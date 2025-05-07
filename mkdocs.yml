@@ -19,6 +19,8 @@ theme:
     - content.code.copy
     - content.code.select
     - content.code.annotate
+extra_css:
+      - css/custom.css
 
 markdown_extensions:
   - attr_list
@@ -42,6 +44,7 @@ repo_name: lancedb/docs
 
 
 nav:
+  - Home: index.md
   - LanceDB:
     - Getting Started:
       - What is LanceDB?: lancedb/getting-started/overview.md
