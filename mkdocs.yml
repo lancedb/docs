@@ -16,9 +16,12 @@ theme:
     - navigation.path
     - navigation.tabs
     - navigation.sections
+    - navigation.expand
     - content.code.copy
     - content.code.select
     - content.code.annotate
+    - toc.follow
+
 extra_css:
       - css/custom.css
 
@@ -42,6 +45,11 @@ markdown_extensions:
 repo_url: https://github.com/lancedb/docs
 repo_name: lancedb/docs
 
+plugins:
+  - search
+  - blog: 
+      blog_dir: docs/blog 
+      post_url_format: "{slug}"
 
 nav:
   - Home: index.md
@@ -64,7 +72,7 @@ nav:
         - Security: lancedb-enterprise/security.md
   - Build Apps:
       - Developer Portal: build/index.md
-  - Articles:
-    - Fine-Tuning Embedding Models: articles/fine-tuning-embedding-models.md
+  - Blog:
+    - blog/index.md
   - API Reference: 
     - REST API: api-reference/index.md
