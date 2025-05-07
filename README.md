@@ -1,0 +1,2 @@
+# docs
+LanceDB Documentation
