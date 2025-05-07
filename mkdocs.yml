@@ -15,3 +15,21 @@ theme:
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
+  features:
+    - navigation.sections
+
+nav:
+  - Getting Started:
+    - What is LanceDB?: getting-started/overview.md
+    - Quickstart: getting-started/quickstart.md
+    - API Reference: getting-started/api-reference.md
+  - User Guide:
+    - Concepts: 
+      - Search: user-manual/concepts/search.md
+      - Tables: user-manual/concepts/tables.md
+    - Guides: 
+      - Hybrid Search: user-manual/guides/hybrid-search.md
+      - Multivector Search: user-manual/guides/multivector-search.md
+  - Tutorials:
+    - 5 Minute Search Bar: tutorials/search.md
+    - 10 Minute RAG Chatbot: tutorials/rag.md
