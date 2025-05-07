@@ -17,19 +17,28 @@ theme:
         name: Switch to dark mode
   features:
     - navigation.sections
+    - navigation.tabs
 
 nav:
-  - Getting Started:
-    - What is LanceDB?: getting-started/overview.md
-    - Quickstart: getting-started/quickstart.md
-    - API Reference: getting-started/api-reference.md
-  - User Guide:
-    - Concepts: 
-      - Search: user-manual/concepts/search.md
-      - Tables: user-manual/concepts/tables.md
-    - Guides: 
-      - Hybrid Search: user-manual/guides/hybrid-search.md
-      - Multivector Search: user-manual/guides/multivector-search.md
-  - Tutorials:
-    - 5 Minute Search Bar: tutorials/search.md
-    - 10 Minute RAG Chatbot: tutorials/rag.md
+  - LanceDB:
+    - Getting Started:
+      - What is LanceDB?: lancedb/getting-started/overview.md
+      - Quickstart: lancedb/getting-started/quickstart.md
+      - API Reference: lancedb/getting-started/api-reference.md
+    - User Guide:
+      - Concepts: 
+        - Search: lancedb/user-manual/concepts/search.md
+        - Tables: lancedb/user-manual/concepts/tables.md
+        - Storage: lancedb/user-manual/concepts/storage.md
+        - Filtering: lancedb/user-manual/concepts/filtering.md
+        - Indexing: lancedb/user-manual/concepts/indexing.md
+      - Guides: 
+        - Hybrid Search: lancedb/user-manual/guides/hybrid-search.md
+        - Multivector Search: lancedb/user-manual/guides/multivector-search.md
+  - LanceDB Enterprise:
+    - Security: lancedb-enterprise/security.md
+  - API Reference: 
+    - REST API: api-reference/index.md
+  - Articles:
+    - Fine-Tuning Embedding Models: articles/fine-tuning-embedding-models.md
+    
