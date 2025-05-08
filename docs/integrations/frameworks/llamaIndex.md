@@ -1,5 +1,5 @@
 # Llama-Index
-![Illustration](../assets/llama-index.jpg)
+![LlamaIndex Integration](../../assets/llama-index.jpg)
 
 ## Quick start
 You would need to install the integration via `pip install llama-index-vector-stores-lancedb` in order to use it. 
@@ -44,7 +44,7 @@ retriever = index.as_retriever(vector_store_kwargs={"where": lance_filter})
 response = retriever.retrieve("What did the author do growing up?")
 ```
 
-Checkout Complete example here - [LlamaIndex demo](../notebooks/LlamaIndex_example.ipynb)
+Checkout Complete example here - [LlamaIndex demo]LINK(../notebooks/LlamaIndex_example.ipynb)
 
 ### Filtering
 For metadata filtering, you can use a Lance SQL-like string filter as demonstrated in the example above. Additionally, you can also filter using the `MetadataFilters` class from LlamaIndex:

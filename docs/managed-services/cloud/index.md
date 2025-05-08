@@ -8,7 +8,7 @@ LanceDB Cloud is a SaaS (software-as-a-service) solution that runs serverless in
 
 LanceDB Cloud provides the same underlying fast vector store that powers the OSS version, but without the need to maintain your own infrastructure. Because it's serverless, you only pay for the storage you use, and you can scale compute up and down as needed depending on the size of your data and its associated index.
 
-![](../assets/lancedb_cloud.png)
+![LanceDB Cloud](../../assets/lancedb_cloud.png)
 
 ## Transitioning from the OSS to the Cloud version
 

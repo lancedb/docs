@@ -8,7 +8,7 @@ It is important to understand the tradeoffs between cost and latency for your sp
 
 We've prepared a simple diagram to showcase the thought process that goes into choosing a storage backend when using LanceDB OSS, Cloud or Enterprise.
 
-![](../assets/lancedb_storage_tradeoffs.png)
+![](../../assets/lancedb_storage_tradeoffs.png)
 
 When architecting your system, you'd typically ask yourself the following questions to decide on a storage option:
 

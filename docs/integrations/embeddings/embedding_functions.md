@@ -200,7 +200,7 @@ rs = table.search(query_image).limit(3).to_pydantic(Pets)
 rs[2].image
 ```
 
-![](../assets/dog_clip_output.png)
+![CLIP Output](../../assets/dog_clip_output.png)
 
 Now that you have the basic idea about LanceDB embedding functions and the embedding function registry,
 let's dive deeper into defining your own [custom functions](./custom_embedding_function.md).

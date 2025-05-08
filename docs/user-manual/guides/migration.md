@@ -17,7 +17,7 @@ We tried to keep the API as similar as possible to the previous version, but the
 
 ### Creating Tables
 
-[CreateTableOptions.writeOptions.writeMode](./javascript/interfaces/WriteOptions.md#writemode) has been replaced with [CreateTableOptions.mode](./js/interfaces/CreateTableOptions.md#mode)
+[CreateTableOptions.writeOptions.writeMode]LINK(./javascript/interfaces/WriteOptions.md#writemode) has been replaced with [CreateTableOptions.mode]LINK(./js/interfaces/CreateTableOptions.md#mode)
 
 === "vectordb (deprecated)"
 
@@ -66,7 +66,7 @@ the size of the data.
 
 ### Embedding Functions
 
-The embedding API has been completely reworked, and it now more closely resembles the Python API, including the new [embedding registry](./js/classes/embedding.EmbeddingFunctionRegistry.md):
+The embedding API has been completely reworked, and it now more closely resembles the Python API, including the new [embedding registry]LINK(./js/classes/embedding.EmbeddingFunctionRegistry.md):
 
 === "vectordb (deprecated)"
 

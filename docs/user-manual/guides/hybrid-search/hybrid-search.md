@@ -58,5 +58,5 @@ By default, LanceDB uses `RRFReranker()`, which uses reciprocal rank fusion scor
 
 ## Available Rerankers
 LanceDB provides a number of rerankers out of the box. You can use any of these rerankers by passing them to the `rerank()` method. 
-Go to [Rerankers](../guides/reranking/index.md) to learn more about using the available rerankers and implementing custom rerankers.
+Go to [Rerankers]LINK(../guides/reranking/index.md) to learn more about using the available rerankers and implementing custom rerankers.
 

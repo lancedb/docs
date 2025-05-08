@@ -257,7 +257,7 @@ table.
 !!! info "Under the hood, LanceDB reads in the Apache Arrow data and persists it to disk using the [Lance format](https://www.github.com/lancedb/lance)."
 
 !!! info "Automatic embedding generation with Embedding API"
-    When working with embedding models, it is recommended to use the LanceDB embedding API to automatically create vector representation of the data and queries in the background. See the [quickstart example](#using-the-embedding-api) or the embedding API [guide](./embeddings/)
+    When working with embedding models, it is recommended to use the LanceDB embedding API to automatically create vector representation of the data and queries in the background. See the [quickstart example](#using-the-embedding-api) or the embedding API [guide](integrations/embeddings/index.md)
 
 ### Create an empty table
 
@@ -498,7 +498,7 @@ LanceDB does not automatically create the ANN index for two reasons. The first i
 for really fast retrievals via a disk-based index, and the second is that data and query workloads can
 be very diverse, so there's no one-size-fits-all index configuration. LanceDB provides many parameters
 to fine-tune index size, query latency and accuracy. See the section on
-[ANN indexes](ann_indexes.md) for more details.
+[ANN indexes](user-manual/concepts/ann_indexes.md) for more details.
 
 ## Delete rows from a table
 
@@ -542,7 +542,7 @@ This can delete any number of rows that match the filter.
 The deletion predicate is a SQL expression that supports the same expressions
 as the `where()` clause (`only_if()` in Rust) on a search. They can be as
 simple or complex as needed. To see what expressions are supported, see the
-[SQL filters](sql.md) section.
+[SQL filters](user-manual/guides/sql.md) section.
 
 === "Python"
 
@@ -555,11 +555,11 @@ simple or complex as needed. To see what expressions are supported, see the
 
     === "@lancedb/lancedb"
 
-        Read more: [lancedb.Table.delete](javascript/interfaces/Table.md#delete)
+        Read more: [lancedb.Table.delete]LINK(api/javascript/interfaces/Table.md#delete)
 
     === "vectordb (deprecated)"
 
-        Read more: [vectordb.Table.delete](javascript/interfaces/Table.md#delete)
+        Read more: [vectordb.Table.delete]LINK(api/javascript/interfaces/Table.md#delete)
 
 === "Rust"
 
@@ -648,7 +648,7 @@ Learn about using the existing integrations and creating custom embedding functi
 
 ## What's next
 
-This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](concepts/index_ivfpq.md) to get familiar with the concepts.
+This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](user-manual/concepts/index_ivfpq.md) to get familiar with the concepts.
 
 If you've already worked with other vector databases, you may want to read the [tables documentation](user-manual/concepts/tables.md) to learn how to work with LanceDB in more detail.
 

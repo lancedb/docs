@@ -1,4 +1,4 @@
-# LanceDB
+# What is LanceDB?
 
 LanceDB is an open-source vector database for AI that's designed to store, manage, query and retrieve embeddings on large-scale multi-modal data. The core of LanceDB is written in Rust 🦀 and is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access.
 
@@ -47,15 +47,15 @@ LanceDB **Cloud** is a SaaS (software-as-a-service) solution that runs serverles
 
 The following pages go deeper into the internal of LanceDB and how to use it.
 
-* [Quick start](basic.md): Get started with LanceDB and vector DB concepts
-* [Vector search concepts](concepts/vector_search.md): Understand the basics of vector search
-* [Working with tables](guides/tables.md): Learn how to work with tables and their associated functions
-* [Indexing](ann_indexes.md): Understand how to create indexes
-* [Vector search](search.md): Learn how to perform vector similarity search
-* [Full-text search (native)](fts.md): Learn how to perform full-text search
-* [Full-text search (tantivy-based)](fts_tantivy.md): Learn how to perform full-text search using Tantivy
-* [Managing embeddings](embeddings/index.md): Managing embeddings and the embedding functions API in LanceDB
-* [Ecosystem Integrations](integrations/index.md): Integrate LanceDB with other tools in the data ecosystem
-* [Python API Reference](python/python.md): Python OSS and Cloud API references
-* [JavaScript API Reference](javascript/modules.md): JavaScript OSS and Cloud API references
+* [Quick start](quickstart.md): Get started with LanceDB and vector DB concepts
+* [Vector search concepts](user-manual/concepts/vector-search.md): Understand the basics of vector search
+* [Working with tables](user-manual/concepts/tables.md): Learn how to work with tables and their associated functions
+* [Indexing](user-manual/concepts/ann_indexes.md): Understand how to create indexes
+* [Vector search](user-manual/concepts/vector-search.md): Learn how to perform vector similarity search
+* [Full-text search (native)](user-manual/guides/full-text-search/fts.md): Learn how to perform full-text search
+* [Full-text search (tantivy-based)](user-manual/guides/full-text-search/fts_tantivy.md): Learn how to perform full-text search using Tantivy
+* [Managing embeddings](integrations/embeddings/index.md): Managing embeddings and the embedding functions API in LanceDB
+* [Ecosystem Integrations](integrations/frameworks/index.md): Integrate LanceDB with other tools in the data ecosystem
+* [Python API Reference]LINK(api/python/index.md): Python OSS and Cloud API references
+* [JavaScript API Reference]LINK(api/javascript/index.md): JavaScript OSS and Cloud API references
 * [Rust API Reference](https://docs.rs/lancedb/latest/lancedb/index.html): Rust API reference

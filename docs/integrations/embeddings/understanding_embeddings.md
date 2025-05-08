@@ -74,7 +74,7 @@ Points that are close to each other in vector space are considered similar (or a
     
     This enables you to **generate** embeddings tailored to the nature of your data (e.g., text, images) and **store** both the **original data** and **embeddings** in a **structured schema** thus providing efficient querying capabilities for similarity searches.
 
-Let's quickly [get started](./index.md) and learn how to manage embeddings in LanceDB. 
+Let's quickly [get started](index.md) and learn how to manage embeddings in LanceDB. 
 
 ## Bonus: As a developer, what you can create using embeddings?
 
@@ -88,7 +88,7 @@ As a developer, you can create a variety of innovative applications using vector
 
     Develop chatbots that utilize embeddings to retrieve relevant context and generate coherent, contextually aware responses to user queries.
 
-    [:octicons-arrow-right-24: Check out examples](../examples/python_examples/chatbot.md)
+    [:octicons-arrow-right-24: Check out examples]LINK(../examples/python_examples/chatbot.md)
 
 -   __Recommendation Systems__
 
@@ -96,7 +96,7 @@ As a developer, you can create a variety of innovative applications using vector
 
     Develop systems that recommend content (such as articles, movies, or products) based on the similarity of keywords and descriptions, enhancing user experience.
 
-    [:octicons-arrow-right-24: Check out examples](../examples/python_examples/recommendersystem.md)
+    [:octicons-arrow-right-24: Check out examples]LINK(../examples/python_examples/recommendersystem.md)
 
 -   __Vector Search__
 
@@ -104,7 +104,7 @@ As a developer, you can create a variety of innovative applications using vector
 
     Build powerful applications that harness the full potential of semantic search, enabling them to retrieve relevant data quickly and effectively. 
 
-    [:octicons-arrow-right-24: Check out examples](../examples/python_examples/vector_search.md)
+    [:octicons-arrow-right-24: Check out examples]LINK(../examples/python_examples/vector_search.md)
 
 -   __RAG Applications__
 
@@ -112,7 +112,7 @@ As a developer, you can create a variety of innovative applications using vector
 
     Combine the strengths of large language models (LLMs) with retrieval-based approaches to create more useful applications.
 
-    [:octicons-arrow-right-24: Check out examples](../examples/python_examples/rag.md)
+    [:octicons-arrow-right-24: Check out examples]LINK(../examples/python_examples/rag.md)
 
 -   __Many more examples__
 
@@ -120,7 +120,7 @@ As a developer, you can create a variety of innovative applications using vector
 
     Explore applied examples available as Colab notebooks or Python scripts to integrate into your applications.
 
-    [:octicons-arrow-right-24: More](../examples/examples_python.md)
+    [:octicons-arrow-right-24: More]LINK(../examples/examples_python.md)
 
 </div>
 

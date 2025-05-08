@@ -11,7 +11,7 @@ LanceDB provides many parameters to fine-tune the index's size, the speed of que
 
 Lance provides an `IVF_PQ` disk-based index. It uses **Inverted File Index (IVF)** to first divide
 the dataset into `N` partitions, and then applies **Product Quantization** to compress vectors in each partition.
-See the [indexing](concepts/index_ivfpq.md) concepts guide for more information on how this works.
+See the [indexing](index_ivfpq.md) concepts guide for more information on how this works.
 
 ## Creating an IVF_PQ Index
 
@@ -41,7 +41,7 @@ Lance supports `IVF_PQ` index type by default.
 
     === "@lancedb/lancedb"
 
-        Creating indexes is done via the [lancedb.Table.createIndex](../js/classes/Table.md/#createIndex) method.
+        Creating indexes is done via the [lancedb.Table.createIndex]LINK(../js/classes/Table.md/#createIndex) method.
 
         ```typescript
         --8<--- "nodejs/examples/ann_indexes.test.ts:import"
@@ -51,7 +51,7 @@ Lance supports `IVF_PQ` index type by default.
 
     === "vectordb (deprecated)"
 
-        Creating indexes is done via the [lancedb.Table.createIndex](../javascript/interfaces/Table.md/#createIndex) method.
+        Creating indexes is done via the [lancedb.Table.createIndex]LINK(../javascript/interfaces/Table.md/#createIndex) method.
 
         ```typescript
         --8<--- "docs/src/ann_indexes.ts:import"
@@ -90,7 +90,7 @@ The following IVF_PQ paramters can be specified:
     changed in the asynchronous python SDK and node's `lancedb`.
 
 <figure markdown>
-  ![IVF PQ](./assets/ivf_pq.png)
+  ![IVF PQ](../../assets/ivf_pq.png)
   <figcaption>IVF_PQ index with <code>num_partitions=2, num_sub_vectors=4</code></figcaption>
 </figure>
 

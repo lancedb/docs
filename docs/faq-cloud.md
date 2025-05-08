@@ -31,4 +31,4 @@ While index creation in LanceDB Cloud is generally fast, querying immediately af
 Multiple factors can impact query latency. To reduce query latency, consider the following:
 - Send pre-warm queries: send a few queries to warm up the cache before an actual user query.
 - Check network latency: LanceDB Cloud is hosted in AWS `us-east-1` region. It is recommended to run queries from an EC2 instance that is in the same region.
-- Create scalar indices: If you are filtering on metadata, it is recommended to create scalar indices on those columns. This will speedup searches with metadata filtering. See [here](../guides/scalar_index.md) for more details on creating a scalar index.
+- Create scalar indices: If you are filtering on metadata, it is recommended to create scalar indices on those columns. This will speedup searches with metadata filtering. See [Scalar Index Guide]LINK(../../user-manual/guides/scalar-index.md) for more details on creating a scalar index.

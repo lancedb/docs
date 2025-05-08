@@ -48,16 +48,34 @@ nav:
   - Documentation: 
     - What is LanceDB?: index.md
     - Quickstart: quickstart.md
+    - Managed Services:
+      - LanceDB Cloud: managed-services/cloud/index.md
+      - LanceDB Enterprise: managed-services/enterprise/index.md
     - User Manual:
       - Concepts: 
-        - user-manual/concepts/tables.md
-        - user-manual/concepts/search.md
-        - user-manual/concepts/indexing.md
-        - user-manual/concepts/storage.md
+        - Tables: user-manual/concepts/tables.md
+        - Search: user-manual/concepts/vector-search.md
+        - Indexing: 
+          - ANN Index: user-manual/concepts/ann_indexes.md
+          - HNSW Index: user-manual/concepts/index_hnsw.md
+          - IVFPQ Index: user-manual/concepts/index_ivfpq.md
+        - Storage: 
+          - Options: user-manual/concepts/storage.md
+          - Datasets: user-manual/concepts/data_management.md
       - Guides: 
-        - user-manual/guides/hybrid-search.md
+        - user-manual/guides/hybrid-search/hybrid-search.md
+        - user-manual/guides/hybrid-search/eval.md
         - user-manual/guides/multivector-search.md
         - user-manual/guides/migration.md
+        - user-manual/guides/scalar-index.md
+        - user-manual/guides/sql.md
+        - user-manual/guides/storage.md
+        - user-manual/guides/full-text-search/fts.md
+        - user-manual/guides/full-text-search/fts_tantivy.md
+        - user-manual/guides/tables/merge_insert.md
+        - user-manual/guides/tuning_retrievers/1_query_types.md
+        - user-manual/guides/tuning_retrievers/2_reranking.md
+        - user-manual/guides/tuning_retrievers/3_embed_tuning.md
         - Reranking:
           - user-manual/guides/reranking/index.md
           - user-manual/guides/reranking/answerdotai.md
@@ -73,10 +91,41 @@ nav:
     - Tutorials: 
       - tutorials/tutorial-1.md
       - tutorials/tutorial-2.md
-    - Integrations: integrations/index.md
+    - Integrations:
+      - Embeddings:
+        - Overview: integrations/embeddings/index.md
+        - Understanding Embeddings: integrations/embeddings/understanding_embeddings.md
+        - Custom Embedding Functions: integrations/embeddings/custom_embedding_function.md
+        - Default Embedding Functions: integrations/embeddings/default_embedding_functions.md
+        - Embedding Functions: integrations/embeddings/embedding_functions.md
+        - Variables and Secrets: integrations/embeddings/variables_and_secrets.md
+        - Legacy: integrations/embeddings/legacy.md
+        - Text Embedding Models:
+          - Sentence Transformers: integrations/embeddings/embedding-models/text_embedding_functions/sentence_transformers.md
+          - HuggingFace: integrations/embeddings/embedding-models/text_embedding_functions/huggingface_embedding.md
+          - Ollama: integrations/embeddings/embedding-models/text_embedding_functions/ollama_embedding.md
+          - OpenAI: integrations/embeddings/embedding-models/text_embedding_functions/openai_embedding.md
+          - Instructor: integrations/embeddings/embedding-models/text_embedding_functions/instructor_embedding.md
+          - Gemini: integrations/embeddings/embedding-models/text_embedding_functions/gemini_embedding.md
+          - Cohere: integrations/embeddings/embedding-models/text_embedding_functions/cohere_embedding.md
+          - Jina: integrations/embeddings/embedding-models/text_embedding_functions/jina_embedding.md
+          - AWS Bedrock: integrations/embeddings/embedding-models/text_embedding_functions/aws_bedrock_embedding.md
+          - IBM WatsonX: integrations/embeddings/embedding-models/text_embedding_functions/ibm_watsonx_ai_embedding.md
+          - VoyageAI: integrations/embeddings/embedding-models/text_embedding_functions/voyageai_embedding.md
+        - Multimodal Embedding Models:
+          - OpenCLIP: integrations/embeddings/embedding-models/multimodal_embedding_functions/openclip_embedding.md
+          - ImageBind: integrations/embeddings/embedding-models/multimodal_embedding_functions/imagebind_embedding.md
+          - Jina Multimodal: integrations/embeddings/embedding-models/multimodal_embedding_functions/jina_multimodal_embedding.md
+      - Frameworks:
+        - Overview: integrations/frameworks/index.md
+        - LangChain: integrations/frameworks/langchain.md
+        - LlamaIndex: integrations/frameworks/llamaIndex.md
+        - DLT: integrations/frameworks/dlt.md
+        - Phidata: integrations/frameworks/phidata.md
+        - PromptTools: integrations/frameworks/prompttools.md
+        - Voxel51: integrations/frameworks/voxel51.md
+      - Support:
+        - FAQ: faq-cloud.md
     - API Reference: api/index.md
-    - Managed Services:
-      - Cloud: managed-services/cloud/index.md
-      - Enterprise: managed-services/enterprise/index.md
   - Research: research/index.md
   - Blog: blog/index.md

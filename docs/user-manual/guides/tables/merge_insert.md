@@ -16,7 +16,7 @@ You can also read more in the API reference:
 * Python
     * Sync: [lancedb.table.Table.merge_insert][]
     * Async: [lancedb.table.AsyncTable.merge_insert][]
-* Typescript: [lancedb.Table.mergeInsert](../../js/classes/Table.md/#mergeinsert)
+* Typescript: [lancedb.Table.mergeInsert]LINK(../../js/classes/Table.md/#mergeinsert)
 
 !!! tip "Use scalar indices to speed up merge insert"
 
@@ -26,7 +26,7 @@ You can also read more in the API reference:
     you can create a scalar index on the `on` column, which will allow LanceDB to
     find matches without having to scan the whole tables.
 
-    Read more about scalar indices in [Building a Scalar Index](../scalar_index.md)
+    Read more about scalar indices in [Building a Scalar Index]LINK(../scalar_index.md)
     guide.
 
 !!! info "Embedding Functions"
@@ -35,7 +35,7 @@ You can also read more in the API reference:
     compute embeddings if the table has a embedding definition in its schema.
     If the input data doesn't contain the source column, or the vector column
     is already filled, then the embeddings won't be computed. See the
-    [Embedding Functions](../../embeddings/embedding_functions.md) guide for more
+    [Embedding Functions]#link(../../embeddings/embedding_functions.md) guide for more
     information.
 
 ## Upsert

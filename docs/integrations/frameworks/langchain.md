@@ -7,7 +7,7 @@ LangChain streamlines these stages (in figure above) by providing pre-built comp
 Integration of **Langchain** with **LanceDB** enables applications to retrieve the most relevant data by comparing query vectors against stored vectors, facilitating effective information retrieval. It results in better and context aware replies and actions by the LLMs.
 
 ## Quick Start
-You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model. Checkout Complete example here - [LangChain demo](../notebooks/langchain_example.ipynb)
+You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model. Checkout Complete example here - [LangChain demo]LINK(../notebooks/langchain_example.ipynb)
 ```python
 import os
 from langchain.document_loaders import TextLoader

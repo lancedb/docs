@@ -14,7 +14,7 @@ Quantization is a compression technique used to reduce the dimensionality of an 
 
 Product quantization (PQ) works by dividing a large, high-dimensional vector of size into equally sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
 
-![](../assets/ivfpq_pq_desc.png)
+![](../../assets/ivfpq_pq_desc.png)
 
 It's important to remember that quantization is a *lossy process*, i.e., the reconstructed vector is not identical to the original vector. This results in a trade-off between the size of the index and the accuracy of the search results.
 
@@ -33,11 +33,11 @@ While PQ helps with reducing the size of the index, IVF primarily addresses sear
 
 In IVF, the PQ vector space is divided into *Voronoi cells*, which are essentially partitions that consist of all the points in the space that are within a threshold distance of the given region's seed point. These seed points are initialized by running K-means over the stored vectors. The centroids of K-means turn into the seed points which then each define a region. These regions are then are used to create an inverted index that correlates each centroid with a list of vectors in the space, allowing a search to be restricted to just a subset of vectors in the index.
 
-![](../assets/ivfpq_ivf_desc.webp)
+![](../../assets/ivfpq_ivf_desc.webp)
 
 During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
 
-![](../assets/ivfpq_query_vector.webp)
+![](../../assets/ivfpq_query_vector.webp)
 
 ## Putting it all together
 
@@ -61,7 +61,7 @@ tbl.create_index(metric="l2", num_partitions=256, num_sub_vectors=96)
 !!! note
     `num_partitions`=256 and `num_sub_vectors`=96 does not work for every dataset. Those values needs to be adjusted for your particular dataset.
 
-The `num_partitions` is usually chosen to target a particular number of vectors per partition. `num_sub_vectors` is typically chosen based on the desired recall and the dimensionality of the vector. See [here](../ann_indexes.md/#how-to-choose-num_partitions-and-num_sub_vectors-for-ivf_pq-index) for best practices on choosing these parameters.
+The `num_partitions` is usually chosen to target a particular number of vectors per partition. `num_sub_vectors` is typically chosen based on the desired recall and the dimensionality of the vector. See [here](ann_indexes.md/#how-to-choose-num_partitions-and-num_sub_vectors-for-ivf_pq-index) for best practices on choosing these parameters.
 
 
 ### Query the index
@@ -79,8 +79,8 @@ The above query will perform a search on the table `tbl` using the given query v
 
 * `limit`: The number of results to return
 * `nprobes`: The number of probes determines the distribution of vector space. While a higher number enhances search accuracy, it also results in slower performance. Typically, setting `nprobes` to cover 5–10% of the dataset proves effective in achieving high recall with minimal latency.
-* `refine_factor`: Refine the results by reading extra elements and re-ranking them in memory. A higher number makes the search more accurate but also slower (see the [FAQ](../faq.md#do-i-need-to-set-a-refine-factor-when-using-an-index) page for more details on this).
+* `refine_factor`: Refine the results by reading extra elements and re-ranking them in memory. A higher number makes the search more accurate but also slower (see the [FAQ]LINK(../faq.md#do-i-need-to-set-a-refine-factor-when-using-an-index) page for more details on this).
 * `to_pandas()`: Convert the results to a pandas DataFrame
 
 And there you have it! You now understand what an IVF-PQ index is, and how to create and query it in LanceDB.
-To see how to create an IVF-PQ index in LanceDB, take a look at the [ANN indexes](../ann_indexes.md) section.
+To see how to create an IVF-PQ index in LanceDB, take a look at the [ANN indexes](ann_indexes.md) section.

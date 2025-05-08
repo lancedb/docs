@@ -5,7 +5,7 @@ To use your own custom embedding function, you can follow these 2 simple steps:
 
 Let us see how this looks like in action.
 
-![](../assets/embeddings_api.png)
+![](../../assets/embeddings_api.png)
 
 `EmbeddingFunction` and `EmbeddingFunctionRegistry` handle low-level details for serializing schema and model information as metadata. To build a custom embedding function, you don't have to worry about the finer details - simply focus on setting up the model and leave the rest to LanceDB.
 
@@ -59,7 +59,7 @@ This is a stripped down version of our implementation of `SentenceTransformerEmb
     To prevent leaking secrets, such as API keys, you should add any sensitive
     parameters of an embedding function to the output of the
     [sensitive_keys()][lancedb.embeddings.base.EmbeddingFunction.sensitive_keys] /
-    [getSensitiveKeys()](../../js/namespaces/embedding/classes/EmbeddingFunction/#getsensitivekeys)
+    [getSensitiveKeys()]LINK(../../js/namespaces/embedding/classes/EmbeddingFunction/#getsensitivekeys)
     method. This prevents users from accidentally instantiating the embedding
     function with hard-coded secrets.
 

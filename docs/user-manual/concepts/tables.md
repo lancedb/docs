@@ -183,7 +183,7 @@ Initialize a LanceDB connection and create a table
 !!! info "Note"
     Data is converted to Arrow before being written to disk. For maximum control over how data is saved, either provide the PyArrow schema to convert to or else provide a PyArrow Table directly.
 
-The **`vector`** column needs to be a [Vector](../python/pydantic.md#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
+The **`vector`** column needs to be a [Vector]LINK(../python/pydantic.md#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
 
 === "Sync API"
 
@@ -629,9 +629,9 @@ in LanceDB, use the merge insert API.
         ```typescript
         --8<-- "nodejs/examples/merge_insert.test.ts:upsert_basic"
         ```
-        **API Reference**: [lancedb.Table.mergeInsert](../js/classes/Table.md/#mergeInsert)
+        **API Reference**: [lancedb.Table.mergeInsert]LINK(../js/classes/Table.md/#mergeInsert)
 
-Read more in the guide on [merge insert](tables/merge_insert.md).
+Read more in the guide on [merge insert](../guides/tables/merge_insert.md).
 
 ## Deleting from a table
 
@@ -715,7 +715,7 @@ This can be used to update zero to all rows depending on how many rows match the
 
 !!! info "SQL syntax"
 
-    See [SQL filters](../sql.md) for more information on the supported SQL syntax.
+    See [SQL filters](../guides/sql.md) for more information on the supported SQL syntax.
 
 !!! warning "Warning"
 
@@ -751,7 +751,7 @@ This can be used to update zero to all rows depending on how many rows match the
 
     === "@lancedb/lancedb"
 
-        API Reference: [lancedb.Table.update](../js/classes/Table.md/#update)
+        API Reference: [lancedb.Table.update]LINK(../js/classes/Table.md/#update)
 
         ```ts
         import * as lancedb from "@lancedb/lancedb";
@@ -773,7 +773,7 @@ This can be used to update zero to all rows depending on how many rows match the
 
     === "vectordb (deprecated)"
 
-        API Reference: [vectordb.Table.update](../javascript/interfaces/Table.md/#update)
+        API Reference: [vectordb.Table.update]LINK(../javascript/interfaces/Table.md/#update)
 
         ```ts
         const lancedb = require("vectordb");
@@ -898,7 +898,7 @@ data type for it.
     ```typescript
     --8<-- "nodejs/examples/basic.test.ts:add_columns"
     ```
-    **API Reference:** [lancedb.Table.addColumns](../js/classes/Table.md/#addcolumns)
+    **API Reference:** [lancedb.Table.addColumns]LINK(../js/classes/Table.md/#addcolumns)
 
 If you want to fill it with null, you can use `cast(NULL as <data_type>)` as
 the SQL expression to fill the column with nulls, while controlling the data
@@ -946,7 +946,7 @@ rewriting the column, which can be a heavy operation.
     ```typescript
     --8<-- "nodejs/examples/basic.test.ts:alter_columns"
     ```
-    **API Reference:** [lancedb.Table.alterColumns](../js/classes/Table.md/#altercolumns)
+    **API Reference:** [lancedb.Table.alterColumns]LINK(../js/classes/Table.md/#altercolumns)
 
 ### Dropping columns
 
@@ -976,7 +976,7 @@ will remove the column from the schema.
     ```typescript
     --8<-- "nodejs/examples/basic.test.ts:drop_columns"
     ```
-    **API Reference:** [lancedb.Table.dropColumns](../js/classes/Table.md/#altercolumns)
+    **API Reference:** [lancedb.Table.dropColumns]LINK(../js/classes/Table.md/#altercolumns)
 
 
 ## Handling bad vectors
@@ -1084,4 +1084,4 @@ There are three possible settings for `read_consistency_interval`:
 
 Learn the best practices on creating an ANN index and getting the most out of it.
 
-[^1]: The `vectordb` package is a legacy package that is  deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide](../migration.md) for more information.
+[^1]: The `vectordb` package is a legacy package that is  deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide](../guides/migration.md) for more information.
