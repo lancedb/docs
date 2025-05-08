@@ -4,6 +4,7 @@ site_url: https://www.lancedb.com/docs
 
 theme:
   name: material
+  custom_dir: overrides
   icon:
     logo: material/vector-polyline
   palette:
@@ -22,6 +23,9 @@ theme:
     - toc.follow
 
 markdown_extensions:
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - attr_list
   - md_in_html
   - pymdownx.highlight:
@@ -46,13 +50,14 @@ plugins:
 
 nav:
   - Documentation: 
-    - What is LanceDB?: index.md
-    - LanceDB Cloud: managed-services/cloud/index.md
-    - LanceDB Enterprise: managed-services/enterprise/index.md
+    - Home: index.md
+    - What is LanceDB?: lancedb/index.md
+    - LanceDB Cloud: lancedb/cloud/index.md
+    - LanceDB Enterprise: lancedb/enterprise/index.md
     - API & SDK Reference: api/migration.md
     - Quickstart:
-      - Cloud Quickstart: quickstart-saas.md
-      - Local Quickstart: quickstart.md
+      - Cloud Quickstart: lancedb/quickstart.md
+      - Local Quickstart: lancedb/quickstart-local.md
     - User Manual:
       - Concepts: 
         - Tables: user-manual/concepts/tables.md

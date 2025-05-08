@@ -6,7 +6,7 @@
     * Directly from a client application like a Jupyter notebook for analytical workloads
     * Deployed as a remote serverless database
 
-![](assets/lancedb_embedded_explanation.png)
+![](../assets/lancedb_embedded_explanation.png)
 
 ## Installation
 
@@ -257,7 +257,7 @@ table.
 !!! info "Under the hood, LanceDB reads in the Apache Arrow data and persists it to disk using the [Lance format](https://www.github.com/lancedb/lance)."
 
 !!! info "Automatic embedding generation with Embedding API"
-    When working with embedding models, it is recommended to use the LanceDB embedding API to automatically create vector representation of the data and queries in the background. See the [quickstart example](#using-the-embedding-api) or the embedding API [guide](integrations/embeddings/index.md)
+    When working with embedding models, it is recommended to use the LanceDB embedding API to automatically create vector representation of the data and queries in the background. See the [quickstart example](#using-the-embedding-api) or the embedding API [guide](../integrations/embeddings/index.md)
 
 ### Create an empty table
 
@@ -280,7 +280,7 @@ similar to a `CREATE TABLE` statement in SQL.
         ```
 
     !!! note "You can define schema in Pydantic"
-        LanceDB comes with Pydantic support, which allows you to define the schema of your data using Pydantic models. This makes it easy to work with LanceDB tables and data. Learn more about all supported types in [tables guide](user-manual/concepts/tables.md).
+        LanceDB comes with Pydantic support, which allows you to define the schema of your data using Pydantic models. This makes it easy to work with LanceDB tables and data. Learn more about all supported types in [tables guide](../user-manual/concepts/tables.md).
 
 === "Typescript[^1]"
 
@@ -498,7 +498,7 @@ LanceDB does not automatically create the ANN index for two reasons. The first i
 for really fast retrievals via a disk-based index, and the second is that data and query workloads can
 be very diverse, so there's no one-size-fits-all index configuration. LanceDB provides many parameters
 to fine-tune index size, query latency and accuracy. See the section on
-[ANN indexes](user-manual/concepts/ann_indexes.md) for more details.
+[ANN indexes](../user-manual/concepts/ann_indexes.md) for more details.
 
 ## Delete rows from a table
 
@@ -542,7 +542,7 @@ This can delete any number of rows that match the filter.
 The deletion predicate is a SQL expression that supports the same expressions
 as the `where()` clause (`only_if()` in Rust) on a search. They can be as
 simple or complex as needed. To see what expressions are supported, see the
-[SQL filters](user-manual/guides/sql.md) section.
+[SQL filters](../user-manual/guides/sql.md) section.
 
 === "Python"
 
@@ -643,13 +643,20 @@ You can use the embedding API when working with embedding models. It automatical
     --8<-- "rust/lancedb/examples/openai.rs:openai_embeddings"
     ```
 
-Learn about using the existing integrations and creating custom embedding functions in the [embedding API guide](integrations/embeddings/index.md).
+Learn about using the existing integrations and creating custom embedding functions in the [embedding API guide](../integrations/embeddings/index.md).
 
 
 ## What's next
 
-This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](user-manual/concepts/index_ivfpq.md) to get familiar with the concepts.
+This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](../user-manual/concepts/index_ivfpq.md) to get familiar with the concepts.
 
-If you've already worked with other vector databases, you may want to read the [tables documentation](user-manual/concepts/tables.md) to learn how to work with LanceDB in more detail.
+If you've already worked with other vector databases, you may want to read the [tables documentation](../user-manual/concepts/tables.md) to learn how to work with LanceDB in more detail.
+
+* [tables documentation](../user-manual/concepts/tables.md)
+* [ANN indexes](../user-manual/concepts/ann_indexes.md)
+* [SQL filters](../user-manual/guides/sql.md)
+* [embedding API guide](../integrations/embeddings/index.md)
+* [indexing](../user-manual/concepts/index_ivfpq.md)
+* [tables documentation](../user-manual/concepts/tables.md)
 
 [^1]: The `vectordb` package is a legacy package that is deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide]LINK(/api/migration.md) for more information.
