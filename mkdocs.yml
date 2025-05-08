@@ -1,4 +1,4 @@
-site_name: LanceDB Documentation
+site_name: LanceDB Developer Portal
 site_description: LanceDB is a multimodal vector database and search engine.
 site_url: https://www.lancedb.com/docs
 
@@ -16,14 +16,10 @@ theme:
     - navigation.path
     - navigation.tabs
     - navigation.sections
-    - navigation.expand
     - content.code.copy
     - content.code.select
     - content.code.annotate
     - toc.follow
-
-extra_css:
-      - css/custom.css
 
 markdown_extensions:
   - attr_list
@@ -47,32 +43,40 @@ repo_name: lancedb/docs
 
 plugins:
   - search
-  - blog: 
-      blog_dir: docs/blog 
-      post_url_format: "{slug}"
 
 nav:
-  - Home: index.md
-  - LanceDB:
-    - Getting Started:
-      - What is LanceDB?: lancedb/getting-started/overview.md
-      - Quickstart: lancedb/getting-started/quickstart.md
-      - API Reference: lancedb/getting-started/api-reference.md
-    - User Guide:
+  - Documentation: 
+    - What is LanceDB?: index.md
+    - Quickstart: quickstart.md
+    - User Manual:
       - Concepts: 
-        - Search: lancedb/user-manual/concepts/search.md
-        - Tables: lancedb/user-manual/concepts/tables.md
-        - Storage: lancedb/user-manual/concepts/storage.md
-        - Filtering: lancedb/user-manual/concepts/filtering.md
-        - Indexing: lancedb/user-manual/concepts/indexing.md
+        - user-manual/concepts/tables.md
+        - user-manual/concepts/search.md
+        - user-manual/concepts/indexing.md
+        - user-manual/concepts/storage.md
       - Guides: 
-        - Hybrid Search: lancedb/user-manual/guides/hybrid-search.md
-        - Multivector Search: lancedb/user-manual/guides/multivector-search.md
-  - LanceDB Enterprise:
-        - Security: lancedb-enterprise/security.md
-  - Build Apps:
-      - Developer Portal: build/index.md
-  - Blog:
-    - blog/index.md
-  - API Reference: 
-    - REST API: api-reference/index.md
+        - user-manual/guides/hybrid-search.md
+        - user-manual/guides/multivector-search.md
+        - user-manual/guides/migration.md
+        - Reranking:
+          - user-manual/guides/reranking/index.md
+          - user-manual/guides/reranking/answerdotai.md
+          - user-manual/guides/reranking/cohere.md
+          - user-manual/guides/reranking/colbert.md
+          - user-manual/guides/reranking/cross_encoder.md
+          - user-manual/guides/reranking/custom_reranker.md
+          - user-manual/guides/reranking/jina.md
+          - user-manual/guides/reranking/linear_combination.md
+          - user-manual/guides/reranking/openai.md
+          - user-manual/guides/reranking/rrf.md
+          - user-manual/guides/reranking/voyageai.md
+    - Tutorials: 
+      - tutorials/tutorial-1.md
+      - tutorials/tutorial-2.md
+    - Integrations: integrations/index.md
+    - API Reference: api/index.md
+    - Managed Services:
+      - Cloud: managed-services/cloud/index.md
+      - Enterprise: managed-services/enterprise/index.md
+  - Research: research/index.md
+  - Blog: blog/index.md
