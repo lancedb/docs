@@ -1084,4 +1084,4 @@ There are three possible settings for `read_consistency_interval`:
 
 Learn the best practices on creating an ANN index and getting the most out of it.
 
-[^1]: The `vectordb` package is a legacy package that is  deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide](../guides/migration.md) for more information.
+[^1]: The `vectordb` package is a legacy package that is  deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide]LINK(api/ migration.md) for more information.

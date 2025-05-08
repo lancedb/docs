@@ -47,10 +47,12 @@ plugins:
 nav:
   - Documentation: 
     - What is LanceDB?: index.md
-    - Quickstart: quickstart.md
-    - Managed Services:
-      - LanceDB Cloud: managed-services/cloud/index.md
-      - LanceDB Enterprise: managed-services/enterprise/index.md
+    - LanceDB Cloud: managed-services/cloud/index.md
+    - LanceDB Enterprise: managed-services/enterprise/index.md
+    - API & SDK Reference: api/migration.md
+    - Quickstart:
+      - Cloud Quickstart: quickstart-saas.md
+      - Local Quickstart: quickstart.md
     - User Manual:
       - Concepts: 
         - Tables: user-manual/concepts/tables.md
@@ -63,20 +65,20 @@ nav:
           - Options: user-manual/concepts/storage.md
           - Datasets: user-manual/concepts/data_management.md
       - Guides: 
-        - user-manual/guides/hybrid-search/hybrid-search.md
-        - user-manual/guides/hybrid-search/eval.md
-        - user-manual/guides/multivector-search.md
-        - user-manual/guides/migration.md
-        - user-manual/guides/scalar-index.md
-        - user-manual/guides/sql.md
-        - user-manual/guides/storage.md
-        - user-manual/guides/full-text-search/fts.md
-        - user-manual/guides/full-text-search/fts_tantivy.md
-        - user-manual/guides/tables/merge_insert.md
-        - user-manual/guides/tuning_retrievers/1_query_types.md
-        - user-manual/guides/tuning_retrievers/2_reranking.md
-        - user-manual/guides/tuning_retrievers/3_embed_tuning.md
-        - Reranking:
+        - Capacity Planning: user-manual/guides/capacity-planning.md
+        - Working with Tables: user-manual/guides/tables/merge_insert.md
+        - Building Indexes: user-manual/guides/scalar-index.md
+        - Configuring Storage: user-manual/guides/storage.md
+        - Building Queries:
+          - Full Text Search:
+            - Full Text Search: user-manual/guides/full-text-search/fts.md
+            - Full Text Search with Tantivy: user-manual/guides/full-text-search/fts_tantivy.md
+          - Hybrid Search:
+            - user-manual/guides/hybrid-search/hybrid-search.md
+            - user-manual/guides/hybrid-search/eval.md
+          - Multivector Search: user-manual/guides/multivector-search.md
+        - Filtering with SQL: user-manual/guides/sql.md
+        - Reranking Results:
           - user-manual/guides/reranking/index.md
           - user-manual/guides/reranking/answerdotai.md
           - user-manual/guides/reranking/cohere.md
@@ -88,9 +90,13 @@ nav:
           - user-manual/guides/reranking/openai.md
           - user-manual/guides/reranking/rrf.md
           - user-manual/guides/reranking/voyageai.md
-    - Tutorials: 
-      - tutorials/tutorial-1.md
-      - tutorials/tutorial-2.md
+      - Tutorials: 
+        - user-manual/tutorials/tutorial-1.md
+        - user-manual/tutorials/tutorial-2.md
+        - Tuning Retrievers:
+          - Query Types: user-manual/guides/tuning_retrievers/1_query_types.md
+          - Reranking: user-manual/guides/tuning_retrievers/2_reranking.md
+          - Embedding Tuning: user-manual/guides/tuning_retrievers/3_embed_tuning.md
     - Integrations:
       - Embeddings:
         - Overview: integrations/embeddings/index.md
@@ -124,8 +130,7 @@ nav:
         - Phidata: integrations/frameworks/phidata.md
         - PromptTools: integrations/frameworks/prompttools.md
         - Voxel51: integrations/frameworks/voxel51.md
-      - Support:
-        - FAQ: faq-cloud.md
-    - API Reference: api/index.md
+    - Support:
+      - FAQ: support/faq-cloud.md
   - Research: research/index.md
   - Blog: blog/index.md

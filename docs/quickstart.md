@@ -1,4 +1,4 @@
-# Quickstart
+# Local Quickstart
 
 !!! info "LanceDB can be run in a number of ways:"
 
@@ -652,4 +652,4 @@ This section covered the very basics of using LanceDB. If you're learning about 
 
 If you've already worked with other vector databases, you may want to read the [tables documentation](user-manual/concepts/tables.md) to learn how to work with LanceDB in more detail.
 
-[^1]: The `vectordb` package is a legacy package that is  deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide](user-manual/guides/migration.md) for more information.
+[^1]: The `vectordb` package is a legacy package that is deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide]LINK(/api/migration.md) for more information.
