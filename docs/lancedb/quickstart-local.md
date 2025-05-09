@@ -1,4 +1,4 @@
-# Local Quickstart
+# Get Started with LanceDB Locally
 
 !!! info "LanceDB can be run in a number of ways:"
 

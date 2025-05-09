@@ -3,7 +3,7 @@ title: "Quickstart Guide"
 description: "Effortlessly transform Open Source experience to Cloud/Enterprise"
 ---
 
-# Quickstart Guide with LanceDB Cloud and Enterprise
+# Quickstart Guide with LanceDB Cloud
 
 Explore the full implementation in this Quickstart guide:
 

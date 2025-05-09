@@ -5,7 +5,7 @@ hide:
 
 ![hero-image](assets/hero-image.png)
 
-<h1 style="text-align:center">Blazingly Fast | Petabyte Scale</h1>
+<h1 style="text-align:center">Lightning Fast | Petabyte Scale</h1>
 
 <div class="grid cards" markdown>
 
