@@ -16,7 +16,7 @@
       pip install lancedb
       ```
 
-=== "Typescript[^1]"
+=== "Typescript"
     === "@lancedb/lancedb"
 
         ```shell
@@ -461,6 +461,8 @@ By default, LanceDB runs a brute-force scan over dataset to find the K nearest n
 For tables with more than 50K vectors, creating an ANN index is recommended to speed up search performance.
 LanceDB allows you to create an ANN index on a table as follows:
 
+See the [indexing](../user-manual/concepts/index.md) guide for more details on how to create and use indexes.
+
 === "Python"
 
     === "Sync API"
@@ -498,7 +500,7 @@ LanceDB does not automatically create the ANN index for two reasons. The first i
 for really fast retrievals via a disk-based index, and the second is that data and query workloads can
 be very diverse, so there's no one-size-fits-all index configuration. LanceDB provides many parameters
 to fine-tune index size, query latency and accuracy. See the section on
-[ANN indexes](../user-manual/concepts/ann_indexes.md) for more details.
+[ANN indexes](../user-manual/concepts/index.md) for more details.
 
 ## Delete rows from a table
 
@@ -542,7 +544,7 @@ This can delete any number of rows that match the filter.
 The deletion predicate is a SQL expression that supports the same expressions
 as the `where()` clause (`only_if()` in Rust) on a search. They can be as
 simple or complex as needed. To see what expressions are supported, see the
-[SQL filters](../user-manual/guides/sql.md) section.
+[SQL filters](../user-manual/concepts/filtering.md) section.
 
 === "Python"
 
@@ -648,15 +650,15 @@ Learn about using the existing integrations and creating custom embedding functi
 
 ## What's next
 
-This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](../user-manual/concepts/index_ivfpq.md) to get familiar with the concepts.
+This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](../user-manual/concepts/index.md) to get familiar with the concepts.
 
 If you've already worked with other vector databases, you may want to read the [tables documentation](../user-manual/concepts/tables.md) to learn how to work with LanceDB in more detail.
 
 * [tables documentation](../user-manual/concepts/tables.md)
-* [ANN indexes](../user-manual/concepts/ann_indexes.md)
-* [SQL filters](../user-manual/guides/sql.md)
+* [ANN indexes](../user-manual/concepts/index.md)
+* [SQL filters](../user-manual/concepts/filtering.md)
 * [embedding API guide](../integrations/embeddings/index.md)
-* [indexing](../user-manual/concepts/index_ivfpq.md)
+* [indexing](../user-manual/concepts/index.md)
 * [tables documentation](../user-manual/concepts/tables.md)
 
 [^1]: The `vectordb` package is a legacy package that is deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide]LINK(/api/migration.md) for more information.

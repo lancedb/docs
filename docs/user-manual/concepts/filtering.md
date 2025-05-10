@@ -67,7 +67,7 @@ const tbl = await db.createTable('myVectors', data)
 
 !!! note
 
-    Creating a [scalar index](scalar-index.md) accelerates filtering.
+    Creating a scalar index accelerates filtering.
 
 ## SQL filters
 

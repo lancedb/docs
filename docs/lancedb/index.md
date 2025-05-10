@@ -42,20 +42,3 @@ LanceDB **Cloud** is a SaaS (software-as-a-service) solution that runs serverles
 * Disk-based index & storage, allowing for massive scalability without breaking the bank
 
 * Ingest your favorite data formats directly, like pandas DataFrames, Pydantic objects, Polars (coming soon), and more
-
-## Documentation guide
-
-The following pages go deeper into the internal of LanceDB and how to use it.
-
-* [Quick start](quickstart.md): Get started with LanceDB and vector DB concepts
-* [Vector search concepts](../user-manual/concepts/vector-search.md): Understand the basics of vector search
-* [Working with tables](../user-manual/concepts/tables.md): Learn how to work with tables and their associated functions
-* [Indexing](../user-manual/concepts/ann_indexes.md): Understand how to create indexes
-* [Vector search](../user-manual/concepts/vector-search.md): Learn how to perform vector similarity search
-* [Full-text search (native)](../user-manual/guides/full-text-search/fts.md): Learn how to perform full-text search
-* [Full-text search (tantivy-based)](../user-manual/guides/full-text-search/fts_tantivy.md): Learn how to perform full-text search using Tantivy
-* [Managing embeddings](../integrations/embeddings/index.md): Managing embeddings and the embedding functions API in LanceDB
-* [Ecosystem Integrations](../integrations/frameworks/index.md): Integrate LanceDB with other tools in the data ecosystem
-* [Python API Reference]LINK(api/python/index.md): Python OSS and Cloud API references
-* [JavaScript API Reference]LINK(api/javascript/index.md): JavaScript OSS and Cloud API references
-* [Rust API Reference](https://docs.rs/lancedb/latest/lancedb/index.html): Rust API reference

@@ -14,9 +14,18 @@ theme:
     text: Samurai
     code: Roboto Mono
   features:
-    - navigation.path
-    - navigation.tabs
+    # - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    # - navigation.instant
+    # - navigation.instant.prefetch
+    # - navigation.instant.progress
+    # - navigation.prune
     - navigation.sections
+    - navigation.tabs
+    # - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
     - content.code.copy
     - content.code.select
     - content.code.annotate
@@ -50,40 +59,27 @@ plugins:
 
 nav:
   - Documentation: 
-    - Home: index.md
+    - Homepage: index.md
     - What is LanceDB?: lancedb/index.md
-    - LanceDB Cloud: lancedb/cloud/index.md
-    - LanceDB Enterprise: lancedb/enterprise/index.md
-    - API & SDK Reference: api/migration.md
-    - Quickstart:
-      - Cloud Quickstart: lancedb/quickstart.md
-      - Local Quickstart: lancedb/quickstart-local.md
+    - LanceDB Enterprise: enterprise/index.md
+    - Quickstart: lancedb/quickstart.md
     - User Manual:
       - Concepts: 
+        - Data: user-manual/concepts/data.md
+        - Vectors: user-manual/concepts/vectors.md
         - Tables: user-manual/concepts/tables.md
-        - Search: user-manual/concepts/vector-search.md
-        - Indexing: 
-          - ANN Index: user-manual/concepts/ann_indexes.md
-          - HNSW Index: user-manual/concepts/index_hnsw.md
-          - IVFPQ Index: user-manual/concepts/index_ivfpq.md
-        - Storage: 
-          - Options: user-manual/concepts/storage.md
-          - Datasets: user-manual/concepts/data_management.md
-      - Guides: 
-        - Capacity Planning: user-manual/guides/capacity-planning.md
-        - Working with Tables: user-manual/guides/tables/merge_insert.md
-        - Building Indexes: user-manual/guides/scalar-index.md
-        - Configuring Storage: user-manual/guides/storage.md
-        - Building Queries:
-          - Full Text Search:
-            - Full Text Search: user-manual/guides/full-text-search/fts.md
-            - Full Text Search with Tantivy: user-manual/guides/full-text-search/fts_tantivy.md
-          - Hybrid Search:
-            - user-manual/guides/hybrid-search/hybrid-search.md
-            - user-manual/guides/hybrid-search/eval.md
-          - Multivector Search: user-manual/guides/multivector-search.md
-        - Filtering with SQL: user-manual/guides/sql.md
-        - Reranking Results:
+        - Schema: user-manual/concepts/schema.md
+        - Indexing: user-manual/concepts/index.md
+        - Search: user-manual/concepts/search.md
+        - Filtering: user-manual/concepts/filtering.md
+        - Storage: user-manual/concepts/storage.md
+      - How-To Guides: 
+        - Connect to Storage: user-manual/guides/storage-setup.md
+        - Build Hybrid Queries: user-manual/guides/hybrid-search.md
+        - Query Optimization: user-manual/guides/query-optimization.md
+        - Database Configuration: user-manual/guides/database-configuration.md
+      - Advanced Usage:
+        - Rerank Search Results:
           - user-manual/guides/reranking/index.md
           - user-manual/guides/reranking/answerdotai.md
           - user-manual/guides/reranking/cohere.md
@@ -94,11 +90,8 @@ nav:
           - user-manual/guides/reranking/linear_combination.md
           - user-manual/guides/reranking/openai.md
           - user-manual/guides/reranking/rrf.md
-          - user-manual/guides/reranking/voyageai.md
-      - Tutorials: 
-        - user-manual/tutorials/tutorial-1.md
-        - user-manual/tutorials/tutorial-2.md
-        - Tuning Retrievers:
+          - user-manual/guides/reranking/voyageai.md 
+        - Improve Retrieval:
           - Query Types: user-manual/guides/tuning_retrievers/1_query_types.md
           - Reranking: user-manual/guides/tuning_retrievers/2_reranking.md
           - Embedding Tuning: user-manual/guides/tuning_retrievers/3_embed_tuning.md
@@ -137,5 +130,6 @@ nav:
         - Voxel51: integrations/frameworks/voxel51.md
     - Support:
       - FAQ: support/faq-cloud.md
+  - API & SDK Reference: api/migration.md
   - Research: research/index.md
   - Blog: blog/index.md
