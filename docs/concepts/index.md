@@ -90,7 +90,7 @@ The following IVF_PQ paramters can be specified:
     changed in the asynchronous python SDK and node's `lancedb`.
 
 <figure markdown>
-  ![IVF PQ](../../assets/ivf_pq.png)
+  ![IVF PQ](/assets/ivf_pq.png)
   <figcaption>IVF_PQ index with <code>num_partitions=2, num_sub_vectors=4</code></figcaption>
 </figure>
 
@@ -323,7 +323,7 @@ Quantization is a compression technique used to reduce the dimensionality of an 
 
 Product quantization (PQ) works by dividing a large, high-dimensional vector of size into equally sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
 
-![](../../assets/ivfpq_pq_desc.png)
+![](/assets/ivfpq_pq_desc.png)
 
 It's important to remember that quantization is a *lossy process*, i.e., the reconstructed vector is not identical to the original vector. This results in a trade-off between the size of the index and the accuracy of the search results.
 
@@ -342,11 +342,11 @@ While PQ helps with reducing the size of the index, IVF primarily addresses sear
 
 In IVF, the PQ vector space is divided into *Voronoi cells*, which are essentially partitions that consist of all the points in the space that are within a threshold distance of the given region's seed point. These seed points are initialized by running K-means over the stored vectors. The centroids of K-means turn into the seed points which then each define a region. These regions are then are used to create an inverted index that correlates each centroid with a list of vectors in the space, allowing a search to be restricted to just a subset of vectors in the index.
 
-![](../../assets/ivfpq_ivf_desc.webp)
+![](/assets/ivfpq_ivf_desc.webp)
 
 During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
 
-![](../../assets/ivfpq_query_vector.webp)
+![](/assets/ivfpq_query_vector.webp)
 
 ## Putting it all together
 
@@ -398,7 +398,7 @@ To see how to create an IVF-PQ index in LanceDB, take a look at the [ANN indexes
 
 # Understanding HNSW index
 
-Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. HNSW is one of the most accurate and fastest Approximate Nearest Neighbour search algorithms, It’s beneficial in high-dimensional spaces where finding the same nearest neighbor would be too slow and costly
+Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. HNSW is one of the most accurate and fastest Approximate Nearest Neighbour search algorithms, It's beneficial in high-dimensional spaces where finding the same nearest neighbor would be too slow and costly
 
 [Jump to usage](#usage)
 There are three main types of ANN search algorithms:

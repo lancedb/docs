@@ -1,4 +1,4 @@
-site_name: LanceDB Developer Portal
+site_name: LanceDB Documentation
 site_description: LanceDB is a multimodal vector database and search engine.
 site_url: https://www.lancedb.com/docs
 
@@ -15,7 +15,6 @@ theme:
     code: Roboto Mono
   features:
     # - navigation.expand
-    - navigation.footer
     - navigation.indexes
     # - navigation.instant
     # - navigation.instant.prefetch
@@ -30,12 +29,17 @@ theme:
     - content.code.select
     - content.code.annotate
     - toc.follow
+  extra:
+    css:
+      - stylesheets/extra.css
 
 markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - attr_list
+  - md_in_html
+  - pymdownx.blocks.caption
   - md_in_html
   - pymdownx.highlight:
       anchor_linenums: true
@@ -59,42 +63,44 @@ plugins:
 
 nav:
   - Documentation: 
-    - Homepage: index.md
-    - What is LanceDB?: lancedb/index.md
+    - Documentation: index.md
+    - What is LanceDB?: overview/index.md
     - LanceDB Enterprise: enterprise/index.md
-    - Quickstart: lancedb/quickstart.md
+    - Quickstart: overview/quickstart-local.md
     - User Manual:
       - Concepts: 
-        - Data: user-manual/concepts/data.md
-        - Vectors: user-manual/concepts/vectors.md
-        - Tables: user-manual/concepts/tables.md
-        - Schema: user-manual/concepts/schema.md
-        - Indexing: user-manual/concepts/index.md
-        - Search: user-manual/concepts/search.md
-        - Filtering: user-manual/concepts/filtering.md
-        - Storage: user-manual/concepts/storage.md
-      - How-To Guides: 
-        - Connect to Storage: user-manual/guides/storage-setup.md
-        - Build Hybrid Queries: user-manual/guides/hybrid-search.md
-        - Query Optimization: user-manual/guides/query-optimization.md
-        - Database Configuration: user-manual/guides/database-configuration.md
+        - Architecture: concepts/architecture.md
+        - Datasets: concepts/datasets.md
+        - Vectors: concepts/vectors.md
+        - Tables: concepts/tables.md
+        - Schema: concepts/schema.md
+        - Indexing: concepts/index.md
+        - Search: concepts/search.md
+        - Filtering: concepts/filtering.md
+        - Storage: concepts/storage.md
+      - Basic Usage: 
+        - Connect to Storage: guides/storage-setup.md
+        - Build Hybrid Queries: guides/hybrid-search.md
+        - Query Optimization: guides/query-optimization.md
+        - Database Configuration: guides/database-configuration.md
       - Advanced Usage:
         - Rerank Search Results:
-          - user-manual/guides/reranking/index.md
-          - user-manual/guides/reranking/answerdotai.md
-          - user-manual/guides/reranking/cohere.md
-          - user-manual/guides/reranking/colbert.md
-          - user-manual/guides/reranking/cross_encoder.md
-          - user-manual/guides/reranking/custom_reranker.md
-          - user-manual/guides/reranking/jina.md
-          - user-manual/guides/reranking/linear_combination.md
-          - user-manual/guides/reranking/openai.md
-          - user-manual/guides/reranking/rrf.md
-          - user-manual/guides/reranking/voyageai.md 
+          - guides/reranking/index.md
+          - guides/reranking/answerdotai.md
+          - guides/reranking/cohere.md
+          - guides/reranking/colbert.md
+          - guides/reranking/cross_encoder.md
+          - guides/reranking/custom_reranker.md
+          - guides/reranking/jina.md
+          - guides/reranking/linear_combination.md
+          - guides/reranking/openai.md
+          - guides/reranking/rrf.md
+          - guides/reranking/voyageai.md 
         - Improve Retrieval:
-          - Query Types: user-manual/guides/tuning_retrievers/1_query_types.md
-          - Reranking: user-manual/guides/tuning_retrievers/2_reranking.md
-          - Embedding Tuning: user-manual/guides/tuning_retrievers/3_embed_tuning.md
+          - Query Types: guides/tuning_retrievers/1_query_types.md
+          - Reranking: guides/tuning_retrievers/2_reranking.md
+          - Embedding Tuning: guides/tuning_retrievers/3_embed_tuning.md
+      - Production: production/index.md
     - Integrations:
       - Embeddings:
         - Overview: integrations/embeddings/index.md

@@ -1,4 +1,67 @@
-# Get Started with LanceDB Locally
+# Get Started with LanceDB Open Source 
+
+```bash
+pip install lancedb
+```
+
+=== "OSS"
+
+    ```python
+    import lancedb
+
+    # Connect to or create a LanceDB database
+    db = lancedb.connect("./my_lancedb")
+    ```
+=== "Cloud"
+
+    ```python
+    import lancedb
+
+     # Connect to remote LanceDB database
+    db = lancedb.connect(
+    uri="db://dmyriel-hh21fn",
+    api_key="sk_OGFJ24SN4JFVFPY7EDWYXCYMTFFCVWCFO5TUFSQBPAVZO6MP3XDQ====",
+    region="us-east-1"
+    )
+    ```
+
+```python
+# Define your data using pure Python types
+data = [
+    {"vector": [0.1, 0.2, 0.3, 0.4], "name": "apple", "category": "fruit"},
+    {"vector": [0.2, 0.1, 0.4, 0.3], "name": "banana", "category": "fruit"},
+    {"vector": [0.9, 0.8, 0.7, 0.6], "name": "carrot", "category": "vegetable"}
+]
+
+# Create a table (or open if already exists)
+table = db.create_table("my_table", data=data, mode="overwrite")
+
+# Search using a raw list as query vector
+query_vector = [0.1, 0.2, 0.3, 0.4]
+results = table.search(query_vector).limit(2).to_arrow().to_pylist()
+
+# Print results
+for item in results:
+    print(item)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 !!! info "LanceDB can be run in a number of ways:"
 
@@ -280,7 +343,7 @@ similar to a `CREATE TABLE` statement in SQL.
         ```
 
     !!! note "You can define schema in Pydantic"
-        LanceDB comes with Pydantic support, which allows you to define the schema of your data using Pydantic models. This makes it easy to work with LanceDB tables and data. Learn more about all supported types in [tables guide](../user-manual/concepts/tables.md).
+        LanceDB comes with Pydantic support, which allows you to define the schema of your data using Pydantic models. This makes it easy to work with LanceDB tables and data. Learn more about all supported types in [Tables](../user-manual/concepts/tables.md).
 
 === "Typescript[^1]"
 
@@ -461,7 +524,7 @@ By default, LanceDB runs a brute-force scan over dataset to find the K nearest n
 For tables with more than 50K vectors, creating an ANN index is recommended to speed up search performance.
 LanceDB allows you to create an ANN index on a table as follows:
 
-See the [indexing](../user-manual/concepts/index.md) guide for more details on how to create and use indexes.
+See the [Indexing](../user-manual/concepts/index.md) guide for more details on how to create and use indexes.
 
 === "Python"
 
@@ -544,7 +607,7 @@ This can delete any number of rows that match the filter.
 The deletion predicate is a SQL expression that supports the same expressions
 as the `where()` clause (`only_if()` in Rust) on a search. They can be as
 simple or complex as needed. To see what expressions are supported, see the
-[SQL filters](../user-manual/concepts/filtering.md) section.
+[Filtering](../user-manual/concepts/filtering.md) section.
 
 === "Python"
 
@@ -650,15 +713,15 @@ Learn about using the existing integrations and creating custom embedding functi
 
 ## What's next
 
-This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [indexing](../user-manual/concepts/index.md) to get familiar with the concepts.
+This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [Indexing](../user-manual/concepts/index.md) to get familiar with the concepts.
 
-If you've already worked with other vector databases, you may want to read the [tables documentation](../user-manual/concepts/tables.md) to learn how to work with LanceDB in more detail.
+If you've already worked with other vector databases, you may want to read the [Tables](../user-manual/concepts/tables.md) documentation to learn how to work with LanceDB in more detail.
 
-* [tables documentation](../user-manual/concepts/tables.md)
-* [ANN indexes](../user-manual/concepts/index.md)
-* [SQL filters](../user-manual/concepts/filtering.md)
+* [Tables](../user-manual/concepts/tables.md)
+* [Indexing](../user-manual/concepts/index.md)
+* [Filtering](../user-manual/concepts/filtering.md)
 * [embedding API guide](../integrations/embeddings/index.md)
-* [indexing](../user-manual/concepts/index.md)
-* [tables documentation](../user-manual/concepts/tables.md)
+* [Indexing](../user-manual/concepts/index.md)
+* [Tables](../user-manual/concepts/tables.md)
 
 [^1]: The `vectordb` package is a legacy package that is deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide]LINK(/api/migration.md) for more information.

@@ -1,5 +1,4 @@
-# Data management
-
+# Datasets
 This section covers concepts related to managing your data over time in LanceDB.
 
 ## A primer on Lance
