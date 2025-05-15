@@ -1,1 +1,0 @@
-# Configure Default LanceDB Settings
