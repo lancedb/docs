@@ -1,67 +1,8 @@
-# Get Started with LanceDB Open Source 
+---
+title: Getting Started with LanceDB OSS
+---
 
-```bash
-pip install lancedb
-```
-
-=== "OSS"
-
-    ```python
-    import lancedb
-
-    # Connect to or create a LanceDB database
-    db = lancedb.connect("./my_lancedb")
-    ```
-=== "Cloud"
-
-    ```python
-    import lancedb
-
-     # Connect to remote LanceDB database
-    db = lancedb.connect(
-    uri="db://dmyriel-hh21fn",
-    api_key="sk_OGFJ24SN4JFVFPY7EDWYXCYMTFFCVWCFO5TUFSQBPAVZO6MP3XDQ====",
-    region="us-east-1"
-    )
-    ```
-
-```python
-# Define your data using pure Python types
-data = [
-    {"vector": [0.1, 0.2, 0.3, 0.4], "name": "apple", "category": "fruit"},
-    {"vector": [0.2, 0.1, 0.4, 0.3], "name": "banana", "category": "fruit"},
-    {"vector": [0.9, 0.8, 0.7, 0.6], "name": "carrot", "category": "vegetable"}
-]
-
-# Create a table (or open if already exists)
-table = db.create_table("my_table", data=data, mode="overwrite")
-
-# Search using a raw list as query vector
-query_vector = [0.1, 0.2, 0.3, 0.4]
-results = table.search(query_vector).limit(2).to_arrow().to_pylist()
-
-# Print results
-for item in results:
-    print(item)
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# Getting Started with LanceDB OSS
 
 !!! info "LanceDB can be run in a number of ways:"
 
@@ -79,7 +20,7 @@ for item in results:
       pip install lancedb
       ```
 
-=== "Typescript"
+=== "Typescript[^1]"
     === "@lancedb/lancedb"
 
         ```shell
@@ -199,18 +140,18 @@ recommend switching to stable releases.
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:imports"
+        --8<-- "tests/python/test_basic.py:imports"
 
-        --8<-- "python/python/tests/docs/test_basic.py:set_uri"
-        --8<-- "python/python/tests/docs/test_basic.py:connect"
+        --8<-- "tests/python/test_basic.py:set_uri"
+        --8<-- "tests/python/test_basic.py:connect"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:imports"
+        --8<-- "tests/python/test_basic.py:imports"
 
-        --8<-- "python/python/tests/docs/test_basic.py:set_uri"
-        --8<-- "python/python/tests/docs/test_basic.py:connect_async"
+        --8<-- "tests/python/test_basic.py:set_uri"
+        --8<-- "tests/python/test_basic.py:connect_async"
         ```
 
 === "Typescript[^1]"
@@ -221,7 +162,7 @@ recommend switching to stable releases.
         import * as lancedb from "@lancedb/lancedb";
         import * as arrow from "apache-arrow";
 
-        --8<-- "nodejs/examples/basic.test.ts:connect"
+        --8<-- "tests/nodejs/basic.test.ts:connect"
         ```
 
     === "vectordb (deprecated)"
@@ -235,7 +176,7 @@ recommend switching to stable releases.
     ```rust
     #[tokio::main]
     async fn main() -> Result<()> {
-        --8<-- "rust/lancedb/examples/simple.rs:connect"
+        --8<-- "tests/rust/simple.rs:connect"
     }
     ```
 
@@ -262,25 +203,25 @@ table.
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_table"
+        --8<-- "tests/python/test_basic.py:create_table"
         ```
 
         You can also pass in a pandas DataFrame directly:
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_table_pandas"
+        --8<-- "tests/python/test_basic.py:create_table_pandas"
         ```
 
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_table_async"
+        --8<-- "tests/python/test_basic.py:create_table_async"
         ```
 
         You can also pass in a pandas DataFrame directly:
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_table_async_pandas"
+        --8<-- "tests/python/test_basic.py:create_table_async_pandas"
         ```
 
 === "Typescript[^1]"
@@ -288,7 +229,7 @@ table.
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:create_table"
+        --8<-- "tests/nodejs/basic.test.ts:create_table"
         ```
 
     === "vectordb (deprecated)"
@@ -304,7 +245,7 @@ table.
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:create_table"
+    --8<-- "tests/rust/simple.rs:create_table"
     ```
 
     If the table already exists, LanceDB will raise an error by default.  See
@@ -320,7 +261,7 @@ table.
 !!! info "Under the hood, LanceDB reads in the Apache Arrow data and persists it to disk using the [Lance format](https://www.github.com/lancedb/lance)."
 
 !!! info "Automatic embedding generation with Embedding API"
-    When working with embedding models, it is recommended to use the LanceDB embedding API to automatically create vector representation of the data and queries in the background. See the [quickstart example](#using-the-embedding-api) or the embedding API [guide](../integrations/embeddings/index.md)
+    When working with embedding models, it is recommended to use the LanceDB embedding API to automatically create vector representation of the data and queries in the background. See the quickstart example or the embedding API guide.
 
 ### Create an empty table
 
@@ -334,23 +275,23 @@ similar to a `CREATE TABLE` statement in SQL.
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_empty_table"
+        --8<-- "tests/python/test_basic.py:create_empty_table"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_empty_table_async"
+        --8<-- "tests/python/test_basic.py:create_empty_table_async"
         ```
 
     !!! note "You can define schema in Pydantic"
-        LanceDB comes with Pydantic support, which allows you to define the schema of your data using Pydantic models. This makes it easy to work with LanceDB tables and data. Learn more about all supported types in [Tables](../user-manual/concepts/tables.md).
+        LanceDB comes with Pydantic support, which allows you to define the schema of your data using Pydantic models. This makes it easy to work with LanceDB tables and data. Learn more about all supported types in tables guide.
 
 === "Typescript[^1]"
 
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:create_empty_table"
+        --8<-- "tests/nodejs/basic.test.ts:create_empty_table"
         ```
 
     === "vectordb (deprecated)"
@@ -362,7 +303,7 @@ similar to a `CREATE TABLE` statement in SQL.
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:create_empty_table"
+    --8<-- "tests/rust/simple.rs:create_empty_table"
     ```
 
 ## Open an existing table
@@ -374,19 +315,19 @@ Once created, you can open a table as follows:
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:open_table"
+        --8<-- "tests/python/test_basic.py:open_table"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:open_table_async"
+        --8<-- "tests/python/test_basic.py:open_table_async"
         ```
 
 === "Typescript[^1]"
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:open_table"
+        --8<-- "tests/nodejs/basic.test.ts:open_table"
         ```
 
     === "vectordb (deprecated)"
@@ -399,7 +340,7 @@ Once created, you can open a table as follows:
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:open_existing_tbl"
+    --8<-- "tests/rust/simple.rs:open_existing_tbl"
     ```
 
 If you forget the name of your table, you can always get a listing of all table names:
@@ -409,19 +350,19 @@ If you forget the name of your table, you can always get a listing of all table 
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:table_names"
+        --8<-- "tests/python/test_basic.py:table_names"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:table_names_async"
+        --8<-- "tests/python/test_basic.py:table_names_async"
         ```
 
 === "Typescript[^1]"
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:table_names"
+        --8<-- "tests/nodejs/basic.test.ts:table_names"
         ```
 
     === "vectordb (deprecated)"
@@ -433,7 +374,7 @@ If you forget the name of your table, you can always get a listing of all table 
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:list_names"
+    --8<-- "tests/rust/simple.rs:list_names"
     ```
 
 ## Add data to a table
@@ -445,19 +386,19 @@ After a table has been created, you can always add more data to it as follows:
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:add_data"
+        --8<-- "tests/python/test_basic.py:add_data"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:add_data_async"
+        --8<-- "tests/python/test_basic.py:add_data_async"
         ```
 
 === "Typescript[^1]"
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:add_data"
+        --8<-- "tests/nodejs/basic.test.ts:add_data"
         ```
 
     === "vectordb (deprecated)"
@@ -469,7 +410,7 @@ After a table has been created, you can always add more data to it as follows:
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:add"
+    --8<-- "tests/rust/simple.rs:add"
     ```
 
 ## Search for nearest neighbors
@@ -481,12 +422,12 @@ Once you've embedded the query, you can find its nearest neighbors as follows:
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:vector_search"
+        --8<-- "tests/python/test_basic.py:vector_search"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:vector_search_async"
+        --8<-- "tests/python/test_basic.py:vector_search_async"
         ```
 
     This returns a pandas DataFrame with the results.
@@ -495,7 +436,7 @@ Once you've embedded the query, you can find its nearest neighbors as follows:
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:vector_search"
+        --8<-- "tests/nodejs/basic.test.ts:vector_search"
         ```
 
     === "vectordb (deprecated)"
@@ -509,7 +450,7 @@ Once you've embedded the query, you can find its nearest neighbors as follows:
     ```rust
     use futures::TryStreamExt;
 
-    --8<-- "rust/lancedb/examples/simple.rs:search"
+    --8<-- "tests/rust/simple.rs:search"
     ```
 
     !!! Query vectors in Rust
@@ -524,26 +465,24 @@ By default, LanceDB runs a brute-force scan over dataset to find the K nearest n
 For tables with more than 50K vectors, creating an ANN index is recommended to speed up search performance.
 LanceDB allows you to create an ANN index on a table as follows:
 
-See the [Indexing](../user-manual/concepts/index.md) guide for more details on how to create and use indexes.
-
 === "Python"
 
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_index"
+        --8<-- "tests/python/test_basic.py:create_index"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:create_index_async"
+        --8<-- "tests/python/test_basic.py:create_index_async"
         ```
 
 === "Typescript[^1]"
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:create_index"
+        --8<-- "tests/nodejs/basic.test.ts:create_index"
         ```
 
     === "vectordb (deprecated)"
@@ -555,7 +494,7 @@ See the [Indexing](../user-manual/concepts/index.md) guide for more details on h
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:create_index"
+    --8<-- "tests/rust/simple.rs:create_index"
     ```
 
 !!! note "Why do I need to create an index manually?"
@@ -563,7 +502,7 @@ LanceDB does not automatically create the ANN index for two reasons. The first i
 for really fast retrievals via a disk-based index, and the second is that data and query workloads can
 be very diverse, so there's no one-size-fits-all index configuration. LanceDB provides many parameters
 to fine-tune index size, query latency and accuracy. See the section on
-[ANN indexes](../user-manual/concepts/index.md) for more details.
+ANN indexes for more details.
 
 ## Delete rows from a table
 
@@ -576,12 +515,12 @@ This can delete any number of rows that match the filter.
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:delete_rows"
+        --8<-- "tests/python/test_basic.py:delete_rows"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:delete_rows_async"
+        --8<-- "tests/python/test_basic.py:delete_rows_async"
         ```
 
 === "Typescript[^1]"
@@ -589,7 +528,7 @@ This can delete any number of rows that match the filter.
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:delete_rows"
+        --8<-- "tests/nodejs/basic.test.ts:delete_rows"
         ```
 
     === "vectordb (deprecated)"
@@ -601,13 +540,13 @@ This can delete any number of rows that match the filter.
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:delete"
+    --8<-- "tests/rust/simple.rs:delete"
     ```
 
 The deletion predicate is a SQL expression that supports the same expressions
 as the `where()` clause (`only_if()` in Rust) on a search. They can be as
 simple or complex as needed. To see what expressions are supported, see the
-[Filtering](../user-manual/concepts/filtering.md) section.
+SQL filters section.
 
 === "Python"
 
@@ -620,15 +559,15 @@ simple or complex as needed. To see what expressions are supported, see the
 
     === "@lancedb/lancedb"
 
-        Read more: [lancedb.Table.delete]LINK(api/javascript/interfaces/Table.md#delete)
+        Read more: [lancedb.Table.delete]LINK(javascript/interfaces/Table.md#delete)
 
     === "vectordb (deprecated)"
 
-        Read more: [vectordb.Table.delete]LINK(api/javascript/interfaces/Table.md#delete)
+        Read more: [vectordb.Table.delete]LINK(javascript/interfaces/Table.md#delete)
 
 === "Rust"
 
-      Read more: [lancedb::Table::delete](https://docs.rs/lancedb/latest/lancedb/table/struct.Table.html#method.delete)
+      Read more: [lancedb::Table::delete]LINK(https://docs.rs/lancedb/latest/lancedb/table/struct.Table.html#method.delete)
 
 ## Drop a table
 
@@ -639,12 +578,12 @@ Use the `drop_table()` method on the database to remove a table.
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:drop_table"
+        --8<-- "tests/python/test_basic.py:drop_table"
         ```
     === "Async API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_basic.py:drop_table_async"
+        --8<-- "tests/python/test_basic.py:drop_table_async"
         ```
 
     This permanently removes the table and is not recoverable, unlike deleting rows.
@@ -656,7 +595,7 @@ Use the `drop_table()` method on the database to remove a table.
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/basic.test.ts:drop_table"
+        --8<-- "tests/nodejs/basic.test.ts:drop_table"
         ```
 
     === "vectordb (deprecated)"
@@ -671,7 +610,7 @@ Use the `drop_table()` method on the database to remove a table.
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/simple.rs:drop_table"
+    --8<-- "tests/rust/simple.rs:drop_table"
     ```
 
 
@@ -683,9 +622,9 @@ You can use the embedding API when working with embedding models. It automatical
     === "Sync API"
 
         ```python
-        --8<-- "python/python/tests/docs/test_embeddings_optional.py:imports"
+        --8<-- "tests/python/test_embeddings_optional.py:imports"
 
-        --8<-- "python/python/tests/docs/test_embeddings_optional.py:openai_embeddings"
+        --8<-- "tests/python/test_embeddings_optional.py:openai_embeddings"
         ```
     === "Async API"
 
@@ -697,31 +636,70 @@ You can use the embedding API when working with embedding models. It automatical
     === "@lancedb/lancedb"
 
         ```typescript
-        --8<-- "nodejs/examples/embedding.test.ts:imports"
-        --8<-- "nodejs/examples/embedding.test.ts:openai_embeddings"
+        --8<-- "tests/nodejs/embedding.test.ts:imports"
+        --8<-- "tests/nodejs/embedding.test.ts:openai_embeddings"
         ```
 
 === "Rust"
 
     ```rust
-    --8<-- "rust/lancedb/examples/openai.rs:imports"
-    --8<-- "rust/lancedb/examples/openai.rs:openai_embeddings"
+    --8<-- "tests/rust/openai.rs:imports"
+    --8<-- "tests/rust/openai.rs:openai_embeddings"
     ```
 
-Learn about using the existing integrations and creating custom embedding functions in the [embedding API guide](../integrations/embeddings/index.md).
+Learn about using the existing integrations and creating custom embedding functions in the embedding API guide.
 
 
 ## What's next
 
-This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on [Indexing](../user-manual/concepts/index.md) to get familiar with the concepts.
+This section covered the very basics of using LanceDB. If you're learning about vector databases for the first time, you may want to read the page on indexing to get familiar with the concepts.
 
-If you've already worked with other vector databases, you may want to read the [Tables](../user-manual/concepts/tables.md) documentation to learn how to work with LanceDB in more detail.
+If you've already worked with other vector databases, you may want to read the guides to learn how to work with LanceDB in more detail.
 
-* [Tables](../user-manual/concepts/tables.md)
-* [Indexing](../user-manual/concepts/index.md)
-* [Filtering](../user-manual/concepts/filtering.md)
-* [embedding API guide](../integrations/embeddings/index.md)
-* [Indexing](../user-manual/concepts/index.md)
-* [Tables](../user-manual/concepts/tables.md)
+## Working with embeddings
 
-[^1]: The `vectordb` package is a legacy package that is deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the [migration guide]LINK(/api/migration.md) for more information.
+LanceDB provides built-in support for generating embeddings from text using various models.
+For more details, see the embeddings documentation.
+
+## Vector search
+
+For a detailed introduction to vector search, see our guide to tables.
+
+## Advanced features
+
+For more information, check out the following resources:
+
+- ANN indexes
+- SQL
+
+### Delete
+
+=== "Python"
+
+    ```python
+    --8<-- "tests/python/test_basic.py:delete"
+    ```
+
+=== "TypeScript"
+
+    === "@lancedb/lancedb"
+
+        ```typescript
+        --8<-- "tests/nodejs/delete.test.ts:delete"
+        ```
+
+    === "vectordb (deprecated)"
+
+        ```typescript
+        // refer to Table.delete
+        // Example:
+        // await tbl.delete({"x": 3})
+        ```
+
+=== "Rust"
+
+    ```rust
+    --8<-- "tests/rust/simple.rs:delete"
+    ```
+
+[^1]: The `vectordb` package is a legacy package that is  deprecated in favor of `@lancedb/lancedb`.  The `vectordb` package will continue to receive bug fixes and security updates until September 2024.  We recommend all new projects use `@lancedb/lancedb`.  See the migration guide for more information.

@@ -8,7 +8,7 @@ It is important to understand the tradeoffs between cost and latency for your sp
 
 We've prepared a simple diagram to showcase the thought process that goes into choosing a storage backend when using LanceDB OSS, Cloud or Enterprise.
 
-![LanceDB Storage Tradeoffs](/assets/lancedb_storage_tradeoffs.png)
+![LanceDB Storage Tradeoffs](../assets/lancedb_storage_tradeoffs.png)
 
 When architecting your system, you'd typically ask yourself the following questions to decide on a storage option:
 
@@ -78,3 +78,9 @@ Just like EFS, an EBS or persistent disk setup requires more manual work to mana
     - **Reliability/Availability** ⇒ If the instance goes down, so does your data. You have to be _very_ diligent about backing up your data
 
 As a rule of thumb, local disk should be your storage option if you require absolutely *crazy low* latency and you're willing to do a bunch of data management work to make it happen.
+
+## Storage Performance
+
+Here is a general performance comparison of each database type:
+
+![LanceDB Storage Tradeoffs](../assets/lancedb_storage_tradeoffs.png)

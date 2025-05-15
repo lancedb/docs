@@ -1,3 +1,9 @@
+---
+title: Frequently Asked Questions
+---
+
+# LanceDB Cloud: FAQ
+
 This section provides answers to the most common questions asked about LanceDB Cloud. By following these guidelines, you can ensure a smooth, performant experience with LanceDB Cloud.
 
 ### Should I reuse the database connection?
