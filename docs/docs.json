@@ -1,0 +1,121 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "LanceDB",
+  "colors": {
+    "primary": "#FF6B35",
+    "light": "#FF8A5C",
+    "dark": "#E55A2B"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "styling": {
+    "codeblocks": {
+      "theme": {
+        "light": "vitesse-light",
+        "dark": "catppuccin-mocha"
+      }
+    }
+  },
+  "favicon": "/static/favicon.ico",
+  "navigation": {
+    "tabs": [
+        {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+                "pages": [
+                  "get-started/quickstart",
+                  "index",
+                  "cloud",
+                  {
+                    "group": "LanceDB Enterprise",
+                    "pages": [
+                      "enterprise/index"
+                    ]
+                  }
+                ]
+          },
+          {
+            "group": "SDK Reference",
+                "pages": [
+                  "api-reference/index"
+                ]
+          },
+          {
+            "group": "API Reference",
+              "openapi": {
+                  "source": "api-reference/rest/openapi.yml",
+                  "directory": "api-reference/rest"
+              },
+              "pages": [
+                "api-reference/rest/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Tutorials",
+        "groups": [
+          {
+            "group": "Tutorials",
+                "pages": [
+                  "tutorials/index",
+                  {
+                    "group": "RAG",
+                    "pages": [
+                      "tutorials/rag/index",
+                      "tutorials/rag/time-travel-rag/index"
+                    ]
+                  }
+                ]
+          }
+        ]
+      },
+      {
+        "tab": "Demos",
+        "groups": [
+          {
+            "group": "Demos",
+                "pages": [
+                  "demos/index"
+                ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/static/assets/logo/dark-lancedb-logo.svg",
+    "dark": "/static/assets/logo/light-lancedb-logo.svg",
+    "href": "https://lancedb.com"
+  },
+  "background": {
+    "color": {
+      "light": "#FAF5F0",
+      "dark": "#000000"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:contact@lancedb.com"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/lancedb",
+      "github": "https://github.com/lancedb",
+      "linkedin": "https://www.linkedin.com/company/lancedb"
+    }
+  },
+  "integrations": {
+    "ga4": {
+      "measurementId": "G-51DH4QDW56"
+    }
+  }
+}

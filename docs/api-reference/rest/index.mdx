@@ -1,0 +1,63 @@
+---
+title: REST API Reference
+sidebarTitle: "REST API Overview"
+description: "API reference for LanceDB Cloud."
+weight: 6
+---
+
+**LanceDB Cloud REST API** allows you to interact with your remote table using standard HTTP requests. 
+
+<Tip>[LanceDB Quickstart](/docs/quickstart/) will get you up and running in 5 minutes!</Tip>
+
+Our [SDK section](/docs/api-reference/) covers SDK examples in Python, Typescript and Rust. 
+
+## Authentication
+
+All HTTP requests to LanceDB APIs must contain an <u>x-api-key</u> header that specifies a valid API key and
+must be encoded as JSON or Arrow RPC.
+
+### Get the API Key
+
+1. Go to [LanceDB Cloud](https://accounts.lancedb.com/sign-up) and complete the onboarding.
+
+![create](/static/assets/images/api-reference/create.png)
+
+2. Let's call this particular **Project** `embedding`.
+3. Save the API key and the project instance name: `embedding-yhs6bg`.
+
+This is how the Project looks in the LanceDB Cloud Dashboard:
+![projects](/static/assets/images/api-reference/projects.png)
+
+4. In your terminal, check the existence of the remote **Project**. Specify the remote LanceDB **Project** `db` and `region`.
+
+```shell
+curl -X GET "https://{db}.{region}.api.lancedb.com/v1/tables" \
+   -H "Content-Type: application/json" \
+   -H "x-api-key: LANCEDB_API_KEY"
+```
+
+5. Now, create a **Table** to store data. Let's call it `words`.
+
+```shell
+curl -X POST "https://embedding-yhs6bg.us-east-1.api.lancedb.com/v1/tables/words" \
+   -H "Content-Type: application/vnd.apache.arrow.stream" \
+   -H "x-api-key: LANCEDB_API_KEY"
+```
+- the `db` is `embedding-yhs6bg` 
+- the `region` is `us-east-1`
+- the name of the table is `words`. 
+
+6. Now check that the **Table has** been created: 
+
+```shell
+curl -X GET "https://embedding-yhs6bg.us-east-1.api.lancedb.com/v1/tables" \
+   -H "Content-Type: application/json" \
+   -H "x-api-key: LANCEDB_API_KEY"
+```
+
+You can always check from the LanceDB Cloud Dashboard:
+
+![words](/static/assets/images/api-reference/words.png)
+
+That's it - you're connected! Now, you can start adding data and querying it.
+The best way to start is to try the [LanceDB Quickstart](/docs/quickstart/) or read the [documentation site](https://lancedb.com/documentation/).

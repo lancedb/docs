@@ -1,0 +1,17 @@
+.venv
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pyi
+
+node_modules
+dist/
+build/
+*.egg-info/
+
+ex_lancedb
+sample-lancedb
+fuzzy-example
+boost-example
+docs/snippets
