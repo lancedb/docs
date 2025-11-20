@@ -117,5 +117,10 @@
     "ga4": {
       "measurementId": "G-51DH4QDW56"
     }
+  },
+  "seo": {
+  "metatags": {
+    "robots": "noindex"
+    }
   }
 }
