@@ -21,37 +21,37 @@
   "favicon": "/static/favicon.ico",
   "navigation": {
     "tabs": [
-        {
+      {
         "tab": "Documentation",
         "groups": [
           {
             "group": "Get started",
+            "pages": [
+              "get-started/quickstart",
+              "index",
+              "cloud",
+              {
+                "group": "LanceDB Enterprise",
                 "pages": [
-                  "get-started/quickstart",
-                  "index",
-                  "cloud",
-                  {
-                    "group": "LanceDB Enterprise",
-                    "pages": [
-                      "enterprise/index"
-                    ]
-                  }
+                  "enterprise/index"
                 ]
+              }
+            ]
           },
           {
-            "group": "SDK Reference",
+            "group": "API & SDK Reference",
+            "pages": [
+              "api-reference/index",
+              {
+                "group": "REST API Reference",
                 "pages": [
-                  "api-reference/index"
-                ]
-          },
-          {
-            "group": "API Reference",
-              "openapi": {
+                  "api-reference/rest/index"
+                ],
+                "openapi": {
                   "source": "api-reference/rest/openapi.yml",
                   "directory": "api-reference/rest"
-              },
-              "pages": [
-                "api-reference/rest/index"
+                }
+              }
             ]
           }
         ]
@@ -61,16 +61,16 @@
         "groups": [
           {
             "group": "Tutorials",
+            "pages": [
+              "tutorials/index",
+              {
+                "group": "RAG",
                 "pages": [
-                  "tutorials/index",
-                  {
-                    "group": "RAG",
-                    "pages": [
-                      "tutorials/rag/index",
-                      "tutorials/rag/time-travel-rag/index"
-                    ]
-                  }
+                  "tutorials/rag/index",
+                  "tutorials/rag/time-travel-rag/index"
                 ]
+              }
+            ]
           }
         ]
       },
@@ -79,9 +79,9 @@
         "groups": [
           {
             "group": "Demos",
-                "pages": [
-                  "demos/index"
-                ]
+            "pages": [
+              "demos/index"
+            ]
           }
         ]
       }
@@ -119,8 +119,8 @@
     }
   },
   "seo": {
-  "metatags": {
-    "robots": "noindex"
+    "metatags": {
+      "robots": "noindex"
     }
   }
 }
