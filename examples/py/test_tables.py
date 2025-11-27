@@ -17,6 +17,29 @@ from numpy.random import randint, random
 # ============================================================================
 
 
+def test_tables_basic_connect_snippet(monkeypatch):
+    calls = {}
+
+    class DummyDB:
+        pass
+
+    def fake_connect(uri):
+        calls["uri"] = uri
+        return DummyDB()
+
+    monkeypatch.setattr(lancedb, "connect", fake_connect)
+
+    # --8<-- [start:tables_basic_connect]
+    import lancedb
+
+    uri = "data/sample-lancedb"
+    db = lancedb.connect(uri)
+    # --8<-- [end:tables_basic_connect]
+
+    assert calls["uri"] == "data/sample-lancedb"
+    assert isinstance(db, DummyDB)
+
+
 def test_table_creation_from_dicts(tmp_db):
     # --8<-- [start:create_table_from_dicts]
     data = [
@@ -134,11 +157,15 @@ def test_table_creation_from_pydantic(tmp_db):
 def test_table_creation_nested_schema(tmp_db):
     # --8<-- [start:create_table_nested_schema]
     from lancedb.pydantic import LanceModel, Vector
+
+    # --8<-- [start:tables_document_model]
     from pydantic import BaseModel
 
     class Document(BaseModel):
         content: str
         source: str
+
+    # --8<-- [end:tables_document_model]
 
     class NestedSchema(LanceModel):
         id: str
@@ -148,6 +175,39 @@ def test_table_creation_nested_schema(tmp_db):
     db = tmp_db
     tbl = db.create_table("nested_table", schema=NestedSchema, mode="overwrite")
     # --8<-- [end:create_table_nested_schema]
+
+
+def test_tables_tz_validator_snippet():
+    # --8<-- [start:tables_tz_validator]
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from lancedb.pydantic import LanceModel
+    from pydantic import Field, ValidationError, ValidationInfo, field_validator
+
+    tzname = "America/New_York"
+    tz = ZoneInfo(tzname)
+
+    class TestModel(LanceModel):
+        dt_with_tz: datetime = Field(json_schema_extra={"tz": tzname})
+
+        @field_validator("dt_with_tz")
+        @classmethod
+        def tz_must_match(cls, dt: datetime) -> datetime:
+            assert dt.tzinfo == tz
+            return dt
+
+    ok = TestModel(dt_with_tz=datetime.now(tz))
+
+    try:
+        TestModel(dt_with_tz=datetime.now(ZoneInfo("Asia/Shanghai")))
+        assert 0 == 1, "this should raise ValidationError"
+    except ValidationError:
+        print("A ValidationError was raised.")
+        pass
+    # --8<-- [end:tables_tz_validator]
+
+    assert ok is not None
 
 
 def test_table_creation_from_iterator(tmp_db):

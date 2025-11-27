@@ -5,6 +5,9 @@ description: Learn about consistency settings and versioning in LanceDB tables.
 weight: 5
 aliases: ["/tutorials/tables/consistency/", "/tutorials/tables/consistency"]
 ---
+import ConsistencyStrong from '/snippets/py/consistency_strong.mdx';
+import ConsistencyEventual from '/snippets/py/consistency_eventual.mdx';
+import ConsistencyCheckoutLatest from '/snippets/py/consistency_checkout_latest.mdx';
 
 In LanceDB OSS, users can set the `read_consistency_interval` parameter on connections to achieve different levels of read consistency. This parameter determines how frequently the database synchronizes with the underlying storage system to check for updates made by other processes. If another process updates a table, the database will not see the changes until the next synchronization.
 
@@ -22,43 +25,22 @@ This is only tune-able in LanceDB OSS. In LanceDB Cloud, readers are always even
 
 To set strong consistency, set the interval to 0:
 
-```python
-from datetime import timedelta
-
-uri = "data/sample-lancedb"
-db = lancedb.connect(uri, read_consistency_interval=timedelta(0))
-tbl = db.open_table("test_table")
-```
-```ts
-const db = await lancedb.connect({ uri: "./.lancedb", readConsistencyInterval: 0 });
-const tbl = await db.openTable("my_table");
-```
+<CodeGroup>
+<ConsistencyStrong/>
+</CodeGroup>
 
 For eventual consistency, use a custom interval:
 
-```python
-from datetime import timedelta
-
-uri = "data/sample-lancedb"
-db = lancedb.connect(uri, read_consistency_interval=timedelta(seconds=5))
-tbl = db.open_table("test_table")
-```
-```ts
-const db = await lancedb.connect({ uri: "./.lancedb", readConsistencyInterval: 5 });
-const tbl = await db.openTable("my_table");
-```
+<CodeGroup>
+<ConsistencyEventual/>
+</CodeGroup>
 
 
 By default, a `Table` will never check for updates from other writers. To manually check for updates you can use `checkout_latest`:
 
-```python
-tbl = db.open_table("test_table")
-
-# (Other writes happen to my_table from another process)
-
-# Check for updates
-tbl.checkout_latest()
-```
+<CodeGroup>
+<ConsistencyCheckoutLatest/>
+</CodeGroup>
 
 ## Handling bad vectors
 

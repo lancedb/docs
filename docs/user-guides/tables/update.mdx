@@ -5,6 +5,16 @@ description: "Learn how to update and modify data in LanceDB. Includes increment
 weight: 2
 aliases: ["/tutorials/tables/update/", "/tutorials/tables/update", "/tutorials/tables/sql.md"]
 ---
+import AddDataToTable from '/snippets/py/add_data_to_table.mdx';
+import AddDataPydanticModel from '/snippets/py/add_data_pydantic_model.mdx';
+import AddDataNestedModel from '/snippets/py/add_data_nested_model.mdx';
+import BatchDataInsertion from '/snippets/py/batch_data_insertion.mdx';
+import UpdateOperation from '/snippets/py/update_operation.mdx';
+import UpdateUsingSql from '/snippets/py/update_using_sql.mdx';
+import DeleteOperation from '/snippets/py/delete_operation.mdx';
+import UpsertOperation from '/snippets/py/upsert_operation.mdx';
+import InsertIfNotExists from '/snippets/py/insert_if_not_exists.mdx';
+import ReplaceRangeOperation from '/snippets/py/replace_range_operation.mdx';
 
 Once you have created a table, there are several ways to modify its data. You can:
 
@@ -35,17 +45,6 @@ db = lancedb.connect(
 )
 ```
 
-```ts
-import * as lancedb from "@lancedb/lancedb"
-
-// Connect to LanceDB Cloud
-const db = await lancedb.connect({
-    uri: "db://your-project-slug",
-    apiKey: "your-api-key",
-    region: "us-east-1"
-});
-```
-
 You can also connect locally using LanceDB OSS:
 
 ```python
@@ -53,13 +52,6 @@ import lancedb
 
 # Connect to local LanceDB
 db = lancedb.connect("./data")  # Local directory for data storage
-```
-
-```ts
-import * as lancedb from "@lancedb/lancedb"
-
-// Connect to local LanceDB
-const db = await lancedb.connect("./data");  // Local directory for data storage
 ```
 
 ## Data Insertion
@@ -70,89 +62,9 @@ Say you created a LanceDB table by passing in a `schema`.
 This is an _empty_ table, with no data in it. To add or append data to a table, you can use the `table.add(data)`,
 as shown below.
 
-```python
-import lancedb
-import pyarrow as pa
-
-# connect to LanceDB Cloud
-db = lancedb.connect(
-    uri="db://your-project-slug",
-    api_key="your-api-key",
-    region="us-east-1"
-)
-
-# create an empty table with schema
-data = [
-    {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
-    {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
-    {"vector": [10.2, 100.8], "item": "baz", "price": 30.0},
-    {"vector": [1.4, 9.5], "item": "fred", "price": 40.0},
-]
-
-schema = pa.schema([
-    pa.field("vector", pa.list_(pa.float32(), 2)),
-    pa.field("item", pa.utf8()),
-    pa.field("price", pa.float32()),
-])
-
-table_name = "basic_ingestion_example"
-table = db.create_table(table_name, schema=schema, mode="overwrite")
-# Add data
-table.add(data)
-```
-
-```ts
-import * as lancedb from "@lancedb/lancedb"
-import { Schema, Field, Float32, FixedSizeList, Utf8 } from "apache-arrow";
-
-const db = await lancedb.connect({
-  uri: "db://your-project-slug",
-  apiKey: "your-api-key",
-  region: "us-east-1"
-});
-
-console.log("Creating table from JavaScript objects");
-const data = [
-    { vector: [3.1, 4.1], item: "foo", price: 10.0 },
-    { vector: [5.9, 26.5], item: "bar", price: 20.0 },
-    { vector: [10.2, 100.8], item: "baz", price: 30.0},
-    { vector: [1.4, 9.5], item: "fred", price: 40.0},
-]
-
-const tableName = "js_objects_example";
-const table = await db.createTable(tableName, data, {
-    mode: "overwrite"
-});
-
-console.log("\nCreating a table with a predefined schema then add data to it");
-const tableName2 = "schema_example";
-
-// Define schema
-// create an empty table with schema
-const schema = new Schema([
-    new Field(
-    "vector",
-    new FixedSizeList(2, new Field("float32", new Float32())),
-    ),
-    new Field("item", new Utf8()),
-    new Field("price", new Float32()),
-]);
-
-// Create an empty table with schema
-const table2 = await db.createEmptyTable(tableName2, schema, {
-    mode: "overwrite",
-});
-
-// Add data to the schema-defined table
-const data2 = [
-    { vector: [3.1, 4.1], item: "foo", price: 10.0 },
-    { vector: [5.9, 26.5], item: "bar", price: 20.0 },
-    { vector: [10.2, 100.8], item: "baz", price: 30.0},
-    { vector: [1.4, 9.5], item: "fred", price: 40.0},
-]
-
-await table2.add(data2);
-```
+<CodeGroup>
+<AddDataToTable/>
+</CodeGroup>
 
 <Note title="Vector Column Type">
 The vector column needs to be a `pyarrow.FixedSizeList` type.
@@ -162,27 +74,9 @@ The vector column needs to be a `pyarrow.FixedSizeList` type.
 
 Pydantic models provide a more structured way to define your table schema:
 
-```python
-from lancedb.pydantic import Vector, LanceModel
-
-import pyarrow as pa
-
-# Define a Pydantic model
-class Content(LanceModel):
-    movie_id: int
-    vector: Vector(128)
-    genres: str
-    title: str
-    imdb_id: int
-
-    @property
-    def imdb_url(self) -> str:
-        return f"https://www.imdb.com/title/tt{self.imdb_id}"
-
-# Create table with Pydantic model schema
-table_name = "pydantic_example"
-table = db.create_table(table_name, schema=Content, mode="overwrite")
-```
+<CodeGroup>
+<AddDataPydanticModel/>
+</CodeGroup>
 
 ### Using Nested Models
 
@@ -199,16 +93,9 @@ class Document(BaseModel):
 
 This can be used as the type of a LanceDB table column:
 
-```python
-class NestedSchema(LanceModel):
-    id: str
-    vector: Vector(128)
-    document: Document
-
-# Create table with nested schema
-table_name = "nested_model_example"
-table = db.create_table(table_name, schema=NestedSchema, mode="overwrite")
-```
+<CodeGroup>
+<AddDataNestedModel/>
+</CodeGroup>
 
 This creates a struct column called `document` that has two subfields called `content` and `source`:
 
@@ -230,75 +117,9 @@ your table in one go. Data will be automatically compacted for the best query pe
 
 #### Python Batch Insertion
 
-```python
-import pyarrow as pa
-
-def make_batches():
-    for i in range(5):  # Create 5 batches
-        yield pa.RecordBatch.from_arrays(
-            [
-                pa.array([[3.1, 4.1], [5.9, 26.5]],
-                        pa.list_(pa.float32(), 2)),
-                pa.array([f"item{i*2+1}", f"item{i*2+2}"]),
-                pa.array([float((i*2+1)*10), float((i*2+2)*10)]),
-            ],
-            ["vector", "item", "price"],
-        )
-
-schema = pa.schema([
-    pa.field("vector", pa.list_(pa.float32(), 2)),
-    pa.field("item", pa.utf8()),
-    pa.field("price", pa.float32()),
-])
-# Create table with batches
-table_name = "batch_ingestion_example"
-table = db.create_table(table_name, make_batches(), schema=schema, mode="overwrite")
-```
-```ts
-console.log("\nBatch ingestion example with product catalog data");
-const tableName = "product_catalog";
-
-// Vector dimension for product embeddings (realistic dimension for text embeddings)
-const vectorDim = 128;
-
-// Create random embedding vector of specified dimension
-const createRandomEmbedding = (dim: number) => Array(dim).fill(0).map(() => Math.random() * 2 - 1);
-
-// Create table with initial batch of products
-const initialBatch = Array(10).fill(0).map((_, i) => ({
-    product_id: `PROD-${1000 + i}`,
-    name: `Product ${i + 1}`,
-    category: ["electronics", "home", "office"][i % 3],
-    price: 10.99 + (i * 5.99),
-    vector: createRandomEmbedding(vectorDim)
-}));
-
-const table = await db.createTable(tableName, initialBatch, { 
-    mode: "overwrite"
-});
-
-// Second batch - 25 more products
-const batch2 = Array(25).fill(0).map((_, i) => ({
-    product_id: `PROD-${2000 + i}`,
-    name: `Premium Product ${i + 1}`,
-    category: ["electronics", "kitchen", "outdoor", "office", "gaming"][i % 5],
-    price: 25.99 + (i * 7.49),
-    vector: createRandomEmbedding(vectorDim)
-}));
-
-await table.add(batch2);
-
-// Third batch - 15 more products in a different category
-const batch3 = Array(15).fill(0).map((_, i) => ({
-    product_id: `PROD-${3000 + i}`,
-    name: `Budget Product ${i + 1}`,
-    category: ["essentials", "budget", "basics"][i % 3],
-    price: 5.99 + (i * 2.50),
-    vector: createRandomEmbedding(vectorDim)
-}));
-
-await table.add(batch3);
-```
+<CodeGroup>
+<BatchDataInsertion/>
+</CodeGroup>
 
 <Warning title="Batch size">
 LanceDB Cloud is a multi-tenant environment with a 100MB payload limit. Adjust your batch size accordingly.
@@ -324,37 +145,9 @@ Updating nested columns is not yet supported.
 See the [SQL queries](/docs/search/sql/sql-queries/) page for more information on the supported SQL syntax.
 </Note>
 
-```python
-import lancedb
-import pandas as pd
-
-# Create a table from a pandas DataFrame
-data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-
-tbl = db.create_table("test_table", data, mode="overwrite")
-# Update the table where x = 2
-tbl.update(where="x = 2", values={"vector": [10, 10]})
-# Get the updated table as a pandas DataFrame
-df = tbl.to_pandas()
-print(df)
-```
-```ts
-import * as lancedb from "@lancedb/lancedb";
-
-const db = await lancedb.connect("./.lancedb");
-
-const data = [
-    {x: 1, vector: [1, 2]},
-    {x: 2, vector: [3, 4]},
-    {x: 3, vector: [5, 6]},
-];
-const tbl = await db.createTable("my_table", data)
-
-await tbl.update({ 
-    values: { vector: [10, 10] },
-    where: "x = 2"
-});
-```
+<CodeGroup>
+<UpdateOperation/>
+</CodeGroup>
 
 Output:
 
@@ -369,11 +162,9 @@ Output:
 
 The `values` parameter is used to provide the new values for the columns as literal values. You can also use the `values_sql` / `valuesSql` parameter to provide SQL expressions for the new values. For example, you can use `values_sql="x + 1"` to increment the value of the `x` column by 1.
 
-```python
-# Update the table where x = 2
-tbl.update(values_sql={"x": "x + 1"})
-print(tbl.to_pandas())
-```
+<CodeGroup>
+<UpdateUsingSql/>
+</CodeGroup>
 
 Output:
 
@@ -392,20 +183,9 @@ When rows are updated, they are moved out of the index. The row will still show 
 
 Remove rows that match a condition.
 
-```python
-table = db.open_table("update_table_example")
-
-# delete data
-predicate = "price = 30.0"
-table.delete(predicate)
-```
-```ts
-table = await db.openTable("update_table_example");
-
-// delete data
-const predicate = "price = 30.0";
-await table.delete(predicate);
-```
+<CodeGroup>
+<DeleteOperation/>
+</CodeGroup>
 
 <Warning title="Soft Deletion">
 Delete operations soft delete rows. Rows are hard deleted later by compaction and cleanup operations that happen in the background on LanceDB Cloud and Enterprise. The default retention on Cloud is 30 days. During this time, these rows are still accessible to query or restore by accessing old table versions (see [Versioning & Reproducibility in LanceDB](/tutorials/tables/versioning/)).
@@ -439,72 +219,11 @@ Like the create table and add APIs, the merge insert API will automatically comp
 `upsert` updates rows if they exist and inserts them if they don't. To do this with merge insert, 
 enable both `when_matched_update_all()` and `when_not_matched_insert_all()`.
 
-#### Setting Up the Example Table
+#### Setting Up the Example Table and Performing Upsert
 
-```python
-# Create example table
-users_table_name = "users_example"
-table = db.create_table(
-    users_table_name,
-    [
-        {"id": 0, "name": "Alice"},
-        {"id": 1, "name": "Bob"},
-    ],
-    mode="overwrite",
-)
-print(f"Created users table with {table.count_rows()} rows")
-```
-```ts
-// Create example table
-const table = await db.createTable("users", [
-    { id: 0, name: "Alice" },
-    { id: 1, name: "Bob" },
-]);
-```
-
-#### Preparing Data for Upsert
-
-```python
-# Prepare data for upsert
-new_users = [
-    {"id": 1, "name": "Bobby"},  # Will update existing record
-    {"id": 2, "name": "Charlie"},  # Will insert new record
-]
-```
-```ts
-// Prepare data for upsert
-const newUsers = [
-    { id: 1, name: "Bobby" },  // Will update existing record
-    { id: 2, name: "Charlie" },  // Will insert new record
-];
-```
-
-#### Performing the Upsert Operation
-
-```python
-# Upsert by id
-(
-    table.merge_insert("id")
-    .when_matched_update_all()
-    .when_not_matched_insert_all()
-    .execute(new_users)
-)
-
-# Verify results - should be 3 records total
-print(f"Total users: {table.count_rows()}")  # 3
-```
-```ts
-// Upsert by id
-await table
-    .mergeInsert("id")
-    .whenMatchedUpdateAll()
-    .whenNotMatchedInsertAll()
-    .execute(newUsers);
-
-// Verify results - should be 3 records total
-const count = await table.countRows();
-console.log(`Total users: ${count}`);  // 3
-```
+<CodeGroup>
+<UpsertOperation/>
+</CodeGroup>
 
 ### Insert-if-not-exists
 
@@ -512,65 +231,11 @@ This will only insert rows that do not have a match in the target table, thus
 preventing duplicate rows. To do this with merge insert, enable just 
 `when_not_matched_insert_all()`.
 
-#### Setting Up the Example Table
+#### Setting Up the Example Table and Performing Insert-if-not-exists
 
-```python
-# Create example table
-table = db.create_table(
-    "domains",
-    [
-        {"domain": "google.com", "name": "Google"},
-        {"domain": "github.com", "name": "GitHub"},
-    ],
-)
-```
-```ts
-// Create example table
-const table = await db.createTable(
-    "domains", 
-    [
-    { domain: "google.com", name: "Google" },
-    { domain: "github.com", name: "GitHub" },
-    ]
-);
-```
-
-#### Preparing Data for Insert-if-not-exists
-
-```python
-# Prepare new data - one existing and one new record
-new_domains = [
-    {"domain": "google.com", "name": "Google"},
-    {"domain": "facebook.com", "name": "Facebook"},
-]
-```
-```ts
-// Prepare new data - one existing and one new record
-const newDomains = [
-    { domain: "google.com", name: "Google" },
-    { domain: "facebook.com", name: "Facebook" },
-];
-```
-
-#### Performing the Insert-if-not-exists Operation
-
-```python
-# Insert only if domain doesn't exist
-table.merge_insert("domain").when_not_matched_insert_all().execute(new_domains)
-
-# Verify count - should be 3 (original 2 plus 1 new)
-print(f"Total domains: {table.count_rows()}")  # 3
-```
-```ts
-// Insert only if domain doesn't exist
-await table.merge_insert("domain")
-    .whenNotMatchedInsertAll()
-    .execute(newDomains);
-
-// Verify count - should be 3 (original 2 plus 1 new)
-const count = await table.countRows();
-console.log(`Total domains: ${count}`);  // 3
-```
+<CodeGroup>
+<InsertIfNotExists/>
+</CodeGroup>
 
 ### Replace Range
 
@@ -582,77 +247,11 @@ This can be tricky otherwise because if you try to use `upsert` when the new dat
 chunks you will end up with extra chunks. To avoid this, add another clause to delete any chunks 
 for the document that are not in the new data, with `when_not_matched_by_source_delete`.
 
-#### Setting Up the Example Table
+#### Setting Up the Example Table and Performing Replace Range
 
-```python
-# Create example table with document chunks
-table = db.create_table(
-    "chunks",
-    [
-        {"doc_id": 0, "chunk_id": 0, "text": "Hello"},
-        {"doc_id": 0, "chunk_id": 1, "text": "World"},
-        {"doc_id": 1, "chunk_id": 0, "text": "Foo"},
-        {"doc_id": 1, "chunk_id": 1, "text": "Bar"},
-        {"doc_id": 2, "chunk_id": 0, "text": "Baz"},
-    ],
-)
-```
-```ts
-// Create example table with document chunks
-const table = await db.createTable(
-    "chunks", 
-    [
-    { doc_id: 0, chunk_id: 0, text: "Hello" },
-    { doc_id: 0, chunk_id: 1, text: "World" },
-    { doc_id: 1, chunk_id: 0, text: "Foo" },
-    { doc_id: 1, chunk_id: 1, text: "Bar" },
-    { doc_id: 2, chunk_id: 0, text: "Baz" },
-    ]
-);
-```
-
-#### Preparing Data for Replace Range
-
-```python
-# New data - replacing all chunks for doc_id 1 with just one chunk
-new_chunks = [
-    {"doc_id": 1, "chunk_id": 0, "text": "Zoo"},
-]
-```
-```ts
-// New data - replacing all chunks for doc_id 1 with just one chunk
-const newChunks = [
-    { doc_id: 1, chunk_id: 0, text: "Zoo" }
-];
-```
-
-#### Performing the Replace Range Operation
-
-```python
-# Replace all chunks for doc_id 1
-(
-    table.merge_insert(["doc_id"])
-    .when_matched_update_all()
-    .when_not_matched_insert_all()
-    .when_not_matched_by_source_delete("doc_id = 1")
-    .execute(new_chunks)
-)
-
-# Verify count for doc_id = 1 - should be 1 
-print(f"Chunks for doc_id = 1: {table.count_rows('doc_id = 1')}")  # 1
-```
-```ts
-// Replace all chunks for doc_id 1
-await table.merge_insert(["doc_id"])
-    .whenMatchedUpdateAll()
-    .whenNotMatchedInsertAll()
-    .whenNotMatchedBySourceDelete("doc_id = 1")
-    .execute(newChunks);
-
-// Verify count for doc_id = 1 - should be 1 
-const count = await table.countRows("doc_id = 1");
-console.log(`Chunks for doc_id = 1: ${count}`);  // 1
-```
+<CodeGroup>
+<ReplaceRangeOperation/>
+</CodeGroup>
 
 <Tip title="Batch Size Recommendation">
 We suggest the best batch size to be 500k for optimal performance.

@@ -5,6 +5,15 @@ description: "Learn how to implement versioning and ensure reproducibility in La
 weight: 3
 aliases: ["/tutorials/tables/versioning/", "/tutorials/tables/versioning"]
 ---
+import VersioningBasicSetup from '/snippets/py/versioning_basic_setup.mdx';
+import VersioningCheckInitialVersion from '/snippets/py/versioning_check_initial_version.mdx';
+import VersioningUpdateData from '/snippets/py/versioning_update_data.mdx';
+import VersioningAddData from '/snippets/py/versioning_add_data.mdx';
+import VersioningCheckVersionsAfterMod from '/snippets/py/versioning_check_versions_after_mod.mdx';
+import VersioningListAllVersions from '/snippets/py/versioning_list_all_versions.mdx';
+import VersioningRollback from '/snippets/py/versioning_rollback.mdx';
+import VersioningCheckoutLatest from '/snippets/py/versioning_checkout_latest.mdx';
+import VersioningDeleteData from '/snippets/py/versioning_delete_data.mdx';
 
 LanceDB redefines data management for AI/ML workflows with built-in, 
 automatic versioning powered by the [Lance columnar format](https://github.com/lancedb/lance). 
@@ -24,112 +33,17 @@ Let's create a table with sample data to demonstrate LanceDB's versioning capabi
 
 First, let's create a table with some sample data:
 
-```python
-import lancedb
-import pandas as pd
-import numpy as np
-import pyarrow as pa
-from sentence_transformers import SentenceTransformer
-
-# Connect to LanceDB
-db = lancedb.connect(
-  uri="db://your-project-slug",
-  api_key="your-api-key",
-  region="us-east-1"
-)
-
-# Create a table with initial data
-table_name = "quotes_versioning_example"
-data = [
-    {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    {"id": 2, "author": "Morty", "quote": "Rick, what's going on?"},
-    {
-        "id": 3,
-        "author": "Richard",
-        "quote": "I turned myself into a pickle, Morty!",
-    },
-]
-
-# Define schema
-schema = pa.schema(
-    [
-        pa.field("id", pa.int64()),
-        pa.field("author", pa.string()),
-        pa.field("quote", pa.string()),
-    ]
-)
-
-table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-```
-
-```ts
-import * as lancedb from "@lancedb/lancedb";
-import {
-  Schema,
-  Field,
-  Utf8,
-  Int64,
-} from "apache-arrow";
-
-// Connect to LanceDB
-const db = await lancedb.connect({
-  uri: "db://your-project-slug",
-  apiKey: "your-api-key",
-  region: "us-east-1"
-});
-
-// Create a table with initial data
-const tableName = "quotes_versioning_example-ts";
-
-const data = [
-  {
-    id: 1,
-    author: "Richard",
-    quote: "Wubba Lubba Dub Dub!",
-  },
-  {
-    id: 2,
-    author: "Morty",
-    quote: "Rick, what's going on?",
-  },
-  {
-    id: 3,
-    author: "Richard",
-    quote: "I turned myself into a pickle, Morty!",
-  },
-];
-
-const schema = new Schema([
-  new Field("author", new Utf8()),
-  new Field("quote", new Utf8()),
-  new Field("id", new Int64()),
-]);
-
-const table = await db.createTable(tableName, data, {
-  schema,
-  mode: "overwrite",
-});
-```
+<CodeGroup>
+<VersioningBasicSetup/>
+</CodeGroup>
 
 ### Checking Initial Version
 
 After creating the table, let's check the initial version information:
 
-```python
-# View the initial version
-versions = table.list_versions()
-print(f"Number of versions after creation: {len(versions)}")
-print(f"Current version: {table.version}")
-```
-
-```ts
-// View the initial version
-const versions = await table.listVersions();
-const versionCountInitial = versions.length;
-const initialVersion = await table.version();
-console.log(`Number of versions after creation: ${versionCountInitial}`);
-console.log(`Current version: ${initialVersion}`);
-```
+<CodeGroup>
+<VersioningCheckInitialVersion/>
+</CodeGroup>
 
 ## Modifying Data
 
@@ -139,78 +53,25 @@ When you modify data through operations like update or delete, LanceDB automatic
 
 Let's update some existing records to see versioning in action:
 
-```python
-# Update author names to be more specific
-table.update(where="author='Richard'", values={"author": "Richard Daniel Sanchez"})
-rows_after_update = table.count_rows()
-print(f"Number of rows after update: {rows_after_update}")
-```
-
-```ts
-// Update author names to be more specific
-await table.update({
-  where: "author='Richard'",
-  values: { author: "Richard Daniel Sanchez" },
-});
-const rowsAfterUpdate = await table.countRows();
-console.log(`Number of rows after update: ${rowsAfterUpdate}`);
-```
+<CodeGroup>
+<VersioningUpdateData/>
+</CodeGroup>
 
 ### Adding New Data
 
 Now let's add more records to the table:
 
-```python
-# Add more data
-more_data = [
-    {
-        "id": 4,
-        "author": "Richard Daniel Sanchez",
-        "quote": "That's the way the news goes!",
-    },
-    {"id": 5, "author": "Morty", "quote": "Aww geez, Rick!"},
-]
-table.add(more_data)
-```
-
-```ts
-// Add more data
-const moreData = [
-  {
-    id: 4,
-    author: "Richard Daniel Sanchez",
-    quote: "That's the way the news goes!",
-  },
-  {
-    id: 5,
-    author: "Morty",
-    quote: "Aww geez, Rick!",
-  },
-];
-await table.add(moreData);
-```
+<CodeGroup>
+<VersioningAddData/>
+</CodeGroup>
 
 ### Checking Version Changes
 
 Let's see how the versions have changed after our modifications:
 
-```python
-# Check versions after modifications
-versions = table.list_versions()
-version_count_after_mod = len(versions)
-version_after_mod = table.version
-print(f"Number of versions after modifications: {version_count_after_mod}")
-print(f"Current version: {version_after_mod}")
-```
-
-```ts
-// Check versions after modifications
-const versionsAfterMod = await table.listVersions();
-const versionCountAfterMod = versionsAfterMod.length;
-const versionAfterMod = await table.version();
-console.log(`Number of versions after modifications: ${versionCountAfterMod}`);
-console.log(`Current version: ${versionAfterMod}`);
-```
+<CodeGroup>
+<VersioningCheckVersionsAfterMod/>
+</CodeGroup>
 
 ## Tracking Changes in Schema
 
@@ -225,11 +86,6 @@ import pyarrow as pa
 
 # Get data from table
 df = table.search().limit(5).to_pandas()
-```
-
-```ts
-// Get data from table
-const df = await table.query().limit(5).toArray()
 ```
 
 ### Generating Embeddings
@@ -253,38 +109,6 @@ vectors_with_ids = [
 ]
 ```
 
-```ts
-let vectorDim = 0;
-try {
-  // Let's use all-MiniLM-L6-v2 model to embed the quotes
-  console.log("Generating embeddings with transformers...");
-  const { pipeline } = await import("@xenova/transformers");
-  const extractor = await pipeline(
-    "feature-extraction",
-    "Xenova/all-MiniLM-L6-v2",
-  );
-
-  // Generate embeddings for all quotes
-  const quotes = df.map((row) => row.quote);
-  const outputs = await Promise.all(
-    quotes.map((quote) =>
-      extractor(quote, {
-        pooling: "mean",
-        normalize: true,
-      }),
-    ),
-  );
-  const embeddings = outputs.map((output) => Array.from(output.data));
-  vectorDim = embeddings[0].length;
-  console.log(`Vector dimension: ${vectorDim}`);
-
-  // Create embedding_with_id for all quotes
-  const embedding_with_id = df.map((row, i) => ({
-    id: row.id,
-    vector_minilm: embeddings[i],
-  }));
-```
-
 ### Adding Vector Column to Schema
 
 Now let's add the vector column to our table schema:
@@ -298,40 +122,6 @@ table.add_columns(
 table.merge_insert(
   "id"
 ).when_matched_update_all().when_not_matched_insert_all().execute(vectors_with_ids)
-```
-
-```ts
-  // Add the vector column to the table
-  await table.addColumns([
-    {
-      name: "vector_minilm",
-      valueSql: `arrow_cast(NULL, 'FixedSizeList(${vectorDim}, Float32)')`,
-    },
-  ]);
-
-  // Update all rows with their embeddings
-  await table
-    .mergeInsert("id")
-    .whenMatchedUpdateAll()
-    .whenNotMatchedInsertAll()
-    .execute(embedding_with_id);
-} catch (error) {
-  console.log(
-    "Failed to load transformers, using dummy vectors instead:",
-    error,
-  );
-  // Create dummy embeddings for all quotes
-  const dummyEmbeddings = df.map(() => Array(vectorDim).fill(10));
-  const embedding_with_id = df.map((row, i) => ({
-    id: row.id,
-    vector: dummyEmbeddings[i],
-  }));
-  await table
-    .mergeInsert("id")
-    .whenMatchedUpdateAll()
-    .whenNotMatchedInsertAll()
-    .execute(embedding_with_id);
-}
 ```
 
 ### Checking Version Changes After Schema Modification
@@ -352,22 +142,6 @@ print(f"Current version: {version_after_embed}")
 print(table.schema)
 ```
 
-```ts
-// Check versions after embedding addition
-const versionsAfterEmbed = await table.listVersions();
-const versionCountAfterEmbed = versionsAfterEmbed.length;
-const versionAfterEmbed = await table.version();
-console.log(
-  `Number of versions after adding embeddings: ${versionCountAfterEmbed}`,
-);
-console.log(`Current version: ${versionAfterEmbed}`);
-
-// Verify the schema change
-// The table should now include a vector_minilm column containing
-// embeddings generated by the all-MiniLM-L6-v2 model
-console.log(await table.schema())
-```
-
 ## Rollback to Previous Versions
 
 LanceDB supports fast rollbacks to any previous version without data duplication.
@@ -376,49 +150,17 @@ LanceDB supports fast rollbacks to any previous version without data duplication
 
 First, let's see all the versions we've created:
 
-```python
-# Let's see all versions
-versions = table.list_versions()
-for v in versions:
-    print(f"Version {v['version']}, created at {v['timestamp']}")
-```
-
-```ts
-// Let's see all versions
-const allVersions = await table.listVersions();
-allVersions.forEach(v => {
-  console.log(`Version ${v.version}, created at ${v.timestamp}`);
-});
-```
+<CodeGroup>
+<VersioningListAllVersions/>
+</CodeGroup>
 
 ### Rolling Back to a Previous Version
 
 Now let's roll back to before we added the vector column:
 
-```python
-# Let's roll back to before we added the vector column
-# We'll use the version after modifications but before adding embeddings
-table.restore(version_after_mod)
-
-# Notice we have one more version now, not less!
-versions = table.list_versions()
-version_count_after_rollback = len(versions)
-print(f"Total number of versions after rollback: {version_count_after_rollback}")
-```
-
-```ts
-// Let's roll back to before we added the vector column
-// We'll use the version after modifications but before adding embeddings
-await table.checkout(versionAfterMod);
-await table.restore();
-
-// Notice we have one more version now, not less!
-const versionsAfterRollback = await table.listVersions();
-const versionCountAfterRollback = versionsAfterRollback.length;
-console.log(
-  `Total number of versions after rollback: ${versionCountAfterRollback}`,
-);
-```
+<CodeGroup>
+<VersioningRollback/>
+</CodeGroup>
 
 ## Making Changes from Previous Versions
 
@@ -445,37 +187,6 @@ vectors_with_ids = [
 ]
 ```
 
-```ts
-try {
-  // Let's switch to the all-mpnet-base-v2 model to embed the quotes
-  console.log("Generating embeddings with transformers...");
-  const { pipeline } = await import("@xenova/transformers");
-  const extractor = await pipeline(
-    "feature-extraction",
-    "Xenova/all-mpnet-base-v2",
-  );
-
-  // Generate embeddings for all quotes
-  const quotes = df.map((row) => row.quote);
-  const outputs = await Promise.all(
-    quotes.map((quote) =>
-      extractor(quote, {
-        pooling: "mean",
-        normalize: true,
-      }),
-    ),
-  );
-  const embeddings = outputs.map((output) => Array.from(output.data));
-  vectorDim = embeddings[0].length;
-  console.log(`Vector dimension: ${vectorDim}`);
-
-  // Create embedding_with_id for all quotes
-  const embedding_with_id = df.map((row, i) => ({
-    id: row.id,
-    vector_mpnet: embeddings[i],
-  }));
-```
-
 ### Adding the New Vector Column
 
 Now let's add the new vector column with the different model:
@@ -489,48 +200,6 @@ table.add_columns(
 table.merge_insert(
     "id"
 ).when_matched_update_all().when_not_matched_insert_all().execute(vectors_with_ids)
-```
-
-```ts
-  // Add the vector column to the table
-  await table.addColumns([
-    {
-      name: "vector_mpnet",
-      valueSql: `arrow_cast(NULL, 'FixedSizeList(${vectorDim}, Float32)')`,
-    },
-  ]);
-
-  // Update all rows with their embeddings
-  await table
-    .mergeInsert("id")
-    .whenMatchedUpdateAll()
-    .whenNotMatchedInsertAll()
-    .execute(embedding_with_id);
-} catch (error) {
-  console.log(
-    "Failed to load transformers, using dummy vectors instead:",
-    error,
-  );
-  // Create dummy embeddings for all quotes
-  const dummyEmbeddings = df.map(() => Array(vectorDim).fill(100));
-  const embedding_with_id = df.map((row, i) => ({
-    id: row.id,
-    vector_mpnet: dummyEmbeddings[i],
-  }));
-  // Add the vector column to the table
-  await table.addColumns([
-    {
-      name: "vector_mpnet",
-      valueSql: `arrow_cast(NULL, 'FixedSizeList(${vectorDim}, Float32)')`,
-    },
-  ]);
-
-  await table
-    .mergeInsert("id")
-    .whenMatchedUpdateAll()
-    .whenNotMatchedInsertAll()
-    .execute(embedding_with_id);
-}
 ```
 
 ### Checking Version Changes
@@ -552,19 +221,6 @@ print(f"Current version: {version_after_alter_embed}")
 print(table.schema)
 ```
 
-```ts
-// Check versions after schema change
-const versionsAfterSchemaChange = await table.listVersions();
-const versionCountAfterSchemaChange = versionsAfterSchemaChange.length;
-console.log(
-  `Total number of versions after schema change: ${versionCountAfterSchemaChange}`,
-);
-
-// The table should now include a vector_mpnet column containing
-// embeddings generated by the all-mpnet-base-v2 model
-console.log(await table.schema())
-```
-
 ## Delete Data From the Table
 
 Let's demonstrate how deletions also create new versions:
@@ -573,33 +229,17 @@ Let's demonstrate how deletions also create new versions:
 
 First, let's return to the latest version:
 
-```python
-# Go back to the latest version
-table.checkout_latest()
-```
-
-```ts
-// Go back to the latest version
-await table.checkoutLatest();
-```
+<CodeGroup>
+<VersioningCheckoutLatest/>
+</CodeGroup>
 
 ### Deleting Data
 
 Now let's delete some data to see how it affects versioning:
 
-```python
-# Let's delete data from the table
-table.delete("author != 'Richard Daniel Sanchez'")
-rows_after_deletion = table.count_rows()
-print(f"Number of rows after deletion: {rows_after_deletion}")
-```
-
-```ts
-// Let's delete data from the table
-await table.delete("author != 'Richard Daniel Sanchez'");
-const rowsAfterDeletion = await table.countRows();
-console.log(`Number of rows after deletion: ${rowsAfterDeletion}`);
-```
+<CodeGroup>
+<VersioningDeleteData/>
+</CodeGroup>
 
 ### Version History and Operations
 
