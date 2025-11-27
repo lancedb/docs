@@ -27,7 +27,11 @@ def test_tables_basic_connect_snippet(monkeypatch):
         calls["uri"] = uri
         return DummyDB()
 
-    monkeypatch.setattr(lancedb, "connect", fake_connect)
+    import lancedb as _lancedb
+
+    # Monkey patch is used only in this test.
+    # Maybe can just actually connect, and disconnect instead?
+    monkeypatch.setattr(_lancedb, "connect", fake_connect)
 
     # --8<-- [start:tables_basic_connect]
     import lancedb
