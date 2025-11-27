@@ -39,6 +39,22 @@
             ]
           },
           {
+            "group": "User guides",
+            "pages": [
+              {
+                "group": "Working with tables",
+                "pages": [
+                  "user-guides/tables/index",
+                  "user-guides/tables/create",
+                  "user-guides/tables/schema",
+                  "user-guides/tables/update",
+                  "user-guides/tables/versioning",
+                  "user-guides/tables/consistency"
+                ]
+              }
+            ]
+          },
+          {
             "group": "API & SDK Reference",
             "pages": [
               "api-reference/index",
