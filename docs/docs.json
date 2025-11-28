@@ -46,7 +46,18 @@
               {
                 "group": "LanceDB Enterprise",
                 "pages": [
-                  "enterprise/index"
+                  "enterprise/index",
+                  "enterprise/features",
+                  "enterprise/architecture",
+                  "enterprise/benchmarks",
+                  "enterprise/security",
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "enterprise/deployment/index",
+                      "enterprise/deployment/azure"
+                    ]
+                  }
                 ]
               }
             ]
