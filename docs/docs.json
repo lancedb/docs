@@ -27,8 +27,21 @@
           {
             "group": "Get started",
             "pages": [
-              "get-started/quickstart",
-              "index",
+              {
+                "group": "Quickstart",
+                "pages": [
+                  "quickstart/index",
+                  "quickstart/basic_usage"
+                ]
+              },
+              {
+                "group": "What is LanceDB?",
+                "pages": [
+                  "index",
+                  "lance",
+                  "features"
+                ]
+              },
               "cloud",
               {
                 "group": "LanceDB Enterprise",
