@@ -1,7 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "aspen",
   "name": "LanceDB",
+  "banner": {
+    "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
+    "dismissible": true 
+  },
   "colors": {
     "primary": "#FF6B35",
     "light": "#FF8A5C",
@@ -27,13 +31,37 @@
           {
             "group": "Get started",
             "pages": [
-              "get-started/quickstart",
-              "index",
+              {
+                "group": "Quickstart",
+                "pages": [
+                  "quickstart/index",
+                  "quickstart/basic_usage"
+                ]
+              },
+              {
+                "group": "What is LanceDB?",
+                "pages": [
+                  "index",
+                  "lance",
+                  "features"
+                ]
+              },
               "cloud",
               {
                 "group": "LanceDB Enterprise",
                 "pages": [
-                  "enterprise/index"
+                  "enterprise/index",
+                  "enterprise/features",
+                  "enterprise/architecture",
+                  "enterprise/benchmarks",
+                  "enterprise/security",
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "enterprise/deployment/index",
+                      "enterprise/deployment/azure"
+                    ]
+                  }
                 ]
               }
             ]

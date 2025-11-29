@@ -1,35 +1,51 @@
 """
-Generate MDX code snippets from annotated source directories.
+Generate MDX-ready snippet modules that export raw string constants.
 
-Markers use the same syntax across languages, with the line comment
-prefix varying by language:
-
-  Python:   # --8<-- [start:snippet_name] ... # --8<-- [end:snippet_name]
-  TS/RS:    // --8<-- [start:snippet_name] ... // --8<-- [end:snippet_name]
-
-This script scans all source files in a given directory and outputs
-MDX files under `docs/snippets/<lang>/<snippet_name>.mdx`.
-
-Examples:
-  python scripts/mdx_snippets_gen.py --source-dir examples/py
-  python scripts/mdx_snippets_gen.py --source-dir examples/ts
-  python scripts/mdx_snippets_gen.py --source-dir examples/rs
+The generator groups snippets by the originating test file name rather than by
+language. For a source file like `examples/py/test_basic.py`, the snippets are
+written under `docs/snippets/basic.mdx`. Each exported constant is prefixed with
+a language identifier (Py|Ts|Rs) followed by the snippet name converted to
+TitleCase so that docs authors can selectively assemble `<CodeGroup>` blocks.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, Iterator, List, Mapping, MutableMapping, Tuple
+
+# Supported languages and relevant metadata.
+LANG_ORDER = ("py", "ts", "rs")
+LANG_PREFIX = {"py": "Py", "ts": "Ts", "rs": "Rs"}
+LANG_EXTENSIONS = {
+    ".py": "py",
+    ".ts": "ts",
+    ".tsx": "ts",
+    ".rs": "rs",
+}
+LANG_MARKERS = {"py": ["#"], "ts": ["//"], "rs": ["//"]}
+
+DEFAULT_SOURCE_DIRS = (
+    Path("examples") / "py",
+    Path("examples") / "ts",
+    Path("examples") / "rs",
+)
+
+
+@dataclass(frozen=True)
+class SnippetRecord:
+    lang: str
+    snippet_name: str
+    export_name: str
+    text: str
+    source_rel: str
 
 
 def build_markers(comment_markers: Iterable[str]) -> Tuple[re.Pattern[str], re.Pattern[str]]:
-    """Build start/end regex patterns for the given comment markers.
-
-    comment_markers: e.g., ["#"] for Python or ["//"] for TS/RS.
-    """
     escaped = "|".join(re.escape(c) for c in comment_markers)
     start_re = re.compile(rf"^\s*(?:{escaped})\s*--8<--\s*\[start:([^\]]+)\]")
     end_re = re.compile(rf"^\s*(?:{escaped})\s*--8<--\s*\[end:([^\]]+)\]")
@@ -39,10 +55,6 @@ def build_markers(comment_markers: Iterable[str]) -> Tuple[re.Pattern[str], re.P
 def parse_snippets(
     lines: List[str], start_re: re.Pattern[str], end_re: re.Pattern[str]
 ) -> Dict[str, List[str]]:
-    """Extract snippets from lines using start/end markers.
-
-    Returns a mapping of snippet_name -> list of lines (content only).
-    """
     snippets: Dict[str, List[str]] = {}
     stack: List[Tuple[str, int]] = []
 
@@ -66,9 +78,7 @@ def parse_snippets(
                     f"Mismatched markers: start '{start_name}' at line {start_idx + 1}, "
                     f"end '{name}' at line {idx + 1}"
                 )
-            # Content is between start and end, exclusive of the marker lines
-            content = lines[start_idx + 1 : idx]
-            snippets[name] = content
+            snippets[name] = lines[start_idx + 1 : idx]
             continue
 
     if stack:
@@ -79,13 +89,10 @@ def parse_snippets(
 
 
 def dedent(lines: List[str]) -> List[str]:
-    """Dedent a block of code while preserving relative indentation and blank lines."""
-    # Compute minimal indentation across non-empty lines
     min_indent = None
     for ln in lines:
         if ln.strip() == "":
             continue
-        # Count leading spaces after expanding tabs
         expanded = ln.expandtabs(4)
         indent = len(expanded) - len(expanded.lstrip(" "))
         if min_indent is None or indent < min_indent:
@@ -106,194 +113,192 @@ def dedent(lines: List[str]) -> List[str]:
     return dedented
 
 
-def write_mdx_snippet(
-    out_dir: Path, fence_lang: str, name: str, content_lines: List[str], source_rel: str
-) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{name}.mdx"
-
-    header = f"{{/* Auto-generated from {source_rel}::{name}. Do not edit manually. */}}\n"
-    code = "\n".join(content_lines).rstrip() + "\n"
-    mdx_body = f"```{fence_lang} {fence_lang}\n{code}```\n"
-
-    new_content = header + mdx_body
-
-    # Only write if changed
-    if out_path.exists():
-        try:
-            existing = out_path.read_text(encoding="utf-8")
-            if existing == new_content:
-                return
-        except Exception:
-            pass
-
-    out_path.write_text(new_content, encoding="utf-8")
+def ensure_dir(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
 
 
-def write_mdx_snippet_with_labels(
-    out_dir: Path, fence_lang: str, name: str, content_lines: List[str], source_rel: str
-) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{name}.mdx"
-
-    header = f"{{/* Auto-generated from {source_rel}::{name}. Do not edit manually. */}}\n"
-    code = "\n".join(content_lines).rstrip() + "\n"
-    # Use nicer tab labels in Mintlify CodeGroup
-    label_map = {
-        "py": "Python",
-        "python": "Python",
-        "ts": "TypeScript",
-        "tsx": "TypeScript",
-        "js": "JavaScript",
-        "jsx": "JavaScript",
-        "rs": "Rust",
-    }
-    display_label = label_map.get(fence_lang, fence_lang)
-
-    # First token: syntax highlight; second: tab label
-    mdx_body = f"```{fence_lang} {display_label} icon={display_label}\n{code}```\n"
-
-    new_content = header + mdx_body
-
-    # Only write if changed
-    if out_path.exists():
-        try:
-            existing = out_path.read_text(encoding="utf-8")
-            if existing == new_content:
-                return
-        except Exception:
-            pass
-
-    out_path.write_text(new_content, encoding="utf-8")
-
-
-def discover_language_from_dir(source_dir: Path) -> str:
-    """Infer language key (py|ts|rs) from directory name or file extensions."""
-    name = source_dir.name.lower()
-    if name in {"py", "python"}:
-        return "py"
-    if name in {"ts", "tsx", "typescript"}:
-        return "ts"
-    if name in {"rs", "rust"}:
-        return "rs"
-
-    # Fallback: detect by file extensions present
-    has_py = any(source_dir.rglob("*.py"))
-    has_ts = any(source_dir.rglob("*.ts")) or any(source_dir.rglob("*.tsx"))
-    has_rs = any(source_dir.rglob("*.rs"))
-    candidates = [(has_py, "py"), (has_ts, "ts"), (has_rs, "rs")]
-    detected = [lang for flag, lang in candidates if flag]
-    if len(detected) == 1:
-        return detected[0]
-    raise ValueError(
-        f"Unable to determine language for directory: {source_dir}. "
-        "Please name the folder py/ts/rs or ensure only one language is present."
-    )
-
-
-def file_globs_for_lang(lang: str) -> List[str]:
-    if lang == "py":
-        return ["*.py"]
-    if lang == "ts":
-        return ["*.ts", "*.tsx"]
-    if lang == "rs":
-        return ["*.rs"]
-    raise ValueError(f"Unsupported language: {lang}")
+def detect_language(file_path: Path) -> str:
+    lang = LANG_EXTENSIONS.get(file_path.suffix.lower())
+    if not lang:
+        raise ValueError(f"Unsupported file extension for {file_path}")
+    return lang
 
 
 def markers_for_lang(lang: str) -> Tuple[re.Pattern[str], re.Pattern[str]]:
-    if lang == "py":
-        return build_markers(["#"])  # Python line comment
-    if lang in {"ts", "rs"}:
-        return build_markers(["//"])  # TS/Rust line comment
-    raise ValueError(f"Unsupported language for markers: {lang}")
+    markers = LANG_MARKERS.get(lang)
+    if not markers:
+        raise ValueError(f"Unsupported language for markers: {lang}")
+    return build_markers(markers)
 
 
-def fence_lang_for_lang(lang: str) -> str:
-    # Normalize fence language id for syntax highlighting + labels
-    if lang == "py":
-        return "py"
-    if lang == "ts":
-        return "ts"
-    if lang == "rs":
-        return "rs"
-    return lang
+def normalize_target_name(file_path: Path) -> str:
+    stem = file_path.stem
+    if stem.startswith("test_"):
+        stem = stem[len("test_") :]
+    if stem.endswith("_test"):
+        stem = stem[: -len("_test")]
+    if stem.endswith(".test"):
+        stem = stem[: -len(".test")]
+    if stem.endswith(".spec"):
+        stem = stem[: -len(".spec")]
+    if stem == "":
+        stem = file_path.stem
+    return stem.replace(" ", "_")
+
+
+def to_title_case(name: str) -> str:
+    parts = re.split(r"[^0-9a-zA-Z]+", name)
+    filtered = [p for p in parts if p]
+    return "".join(p[:1].upper() + p[1:].lower() for p in filtered) or "Snippet"
+
+
+def format_export_name(lang: str, snippet_name: str) -> str:
+    prefix = LANG_PREFIX[lang]
+    return f"{prefix}{to_title_case(snippet_name)}"
+
+
+def snippet_text(lines: List[str]) -> str:
+    if not lines:
+        return ""
+    joined = "\n".join(lines).rstrip("\n")
+    return (joined + "\n") if joined else ""
+
+
+def to_js_literal(text: str) -> str:
+    return json.dumps(text, ensure_ascii=False)
+
+
+def iter_source_files(source_dirs: Iterable[Path]) -> Iterator[Path]:
+    for root in source_dirs:
+        for path in root.rglob("*"):
+            if path.is_file() and path.suffix.lower() in LANG_EXTENSIONS:
+                yield path
+
+
+def write_if_changed(path: Path, content: str) -> bool:
+    if path.exists():
+        try:
+            current = path.read_text(encoding="utf-8")
+            if current == content:
+                return False
+        except Exception:
+            pass
+    ensure_dir(path.parent)
+    path.write_text(content, encoding="utf-8")
+    return True
+
+
+def collect_snippets(
+    source_dirs: Iterable[Path],
+) -> Mapping[str, Mapping[str, Mapping[str, SnippetRecord]]]:
+    result: Dict[str, Dict[str, Dict[str, SnippetRecord]]] = {}
+    for file_path in iter_source_files(source_dirs):
+        lang = detect_language(file_path)
+        start_re, end_re = markers_for_lang(lang)
+        try:
+            text = file_path.read_text(encoding="utf-8")
+        except Exception as exc:  # pragma: no cover
+            raise RuntimeError(f"Failed to read {file_path}: {exc}") from exc
+        lines = text.splitlines(keepends=True)
+        snippets = parse_snippets(lines, start_re, end_re)
+        if not snippets:
+            continue
+
+        target = normalize_target_name(file_path)
+        lang_map = result.setdefault(target, {}).setdefault(lang, {})
+        for snippet_name, content_lines in snippets.items():
+            if snippet_name in lang_map:
+                raise ValueError(
+                    f"Duplicate snippet '{snippet_name}' in {file_path} and {lang_map[snippet_name].source_rel}"
+                )
+            dedented = dedent(content_lines)
+            export_name = format_export_name(lang, snippet_name)
+            source_rel = os.path.relpath(file_path, Path.cwd())
+            lang_map[snippet_name] = SnippetRecord(
+                lang=lang,
+                snippet_name=snippet_name,
+                export_name=export_name,
+                text=snippet_text(dedented),
+                source_rel=source_rel,
+            )
+    return result
+
+
+def render_module(target: str, lang_map: Mapping[str, Mapping[str, SnippetRecord]]) -> str:
+    parts: List[str] = []
+    parts.append("{/* Auto-generated by scripts/mdx_snippets_gen.py. Do not edit manually. */}\n\n")
+    for lang in LANG_ORDER:
+        snippets = lang_map.get(lang)
+        if not snippets:
+            continue
+        for snippet_name in sorted(snippets.keys()):
+            record = snippets[snippet_name]
+            literal = to_js_literal(record.text)
+            parts.append(f"export const {record.export_name} = {literal};\n\n")
+    return "".join(parts)
+
+
+def generate_modules(
+    snippets_by_target: Mapping[str, Mapping[str, Mapping[str, SnippetRecord]]],
+    output_root: Path,
+) -> Tuple[int, int]:
+    modules_written = 0
+    total_exports = 0
+
+    for target in sorted(snippets_by_target.keys()):
+        lang_map = snippets_by_target[target]
+        total_exports += sum(len(snippets) for snippets in lang_map.values())
+        module_content = render_module(target, lang_map)
+        module_path = output_root / f"{target}.mdx"
+        if write_if_changed(module_path, module_content):
+            modules_written += 1
+
+    return modules_written, total_exports
+
+
+def resolve_source_dirs(args_dirs: List[str] | None) -> List[Path]:
+    if args_dirs:
+        dirs = [Path(p) for p in args_dirs]
+    else:
+        dirs = list(DEFAULT_SOURCE_DIRS)
+
+    missing = [str(p) for p in dirs if not p.exists()]
+    if missing:
+        raise FileNotFoundError(f"Source directories not found: {', '.join(missing)}")
+    return dirs
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Generate MDX snippets from annotated source directory"
+        description="Generate MDX snippet modules grouped by test filename."
     )
     parser.add_argument(
-        "--source_dir", "-s", required=True, help="Path to the source directory (e.g., examples/py)"
+        "-s",
+        "--source-dir",
+        action="append",
+        help="Path(s) to language example directories (default: examples/py, ts, rs)",
     )
     parser.add_argument(
-        "--output_path",
         "-o",
+        "--output-dir",
         default=str(Path("docs") / "snippets"),
-        help="Output directory for MDX code snippets (default: docs/snippets)",
+        help="Directory where snippet modules are written (default: docs/snippets)",
     )
     args = parser.parse_args()
 
-    source_dir = Path(args.source_dir)
-    if not source_dir.exists() or not source_dir.is_dir():
-        parser.error(f"Source directory not found or not a directory: {source_dir}")
-
-    lang = discover_language_from_dir(source_dir)
-    fence_lang = fence_lang_for_lang(lang)
-    out_dir = Path(args.output_path) / lang
-
-    start_re, end_re = markers_for_lang(lang)
-
-    # Collect files
-    file_patterns = file_globs_for_lang(lang)
-    files: List[Path] = []
-    for pat in file_patterns:
-        files.extend(source_dir.rglob(pat))
-    # Deduplicate and sort
-    files = sorted(set(files))
-
-    if not files:
-        print(f"No source files found under {source_dir} for language '{lang}'")
+    source_dirs = resolve_source_dirs(args.source_dir)
+    snippets = collect_snippets(source_dirs)
+    if not snippets:
+        print("No snippets found.")
         return 0
 
-    # Aggregate snippets, detect duplicates across files
-    all_snippets: Dict[str, Tuple[Path, List[str]]] = {}
-
-    for file_path in files:
-        try:
-            text = file_path.read_text(encoding="utf-8")
-        except Exception:
-            # Skip unreadable files
-            continue
-        lines = text.splitlines(keepends=True)
-        try:
-            raw = parse_snippets(lines, start_re, end_re)
-        except ValueError as e:
-            raise ValueError(f"Error parsing {file_path}: {e}") from e
-
-        for name, content in raw.items():
-            if name in all_snippets:
-                prev_file, prev_content = all_snippets[name]
-                if "".join(prev_content) != "".join(content):
-                    raise ValueError(
-                        f"Duplicate snippet name '{name}' with different content: {prev_file} and {file_path}"
-                    )
-                # If identical, keep the first occurrence
-                continue
-            all_snippets[name] = (file_path, content)
-
-    # Write snippets
-    written = 0
-    for name, (src_path, content) in all_snippets.items():
-        dedented = dedent(content)
-        src_rel = os.path.relpath(src_path, Path.cwd())
-        write_mdx_snippet_with_labels(out_dir, fence_lang, name, dedented, src_rel)
-        written += 1
-
-    print(f"Generated {written} MDX snippets in {out_dir} from {len(files)} files")
+    output_root = Path(args.output_dir)
+    modules_written, exports_written = generate_modules(snippets, output_root)
+    print(
+        f"Generated {exports_written} snippet exports across {modules_written} module(s) in {output_root}"
+    )
     return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
