@@ -14,8 +14,8 @@ import {
     PyQuickstartVectorSearch2,
 } from '/snippets/quickstart.mdx';
 
-The quickest way to get going with LanceDB is with the open source version, which is file-based and
-runs in-process (like SQLite). Let's get started using Python in just a few steps!
+The easiest way to get started with LanceDB is the open source version, which is an embedded database that
+runs in-process (like SQLite). Let's get started in just a few steps!
 
 ## 1. Install LanceDB
 
@@ -65,15 +65,14 @@ feature engineering, model training and more, check out [LanceDB Enterprise](/en
 
 ## 3. Create table and ingest data
 
-LanceDB uses the notion of tables, where each row represents a record, and each column represents a field
-and/or its metadata. The simplest way to begin is to define a list of objects, where each object
-contains a vector field (list of floats) and optional fields for metadata.
+LanceDB uses Lance tables under the hood. In a Lance table, each row represents a record, and each column represents a field
+and/or its metadata. The simplest way to create a table and ingest data to it, is to define a list of objects. Each object
+in this list contains a vector field (list of floats) and optional fields for metadata.
 
-Let's look at an example. We have the following records of characters in an adventure board game. The `vector` field is
-a list of floats. In the real world, these would contain hundreds of floating-point values and be generated via an embedding model, but the example below shows a simple version with just 3 values.
-
-The table schema is inferred from the data you provide, if not provided explicitly via
-the `schema` parameter.
+An example is shown below. We obtain records of characters in an adventure board game. The `vector` field is
+a list of floats, representing an embedding of the text for a given character. For brevity, only three dimensions are
+shown, but in n the real world, the embeddings would be much larger (thousands of dimensions) and be generated via an
+embedding model.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -81,9 +80,12 @@ the `schema` parameter.
     </CodeBlock>
 </CodeGroup >
 
-The above code creates a table named `adventurers` and ingests four records into it, by overwriting
-the table if it already exists. To raise a `ValueError` if the table already exists, you can
-omit the `mode="overwrite"` parameter.
+The code above creates a table named `adventurers` and ingests four records into it, by overwriting
+the table if it already exists.
+The table schema is inferred from the data you provide, if not provided explicitly via the `schema` parameter.
+
+If you do not want to overwrite the existing table, you can
+omit the `mode="overwrite"` parameter -- this will raise a `ValueError` when trying to create a table with the same name.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -100,7 +102,7 @@ Now, let's perform a vector similarity search. The query vector should have the 
 your data vectors. The search returns the most similar vectors based on Euclidean distance.
 
 Our query is a vector that represents a `warrior`, which isn't in the data we ingested.
-We'll find the result that's most similar to it!
+Let's try and find the result that's most similar to it!
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -108,17 +110,19 @@ We'll find the result that's most similar to it!
     </CodeBlock>
 </CodeGroup >
 
-It's often convenient to display the query results as a table. You can output the results of a vector search query
-as a Pandas or Polars DataFrame. The example below shows the output as a Polars DataFrame.
-
-It looks like the `knight` is the most similar adventurer to the `warrior` from our query!
+The example above outputs the top 2 most similar results of the vector search query
+as a Polars DataFrame, as it's easier to interpret the results when displayed in tabular format.
 
 | id | text   | vector            | _distance |
 | --- | --- | --- | --- |
 | 1 | knight | [0.9, 0.4, 0.8] | 0.02 |
 | 2 | ranger | [0.8, 0.4, 0.7] | 0.02 |
 
-If you prefer Pandas, you can use the `to_pandas()` method to display the results as a Pandas DataFrame.
+It looks like the `knight` is the most similar adventurer to the `warrior` from our query!
+
+<Info>
+If you prefer Pandas, you can use the `to_pandas()` method to display the results as a Pandas DataFrame, see below.
+</Info>
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -128,8 +132,8 @@ If you prefer Pandas, you can use the `to_pandas()` method to display the result
 
 ## 5. Add data and run more queries
 
-If you obtain more data, it's simple to add it to an existing table. In the same script or a new one, you
-can connect to the LanceDB database, open an existing table.
+As you obtain more data, you can append it to an existing table. In the same script or a new one, you
+can connect to the LanceDB database and open an existing table as follows.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -137,7 +141,7 @@ can connect to the LanceDB database, open an existing table.
     </CodeBlock>
 </CodeGroup >
 
-You can then append more records to the existing table using the `add()` method.
+Append more records to the existing table using the `add()` method:
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python">
@@ -169,7 +173,8 @@ search allows you to find the most relevant data based on semantic similarity.
 As you explore LanceDB further, you can combine vector search with other techniques like filtering based
 on metadata fields, full-text search, hybrid search, and more.
 
-Note that LanceDB is much more than "just a vector database" -- it's a multimodal lakehouse.
+Note that LanceDB is much more than "just a vector database" -- it's
+[a multimodal lakehouse](/index).
 There's a lot more you can do with it! Learn more about what LanceDB is
 by continuing on to the next page, and have fun building with LanceDB!
 
