@@ -27,7 +27,7 @@ LanceDB Enterprise is a distributed cluster that spans many machines (unlike Lan
 ### Architecture and scale
 
 LanceDB OSS is directly embedded into your service. The process owns all CPU, memory, and storage, so scale is limited to what the host can provide. 
-Lance DB Enterprise separates work into routers, execution nodes, and background workers. New nodes join the cluster through a discovery service; they register, replicate metadata, and begin answering traffic without a restart. A distributed control plane watches node health, shifts load away from unhealthy nodes, and enforces consensus rules that prevent split-brain events.
+LanceDB Enterprise separates work into routers, execution nodes, and background workers. New nodes join the cluster through a discovery service; they register, replicate metadata, and begin answering traffic without a restart. A distributed control plane watches node health, shifts load away from unhealthy nodes, and enforces consensus rules that prevent split-brain events.
 
 Read More: [LanceDB Enterprise Architecture](/docs/overview/enterprise/architecture/)
 
@@ -73,6 +73,6 @@ LanceDB OSS makes sense when the entire dataset fits on one machine, daily traff
 
 [It's very simple to get started with OSS](/quickstart/): Get started with `pip install lancedb` and begin ingesting your data and vectors into LanceDB.
 
-Move to Lance DB Enterprise when you have petabyte-scale data, or you need latency to be below 200 ms, or you need higher query throughput towards thousands of QPS, or your business requires high availability, compliance controls, and vendor support.
+Move to LanceDB Enterprise when you have petabyte-scale data, or you need latency to be below 200 ms, or you need higher query throughput towards thousands of QPS, or your business requires high availability, compliance controls, and vendor support.
 
 If these sound like your use cases, [reach out via this form](https://lancedb.com/contact/) and we can help you scope your workload and arrange an Enterprise proof of concept.
