@@ -1,7 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "aspen",
   "name": "LanceDB",
+  "banner": {
+    "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
+    "dismissible": true 
+  },
   "colors": {
     "primary": "#FF6B35",
     "light": "#FF8A5C",
