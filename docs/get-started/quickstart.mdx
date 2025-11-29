@@ -1,0 +1,195 @@
+---
+title: Quickstart
+sidebarTitle: "Quickstart"
+description: "Get started with LanceDB in minutes."
+weight: 6
+---
+import ImportLanceDBPy from '/snippets/py/import_lancedb.mdx';
+import ConnectToLanceDBPy from '/snippets/py/connect_to_lancedb.mdx';
+import AddDataPy from '/snippets/py/basic_usage_add_data.mdx';
+
+The quickest way to get going with LanceDB is with the open source version, which is file-based and
+runs in-process (like SQLite). Let's get started using Python in just a few steps!
+
+## 1. Install LanceDB
+
+Install LanceDB in your client SDK.
+
+<CodeGroup>
+```bash Python icon=Python
+pip install lancedb
+```
+
+```bash TypeScript icon=js
+npm install @lancedb/lancedb
+```
+
+```bash Rust icon=Rust
+cargo add lancedb
+```
+</CodeGroup>
+
+## 2. Connect to a LanceDB database
+
+Using LanceDB's open source version is as simple as running
+the following import statement -- no servers needed!
+
+<CodeGroup>
+<ImportLanceDBPy/>
+</CodeGroup>
+
+### Connect to a database
+
+Once you import LanceDB as a library, you can connect to a LanceDB database by specifying a
+local file path.
+
+<CodeGroup>
+<ConnectToLanceDBPy/>
+</CodeGroup>
+
+### LanceDB Cloud or Enterprise versions
+
+If you want a fully-managed solution, you can opt for LanceDB Cloud, which provides managed infrastructure,
+security, and automatic backups. Simply replace the local path with a remote `uri`
+that points to where your data is stored.
+
+<CodeGroup >
+```py Python icon=Python
+db = lancedb.connect(
+    uri="db://your-project-slug",
+    api_key="your-api-key",
+    region="us-east-1"
+)
+```
+</CodeGroup >
+
+If you're operating at enormous scale and are looking for more advanced use cases beyond just search, like
+feature engineering, model training and more, check out [LanceDB Enterprise](/enterprise).
+
+## 3. Obtain some data
+
+LanceDB uses the notion of tables, where each row represents a record, and each column represents a field
+and/or its metadata. The simplest way to begin is to define a list of objects, where each object
+contains a vector field (list of floats) and optional fields for metadata.
+
+Let's look at an example. We have the following records of characters in an adventure board game. The `vector` field is
+a list of floats. In the real world, these would contain hundreds of floating-point values and be generated via an embedding model, but the example below shows a simple version with just 3 values.
+
+<CodeGroup >
+```py Python icon=Python
+data = [
+    {"id": "1", "text": "knight", "vector": [0.9, 0.4, 0.8]},
+    {"id": "2", "text": "ranger", "vector": [0.8, 0.4, 0.7]},
+    {"id": "9", "text": "priest", "vector": [0.6, 0.2, 0.6]},
+    {"id": "4", "text": "rogue", "vector": [0.7, 0.4, 0.7]},
+]
+```
+</CodeGroup >
+
+## 5. Create a table
+
+Next, let's create a `Table` in LanceDB and ingest the data into it.
+If not provided explicitly, the table infers the schema from the data you provide.
+If the table already exists, you'll get an error message.
+
+```py
+table = db.create_table("adventurers", data=data)
+# If the table already exists, you'll get a ValueError: Table 'my_table' already exists
+```
+
+To overwrite the existing table, you can use the `mode=overwrite` parameter.
+
+<CodeGroup >
+```py Python icon=Python
+table = db.create_table("adventurers", data=data, mode="overwrite")
+# No ValueError!
+```
+</CodeGroup >
+
+LanceDB requires that you provide either data or a schema (e.g., PyArrow) during table creation.
+You can learn more about that in the "[working with tables](/tutorials/tables)" page.
+
+## 6. Vector search
+
+Now, let's perform a vector similarity search. The query vector should have the same dimensionality as your data vectors. The search returns the most similar vectors based on Euclidean distance.
+
+Our query is a vector that represents a `warrior`, which isn't in the data we ingested.
+We'll find the result that's most similar to it!
+
+<CodeGroup >
+```py Python icon=Python
+# Let's search for vectors similar to "warrior"
+query_vector = [0.8, 0.3, 0.8]
+
+# Ensure you run `pip install polars` beforehand
+results = table.search(query_vector).limit(2).to_polars()
+```
+</CodeGroup >
+
+It's often convenient to display the query results as a table. You can output the results of a vector search query
+as a Pandas or Polars DataFrame. The example below shows the output as a Polars DataFrame.
+
+It looks like the `knight` is the most similar adventurer to the `warrior` from our query!
+
+| id | text   | vector            | _distance |
+| --- | --- | --- | --- |
+| 1 | knight | [0.9, 0.4, 0.8] | 0.02 |
+| 2 | ranger | [0.8, 0.4, 0.7] | 0.02 |
+
+If you prefer Pandas, you can use the `to_pandas()` method to display the results as a Pandas DataFrame.
+
+<CodeGroup>
+```py Python icon=Python
+results = table.search(query_vector).limit(2).to_pandas()
+```
+</CodeGroup>
+
+
+
+## 7. Add data and run more queries
+
+If you obtain more data, it's simple to add it to an existing table. In the same script or a new one, you
+can connect to the LanceDB database, open an existing table, and use the `table.add` command.
+
+```py Python icon=Python
+import lancedb
+
+# Connect to an existing database
+uri = "./ex_lancedb"
+db = lancedb.connect(uri)
+
+# Open the existing table that we created earlier
+table = db.open_table("my_table")
+
+more_data = [
+    {"id": "7", "text": "mage", "vector": [0.6, 0.3, 0.4]},
+    {"id": "8", "text": "bard", "vector": [0.3, 0.8, 0.4]},
+]
+
+# Add data to table
+table.add(more_data)
+```
+
+To verify that our new data was added, we can run a different query that looks for adventurers similar to `wizard`.
+
+```py Python icon=Python
+# Let's search for vectors similar to "wizard"
+query_vector = [0.7, 0.3, 0.5]
+
+results = table.search(query_vector).limit(2).to_polars()
+print(results)
+```
+
+| id | text   | vector            | _distance |
+| --- | --- | --- | --- |
+| 7 | mage | [0.6, 0.3, 0.4] | 0.02 |
+| 9 | priest | [0.6, 0.2, 0.6] | 0.03 |
+
+The `mage` is the most magical of all our characters!
+
+## Temp
+
+here's a snippet:
+
+<AddDataPy/>
+
