@@ -67,10 +67,10 @@
             ]
           },
           {
-            "group": "User guides",
+            "group": "User guide",
             "pages": [
               {
-                "group": "Working with tables",
+                "group": "Table management",
                 "pages": [
                   "user-guides/tables/index",
                   "user-guides/tables/create",
