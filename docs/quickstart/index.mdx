@@ -1,0 +1,180 @@
+---
+title: Quickstart
+sidebarTitle: "Quickstart"
+description: "Get started with LanceDB in minutes."
+---
+import { PyConnect, PyConnectCloud } from '/snippets/connection.mdx';
+import {
+    PyQuickstartCreateTable,
+    PyQuickstartCreateTableNoOverwrite,
+    PyQuickstartVectorSearch1,
+    PyQuickstartAddData,
+    PyQuickstartOpenTable,
+    PyQuickstartOutputPandas,
+    PyQuickstartVectorSearch2,
+} from '/snippets/quickstart.mdx';
+
+The easiest way to get started with LanceDB is the open source version, which is an embedded database that
+runs in-process (like SQLite). Let's get started in just a few steps!
+
+## 1. Install LanceDB
+
+Install LanceDB in your client SDK.
+
+<CodeGroup>
+```bash Python icon=Python
+pip install lancedb  # or uv add lancedb
+```
+
+```bash TypeScript icon=js
+npm install @lancedb/lancedb
+```
+
+```bash Rust icon=Rust
+cargo add lancedb
+```
+</CodeGroup>
+
+## 2. Connect to a LanceDB database
+
+Using LanceDB's open source version is as simple as importing LanceDB as a library
+and pointing to a local path -- no servers needed!
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyConnect}
+    </CodeBlock>
+</CodeGroup >
+
+
+### Optional: LanceDB Cloud or Enterprise versions
+
+If you're looking for a fully-managed solution,
+you can use LanceDB Cloud, which provides managed infrastructure,
+security, and automatic backups. Simply replace the local path with a remote `uri`
+that points to where your data is stored, and you're ready to go.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyConnectCloud}
+    </CodeBlock>
+</CodeGroup >
+
+For enormous scale and more advanced use cases beyond just search -- like
+feature engineering, model training and more, check out [LanceDB Enterprise](/enterprise).
+
+## 3. Create table and ingest data
+
+LanceDB uses Lance tables under the hood. In a Lance table, each row represents a record, and each column represents a field
+and/or its metadata. The simplest way to create a table and ingest data to it, is to define a list of objects. Each object
+in this list contains a vector field (list of floats) and optional fields for metadata.
+
+An example is shown below. We obtain records of characters in an adventure board game. The `vector` field is
+a list of floats, representing an embedding of the text for a given character. For brevity, only three dimensions are
+shown, but in n the real world, the embeddings would be much larger (thousands of dimensions) and be generated via an
+embedding model.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartCreateTable}
+    </CodeBlock>
+</CodeGroup >
+
+The code above creates a table named `adventurers` and ingests four records into it, by overwriting
+the table if it already exists.
+The table schema is inferred from the data you provide, if not provided explicitly via the `schema` parameter.
+
+If you do not want to overwrite the existing table, you can
+omit the `mode="overwrite"` parameter -- this will raise a `ValueError` when trying to create a table with the same name.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartCreateTableNoOverwrite}
+    </CodeBlock>
+</CodeGroup >
+
+LanceDB requires that you provide either data or a schema (via PyArrow) during table creation.
+You can learn more on how to provide schemas explicitly in the "[working with tables](/docs/tables)" page.
+
+## 4. Vector search
+
+Now, let's perform a vector similarity search. The query vector should have the same dimensionality as
+your data vectors. The search returns the most similar vectors based on Euclidean distance.
+
+Our query is a vector that represents a `warrior`, which isn't in the data we ingested.
+Let's try and find the result that's most similar to it!
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartVectorSearch1}
+    </CodeBlock>
+</CodeGroup >
+
+The example above outputs the top 2 most similar results of the vector search query
+as a Polars DataFrame, as it's easier to interpret the results when displayed in tabular format.
+
+| id | text   | vector            | _distance |
+| --- | --- | --- | --- |
+| 1 | knight | [0.9, 0.4, 0.8] | 0.02 |
+| 2 | ranger | [0.8, 0.4, 0.7] | 0.02 |
+
+It looks like the `knight` is the most similar adventurer to the `warrior` from our query!
+
+<Info>
+If you prefer Pandas, you can use the `to_pandas()` method to display the results as a Pandas DataFrame, see below.
+</Info>
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartOutputPandas}
+    </CodeBlock>
+</CodeGroup >
+
+## 5. Add data and run more queries
+
+As you obtain more data, you can append it to an existing table. In the same script or a new one, you
+can connect to the LanceDB database and open an existing table as follows.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartOpenTable}
+    </CodeBlock>
+</CodeGroup >
+
+Append more records to the existing table using the `add()` method:
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python">
+    {PyQuickstartAddData}
+    </CodeBlock>
+</CodeGroup >
+
+To verify that our new data was added, we can run a different query that looks for adventurers similar to `wizard`.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python">
+    {PyQuickstartVectorSearch2}
+    </CodeBlock>
+</CodeGroup >
+
+| id | text   | vector            | _distance |
+| --- | --- | --- | --- |
+| 7 | mage | [0.6, 0.3, 0.4] | 0.02 |
+| 9 | priest | [0.6, 0.2, 0.6] | 0.03 |
+
+The `mage` is the most magical of all our characters!
+
+## 6. What's next?
+
+You've learned how to create a LanceDB database, add data to it, and run vector search to find the most
+similar results to your given query embedding. In the real world, embeddings capture meaning and vector
+search allows you to find the most relevant data based on semantic similarity.
+
+As you explore LanceDB further, you can combine vector search with other techniques like filtering based
+on metadata fields, full-text search, hybrid search, and more.
+
+Note that LanceDB is much more than "just a vector database" -- it's
+[a multimodal lakehouse](/index).
+There's a lot more you can do with it! Learn more about what LanceDB is
+by continuing on to the next page, and have fun building with LanceDB!
+
