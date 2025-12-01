@@ -1,0 +1,51 @@
+---
+title: "GPU-Powered Vector Indexing in LanceDB"
+sidebarTitle: "GPU Indexing"
+description: "Accelerate IVF and HNSW index builds with GPU acceleration in LanceDB."
+weight: 4
+aliases:
+  - "/docs/concepts/indexing/gpu-indexing/"
+  - "/docs/concepts/indexing/gpu-indexing"
+---
+import GpuIndexCuda from '/snippets/py/gpu_index_cuda.mdx';
+import GpuIndexMps from '/snippets/py/gpu_index_mps.mdx';
+
+With LanceDB’s GPU-powered indexing you can build vector indexes for billions of rows in just a few hours—dramatically improving ingestion speed.
+
+> Internal tests show GPU indexing processing billions of vectors in under four hours.
+
+## Automatic GPU Indexing in LanceDB Enterprise
+
+<Info>
+Automatic GPU indexing is currently available only in LanceDB Enterprise. [Contact us](mailto:contact@lancedb.com) to enable the feature.
+</Info>
+
+Whenever you call `create_index`, Enterprise automatically selects GPU resources to build IVF or HNSW indexes. Indexing is asynchronous; call `wait_for_index()` to block until completion.
+
+## Manual GPU Indexing in LanceDB OSS
+
+Use the Python SDK with [PyTorch ≥ 2.0](https://pytorch.org/) to manually create IVF_PQ indexes on GPUs. GPU indexing currently requires the synchronous SDK. Specify the device via the `accelerator` parameter (`"cuda"` on Linux/NVIDIA, `"mps"` on Apple Silicon).
+
+### GPU Indexing on Linux
+
+<CodeGroup>
+  <GpuIndexCuda />
+</CodeGroup>
+
+### GPU Indexing on macOS (Apple Silicon)
+
+<CodeGroup>
+  <GpuIndexMps />
+</CodeGroup>
+
+## Performance Considerations
+
+- GPU memory usage scales with `num_partitions` and vector dimension.
+- Ensure GPU memory comfortably exceeds the dataset you’re indexing.
+- Batch size is tuned automatically based on available GPU memory.
+- Larger batches further improve throughput.
+
+## Troubleshooting
+
+If you encounter `AssertionError: Torch not compiled with CUDA enabled`, [install a PyTorch build that includes CUDA support](https://pytorch.org/get-started/locally/).
+

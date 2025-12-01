@@ -1,0 +1,81 @@
+---
+title: "Indexing Data in LanceDB"
+sidebarTitle: "Indexing Data"
+description: "Optimize search performance in LanceDB using vector, full-text, and scalar indexes."
+weight: 102
+aliases:
+  - "/docs/concepts/indexing/"
+  - "/docs/concepts/indexing"
+---
+
+Embeddings for a dataset become searchable through an **index**, a data structure that stores embeddings for efficient scans and lookups.
+
+LanceDB provides a comprehensive suite of indexing strategies:
+
+- **Vector Index**: Optimized for high-dimensional data (images, audio, or text embeddings)
+- **Full-Text Search Index**: Enables fast keyword-based searches
+- **Scalar Index**: Accelerates filtering and sorting of structured numeric or categorical data
+
+<Tip title="Working with scalar indexes">
+Scalar indexes serve as a foundational optimization layer. They can be combined with vector search (prefilter or post-filter), full-text search, SQL scans, or key-value lookups for rapid primary-key retrievals.
+</Tip>
+
+## Understanding the IVF-PQ Index
+
+An Approximate Nearest Neighbor (ANN) index re-represents data so that searches become faster (with a slight accuracy trade-off vs. brute-force search). LanceDB’s disk-based IVF-PQ index is a variant of the Inverted File Index (IVF) that uses Product Quantization (PQ) to compress embeddings.
+
+LanceDB is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar format designed for performant ML workloads and fast random access. Because of this foundation, LanceDB adopts a primarily *disk-based* indexing philosophy.
+
+## IVF-PQ
+
+IVF-PQ combines inverted file partitions with product quantization. The implementation in LanceDB exposes parameters you can fine-tune for index size, throughput, latency, and recall.
+
+### Product Quantization
+
+Quantization compresses embeddings to speed up search. Product quantization (PQ) divides a high-dimensional vector into equal-sized subvectors. Each subvector maps to the nearest centroid in its PQ codebook.
+
+![](/assets/docs/ivfpq_pq_desc.png)
+
+Quantization is *lossy*, so reconstructed vectors differ slightly from the originals. This trades accuracy for memory.
+
+<Note title="Effect of quantization">
+Original: `128 × 32 = 4096` bits  
+Quantized: `4 × 8 = 32` bits  
+This yields a **128×** reduction in memory requirements per vector.
+</Note>
+
+### Inverted File Index (IVF) Implementation
+
+PQ reduces index size, while IVF accelerates search by narrowing the candidate space. IVF partitions the PQ vector space into *Voronoi cells* by running K-means and using the centroids as region seeds.
+
+![](/assets/docs/ivfpq_ivf_desc.webp)
+
+During query time, a vector may lie near multiple cells. The `nprobe` parameter controls how many cells to search (higher `nprobe` improves accuracy but increases latency).
+
+![](/assets/docs/ivfpq_query_vector.webp)
+
+## HNSW Index Implementation
+
+Hierarchical Navigable Small Worlds (HNSW) is one of the most accurate and fastest ANN algorithms for high-dimensional data.
+
+### Types of ANN Search Algorithms
+
+- **Tree-based**: organize points into a tree.
+- **Hash-based**: rely on geometric hashing; good theoretical guarantees but weaker empirical performance.
+- **Graph-based**: represent points as a graph. HNSW is graph-based and combines k-NN graphs with skip-list concepts.
+
+### Understanding k-Nearest Neighbor Graphs
+
+Each vector becomes a vertex connected to its k nearest neighbors (k edges). A greedy walk from an entry point toward closer neighbors yields good approximate neighbors. Building k-NN graphs exactly is quadratic, so practical systems use approximate constructions or incremental updates.
+
+One downside: getting good accuracy can require large `k`, increasing index size.
+
+### Hierarchical Navigable Small Worlds (HNSW)
+
+HNSW improves upon k-ANN graphs by:
+
+- Pruning edges with heuristics so each vertex only keeps a small constant number of edges.
+- Using multiple layers (like a skip list) and dynamic entry points to speed up search.
+
+Layers contain decreasing fractions of the dataset. Greedy search starts at the top layer, descends layer by layer, and finishes with a bottom-layer search to retrieve multiple neighbors.
+
