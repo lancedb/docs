@@ -51,6 +51,17 @@
                   "user-guides/tables/versioning",
                   "user-guides/tables/consistency"
                 ]
+          },
+          {
+            "group": "Indexing data",
+            "pages": [
+              "user-guides/indexing/index",
+              "user-guides/indexing/vector-index",
+              "user-guides/indexing/fts-index",
+              "user-guides/indexing/scalar-index",
+              "user-guides/indexing/gpu-indexing",
+              "user-guides/indexing/reindexing"
+            ]
               }
             ]
           },
