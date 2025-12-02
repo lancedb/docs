@@ -22,7 +22,7 @@ Scalar indexes serve as a foundational optimization layer. They can be combined 
 
 ## Understanding the IVF-PQ Index
 
-An Approximate Nearest Neighbor (ANN) index re-represents data so that searches become faster (with a slight accuracy trade-off vs. brute-force search). LanceDB’s disk-based IVF-PQ index is a variant of the Inverted File Index (IVF) that uses Product Quantization (PQ) to compress embeddings.
+An Approximate Nearest Neighbor (ANN) index re-represents data so that searches become faster (with a slight accuracy trade-off vs. brute-force search). LanceDB's disk-based IVF-PQ index is a variant of the Inverted File Index (IVF) that uses Product Quantization (PQ) to compress embeddings.
 
 LanceDB is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar format designed for performant ML workloads and fast random access. Because of this foundation, LanceDB adopts a primarily *disk-based* indexing philosophy.
 

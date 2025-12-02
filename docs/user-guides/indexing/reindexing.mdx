@@ -14,7 +14,7 @@ import ReindexingIncremental from '/snippets/py/reindexing_incremental.mdx';
 Reindexing updates indexes after new data arrives so queries continue to perform well. For ANN search, new data always appears in results, but if it is not indexed yet LanceDB falls back to brute-force search for the new segments—which increases latency.
 
 <Tip>
-When you add data to a table with an existing index (vector or FTS), LanceDB doesn’t update the index until a reindex operation finishes.
+When you add data to a table with an existing index (vector or FTS), LanceDB doesn't update the index until a reindex operation finishes.
 </Tip>
 
 > Both LanceDB OSS and Cloud support reindexing, but the workflows differ depending on the index type.

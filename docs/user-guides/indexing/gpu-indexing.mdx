@@ -10,7 +10,7 @@ aliases:
 import GpuIndexCuda from '/snippets/py/gpu_index_cuda.mdx';
 import GpuIndexMps from '/snippets/py/gpu_index_mps.mdx';
 
-With LanceDB’s GPU-powered indexing you can build vector indexes for billions of rows in just a few hours—dramatically improving ingestion speed.
+With LanceDB's GPU-powered indexing you can build vector indexes for billions of rows in just a few hours—dramatically improving ingestion speed.
 
 > Internal tests show GPU indexing processing billions of vectors in under four hours.
 
@@ -41,7 +41,7 @@ Use the Python SDK with [PyTorch ≥ 2.0](https://pytorch.org/) to manually crea
 ## Performance Considerations
 
 - GPU memory usage scales with `num_partitions` and vector dimension.
-- Ensure GPU memory comfortably exceeds the dataset you’re indexing.
+- Ensure GPU memory comfortably exceeds the dataset you're indexing.
 - Batch size is tuned automatically based on available GPU memory.
 - Larger batches further improve throughput.
 
