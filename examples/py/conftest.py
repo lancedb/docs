@@ -44,6 +44,13 @@ def mem_db() -> DBConnection:
     return lancedb.connect("memory://")
 
 
+@pytest.fixture
+def tmp_db(db_path_factory) -> DBConnection:
+    """Create a temporary database connection for testing."""
+    db_path = db_path_factory("tmp_db")
+    return lancedb.connect(str(db_path))
+
+
 @pytest_asyncio.fixture
 async def mem_db_async() -> AsyncConnection:
     return await lancedb.connect_async("memory://")
