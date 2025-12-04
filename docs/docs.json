@@ -67,6 +67,13 @@
                     ]
                   }
                 ]
+              },
+              {
+                "group": "Training",
+                "pages": [
+                  "training/index",
+                  "training/torch"
+                ]
               }
             ]
           },
