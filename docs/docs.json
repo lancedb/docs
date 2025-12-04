@@ -1,5 +1,9 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "appearance": {
+    "default": "system",
+    "strict": false
+  },
   "theme": "aspen",
   "name": "LanceDB",
   "banner": {
