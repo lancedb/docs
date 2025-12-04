@@ -85,6 +85,21 @@
                 }
               }
             ]
+          },
+          {
+            "group": "Support",
+            "pages": [
+              "troubleshooting",
+              {
+                "group": "FAQ",
+                "pages": [
+                  "faq/index",
+                  "faq/faq-oss",
+                  "faq/faq-cloud",
+                  "faq/faq-enterprise"
+                ]
+              }
+            ]
           }
         ]
       },
