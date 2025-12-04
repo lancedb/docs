@@ -35,13 +35,7 @@
           {
             "group": "Get started",
             "pages": [
-              {
-                "group": "Quickstart",
-                "pages": [
-                  "quickstart/index",
-                  "quickstart/basic_usage"
-                ]
-              },
+              "quickstart",
               {
                 "group": "What is LanceDB?",
                 "pages": [
@@ -50,7 +44,13 @@
                   "features"
                 ]
               },
-              "cloud",
+              {
+                "group": "Cloud",
+                "pages": [
+                  "cloud/index",
+                  "cloud/get-started"
+                ]
+              },
               {
                 "group": "LanceDB Enterprise",
                 "pages": [
@@ -140,9 +140,10 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/lancedb",
       "github": "https://github.com/lancedb",
-      "linkedin": "https://www.linkedin.com/company/lancedb"
+      "linkedin": "https://www.linkedin.com/company/lancedb",
+      "x": "https://x.com/lancedb",
+      "discord": "https://discord.gg/AUEWnJ7Txb"
     }
   },
   "integrations": {
