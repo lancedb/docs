@@ -1,0 +1,54 @@
+---
+title: "PyTorch Integration"
+sidebar_title: "PyTorch integration"
+description: Learn how to use LanceDB with PyTorch for training and inference.
+---
+
+LanceDB provides a seamless integration with PyTorch for training and inference. This allows you to use LanceDB as a backend for your PyTorch models, and to use PyTorch for training and inference. You can use LanceDB to store your data, and PyTorch to train your models.
+
+## Quickstart
+
+The `Table` class in LanceDB implements a contract for a PyTorch
+[Dataset](https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset).
+ This means you can simply use a LanceDB table in a PyTorch dataloader directly.
+
+<CodeGroup>
+```py Python icon=Python 
+import lancedb
+import torch
+import pyarrow as pa
+
+mem_db = lancedb.connect("memory://")
+table = mem_db.create_table("test_table", pa.table({"a": range(1000)}))
+
+# Any LanceDB table can be used as a PyTorch Dataset
+dataloader = torch.utils.data.DataLoader(
+    table, batch_size=1024, shuffle=True
+)
+
+for batch in dataloader:
+    print(batch)
+```
+</CodeGroup>
+
+Although the `Table` class in LanceDB implements the `torch.utils.data.Dataset` interface, you'll most likely find that using
+a table [Permutation](/training/) is more efficient for training.
+
+## Selecting columns
+
+By default, the `Table` class will return all columns in the table when used as input to PyTorch. If you only need
+a subset of columns, you can significantly reduce your I/O requirements by selecting only the columns you need.
+
+<CodeGroup>
+```py Python icon=Python 
+from lancedb.permutation import Permutation
+
+permutation = Permutation.identity(table).select_columns(["id", "prompt"])
+dataloader = torch.utils.data.DataLoader(
+    permutation, batch_size=1024, shuffle=True
+)
+
+for batch in dataloader:
+    print(batch.schema)
+```
+</CodeGroup>
