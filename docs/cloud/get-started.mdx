@@ -357,14 +357,14 @@ print(filtered_result)
 ```
 
 ```ts TypeScript icon=js
-const filteredResultsesults = await table.search(queryDoc.embeddings)
+const filteredResults = await table.search(queryDoc.embeddings)
     .where("label > 2")
     .limit(5)
     .select(['text', 'keywords','label'])
     .toArray();
 
 console.log('Search Results with filter:');
-console.log(filteredResultsesults);
+console.log(filteredResults);
 ```
 </CodeGroup>
 
