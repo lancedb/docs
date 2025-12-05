@@ -5,16 +5,18 @@ description: Learn how to manage table schemas in LanceDB, including adding, alt
 weight: 4
 aliases: ["/tutorials/tables/schema/", "/tutorials/tables/schema"]
 ---
-import AddColumnsCalculated from '/snippets/py/add_columns_calculated.mdx';
-import AddColumnsDefaultValues from '/snippets/py/add_columns_default_values.mdx';
-import AddColumnsNullable from '/snippets/py/add_columns_nullable.mdx';
-import AlterColumnsRename from '/snippets/py/alter_columns_rename.mdx';
-import AlterColumnsDataType from '/snippets/py/alter_columns_data_type.mdx';
-import AlterColumnsNullable from '/snippets/py/alter_columns_nullable.mdx';
-import AlterColumnsMultiple from '/snippets/py/alter_columns_multiple.mdx';
-import DropColumnsSingle from '/snippets/py/drop_columns_single.mdx';
-import DropColumnsMultiple from '/snippets/py/drop_columns_multiple.mdx';
-import AlterVectorColumn from '/snippets/py/alter_vector_column.mdx';
+import {
+    PyAddColumnsCalculated as AddColumnsCalculated,
+    PyAddColumnsDefaultValues as AddColumnsDefaultValues,
+    PyAddColumnsNullable as AddColumnsNullable,
+    PyAlterColumnsRename as AlterColumnsRename,
+    PyAlterColumnsDataType as AlterColumnsDataType,
+    PyAlterColumnsNullable as AlterColumnsNullable,
+    PyAlterColumnsMultiple as AlterColumnsMultiple,
+    PyDropColumnsSingle as DropColumnsSingle,
+    PyDropColumnsMultiple as DropColumnsMultiple,
+    PyAlterVectorColumn as AlterVectorColumn,
+} from '/snippets/tables.mdx';
 
 Schema evolution enables non-breaking modifications to a database table's structure — such as adding columns, altering data types, or dropping fields — to adapt to evolving data requirements without service interruptions. 
 LanceDB supports ACID-compliant schema evolution through granular operations (add/alter/drop columns), allowing you to:
@@ -91,7 +93,9 @@ table = db.create_table(table_name, data, mode="overwrite")
 You can add new columns that are calculated from existing data using SQL expressions:
 
 <CodeGroup>
-<AddColumnsCalculated/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddColumnsCalculated}
+    </CodeBlock>
 </CodeGroup>
 
 ### Adding Columns with Default Values
@@ -99,7 +103,9 @@ You can add new columns that are calculated from existing data using SQL express
 Add boolean columns with default values for status tracking:
 
 <CodeGroup>
-<AddColumnsDefaultValues/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddColumnsDefaultValues}
+    </CodeBlock>
 </CodeGroup>
 
 ### Adding Nullable Columns
@@ -107,7 +113,9 @@ Add boolean columns with default values for status tracking:
 Add timestamp columns that can contain NULL values:
 
 <CodeGroup>
-<AddColumnsNullable/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddColumnsNullable}
+    </CodeBlock>
 </CodeGroup>
 
 <Warning title="NULL Values in New Columns">
@@ -186,7 +194,9 @@ table = db.create_table(table_name, data, schema=schema, mode="overwrite")
 Change column names to better reflect their purpose:
 
 <CodeGroup>
-<AlterColumnsRename/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AlterColumnsRename}
+    </CodeBlock>
 </CodeGroup>
 
 ### Changing Data Types
@@ -194,7 +204,9 @@ Change column names to better reflect their purpose:
 Convert column data types for better performance or compatibility:
 
 <CodeGroup>
-<AlterColumnsDataType/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AlterColumnsDataType}
+    </CodeBlock>
 </CodeGroup>
 
 ### Making Columns Nullable
@@ -202,7 +214,9 @@ Convert column data types for better performance or compatibility:
 Allow columns to contain NULL values:
 
 <CodeGroup>
-<AlterColumnsNullable/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AlterColumnsNullable}
+    </CodeBlock>
 </CodeGroup>
 
 ### Multiple Changes at Once
@@ -210,7 +224,9 @@ Allow columns to contain NULL values:
 Apply several alterations in a single operation:
 
 <CodeGroup>
-<AlterColumnsMultiple/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AlterColumnsMultiple}
+    </CodeBlock>
 </CodeGroup>
 
 <Warning title="Data Type Changes">
@@ -265,7 +281,9 @@ table = db.create_table(table_name, data, mode="overwrite")
 Remove individual columns that are no longer needed:
 
 <CodeGroup>
-<DropColumnsSingle/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {DropColumnsSingle}
+    </CodeBlock>
 </CodeGroup>
 
 ### Dropping Multiple Columns
@@ -273,7 +291,9 @@ Remove individual columns that are no longer needed:
 Remove several columns at once for efficiency:
 
 <CodeGroup>
-<DropColumnsMultiple/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {DropColumnsMultiple}
+    </CodeBlock>
 </CodeGroup>
 
 <Warning title="Irreversible Column Deletion">
@@ -289,6 +309,8 @@ Vector columns (used for embeddings) have special considerations. When altering 
 A common schema evolution task is converting a generic list column to a fixed-size list for performance:
 
 <CodeGroup>
-<AlterVectorColumn/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AlterVectorColumn}
+    </CodeBlock>
 </CodeGroup>
 

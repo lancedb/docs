@@ -5,15 +5,17 @@ description: "Learn how to implement versioning and ensure reproducibility in La
 weight: 3
 aliases: ["/tutorials/tables/versioning/", "/tutorials/tables/versioning"]
 ---
-import VersioningBasicSetup from '/snippets/py/versioning_basic_setup.mdx';
-import VersioningCheckInitialVersion from '/snippets/py/versioning_check_initial_version.mdx';
-import VersioningUpdateData from '/snippets/py/versioning_update_data.mdx';
-import VersioningAddData from '/snippets/py/versioning_add_data.mdx';
-import VersioningCheckVersionsAfterMod from '/snippets/py/versioning_check_versions_after_mod.mdx';
-import VersioningListAllVersions from '/snippets/py/versioning_list_all_versions.mdx';
-import VersioningRollback from '/snippets/py/versioning_rollback.mdx';
-import VersioningCheckoutLatest from '/snippets/py/versioning_checkout_latest.mdx';
-import VersioningDeleteData from '/snippets/py/versioning_delete_data.mdx';
+import {
+    PyVersioningBasicSetup as VersioningBasicSetup,
+    PyVersioningCheckInitialVersion as VersioningCheckInitialVersion,
+    PyVersioningUpdateData as VersioningUpdateData,
+    PyVersioningAddData as VersioningAddData,
+    PyVersioningCheckVersionsAfterMod as VersioningCheckVersionsAfterMod,
+    PyVersioningListAllVersions as VersioningListAllVersions,
+    PyVersioningRollback as VersioningRollback,
+    PyVersioningCheckoutLatest as VersioningCheckoutLatest,
+    PyVersioningDeleteData as VersioningDeleteData,
+} from '/snippets/tables.mdx';
 
 LanceDB redefines data management for AI/ML workflows with built-in, 
 automatic versioning powered by the [Lance columnar format](https://github.com/lancedb/lance). 
@@ -34,7 +36,9 @@ Let's create a table with sample data to demonstrate LanceDB's versioning capabi
 First, let's create a table with some sample data:
 
 <CodeGroup>
-<VersioningBasicSetup/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningBasicSetup}
+    </CodeBlock>
 </CodeGroup>
 
 ### Checking Initial Version
@@ -42,7 +46,9 @@ First, let's create a table with some sample data:
 After creating the table, let's check the initial version information:
 
 <CodeGroup>
-<VersioningCheckInitialVersion/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningCheckInitialVersion}
+    </CodeBlock>
 </CodeGroup>
 
 ## Modifying Data
@@ -54,7 +60,9 @@ When you modify data through operations like update or delete, LanceDB automatic
 Let's update some existing records to see versioning in action:
 
 <CodeGroup>
-<VersioningUpdateData/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningUpdateData}
+    </CodeBlock>
 </CodeGroup>
 
 ### Adding New Data
@@ -62,7 +70,9 @@ Let's update some existing records to see versioning in action:
 Now let's add more records to the table:
 
 <CodeGroup>
-<VersioningAddData/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningAddData}
+    </CodeBlock>
 </CodeGroup>
 
 ### Checking Version Changes
@@ -70,7 +80,9 @@ Now let's add more records to the table:
 Let's see how the versions have changed after our modifications:
 
 <CodeGroup>
-<VersioningCheckVersionsAfterMod/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningCheckVersionsAfterMod}
+    </CodeBlock>
 </CodeGroup>
 
 ## Tracking Changes in Schema
@@ -151,7 +163,9 @@ LanceDB supports fast rollbacks to any previous version without data duplication
 First, let's see all the versions we've created:
 
 <CodeGroup>
-<VersioningListAllVersions/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningListAllVersions}
+    </CodeBlock>
 </CodeGroup>
 
 ### Rolling Back to a Previous Version
@@ -159,7 +173,9 @@ First, let's see all the versions we've created:
 Now let's roll back to before we added the vector column:
 
 <CodeGroup>
-<VersioningRollback/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningRollback}
+    </CodeBlock>
 </CodeGroup>
 
 ## Making Changes from Previous Versions
@@ -230,7 +246,9 @@ Let's demonstrate how deletions also create new versions:
 First, let's return to the latest version:
 
 <CodeGroup>
-<VersioningCheckoutLatest/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningCheckoutLatest}
+    </CodeBlock>
 </CodeGroup>
 
 ### Deleting Data
@@ -238,7 +256,9 @@ First, let's return to the latest version:
 Now let's delete some data to see how it affects versioning:
 
 <CodeGroup>
-<VersioningDeleteData/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VersioningDeleteData}
+    </CodeBlock>
 </CodeGroup>
 
 ### Version History and Operations

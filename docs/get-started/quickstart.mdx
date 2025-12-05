@@ -4,9 +4,9 @@ sidebarTitle: "Quickstart"
 description: "Get started with LanceDB in minutes."
 weight: 6
 ---
-import ImportLanceDBPy from '/snippets/py/import_lancedb.mdx';
-import ConnectToLanceDBPy from '/snippets/py/connect_to_lancedb.mdx';
-import AddDataPy from '/snippets/py/basic_usage_add_data.mdx';
+import { PyBasicImports as BasicUsageImports } from '/snippets/basic_usage.mdx';
+import { PyConnect as BasicUsageConnect } from '/snippets/connection.mdx';
+import { PyQuickstartAddData as AddDataPy } from '/snippets/quickstart.mdx';
 
 The quickest way to get going with LanceDB is with the open source version, which is file-based and
 runs in-process (like SQLite). Let's get started using Python in just a few steps!
@@ -35,7 +35,9 @@ Using LanceDB's open source version is as simple as running
 the following import statement -- no servers needed!
 
 <CodeGroup>
-<ImportLanceDBPy/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {BasicUsageImports}
+    </CodeBlock>
 </CodeGroup>
 
 ### Connect to a database
@@ -44,7 +46,9 @@ Once you import LanceDB as a library, you can connect to a LanceDB database by s
 local file path.
 
 <CodeGroup>
-<ConnectToLanceDBPy/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {BasicUsageConnect}
+    </CodeBlock>
 </CodeGroup>
 
 ### LanceDB Cloud or Enterprise versions
@@ -191,5 +195,9 @@ The `mage` is the most magical of all our characters!
 
 here's a snippet:
 
-<AddDataPy/>
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddDataPy}
+    </CodeBlock>
+</CodeGroup>
 

@@ -5,21 +5,23 @@ description: Learn about different methods to create tables in LanceDB, includin
 weight: 1
 aliases: ["/tutorials/tables/create/", "/tutorials/tables/create"]
 ---
-import CreateTableFromDicts from '/snippets/py/create_table_from_dicts.mdx';
-import CreateTableFromPandas from '/snippets/py/create_table_from_pandas.mdx';
-import CreateTableCustomSchema from '/snippets/py/create_table_custom_schema.mdx';
-import CreateTableFromPolars from '/snippets/py/create_table_from_polars.mdx';
-import CreateTableFromArrow from '/snippets/py/create_table_from_arrow.mdx';
-import CreateTableFromPydantic from '/snippets/py/create_table_from_pydantic.mdx';
-import CreateTableNestedSchema from '/snippets/py/create_table_nested_schema.mdx';
-import CreateTableFromIterator from '/snippets/py/create_table_from_iterator.mdx';
-import OpenExistingTable from '/snippets/py/open_existing_table.mdx';
-import CreateEmptyTable from '/snippets/py/create_empty_table.mdx';
-import CreateEmptyTablePydantic from '/snippets/py/create_empty_table_pydantic.mdx';
-import DropTable from '/snippets/py/drop_table.mdx';
-import TablesBasicConnect from '/snippets/py/tables_basic_connect.mdx';
-import TablesDocumentModel from '/snippets/py/tables_document_model.mdx';
-import TablesTzValidator from '/snippets/py/tables_tz_validator.mdx';
+import {
+    PyCreateTableFromDicts as CreateTableFromDicts,
+    PyCreateTableFromPandas as CreateTableFromPandas,
+    PyCreateTableCustomSchema as CreateTableCustomSchema,
+    PyCreateTableFromPolars as CreateTableFromPolars,
+    PyCreateTableFromArrow as CreateTableFromArrow,
+    PyCreateTableFromPydantic as CreateTableFromPydantic,
+    PyCreateTableNestedSchema as CreateTableNestedSchema,
+    PyCreateTableFromIterator as CreateTableFromIterator,
+    PyOpenExistingTable as OpenExistingTable,
+    PyCreateEmptyTable as CreateEmptyTable,
+    PyCreateEmptyTablePydantic as CreateEmptyTablePydantic,
+    PyDropTable as DropTable,
+    PyTablesBasicConnect as TablesBasicConnect,
+    PyTablesDocumentModel as TablesDocumentModel,
+    PyTablesTzValidator as TablesTzValidator,
+} from '/snippets/tables.mdx';
 
 In LanceDB, tables store records with a defined schema that specifies column names and types. You can create LanceDB tables from these data formats:
 
@@ -38,7 +40,9 @@ Initialize a LanceDB connection and create a table
 
 
 <CodeGroup>
-<TablesBasicConnect/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {TablesBasicConnect}
+    </CodeBlock>
 </CodeGroup>
 
 LanceDB allows ingesting data from various sources - `dict`, `list[dict]`, `pd.DataFrame`, `pa.Table` or a `Iterator[pa.RecordBatch]`. Let's take a look at some of the these.
@@ -46,13 +50,17 @@ LanceDB allows ingesting data from various sources - `dict`, `list[dict]`, `pd.D
 ### From list of tuples or dictionaries
 
 <CodeGroup>
-<CreateTableFromDicts/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableFromDicts}
+    </CodeBlock>
 </CodeGroup>
 
 ### From a Pandas DataFrame
 
 <CodeGroup>
-<CreateTableFromPandas/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableFromPandas}
+    </CodeBlock>
 </CodeGroup>
 
 <Note title="Note">
@@ -66,7 +74,9 @@ The **`vector`** column needs to be a [Vector](/docs/integrations/frameworks/pyd
 #### From a custom schema
 
 <CodeGroup>
-<CreateTableCustomSchema/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableCustomSchema}
+    </CodeBlock>
 </CodeGroup>
 
 ### From a Polars DataFrame
@@ -77,7 +87,9 @@ under the hood. A deeper integration between LanceDB Tables and Polars DataFrame
 is on the way.
 
 <CodeGroup>
-<CreateTableFromPolars/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableFromPolars}
+    </CodeBlock>
 </CodeGroup>
 
 ### From an Arrow Table
@@ -85,7 +97,9 @@ You can also create LanceDB tables directly from Arrow tables.
 LanceDB supports float16 data type!
 
 <CodeGroup>
-<CreateTableFromArrow/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableFromArrow}
+    </CodeBlock>
 </CodeGroup>
 
 ### From Pydantic Models
@@ -103,7 +117,9 @@ LanceDB only understands subclasses of `lancedb.pydantic.LanceModel`
 (which itself derives from `pydantic.BaseModel`).
 
 <CodeGroup>
-<CreateTableFromPydantic/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableFromPydantic}
+    </CodeBlock>
 </CodeGroup>
 
 #### Nested schemas
@@ -111,13 +127,17 @@ LanceDB only understands subclasses of `lancedb.pydantic.LanceModel`
 Sometimes your data model may contain nested objects. For example, you may want to store the document string and the document source name as a nested Document object:
 
 <CodeGroup>
-<TablesDocumentModel/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {TablesDocumentModel}
+    </CodeBlock>
 </CodeGroup>
 
 This can be used as the type of a LanceDB table column:
 
 <CodeGroup>
-<CreateTableNestedSchema/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableNestedSchema}
+    </CodeBlock>
 </CodeGroup>
 
 This creates a struct column called "document" that has two subfields
@@ -140,7 +160,9 @@ Note that neither Pydantic nor PyArrow automatically validates that input data
 is of the correct timezone, but this is easy to add as a custom field validator:
 
 <CodeGroup>
-<TablesTzValidator/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {TablesTzValidator}
+    </CodeBlock>
 </CodeGroup>
 
 When you run this code it should print "A ValidationError was raised."
@@ -159,7 +181,9 @@ LanceDB additionally supports PyArrow's `RecordBatch` Iterators or other generat
 Here's an example using using `RecordBatch` iterator for creating tables.
 
 <CodeGroup>
-<CreateTableFromIterator/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateTableFromIterator}
+    </CodeBlock>
 </CodeGroup>
 
 You can also use iterators of other types like Pandas DataFrame or Pylists directly in the above example.
@@ -169,7 +193,9 @@ You can also use iterators of other types like Pandas DataFrame or Pylists direc
 If you forget the name of your table, you can always get a listing of all table names.
 
 <CodeGroup>
-<OpenExistingTable/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {OpenExistingTable}
+    </CodeBlock>
 </CodeGroup>
 
 ## Creating empty table
@@ -178,7 +204,9 @@ You can create an empty table for scenarios where you want to add data to the ta
 An empty table can be initialized via a PyArrow schema.
 
 <CodeGroup>
-<CreateEmptyTable/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateEmptyTable}
+    </CodeBlock>
 </CodeGroup>
 
 Alternatively, you can also use Pydantic to specify the schema for the empty table. Note that we do not
@@ -186,7 +214,9 @@ directly import `pydantic` but instead use `lancedb.pydantic` which is a subclas
 that has been extended to support LanceDB specific types like `Vector`.
 
 <CodeGroup>
-<CreateEmptyTablePydantic/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {CreateEmptyTablePydantic}
+    </CodeBlock>
 </CodeGroup>
 
 Once the empty table has been created, you can add data to it, as explained in the next section on [working with data](/tutorials/tables/update).
@@ -196,7 +226,9 @@ Once the empty table has been created, you can add data to it, as explained in t
 Use the `drop_table()` method on the database to remove a table.
 
 <CodeGroup>
-<DropTable/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {DropTable}
+    </CodeBlock>
 </CodeGroup>
 
 This permanently removes the table and is not recoverable, unlike deleting rows.

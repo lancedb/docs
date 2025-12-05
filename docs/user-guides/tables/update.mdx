@@ -5,16 +5,18 @@ description: "Learn how to update and modify data in LanceDB. Includes increment
 weight: 2
 aliases: ["/tutorials/tables/update/", "/tutorials/tables/update", "/tutorials/tables/sql.md"]
 ---
-import AddDataToTable from '/snippets/py/add_data_to_table.mdx';
-import AddDataPydanticModel from '/snippets/py/add_data_pydantic_model.mdx';
-import AddDataNestedModel from '/snippets/py/add_data_nested_model.mdx';
-import BatchDataInsertion from '/snippets/py/batch_data_insertion.mdx';
-import UpdateOperation from '/snippets/py/update_operation.mdx';
-import UpdateUsingSql from '/snippets/py/update_using_sql.mdx';
-import DeleteOperation from '/snippets/py/delete_operation.mdx';
-import UpsertOperation from '/snippets/py/upsert_operation.mdx';
-import InsertIfNotExists from '/snippets/py/insert_if_not_exists.mdx';
-import ReplaceRangeOperation from '/snippets/py/replace_range_operation.mdx';
+import {
+    PyAddDataToTable as AddDataToTable,
+    PyAddDataPydanticModel as AddDataPydanticModel,
+    PyAddDataNestedModel as AddDataNestedModel,
+    PyBatchDataInsertion as BatchDataInsertion,
+    PyUpdateOperation as UpdateOperation,
+    PyUpdateUsingSql as UpdateUsingSql,
+    PyDeleteOperation as DeleteOperation,
+    PyUpsertOperation as UpsertOperation,
+    PyInsertIfNotExists as InsertIfNotExists,
+    PyReplaceRangeOperation as ReplaceRangeOperation,
+} from '/snippets/tables.mdx';
 
 Once you have created a table, there are several ways to modify its data. You can:
 
@@ -63,7 +65,9 @@ This is an _empty_ table, with no data in it. To add or append data to a table, 
 as shown below.
 
 <CodeGroup>
-<AddDataToTable/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddDataToTable}
+    </CodeBlock>
 </CodeGroup>
 
 <Note title="Vector Column Type">
@@ -75,7 +79,9 @@ The vector column needs to be a `pyarrow.FixedSizeList` type.
 Pydantic models provide a more structured way to define your table schema:
 
 <CodeGroup>
-<AddDataPydanticModel/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddDataPydanticModel}
+    </CodeBlock>
 </CodeGroup>
 
 ### Using Nested Models
@@ -94,7 +100,9 @@ class Document(BaseModel):
 This can be used as the type of a LanceDB table column:
 
 <CodeGroup>
-<AddDataNestedModel/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {AddDataNestedModel}
+    </CodeBlock>
 </CodeGroup>
 
 This creates a struct column called `document` that has two subfields called `content` and `source`:
@@ -118,7 +126,9 @@ your table in one go. Data will be automatically compacted for the best query pe
 #### Python Batch Insertion
 
 <CodeGroup>
-<BatchDataInsertion/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {BatchDataInsertion}
+    </CodeBlock>
 </CodeGroup>
 
 <Warning title="Batch size">
@@ -146,7 +156,9 @@ See the [SQL queries](/docs/search/sql/sql-queries/) page for more information o
 </Note>
 
 <CodeGroup>
-<UpdateOperation/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {UpdateOperation}
+    </CodeBlock>
 </CodeGroup>
 
 Output:
@@ -163,7 +175,9 @@ Output:
 The `values` parameter is used to provide the new values for the columns as literal values. You can also use the `values_sql` / `valuesSql` parameter to provide SQL expressions for the new values. For example, you can use `values_sql="x + 1"` to increment the value of the `x` column by 1.
 
 <CodeGroup>
-<UpdateUsingSql/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {UpdateUsingSql}
+    </CodeBlock>
 </CodeGroup>
 
 Output:
@@ -184,7 +198,9 @@ When rows are updated, they are moved out of the index. The row will still show 
 Remove rows that match a condition.
 
 <CodeGroup>
-<DeleteOperation/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {DeleteOperation}
+    </CodeBlock>
 </CodeGroup>
 
 <Warning title="Soft Deletion">
@@ -222,7 +238,9 @@ enable both `when_matched_update_all()` and `when_not_matched_insert_all()`.
 #### Setting Up the Example Table and Performing Upsert
 
 <CodeGroup>
-<UpsertOperation/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {UpsertOperation}
+    </CodeBlock>
 </CodeGroup>
 
 ### Insert-if-not-exists
@@ -234,7 +252,9 @@ preventing duplicate rows. To do this with merge insert, enable just
 #### Setting Up the Example Table and Performing Insert-if-not-exists
 
 <CodeGroup>
-<InsertIfNotExists/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {InsertIfNotExists}
+    </CodeBlock>
 </CodeGroup>
 
 ### Replace Range
@@ -250,7 +270,9 @@ for the document that are not in the new data, with `when_not_matched_by_source_
 #### Setting Up the Example Table and Performing Replace Range
 
 <CodeGroup>
-<ReplaceRangeOperation/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ReplaceRangeOperation}
+    </CodeBlock>
 </CodeGroup>
 
 <Tip title="Batch Size Recommendation">

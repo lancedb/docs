@@ -7,17 +7,19 @@ aliases:
   - "/docs/concepts/indexing/vector-index/"
   - "/docs/concepts/indexing/vector-index"
 ---
-import VectorIndexConfigureIvf from '/snippets/py/vector_index_configure_ivf.mdx';
-import VectorIndexSetup from '/snippets/py/vector_index_setup.mdx';
-import VectorIndexBuildIvf from '/snippets/py/vector_index_build_ivf.mdx';
-import VectorIndexQueryIvf from '/snippets/py/vector_index_query_ivf.mdx';
-import VectorIndexBuildHnsw from '/snippets/py/vector_index_build_hnsw.mdx';
-import VectorIndexQueryHnsw from '/snippets/py/vector_index_query_hnsw.mdx';
-import VectorIndexBinarySchema from '/snippets/py/vector_index_binary_schema.mdx';
-import VectorIndexBinaryAddData from '/snippets/py/vector_index_binary_add_data.mdx';
-import VectorIndexBinaryBuildIndex from '/snippets/py/vector_index_binary_build_index.mdx';
-import VectorIndexBinarySearch from '/snippets/py/vector_index_binary_search.mdx';
-import VectorIndexCheckStatus from '/snippets/py/vector_index_check_status.mdx';
+import {
+    PyVectorIndexConfigureIvf as VectorIndexConfigureIvf,
+    PyVectorIndexSetup as VectorIndexSetup,
+    PyVectorIndexBuildIvf as VectorIndexBuildIvf,
+    PyVectorIndexQueryIvf as VectorIndexQueryIvf,
+    PyVectorIndexBuildHnsw as VectorIndexBuildHnsw,
+    PyVectorIndexQueryHnsw as VectorIndexQueryHnsw,
+    PyVectorIndexBinarySchema as VectorIndexBinarySchema,
+    PyVectorIndexBinaryAddData as VectorIndexBinaryAddData,
+    PyVectorIndexBinaryBuildIndex as VectorIndexBinaryBuildIndex,
+    PyVectorIndexBinarySearch as VectorIndexBinarySearch,
+    PyVectorIndexCheckStatus as VectorIndexCheckStatus,
+} from '/snippets/indexing.mdx';
 
 LanceDB offers two main vector indexing algorithms: **Inverted File (IVF) Index** and **Hierarchically Navigable Small Worlds (HNSW) Index**. You can create multiple vector indexes within a Lance table. This guide walks through common configurations and build patterns.
 
@@ -53,7 +55,9 @@ You can configure the index beyond default parameters:
 - `num_sub_vectors`: Number of subvectors created during PQ (controls recall vs. memory)
 
 <CodeGroup>
-  <VectorIndexConfigureIvf />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexConfigureIvf}
+    </CodeBlock>
 </CodeGroup>
 
 ### 1. Setup
@@ -61,7 +65,9 @@ You can configure the index beyond default parameters:
 Connect to LanceDB and open the table you want to index.
 
 <CodeGroup>
-  <VectorIndexSetup />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexSetup}
+    </CodeBlock>
 </CodeGroup>
 
 ### 2. Construct an IVF Index
@@ -69,7 +75,9 @@ Connect to LanceDB and open the table you want to index.
 Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. By default LanceDB uses Product Quantization; switch to `IVF_SQ` for scalar quantization.
 
 <CodeGroup>
-  <VectorIndexBuildIvf />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexBuildIvf}
+    </CodeBlock>
 </CodeGroup>
 
 ### 3. Query the IVF Index
@@ -77,7 +85,9 @@ Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` 
 Search using a random 1,536-dimensional embedding.
 
 <CodeGroup>
-  <VectorIndexQueryIvf />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexQueryIvf}
+    </CodeBlock>
 </CodeGroup>
 
 #### Search Configuration
@@ -102,13 +112,17 @@ Set the following when constructing an HNSW index:
 ### 1. Construct an HNSW Index
 
 <CodeGroup>
-  <VectorIndexBuildHnsw />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexBuildHnsw}
+    </CodeBlock>
 </CodeGroup>
 
 ### 2. Query the HNSW Index
 
 <CodeGroup>
-  <VectorIndexQueryHnsw />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexQueryHnsw}
+    </CodeBlock>
 </CodeGroup>
 
 ## Example: Construct a Binary Vector Index
@@ -125,25 +139,33 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 ### 1. Create Table and Schema
 
 <CodeGroup>
-  <VectorIndexBinarySchema />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexBinarySchema}
+    </CodeBlock>
 </CodeGroup>
 
 ### 2. Generate and Add Data
 
 <CodeGroup>
-  <VectorIndexBinaryAddData />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexBinaryAddData}
+    </CodeBlock>
 </CodeGroup>
 
 ### 3. Construct the Binary Index
 
 <CodeGroup>
-  <VectorIndexBinaryBuildIndex />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexBinaryBuildIndex}
+    </CodeBlock>
 </CodeGroup>
 
 ### 4. Vector Search
 
 <CodeGroup>
-  <VectorIndexBinarySearch />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexBinarySearch}
+    </CodeBlock>
 </CodeGroup>
 
 ## Check Index Status
@@ -151,6 +173,8 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 Vector index creation is fast—usually a few minutes for a million 1,536-D vectors. Check status via the UI or APIs. The index name appends `_idx` to the column name. Use `wait_for_index()` to block until completion.
 
 <CodeGroup>
-  <VectorIndexCheckStatus />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {VectorIndexCheckStatus}
+    </CodeBlock>
 </CodeGroup>
 

@@ -7,16 +7,18 @@ aliases:
   - "/docs/concepts/indexing/scalar-index/"
   - "/docs/concepts/indexing/scalar-index"
 ---
-import ScalarIndexBuild from '/snippets/py/scalar_index_build.mdx';
-import ScalarIndexWait from '/snippets/py/scalar_index_wait.mdx';
-import ScalarIndexOptimize from '/snippets/py/scalar_index_optimize.mdx';
-import ScalarIndexFilter from '/snippets/py/scalar_index_filter.mdx';
-import ScalarIndexPrefilter from '/snippets/py/scalar_index_prefilter.mdx';
-import ScalarIndexUuidType from '/snippets/py/scalar_index_uuid_type.mdx';
-import ScalarIndexUuidData from '/snippets/py/scalar_index_uuid_data.mdx';
-import ScalarIndexUuidTable from '/snippets/py/scalar_index_uuid_table.mdx';
-import ScalarIndexUuidWait from '/snippets/py/scalar_index_uuid_wait.mdx';
-import ScalarIndexUuidUpsert from '/snippets/py/scalar_index_uuid_upsert.mdx';
+import {
+    PyScalarIndexBuild as ScalarIndexBuild,
+    PyScalarIndexWait as ScalarIndexWait,
+    PyScalarIndexOptimize as ScalarIndexOptimize,
+    PyScalarIndexFilter as ScalarIndexFilter,
+    PyScalarIndexPrefilter as ScalarIndexPrefilter,
+    PyScalarIndexUuidType as ScalarIndexUuidType,
+    PyScalarIndexUuidData as ScalarIndexUuidData,
+    PyScalarIndexUuidTable as ScalarIndexUuidTable,
+    PyScalarIndexUuidWait as ScalarIndexUuidWait,
+    PyScalarIndexUuidUpsert as ScalarIndexUuidUpsert,
+} from '/snippets/indexing.mdx';
 
 Scalar indexes organize scalar attributes (numbers, categories, timestamps) to accelerate filtering alongside vector data.
 
@@ -39,7 +41,9 @@ Supported scalar index types:
 ### 1. Build the Index
 
 <CodeGroup>
-  <ScalarIndexBuild />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexBuild}
+    </CodeBlock>
 </CodeGroup>
 
 <Note title="LanceDB Cloud & Enterprise">
@@ -49,7 +53,9 @@ Supported scalar index types:
 ### 2. Check Index Status
 
 <CodeGroup>
-  <ScalarIndexWait />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexWait}
+    </CodeBlock>
 </CodeGroup>
 
 ### 3. Update the Index
@@ -57,7 +63,9 @@ Supported scalar index types:
 Update scalar indexes after inserts/deletes by calling `optimize()`.
 
 <CodeGroup>
-  <ScalarIndexOptimize />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexOptimize}
+    </CodeBlock>
 </CodeGroup>
 
 <Note title="LanceDB Cloud">
@@ -69,13 +77,17 @@ Cloud automates `optimize`, so new data remains queryable without extra steps.
 Scalar indexes speed up pure scalar filters:
 
 <CodeGroup>
-  <ScalarIndexFilter />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexFilter}
+    </CodeBlock>
 </CodeGroup>
 
 They also accelerate hybrid searches that combine vector similarity with scalar prefilters:
 
 <CodeGroup>
-  <ScalarIndexPrefilter />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexPrefilter}
+    </CodeBlock>
 </CodeGroup>
 
 ## Advanced: Index UUID Columns
@@ -90,30 +102,40 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 1. Define UUID Type
 
 <CodeGroup>
-  <ScalarIndexUuidType />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexUuidType}
+    </CodeBlock>
 </CodeGroup>
 
 ### 2. Generate UUID Data
 
 <CodeGroup>
-  <ScalarIndexUuidData />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexUuidData}
+    </CodeBlock>
 </CodeGroup>
 
 ### 3. Create Table with UUID Column
 
 <CodeGroup>
-  <ScalarIndexUuidTable />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexUuidTable}
+    </CodeBlock>
 </CodeGroup>
 
 ### 4. Create and Wait for the Index
 
 <CodeGroup>
-  <ScalarIndexUuidWait />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexUuidWait}
+    </CodeBlock>
 </CodeGroup>
 
 ### 5. Perform Operations with the UUID Index
 
 <CodeGroup>
-  <ScalarIndexUuidUpsert />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ScalarIndexUuidUpsert}
+    </CodeBlock>
 </CodeGroup>
 
