@@ -49,7 +49,7 @@ class SentenceTransformersEmbeddings extends TextEmbeddingFunction {
     return output.tolist();
   }
 }
-// -8<-- [end:embedding_impl]
+// --8<-- [end:embedding_impl]
 
 test("Registry examples", async () => {
   await withTempDirectory(async (databaseDir) => {
@@ -73,7 +73,7 @@ test("Registry examples", async () => {
     await table.add([{ text: "hello" }, { text: "world" }]);
 
     const results = await table.search("greeting").limit(1).toArray();
-    // -8<-- [end:call_custom_function]
+    // --8<-- [end:call_custom_function]
     expect(results.length).toBe(1);
   });
 }, 100_000);

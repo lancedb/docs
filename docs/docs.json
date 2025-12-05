@@ -129,6 +129,72 @@
         ]
       },
       {
+        "tab": "Integrations",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "integrations/index"
+            ]
+          },
+          {
+            "group": "Embedding providers",
+            "pages": [
+              "integrations/embedding/aws",
+              "integrations/embedding/cohere",
+              "integrations/embedding/gemini",
+              "integrations/embedding/huggingface",
+              "integrations/embedding/ibm",
+              "integrations/embedding/imagebind",
+              "integrations/embedding/instructor",
+              "integrations/embedding/jina",
+              "integrations/embedding/ollama",
+              "integrations/embedding/openai",
+              "integrations/embedding/openclip",
+              "integrations/embedding/sentence-transformers",
+              "integrations/embedding/voyageai"
+            ]
+          },
+          {
+            "group": "Reranking",
+            "pages": [
+              "integrations/reranking/answerdotai",
+              "integrations/reranking/cohere",
+              "integrations/reranking/colbert",
+              "integrations/reranking/cross_encoder",
+              "integrations/reranking/jina",
+              "integrations/reranking/linear_combination",
+              "integrations/reranking/openai",
+              "integrations/reranking/rrf",
+              "integrations/reranking/voyageai"
+            ]
+          },
+          {
+            "group": "Frameworks",
+            "pages": [
+              "integrations/frameworks/genkit",
+              "integrations/frameworks/kiln",
+              "integrations/frameworks/langchain",
+              "integrations/frameworks/llamaIndex",
+              "integrations/frameworks/prompttools",
+              "integrations/frameworks/pydantic",
+              "integrations/frameworks/synthetic-data-kit"
+            ]
+          },
+          {
+            "group": "Platforms",
+            "pages": [
+              "integrations/platforms/dlt",
+              "integrations/platforms/duckdb",
+              "integrations/platforms/pandas_and_pyarrow",
+              "integrations/platforms/phidata",
+              "integrations/platforms/polars_arrow",
+              "integrations/platforms/voxel51"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Demos",
         "groups": [
           {

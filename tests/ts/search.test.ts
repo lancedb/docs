@@ -86,7 +86,7 @@ test("vector search", async () => {
         .fill(1)
         .map(() => Math.floor(Math.random() * 255));
       const results = await tbl.query().nearestTo(query).limit(10).toArrow();
-      // --8<-- [end:search_binary_data
+      // --8<-- [end:search_binary_data]
       expect(results.numRows).toBe(10);
     }
   });
