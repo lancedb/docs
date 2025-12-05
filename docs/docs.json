@@ -118,7 +118,6 @@
           {
             "group": "Embedding providers",
             "pages": [
-              "integrations/embedding/index",
               "integrations/embedding/aws",
               "integrations/embedding/cohere",
               "integrations/embedding/gemini",
@@ -137,7 +136,6 @@
           {
             "group": "Reranking",
             "pages": [
-              "integrations/reranking/index",
               "integrations/reranking/answerdotai",
               "integrations/reranking/cohere",
               "integrations/reranking/colbert",
@@ -152,7 +150,6 @@
           {
             "group": "Frameworks",
             "pages": [
-              "integrations/frameworks/index",
               "integrations/frameworks/genkit",
               "integrations/frameworks/kiln",
               "integrations/frameworks/langchain",
@@ -165,7 +162,6 @@
           {
             "group": "Platforms",
             "pages": [
-              "integrations/platforms/index",
               "integrations/platforms/dlt",
               "integrations/platforms/duckdb",
               "integrations/platforms/pandas_and_pyarrow",
