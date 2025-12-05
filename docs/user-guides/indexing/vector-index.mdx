@@ -1,0 +1,156 @@
+---
+title: "Vector Indexes in LanceDB"
+sidebarTitle: "Vector Index"
+description: "Build and optimize vector indexes in LanceDB using IVF-PQ, HNSW, and binary indexes."
+weight: 1
+aliases:
+  - "/docs/concepts/indexing/vector-index/"
+  - "/docs/concepts/indexing/vector-index"
+---
+import VectorIndexConfigureIvf from '/snippets/py/vector_index_configure_ivf.mdx';
+import VectorIndexSetup from '/snippets/py/vector_index_setup.mdx';
+import VectorIndexBuildIvf from '/snippets/py/vector_index_build_ivf.mdx';
+import VectorIndexQueryIvf from '/snippets/py/vector_index_query_ivf.mdx';
+import VectorIndexBuildHnsw from '/snippets/py/vector_index_build_hnsw.mdx';
+import VectorIndexQueryHnsw from '/snippets/py/vector_index_query_hnsw.mdx';
+import VectorIndexBinarySchema from '/snippets/py/vector_index_binary_schema.mdx';
+import VectorIndexBinaryAddData from '/snippets/py/vector_index_binary_add_data.mdx';
+import VectorIndexBinaryBuildIndex from '/snippets/py/vector_index_binary_build_index.mdx';
+import VectorIndexBinarySearch from '/snippets/py/vector_index_binary_search.mdx';
+import VectorIndexCheckStatus from '/snippets/py/vector_index_check_status.mdx';
+
+LanceDB offers two main vector indexing algorithms: **Inverted File (IVF) Index** and **Hierarchically Navigable Small Worlds (HNSW) Index**. You can create multiple vector indexes within a Lance table. This guide walks through common configurations and build patterns.
+
+### Option 1: Self-Hosted Indexing
+
+Manual, synchronous or asynchronous: When using LanceDB Open Source, you build indexes manually, reindex, and tune parameters yourself. The Python SDK supports both synchronous and asynchronous workflows.
+
+### Option 2: Automated Indexing
+
+Automatic and async: LanceDB Cloud/Enterprise handles indexing automatically. When a table contains a single vector column named `vector`, LanceDB automatically:
+
+- Infers the vector column from the schema
+- Creates an optimized `IVF_PQ` index with default `l2` distance
+- Tunes indexing parameters based on data distribution
+
+<Note title="Manual index creation">
+You can create a new index with different parameters using `create_index` (this replaces any existing index). Index building is asynchronous—call `wait_for_index()` to block until indexing completes.
+</Note>
+
+## Example: Construct an IVF Index
+
+This example creates an index for a table containing 1,536-dimensional vectors. Ensure the table contains at least a few thousand rows for effective index training.
+
+### Index Configuration
+
+You can configure the index beyond default parameters:
+
+- `index_type`
+  - `IVF_PQ`: Default index optimized for high-dimensional vectors
+  - `IVF_HNSW_SQ`: Combines IVF clustering with an HNSW graph
+- `metric`: Defaults to `l2`; you can switch to `cosine` or `dot`
+- `num_partitions`: Number of IVF partitions (choose to target a desired rows-per-partition)
+- `num_sub_vectors`: Number of subvectors created during PQ (controls recall vs. memory)
+
+<CodeGroup>
+  <VectorIndexConfigureIvf />
+</CodeGroup>
+
+### 1. Setup
+
+Connect to LanceDB and open the table you want to index.
+
+<CodeGroup>
+  <VectorIndexSetup />
+</CodeGroup>
+
+### 2. Construct an IVF Index
+
+Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. By default LanceDB uses Product Quantization; switch to `IVF_SQ` for scalar quantization.
+
+<CodeGroup>
+  <VectorIndexBuildIvf />
+</CodeGroup>
+
+### 3. Query the IVF Index
+
+Search using a random 1,536-dimensional embedding.
+
+<CodeGroup>
+  <VectorIndexQueryIvf />
+</CodeGroup>
+
+#### Search Configuration
+
+The previous query uses:
+
+- `limit`: number of results to return
+- `nprobes`: number of IVF partitions to scan (5–10% of partitions often balances recall and latency)
+- `refine_factor`: reads additional candidates and reranks in memory
+- `.to_pandas()`: converts the results to a pandas DataFrame
+
+## Example: Construct an HNSW Index
+
+### Index Configuration
+
+Set the following when constructing an HNSW index:
+
+- `metric`: defaults to `l2`; `dot` and `cosine` are also available
+- `m`: number of neighbors per vector in the HNSW graph
+- `ef_construction`: number of candidates to evaluate when building the graph
+
+### 1. Construct an HNSW Index
+
+<CodeGroup>
+  <VectorIndexBuildHnsw />
+</CodeGroup>
+
+### 2. Query the HNSW Index
+
+<CodeGroup>
+  <VectorIndexQueryHnsw />
+</CodeGroup>
+
+## Example: Construct a Binary Vector Index
+
+Binary vectors are useful for hash-based retrieval, fingerprinting, or any scenario modeled as bits.
+
+### Index Configuration
+
+- Store binary vectors as fixed-size binary data (uint8 arrays, 8 bits per byte)
+- Use `IVF_FLAT` for binary vectors
+- Use the `hamming` distance metric
+- Ensure the dimension is a multiple of 8 (e.g., a 128-D vector becomes 16 bytes)
+
+### 1. Create Table and Schema
+
+<CodeGroup>
+  <VectorIndexBinarySchema />
+</CodeGroup>
+
+### 2. Generate and Add Data
+
+<CodeGroup>
+  <VectorIndexBinaryAddData />
+</CodeGroup>
+
+### 3. Construct the Binary Index
+
+<CodeGroup>
+  <VectorIndexBinaryBuildIndex />
+</CodeGroup>
+
+### 4. Vector Search
+
+<CodeGroup>
+  <VectorIndexBinarySearch />
+</CodeGroup>
+
+## Check Index Status
+
+Vector index creation is fast—usually a few minutes for a million 1,536-D vectors. Check status via the UI or APIs. The index name appends `_idx` to the column name. Use `wait_for_index()` to block until completion.
+
+<CodeGroup>
+  <VectorIndexCheckStatus />
+</CodeGroup>
+

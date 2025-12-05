@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright The LanceDB Authors
 
+from random import randint, random
+
 # --8<-- [start:basic_imports]
 import lancedb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
+
 # --8<-- [end:basic_imports]
 import pytest
 

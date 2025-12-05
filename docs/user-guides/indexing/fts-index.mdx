@@ -1,0 +1,60 @@
+---
+title: "Full-Text Search (FTS) Index"
+sidebarTitle: "Full-Text Index"
+description: "Create and tune BM25-based full-text search indexes in LanceDB."
+weight: 2
+aliases:
+  - "/docs/concepts/indexing/fts-index/"
+  - "/docs/concepts/indexing/fts-index"
+---
+import FtsIndexCreate from '/snippets/py/fts_index_create.mdx';
+import FtsIndexWait from '/snippets/py/fts_index_wait.mdx';
+
+LanceDB Cloud and Enterprise provide performant full-text search based on BM25 so you can incorporate keyword-based search into retrieval solutions.
+
+<Note>
+The `create_fts_index` API returns immediately, but index building happens asynchronously.
+</Note>
+
+## Creating FTS Indexes
+
+<CodeGroup>
+  <FtsIndexCreate />
+</CodeGroup>
+
+Check FTS index status using the API:
+
+<CodeGroup>
+  <FtsIndexWait />
+</CodeGroup>
+
+## Configuration Options
+
+### FTS Parameters
+
+| Parameter | Type | Default | Description |
+|:----------|:-----|:--------|:------------|
+| `with_position` | bool | `False` | Store token positions (required for phrase queries) |
+| `base_tokenizer` | str | `"simple"` | Text splitting method (`simple`, `whitespace`, or `raw`) |
+| `language` | str | `"English"` | Language for stemming/stop words |
+| `max_token_length` | int | `40` | Maximum token size; longer tokens are omitted |
+| `lower_case` | bool | `True` | Lowercase tokens |
+| `stem` | bool | `True` | Apply stemming (`running` → `run`) |
+| `remove_stop_words` | bool | `True` | Drop common stop words |
+| `ascii_folding` | bool | `True` | Normalize accented characters |
+
+<Note title="Key parameters">
+- `max_token_length` can filter out base64 blobs or long URLs.
+- Disabling `with_position` reduces index size but disables phrase queries.
+- `ascii_folding` helps with international text (e.g., “café” → “cafe”).
+</Note>
+
+### Phrase Query Configuration
+
+Enable phrase queries by setting:
+
+| Parameter | Required Value | Purpose |
+|:----------|:---------------|:--------|
+| `with_position` | `True` | Track token positions for phrase matching |
+| `remove_stop_words` | `False` | Preserve stop words for exact phrase matching |
+

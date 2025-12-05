@@ -1,0 +1,49 @@
+---
+title: "Reindexing and Incremental Indexing in LanceDB"
+sidebarTitle: "Reindexing"
+description: "Keep indexes fresh with incremental indexing workflows in LanceDB OSS and Cloud."
+weight: 5
+aliases:
+  - "/docs/concepts/indexing/reindexing/"
+  - "/docs/concepts/indexing/reindexing"
+---
+import ReindexingIncremental from '/snippets/py/reindexing_incremental.mdx';
+
+## Reindexing and Incremental Indexing
+
+Reindexing updates indexes after new data arrives so queries continue to perform well. For ANN search, new data always appears in results, but if it is not indexed yet LanceDB falls back to brute-force search for the new segments—which increases latency.
+
+<Tip>
+When you add data to a table with an existing index (vector or FTS), LanceDB doesn't update the index until a reindex operation finishes.
+</Tip>
+
+> Both LanceDB OSS and Cloud support reindexing, but the workflows differ depending on the index type.
+
+While a reindex job runs, LanceDB combines results from the existing index with exhaustive search on new data. The more unindexed data accumulates, the higher the latency cost.
+
+## Incremental Indexing in LanceDB Cloud
+
+**LanceDB Cloud & Enterprise** support incremental reindexing automatically. When new data lands, a background job rebuilds indexes so they stay in sync with the data size.
+
+> During rebuilding, queries still cover all data but brute-force search handles the new rows. Use `fast_search=True` to limit searches to indexed data only.
+
+<Note title="Checking index status">
+Use `index_stats()` to monitor the number of unindexed rows. The value drops to zero once background indexing completes.
+</Note>
+
+## Incremental Indexing in LanceDB OSS
+
+LanceDB OSS also supports incremental indexing—you can append records without rebuilding the entire index, then optimize when convenient.
+
+<CodeGroup>
+  <ReindexingIncremental />
+</CodeGroup>
+
+<Note title="Performance considerations">
+New data added after building an index still appears in search results, but searches require a flat scan over the unindexed portion until reindexing completes. Cloud & Enterprise automate this merging process to minimize the impact.
+</Note>
+
+## FTS Index Reindexing
+
+FTS reindexing is supported in LanceDB OSS, Cloud, and Enterprise. Trigger a rebuild whenever a significant amount of text data remains unindexed.
+
