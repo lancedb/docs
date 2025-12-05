@@ -4,6 +4,19 @@ sidebar_title: "LangChain"
 weight: 1
 ---
 
+import {
+  PyFrameworksLangchainAddImages,
+  PyFrameworksLangchainAddTexts,
+  PyFrameworksLangchainCreateIndex,
+  PyFrameworksLangchainMaxMarginalRelevance,
+  PyFrameworksLangchainQuickStart,
+  PyFrameworksLangchainSimilaritySearch,
+  PyFrameworksLangchainSimilaritySearchByVector,
+  PyFrameworksLangchainSimilaritySearchByVectorWithScores,
+  PyFrameworksLangchainSimilaritySearchWithScores,
+  PyFrameworksLangchainVectorStoreConfig,
+} from '/snippets/integrations.mdx';
+
 **LangChain** is a framework designed for building applications with large language models (LLMs) by chaining together various components. It supports a range of functionalities including memory, agents, and chat models, enabling developers to create context-aware applications.
 
 ![Illustration](https://raw.githubusercontent.com/lancedb/assets/refs/heads/main/docs/assets/integration/langchain_rag.png)
@@ -14,26 +27,9 @@ Integration of **Langchain** with **LanceDB** enables applications to retrieve t
 
 ## Quick Start
 You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model. Checkout Complete example here - [LangChain demo](../notebooks/langchain_example.ipynb)
-```python
-import os
-from langchain.document_loaders import TextLoader
-from langchain.vectorstores import LanceDB
-from langchain_openai import OpenAIEmbeddings
-from langchain_text_splitters import CharacterTextSplitter
-
-os.environ["OPENAI_API_KEY"] = "sk-..."
-
-loader = TextLoader("../../modules/state_of_the_union.txt") # Replace with your data path
-documents = loader.load()
-
-documents = CharacterTextSplitter().split_documents(documents)
-embeddings = OpenAIEmbeddings()
-
-docsearch = LanceDB.from_documents(documents, embeddings)
-query = "What did the president say about Ketanji Brown Jackson"
-docs = docsearch.similarity_search(query)
-print(docs[0].page_content)
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainQuickStart}
+</CodeBlock>
 
 ## Documentation
 In the above example `LanceDB` vector store class object is created using `from_documents()` method  which is a `classmethod` and returns the initialized class object. 
@@ -60,19 +56,9 @@ The exhaustive list of parameters for `LanceDB` vector store are :
 |`relevance_score_fn` |(Optional) `Callable[[float], float]` | Langchain relevance score function to be used.|`None`|
 |`limit`|`int`|Set the maximum number of results to return.|`DEFAULT_K` (it is 4)|
 
-```python
-db_url = "db://lang_test" # url of db you created
-api_key = "xxxxx" # your API key
-region="us-east-1-dev"  # your selected region
-
-vector_store = LanceDB(
-    uri=db_url,
-    api_key=api_key, #(dont include for local API)
-    region=region, #(dont include for local API)
-    embedding=embeddings,
-    table_name='langchain_test' # Optional
-    )
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainVectorStoreConfig}
+</CodeBlock>
 
 ### Methods 
 
@@ -89,19 +75,9 @@ This method turn texts into embedding and add it to the database.
 
 It returns list of ids of the added texts.
 
-```python
-vector_store.add_texts(texts = ['test_123'], metadatas =[{'source' :'wiki'}]) 
-
-#Additionaly, to explore the table you can load it into a df or save it in a csv file:
-
-tbl = vector_store.get_table()
-print("tbl:", tbl)
-pd_df = tbl.to_pandas()
-pd_df.to_csv("docsearch.csv", index=False)
-
-# you can also create a new vector store object using an older connection object:
-vector_store = LanceDB(connection=tbl, embedding=embeddings)
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainAddTexts}
+</CodeBlock>
 
 ------
 
@@ -122,14 +98,9 @@ This method creates a scalar(for non-vector cols) or a vector index on a table.
 
 For index creation make sure your table has enough data in it. An ANN index is ususally not needed for datasets ~100K vectors. For large-scale (>1M) or higher dimension vectors, it is beneficial to create an ANN index.
 
-```python
-# for creating vector index
-vector_store.create_index(vector_col='vector', metric = 'cosine')
-
-# for creating scalar index(for non-vector columns)
-vector_store.create_index(col_name='text')
-
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainCreateIndex}
+</CodeBlock>
 
 ------
 
@@ -148,10 +119,9 @@ This method performs similarity search based on **text query**.
 
 Return documents most similar to the query **without relevance scores**.
 
-```python
-docs = docsearch.similarity_search(query)
-print(docs[0].page_content)
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainSimilaritySearch}
+</CodeBlock>
 
 ------
 
@@ -169,10 +139,9 @@ The method returns documents that are most similar to the specified **embedding 
 
 **It does not provide relevance scores.**
 
-```python
-docs = docsearch.similarity_search_by_vector(query)
-print(docs[0].page_content)
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainSimilaritySearchByVector}
+</CodeBlock>
 
 ------
 
@@ -189,11 +158,9 @@ Returns documents most similar to the **query string** along with their relevanc
 
 It gets called by base class's `similarity_search_with_relevance_scores` which selects relevance score based on our `_select_relevance_score_fn`.
 
-```python
-docs = docsearch.similarity_search_with_relevance_scores(query)
-print("relevance score - ", docs[0][1])
-print("text- ", docs[0][0].page_content[:1000])
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainSimilaritySearchWithScores}
+</CodeBlock>
 
 ------
 
@@ -211,11 +178,9 @@ Similarity search using **query vector**.
 
 The method returns documents most similar to the specified embedding (query) vector, along with their relevance scores.
 
-```python
-docs = docsearch.similarity_search_by_vector_with_relevance_scores(query_embedding)
-print("relevance score - ", docs[0][1])
-print("text- ", docs[0][0].page_content[:1000])
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainSimilaritySearchByVectorWithScores}
+</CodeBlock>
 
 ------
 
@@ -235,20 +200,9 @@ Maximal marginal relevance optimizes for similarity to query AND diversity among
 
 Similarly, `max_marginal_relevance_search_by_vector()` function returns docs most similar to the embedding passed to the function using MMR. instead of a string query you need to pass the embedding to be searched for. 
 
-```python
-result = docsearch.max_marginal_relevance_search(
-        query="text"
-    )
-result_texts = [doc.page_content for doc in result]
-print(result_texts)
-
-## search by vector :
-result = docsearch.max_marginal_relevance_search_by_vector(
-        embeddings.embed_query("text")
-    )
-result_texts = [doc.page_content for doc in result]
-print(result_texts)
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainMaxMarginalRelevance}
+</CodeBlock>
 
 ------
 
@@ -264,9 +218,8 @@ This method ddds images by automatically creating their embeddings and adds them
 
 It returns list of IDs of the added images.
 
-```python
-vec_store.add_images(uris=image_uris) 
-# here image_uris are local fs paths to the images.
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyFrameworksLangchainAddImages}
+</CodeBlock>
 
 

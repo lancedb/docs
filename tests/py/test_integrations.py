@@ -546,3 +546,1195 @@ def test_embedding_voyageai_usage() -> None:
 
     tbl.add(data)
     # --8<-- [end:embedding_voyageai_usage]
+
+
+# Reranking integrations
+
+
+def test_reranking_answerdotai_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+
+    # --8<-- [start:reranking_answerdotai_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import AnswerdotaiRerankers
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = AnswerdotaiRerankers()
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_answerdotai_usage]
+
+
+def test_reranking_cohere_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+    os.environ["COHERE_API_KEY"] = require_env("COHERE_API_KEY")
+
+    # --8<-- [start:reranking_cohere_usage]
+    import os
+
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import CohereReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = CohereReranker(api_key=os.environ["COHERE_API_KEY"])
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_cohere_usage]
+
+
+def test_reranking_colbert_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+
+    # --8<-- [start:reranking_colbert_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import ColbertReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = ColbertReranker()
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_colbert_usage]
+
+
+def test_reranking_cross_encoder_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+
+    # --8<-- [start:reranking_cross_encoder_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import CrossEncoderReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = CrossEncoderReranker()
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_cross_encoder_usage]
+
+
+def test_reranking_jina_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+    os.environ["JINA_API_KEY"] = require_env("JINA_API_KEY")
+
+    # --8<-- [start:reranking_jina_usage]
+    import os
+
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import JinaReranker
+
+    embedder = get_registry().get("jina").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = JinaReranker(api_key=os.environ["JINA_API_KEY"])
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_jina_usage]
+
+
+def test_reranking_linear_combination_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+
+    # --8<-- [start:reranking_linear_combination_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import LinearCombinationReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = LinearCombinationReranker()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_linear_combination_usage]
+
+
+def test_reranking_openai_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+    os.environ["OPENAI_API_KEY"] = require_env("OPENAI_API_KEY")
+
+    # --8<-- [start:reranking_openai_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import OpenaiReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = OpenaiReranker()
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_openai_usage]
+
+
+def test_reranking_rrf_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+
+    # --8<-- [start:reranking_rrf_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import RRFReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = RRFReranker()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_rrf_usage]
+
+
+def test_reranking_voyageai_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+    os.environ["VOYAGE_API_KEY"] = require_env("VOYAGE_API_KEY")
+
+    # --8<-- [start:reranking_voyageai_usage]
+    import os
+
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import VoyageAIReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = VoyageAIReranker(model_name="rerank-2")
+
+    # Run vector search with a reranker
+    result = tbl.search("hello").rerank(reranker=reranker).to_list()
+
+    # Run FTS search with a reranker
+    result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+    # --8<-- [end:reranking_voyageai_usage]
+
+
+# Framework integrations
+
+
+def test_frameworks_langchain_examples() -> None:
+    require_flag("RUN_LANGCHAIN_SNIPPETS")
+    pytest.importorskip("langchain")
+    pytest.importorskip("langchain_openai")
+    pytest.importorskip("langchain_text_splitters")
+
+    # --8<-- [start:frameworks_langchain_quick_start]
+    import os
+
+    from langchain.document_loaders import TextLoader
+    from langchain.vectorstores import LanceDB
+    from langchain_openai import OpenAIEmbeddings
+    from langchain_text_splitters import CharacterTextSplitter
+
+    os.environ["OPENAI_API_KEY"] = "sk-..."
+
+    loader = TextLoader(
+        "../../modules/state_of_the_union.txt"
+    )  # Replace with your data path
+    documents = loader.load()
+
+    documents = CharacterTextSplitter().split_documents(documents)
+    embeddings = OpenAIEmbeddings()
+
+    docsearch = LanceDB.from_documents(documents, embeddings)
+    query = "What did the president say about Ketanji Brown Jackson"
+    docs = docsearch.similarity_search(query)
+    print(docs[0].page_content)
+    # --8<-- [end:frameworks_langchain_quick_start]
+
+    # --8<-- [start:frameworks_langchain_vector_store_config]
+    db_url = "db://lang_test"  # url of db you created
+    api_key = "xxxxx"  # your API key
+    region = "us-east-1-dev"  # your selected region
+
+    vector_store = LanceDB(
+        uri=db_url,
+        api_key=api_key,  # (dont include for local API)
+        region=region,  # (dont include for local API)
+        embedding=embeddings,
+        table_name="langchain_test",  # Optional
+    )
+    # --8<-- [end:frameworks_langchain_vector_store_config]
+
+    # --8<-- [start:frameworks_langchain_add_texts]
+    vector_store.add_texts(texts=["test_123"], metadatas=[{"source": "wiki"}])
+
+    # Additionaly, to explore the table you can load it into a df or save it in a csv file:
+
+    tbl = vector_store.get_table()
+    print("tbl:", tbl)
+    pd_df = tbl.to_pandas()
+    pd_df.to_csv("docsearch.csv", index=False)
+
+    # you can also create a new vector store object using an older connection object:
+    vector_store = LanceDB(connection=tbl, embedding=embeddings)
+    # --8<-- [end:frameworks_langchain_add_texts]
+
+    # --8<-- [start:frameworks_langchain_create_index]
+    # for creating vector index
+    vector_store.create_index(vector_col="vector", metric="cosine")
+
+    # for creating scalar index(for non-vector columns)
+    vector_store.create_index(col_name="text")
+    # --8<-- [end:frameworks_langchain_create_index]
+
+    # --8<-- [start:frameworks_langchain_similarity_search]
+    docs = docsearch.similarity_search(query)
+    print(docs[0].page_content)
+    # --8<-- [end:frameworks_langchain_similarity_search]
+
+    # --8<-- [start:frameworks_langchain_similarity_search_by_vector]
+    docs = docsearch.similarity_search_by_vector(query)
+    print(docs[0].page_content)
+    # --8<-- [end:frameworks_langchain_similarity_search_by_vector]
+
+    # --8<-- [start:frameworks_langchain_similarity_search_with_scores]
+    docs = docsearch.similarity_search_with_relevance_scores(query)
+    print("relevance score - ", docs[0][1])
+    print("text- ", docs[0][0].page_content[:1000])
+    # --8<-- [end:frameworks_langchain_similarity_search_with_scores]
+
+    # --8<-- [start:frameworks_langchain_similarity_search_by_vector_with_scores]
+    query_embedding = embeddings.embed_query("text")
+    docs = docsearch.similarity_search_by_vector_with_relevance_scores(query_embedding)
+    print("relevance score - ", docs[0][1])
+    print("text- ", docs[0][0].page_content[:1000])
+    # --8<-- [end:frameworks_langchain_similarity_search_by_vector_with_scores]
+
+    # --8<-- [start:frameworks_langchain_max_marginal_relevance]
+    result = docsearch.max_marginal_relevance_search(query="text")
+    result_texts = [doc.page_content for doc in result]
+    print(result_texts)
+
+    # search by vector :
+    result = docsearch.max_marginal_relevance_search_by_vector(
+        embeddings.embed_query("text")
+    )
+    result_texts = [doc.page_content for doc in result]
+    print(result_texts)
+    # --8<-- [end:frameworks_langchain_max_marginal_relevance]
+
+    # --8<-- [start:frameworks_langchain_add_images]
+    image_uris = ["./assets/image-1.png", "./assets/image-2.png"]
+    vector_store.add_images(uris=image_uris)
+    # here image_uris are local fs paths to the images.
+    # --8<-- [end:frameworks_langchain_add_images]
+
+
+def test_frameworks_llamaindex_examples() -> None:
+    require_flag("RUN_LLAMAINDEX_SNIPPETS")
+    pytest.importorskip("llama_index")
+    pytest.importorskip("llama_index.vector_stores.lancedb")
+
+    # --8<-- [start:frameworks_llamaindex_quick_start]
+    import logging
+    import sys
+    import textwrap
+
+    import openai
+
+    # Uncomment to see debug logs
+    # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    # logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+    from llama_index.core import (
+        Document,
+        SimpleDirectoryReader,
+        StorageContext,
+        VectorStoreIndex,
+    )
+    from llama_index.vector_stores.lancedb import LanceDBVectorStore
+
+    openai.api_key = "sk-..."
+
+    documents = SimpleDirectoryReader("./data/your-data-dir/").load_data()
+    print("Document ID:", documents[0].doc_id, "Document Hash:", documents[0].hash)
+
+    ## For LanceDB cloud :
+    # vector_store = LanceDBVectorStore(
+    #     uri="db://db_name", # your remote DB URI
+    #     api_key="sk_..", # lancedb cloud api key
+    #     region="your-region" # the region you configured
+    #     ...
+    # )
+
+    vector_store = LanceDBVectorStore(
+        uri="./lancedb", mode="overwrite", query_type="vector"
+    )
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+    index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+    lance_filter = "metadata.file_name = 'paul_graham_essay.txt' "
+    retriever = index.as_retriever(vector_store_kwargs={"where": lance_filter})
+    response = retriever.retrieve("What did the author do growing up?")
+    # --8<-- [end:frameworks_llamaindex_quick_start]
+
+    # --8<-- [start:frameworks_llamaindex_filtering]
+    from llama_index.core.vector_stores import (
+        FilterCondition,
+        FilterOperator,
+        MetadataFilter,
+        MetadataFilters,
+    )
+
+    query_filters = MetadataFilters(
+        filters=[
+            MetadataFilter(
+                key="creation_date", operator=FilterOperator.EQ, value="2024-05-23"
+            ),
+            MetadataFilter(key="file_size", value=75040, operator=FilterOperator.GT),
+        ],
+        condition=FilterCondition.AND,
+    )
+    # --8<-- [end:frameworks_llamaindex_filtering]
+
+    # --8<-- [start:frameworks_llamaindex_hybrid_search]
+    from lancedb.rerankers import ColbertReranker
+
+    reranker = ColbertReranker()
+    vector_store._add_reranker(reranker)
+
+    query_engine = index.as_query_engine(
+        filters=query_filters,
+        vector_store_kwargs={
+            "query_type": "hybrid",
+        },
+    )
+
+    response = query_engine.query("How much did Viaweb charge per month?")
+    # --8<-- [end:frameworks_llamaindex_hybrid_search]
+
+    # --8<-- [start:frameworks_llamaindex_add_reranker]
+    from lancedb.rerankers import ColbertReranker
+
+    reranker = ColbertReranker()
+    vector_store._add_reranker(reranker)
+    # --8<-- [end:frameworks_llamaindex_add_reranker]
+
+
+def test_frameworks_pydantic_examples() -> None:
+    require_flag("RUN_PYDANTIC_SNIPPETS")
+    pytest.importorskip("pyarrow")
+
+    # --8<-- [start:frameworks_pydantic_imports]
+    import tempfile
+    from pathlib import Path
+
+    import lancedb
+    from lancedb.pydantic import LanceModel, Vector
+
+    # --8<-- [end:frameworks_pydantic_imports]
+    # --8<-- [start:frameworks_pydantic_base_model]
+    class LanceDocs(LanceModel):
+        text: str
+        vector: Vector(2)
+
+    # --8<-- [end:frameworks_pydantic_base_model]
+
+    # --8<-- [start:frameworks_pydantic_set_url]
+    db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "pydantic-docs"))
+    # --8<-- [end:frameworks_pydantic_set_url]
+
+    # --8<-- [start:frameworks_pydantic_vector_field]
+    import pyarrow as pa
+    import pydantic
+    from lancedb.pydantic import Vector, pydantic_to_schema
+
+    class MyModel(pydantic.BaseModel):
+        id: int
+        url: str
+        embeddings: Vector(768)
+
+    schema = pydantic_to_schema(MyModel)
+    assert schema == pa.schema(
+        [
+            pa.field("id", pa.int64(), False),
+            pa.field("url", pa.utf8(), False),
+            pa.field("embeddings", pa.list_(pa.float32(), 768)),
+        ]
+    )
+    # --8<-- [end:frameworks_pydantic_vector_field]
+
+    # --8<-- [start:frameworks_pydantic_type_conversion]
+    from typing import List, Optional
+
+    import pyarrow as pa
+    import pydantic
+    from lancedb.pydantic import Vector, pydantic_to_schema
+
+    class FooModel(pydantic.BaseModel):
+        id: int
+        s: str
+        vec: Vector(1536)  # fixed_size_list<item: float32>[1536]
+        li: List[int]
+
+    schema = pydantic_to_schema(FooModel)
+    assert schema == pa.schema(
+        [
+            pa.field("id", pa.int64(), False),
+            pa.field("s", pa.utf8(), False),
+            pa.field("vec", pa.list_(pa.float32(), 1536)),
+            pa.field("li", pa.list_(pa.int64()), False),
+        ]
+    )
+    # --8<-- [end:frameworks_pydantic_type_conversion]
+
+    # --8<-- [start:frameworks_pydantic_base_example]
+    table = db.create_table("docs", schema=LanceDocs, mode="overwrite")
+    table.add(
+        [
+            {"text": "hello world", "vector": [1.0, 0.0]},
+            {"text": "goodbye world", "vector": [0.0, 1.0]},
+        ]
+    )
+    results = table.search("hello world").limit(1).to_pydantic(LanceDocs)
+    print(results[0].text)
+    # --8<-- [end:frameworks_pydantic_base_example]
+
+
+# Platform integrations
+
+
+def test_platforms_dlt_examples() -> None:
+    require_flag("RUN_DLT_SNIPPETS")
+    pytest.importorskip("dlt")
+
+    # --8<-- [start:platforms_dlt_pipeline]
+    # Import necessary modules
+    import dlt
+    from rest_api import rest_api_source
+
+    # Configure the REST API source
+    movies_source = rest_api_source(
+        {
+            "client": {
+                "base_url": "https://www.omdbapi.com/",
+                "auth": {  # authentication strategy for the OMDb API
+                    "type": "api_key",
+                    "name": "apikey",
+                    "api_key": dlt.secrets[
+                        "sources.rest_api.api_token"
+                    ],  # read API credentials directly from secrets.toml
+                    "location": "query",
+                },
+                "paginator": {  # pagination strategy for the OMDb API
+                    "type": "page_number",
+                    "base_page": 1,
+                    "total_path": "totalResults",
+                    "maximum_page": 5,
+                },
+            },
+            "resources": [  # list of API endpoints to request
+                {
+                    "name": "movie_search",
+                    "endpoint": {
+                        "path": "/",
+                        "params": {
+                            "s": "godzilla",
+                            "type": "movie",
+                        },
+                    },
+                }
+            ],
+        }
+    )
+
+    if __name__ == "__main__":
+        # Create a pipeline object
+        pipeline = dlt.pipeline(
+            pipeline_name="movies_pipeline",
+            destination="lancedb",  # this tells dlt to load the data into LanceDB
+            dataset_name="movies_data_pipeline",
+        )
+
+        # Run the pipeline
+        load_info = pipeline.run(movies_source)
+
+        # pretty print the information on data that was loaded
+        print(load_info)
+    # --8<-- [end:platforms_dlt_pipeline]
+
+    # --8<-- [start:platforms_dlt_adapter_import]
+    from dlt.destinations.adapters import lancedb_adapter
+
+    # --8<-- [end:platforms_dlt_adapter_import]
+    # --8<-- [start:platforms_dlt_adapter_usage]
+    load_info = pipeline.run(
+        lancedb_adapter(
+            movies_source,
+            embed="Title",
+        )
+    )
+    # --8<-- [end:platforms_dlt_adapter_usage]
+
+
+def test_platforms_duckdb_examples() -> None:
+    require_flag("RUN_DUCKDB_SNIPPETS")
+    pytest.importorskip("duckdb")
+
+    # --8<-- [start:platforms_duckdb_create_table]
+    import lancedb
+
+    db = lancedb.connect("data/sample-lancedb")
+    data = [
+        {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
+        {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
+    ]
+    table = db.create_table("pd_table", data=data)
+    # --8<-- [end:platforms_duckdb_create_table]
+
+    # --8<-- [start:platforms_duckdb_query_table]
+    import duckdb
+
+    arrow_table = table.to_lance()
+
+    duckdb.query("SELECT * FROM arrow_table")
+    # --8<-- [end:platforms_duckdb_query_table]
+
+    # --8<-- [start:platforms_duckdb_mean_price]
+    duckdb.query("SELECT mean(price) FROM arrow_table")
+    # --8<-- [end:platforms_duckdb_mean_price]
+
+
+def test_platforms_phidata_transcript_module() -> None:
+    require_flag("RUN_PHIDATA_SNIPPETS")
+    pytest.importorskip("youtube_transcript_api")
+
+    # --8<-- [start:platforms_phidata_transcript_module]
+    import re
+
+    from youtube_transcript_api import YouTubeTranscriptApi
+
+    def smodify(seconds):
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
+
+    def extract_transcript(youtube_url, segment_duration):
+        # Extract video ID from the URL
+        video_id = re.search(r"(?<=v=)[\w-]+", youtube_url)
+        if not video_id:
+            video_id = re.search(r"(?<=be/)[\w-]+", youtube_url)
+        if not video_id:
+            return None
+
+        video_id = video_id.group(0)
+
+        # Attempt to fetch the transcript
+        try:
+            # Try to get the official transcript
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+        except Exception:
+            # If no official transcript is found, try to get auto-generated transcript
+            try:
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+                for transcript in transcript_list:
+                    transcript = transcript.translate("en").fetch()
+            except Exception:
+                return None
+
+        # Format the transcript into 120s chunks
+        transcript_text, dict_transcript = format_transcript(
+            transcript, segment_duration
+        )
+        # Open the file in write mode, which creates it if it doesn't exist
+        with open("transcript.txt", "w", encoding="utf-8") as file:
+            file.write(transcript_text)
+        return transcript_text, dict_transcript
+
+    def format_transcript(transcript, segment_duration):
+        chunked_transcript = []
+        chunk_dict = []
+        current_chunk = []
+        current_time = 0
+        # 2 minutes in seconds
+        start_time_chunk = 0  # To track the start time of the current chunk
+
+        for segment in transcript:
+            start_time = segment["start"]
+            end_time_x = start_time + segment["duration"]
+            text = segment["text"]
+
+            # Add text to the current chunk
+            current_chunk.append(text)
+
+            # Update the current time with the duration of the current segment
+            # The duration of the current segment is given by segment['start'] - start_time_chunk
+            if current_chunk:
+                current_time = start_time - start_time_chunk
+
+            # If current chunk duration reaches or exceeds 2 minutes, save the chunk
+            if current_time >= segment_duration:
+                # Use the start time of the first segment in the current chunk as the timestamp
+                chunked_transcript.append(
+                    f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}] "
+                    + " ".join(current_chunk)
+                )
+                current_chunk = re.sub(
+                    r"[\xa0\n]",
+                    lambda x: "" if x.group() == "\xa0" else " ",
+                    "\n".join(current_chunk),
+                )
+                chunk_dict.append(
+                    {
+                        "timestamp": f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}]",
+                        "text": "".join(current_chunk),
+                    }
+                )
+                current_chunk = []  # Reset the chunk
+                start_time_chunk = (
+                    start_time + segment["duration"]
+                )  # Update the start time for the next chunk
+                current_time = 0  # Reset current time
+
+        # Add any remaining text in the last chunk
+        if current_chunk:
+            chunked_transcript.append(
+                f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}] "
+                + " ".join(current_chunk)
+            )
+            current_chunk = re.sub(
+                r"[\xa0\n]",
+                lambda x: "" if x.group() == "\xa0" else " ",
+                "\n".join(current_chunk),
+            )
+            chunk_dict.append(
+                {
+                    "timestamp": f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}]",
+                    "text": "".join(current_chunk),
+                }
+            )
+
+        return "\n\n".join(chunked_transcript), chunk_dict
+
+    # --8<-- [end:platforms_phidata_transcript_module]
+
+
+def test_platforms_phidata_openai_examples() -> None:
+    require_flag("RUN_PHIDATA_SNIPPETS")
+    pytest.importorskip("phi")
+    pytest.importorskip("openai")
+    pytest.importorskip("rich")
+
+    # --8<-- [start:platforms_phidata_openai_setup]
+    import os
+
+    import openai
+    from phi.assistant import Assistant
+    from phi.embedder.openai import OpenAIEmbedder
+    from phi.knowledge.text import TextKnowledgeBase
+    from phi.llm.openai import OpenAIChat
+    from phi.vectordb.lancedb import LanceDb
+    from rich.prompt import Prompt
+    from transcript import extract_transcript
+
+    if "OPENAI_API_KEY" not in os.environ:
+        # OR set the key here as a variable
+        openai.api_key = "sk-..."
+
+    # The code below creates a file "transcript.txt" in the directory, the txt file will be used below
+    youtube_url = "https://www.youtube.com/watch?v=Xs33-Gzl8Mo"
+    segment_duration = 20
+    transcript_text, dict_transcript = extract_transcript(youtube_url, segment_duration)
+    # --8<-- [end:platforms_phidata_openai_setup]
+
+    # --8<-- [start:platforms_phidata_openai_knowledge_base]
+    # Create knowledge Base with OpenAIEmbedder in LanceDB
+    knowledge_base = TextKnowledgeBase(
+        path="transcript.txt",
+        vector_db=LanceDb(
+            embedder=OpenAIEmbedder(api_key=openai.api_key),
+            table_name="transcript_documents",
+            uri="./t3mp/.lancedb",
+        ),
+        num_documents=10,
+    )
+    # --8<-- [end:platforms_phidata_openai_knowledge_base]
+
+    # --8<-- [start:platforms_phidata_openai_assistant]
+    # define an assistant with gpt-4o-mini llm and reference to the knowledge base created above
+    assistant = Assistant(
+        llm=OpenAIChat(
+            model="gpt-4o-mini",
+            max_tokens=1000,
+            temperature=0.3,
+            api_key=openai.api_key,
+        ),
+        description="""You are an Expert in explaining youtube video transcripts. You are a bot that takes transcript of a video and answer the question based on it.
+
+        This is transcript for the above timestamp: {relevant_document}
+        The user input is: {user_input}
+        generate highlights only when asked.
+        When asked to generate highlights from the video, understand the context for each timestamp and create key highlight points, answer in following way -
+        [timestamp] - highlight 1
+        [timestamp] - highlight 2
+        ... so on
+
+        Your task is to understand the user question, and provide an answer using the provided contexts. Your answers are correct, high-quality, and written by an domain expert. If the provided context does not contain the answer, simply state,'The provided context does not have the answer.'""",
+        knowledge_base=knowledge_base,
+        add_references_to_prompt=True,
+    )
+    # --8<-- [end:platforms_phidata_openai_assistant]
+
+    # --8<-- [start:platforms_phidata_load_knowledge_base]
+    assistant.knowledge_base.load(recreate=False)
+    # --8<-- [end:platforms_phidata_load_knowledge_base]
+
+    # --8<-- [start:platforms_phidata_cli_chat]
+    assistant.print_response("Ask me about something from the knowledge base")
+    while True:
+        message = Prompt.ask(f"[bold] :sunglasses: User [/bold]")
+        if message in ("exit", "bye"):
+            break
+        assistant.print_response(message, markdown=True)
+    # --8<-- [end:platforms_phidata_cli_chat]
+
+
+def test_platforms_phidata_ollama_examples() -> None:
+    require_flag("RUN_PHIDATA_SNIPPETS")
+    pytest.importorskip("phi")
+
+    # --8<-- [start:platforms_phidata_ollama_setup]
+    from phi.assistant import Assistant
+    from phi.embedder.ollama import OllamaEmbedder
+    from phi.knowledge.text import TextKnowledgeBase
+    from phi.llm.ollama import Ollama
+    from phi.vectordb.lancedb import LanceDb
+    from rich.prompt import Prompt
+    from transcript import extract_transcript
+
+    # The code below creates a file "transcript.txt" in the directory, the txt file will be used below
+    youtube_url = "https://www.youtube.com/watch?v=Xs33-Gzl8Mo"
+    segment_duration = 20
+    transcript_text, dict_transcript = extract_transcript(youtube_url, segment_duration)
+    # --8<-- [end:platforms_phidata_ollama_setup]
+
+    # --8<-- [start:platforms_phidata_ollama_knowledge_base]
+    # Create knowledge Base with OllamaEmbedder in LanceDB
+    knowledge_base = TextKnowledgeBase(
+        path="transcript.txt",
+        vector_db=LanceDb(
+            embedder=OllamaEmbedder(model="nomic-embed-text", dimensions=768),
+            table_name="transcript_documents",
+            uri="./t2mp/.lancedb",
+        ),
+        num_documents=10,
+    )
+    # --8<-- [end:platforms_phidata_ollama_knowledge_base]
+
+    # --8<-- [start:platforms_phidata_ollama_assistant]
+    # define an assistant with llama3.1 llm and reference to the knowledge base created above
+    assistant = Assistant(
+        llm=Ollama(model="llama3.1"),
+        description="""You are an Expert in explaining youtube video transcripts. You are a bot that takes transcript of a video and answer the question based on it.
+
+        This is transcript for the above timestamp: {relevant_document}
+        The user input is: {user_input}
+        generate highlights only when asked.
+        When asked to generate highlights from the video, understand the context for each timestamp and create key highlight points, answer in following way -
+        [timestamp] - highlight 1
+        [timestamp] - highlight 2
+        ... so on
+
+        Your task is to understand the user question, and provide an answer using the provided contexts. Your answers are correct, high-quality, and written by an domain expert. If the provided context does not contain the answer, simply state,'The provided context does not have the answer.'""",
+        knowledge_base=knowledge_base,
+        add_references_to_prompt=True,
+    )
+    # --8<-- [end:platforms_phidata_ollama_assistant]
+
+
+def test_platforms_phidata_document_model() -> None:
+    require_flag("RUN_PHIDATA_SNIPPETS")
+
+    # --8<-- [start:platforms_phidata_document_model]
+    from typing import Any, Dict, List, Optional
+
+    from pydantic import BaseModel
+
+    class Document(BaseModel):
+        """Model for managing a document"""
+
+        content: str  # <--- here data of chunk is stored
+        id: Optional[str] = None
+        name: Optional[str] = None
+        meta_data: Dict[str, Any] = {}
+        embedder: Optional["Embedder"] = None
+        embedding: Optional[List[float]] = None
+        usage: Optional[Dict[str, Any]] = None
+
+    # --8<-- [end:platforms_phidata_document_model]
+
+
+def test_platforms_voxel51_examples() -> None:
+    require_flag("RUN_VOXEL51_SNIPPETS")
+    pytest.importorskip("fiftyone")
+
+    # --8<-- [start:platforms_voxel51_load_dataset]
+    import fiftyone as fo
+    import fiftyone.brain as fob
+    import fiftyone.zoo as foz
+
+    # Step 1: Load your data into FiftyOne
+    dataset = foz.load_zoo_dataset("quickstart")
+    # --8<-- [end:platforms_voxel51_load_dataset]
+
+    # --8<-- [start:platforms_voxel51_compute_similarity]
+    # Steps 2 and 3: Compute embeddings and create a similarity index
+    lancedb_index = fob.compute_similarity(
+        dataset,
+        model="clip-vit-base32-torch",
+        brain_key="lancedb_index",
+        backend="lancedb",
+    )
+    # --8<-- [end:platforms_voxel51_compute_similarity]
+
+    # --8<-- [start:platforms_voxel51_sort_by_similarity]
+    # Step 4: Query your data
+    query = dataset.first().id  # query by sample ID
+    view = dataset.sort_by_similarity(
+        query,
+        brain_key="lancedb_index",
+        k=10,  # limit to 10 most similar samples
+    )
+    # --8<-- [end:platforms_voxel51_sort_by_similarity]
+
+    # --8<-- [start:platforms_voxel51_cleanup]
+    # Step 5 (optional): Cleanup
+
+    # Delete the LanceDB table
+    lancedb_index.cleanup()
+
+    # Delete run record from FiftyOne
+    dataset.delete_brain_run("lancedb_index")
+    # --8<-- [end:platforms_voxel51_cleanup]
+
+    if False:
+        # --8<-- [start:platforms_voxel51_backend_flag]
+        import fiftyone.brain as fob
+
+        # Re-run similarity creation using the LanceDB backend explicitly
+        fob.compute_similarity(
+            dataset,
+            model="clip-vit-base32-torch",
+            brain_key="lancedb_index",
+            backend="lancedb",
+        )
+        # --8<-- [end:platforms_voxel51_backend_flag]
+
+    # --8<-- [start:platforms_voxel51_brain_config]
+    import fiftyone.brain as fob
+
+    # Print your current brain config
+    print(fob.brain_config)
+    # --8<-- [end:platforms_voxel51_brain_config]
+
+    if False:
+        # --8<-- [start:platforms_voxel51_backend_params]
+        lancedb_index = fob.compute_similarity(
+            dataset,
+            model="clip-vit-base32-torch",
+            backend="lancedb",
+            brain_key="lancedb_index",
+            table_name="your-table",
+            metric="euclidean",
+            uri="/tmp/lancedb",
+        )
+        # --8<-- [end:platforms_voxel51_backend_params]
+
+
+def test_platforms_pandas_examples() -> None:
+    require_flag("RUN_PANDAS_SNIPPETS")
+    pytest.importorskip("pandas")
+
+    # --8<-- [start:platforms_pandas_imports]
+    import asyncio
+    import tempfile
+    from pathlib import Path
+
+    import lancedb
+    import pandas as pd
+
+    # --8<-- [end:platforms_pandas_imports]
+    # --8<-- [start:platforms_pandas_create_table]
+    pandas_df = pd.DataFrame(
+        [
+            {"id": "1", "text": "dragon", "vector": [0.9, 0.1, 0.3]},
+            {"id": "2", "text": "griffin", "vector": [0.4, 0.5, 0.2]},
+            {"id": "3", "text": "phoenix", "vector": [0.7, 0.3, 0.6]},
+        ]
+    )
+    pandas_db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "pandas-demo"))
+    pandas_table = pandas_db.create_table("creatures", data=pandas_df, mode="overwrite")
+    # --8<-- [end:platforms_pandas_create_table]
+
+    # --8<-- [start:platforms_pandas_vector_search]
+    pandas_results = (
+        pandas_table.search([0.9, 0.1, 0.3])
+        .select(["text", "_distance"])
+        .limit(1)
+        .to_pandas()
+    )
+    print(pandas_results)
+    # --8<-- [end:platforms_pandas_vector_search]
+
+    # --8<-- [start:platforms_pandas_async_example]
+    async def run_pandas_async_example() -> None:
+        async_db = await lancedb.connect_async(
+            str(Path(tempfile.mkdtemp()) / "pandas-async")
+        )
+        async_df = pd.DataFrame(
+            [
+                {"id": "10", "text": "sage", "vector": [0.6, 0.4, 0.8]},
+                {"id": "11", "text": "bard", "vector": [0.2, 0.7, 0.3]},
+            ]
+        )
+        async_table = await async_db.create_table(
+            "creatures_async", data=async_df, mode="overwrite"
+        )
+        async_results = await (
+            async_table.search([0.6, 0.4, 0.8])
+            .select(["text", "_distance"])
+            .limit(1)
+            .to_pandas()
+        )
+        print(async_results)
+
+    asyncio.run(run_pandas_async_example())
+    # --8<-- [end:platforms_pandas_async_example]
+
+
+def test_platforms_polars_examples() -> None:
+    require_flag("RUN_POLARS_SNIPPETS")
+    pytest.importorskip("polars")
+
+    # --8<-- [start:platforms_polars_imports]
+    import tempfile
+    from pathlib import Path
+
+    import lancedb
+    import polars as pl
+    from lancedb.pydantic import LanceModel, Vector
+
+    # --8<-- [end:platforms_polars_imports]
+    # --8<-- [start:platforms_polars_create_table]
+    birds = pl.DataFrame(
+        {
+            "text": ["phoenix", "sparrow"],
+            "vector": [
+                [0.1, 0.2, 0.3],
+                [0.8, 0.6, 0.5],
+            ],
+        }
+    )
+    polars_db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "polars-demo"))
+    polars_table = polars_db.create_table(
+        "birds", data=birds.to_arrow(), mode="overwrite"
+    )
+    # --8<-- [end:platforms_polars_create_table]
+
+    # --8<-- [start:platforms_polars_vector_search]
+    polars_results = (
+        polars_table.search([0.1, 0.2, 0.3])
+        .select(["text", "_distance"])
+        .limit(1)
+        .to_polars()
+    )
+    print(polars_results)
+    # --8<-- [end:platforms_polars_vector_search]
+
+    # --8<-- [start:platforms_polars_lazyframe]
+    lazy_frame = polars_table.to_polars().lazy()
+    print(lazy_frame.select(["text"]).collect())
+    # --8<-- [end:platforms_polars_lazyframe]
+
+    # --8<-- [start:platforms_polars_pydantic]
+    class BirdModel(LanceModel):
+        text: str
+        vector: Vector(3)
+
+    schema_table = polars_db.create_table(
+        "birds_schema", schema=BirdModel, mode="overwrite"
+    )
+    schema_table.add(birds.to_dicts())
+    # --8<-- [end:platforms_polars_pydantic]

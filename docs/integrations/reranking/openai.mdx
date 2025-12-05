@@ -1,54 +1,24 @@
 ---
-title: OpenAI Reranker in LanceDB 
+title: OpenAI Reranker (Experimental)
 sidebar_title: "OpenAI"
 description: Explore experimental search reranking using OpenAI's GPT models in LanceDB. Features configurable model selection, API key management, and comprehensive scoring options for all search types.
 weight: 9
 ---
 
-# OpenAI Reranker (Experimental) in LanceDB
+import { PyRerankingOpenaiUsage } from '/snippets/integrations.mdx';
+
+# OpenAI Reranker (Experimental)
 
 This reranker uses OpenAI chat model to rerank the search results. You can use this reranker by passing `OpenAI()` to the `rerank()` method. 
-{{< admonition "note" >}}
-Supported Query Types: Hybrid, Vector, FTS
-{{< /admonition >}}
+> **Note:** Supported query types – Hybrid, Vector, and FTS.
 
-{{< admonition "warning" >}}
-This reranker is experimental. OpenAI doesn't have a dedicated reranking model, so we are using the chat model for reranking.
-{{< /admonition >}}
+> **Warning:** This reranker is experimental. OpenAI does not have a dedicated reranking model, so it uses a chat model under the hood.
 
-```python
-import numpy
-import lancedb
-from lancedb.embeddings import get_registry
-from lancedb.pydantic import LanceModel, Vector
-from lancedb.rerankers import OpenaiReranker
-
-embedder = get_registry().get("sentence-transformers").create()
-db = lancedb.connect("~/.lancedb")
-
-class Schema(LanceModel):
-    text: str = embedder.SourceField()
-    vector: Vector(embedder.ndims()) = embedder.VectorField()
-
-data = [
-    {"text": "hello world"},
-    {"text": "goodbye world"}
-    ]
-tbl = db.create_table("test", schema=Schema, mode="overwrite")
-tbl.add(data)
-reranker = OpenaiReranker()
-
-# Run vector search with a reranker
-result = tbl.search("hello").rerank(reranker=reranker).to_list() 
-
-# Run FTS search with a reranker
-result = tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
-
-# Run hybrid search with a reranker
-tbl.create_fts_index("text", replace=True)
-result = tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
-
-```
+<CodeGroup>
+  <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyRerankingOpenaiUsage}
+  </CodeBlock>
+</CodeGroup>
 
 Accepted Arguments
 ----------------

@@ -4,6 +4,19 @@ sidebar_title: "PhiData"
 weight: 6
 ---
 
+import {
+  PyPlatformsPhidataCliChat,
+  PyPlatformsPhidataDocumentModel,
+  PyPlatformsPhidataLoadKnowledgeBase,
+  PyPlatformsPhidataOllamaAssistant,
+  PyPlatformsPhidataOllamaKnowledgeBase,
+  PyPlatformsPhidataOllamaSetup,
+  PyPlatformsPhidataOpenaiAssistant,
+  PyPlatformsPhidataOpenaiKnowledgeBase,
+  PyPlatformsPhidataOpenaiSetup,
+  PyPlatformsPhidataTranscriptModule,
+} from '/snippets/integrations.mdx';
+
 **phidata** is a framework for building **AI Assistants** with long-term memory, contextual knowledge, and the ability to take actions using function calling. It helps turn general-purpose LLMs into specialized assistants tailored to your use case by extending its capabilities using **memory**, **knowledge**, and **tools**. 
 
 - **Memory**: Stores chat history in a **database** and enables LLMs to have long-term conversations.
@@ -28,29 +41,29 @@ Let's see how using LanceDB inside phidata helps in making LLM more useful:
 **Create a virtual environment**
 
 1. install virtualenv package
-    ```python
+    ```bash
     pip install virtualenv
     ```
 2. Create a directory for your project and go to the directory and create a virtual environment inside it.
-    ```python
+    ```bash
     mkdir phi
     ```
-    ```python
+    ```bash
     cd phi
     ```
-    ```python
+    ```bash
     python -m venv phidata_
     ```
 
 **Activating virtual environment**
 
 1. from inside the project directory, run the following command to activate the virtual environment.
-    ```python
+    ```bash
     phidata_/Scripts/activate
     ```
 
 **Install the following packages in the virtual environment**
-```python
+```bash
 pip install lancedb phidata youtube_transcript_api openai ollama numpy pandas
 ```
 
@@ -60,130 +73,28 @@ You need to create two files - `transcript.py` and `ollama_assistant.py` or `ope
 
 === "openai_assistant.py"
 
-    ```python
-    import os, openai
-    from rich.prompt import Prompt
-    from phi.assistant import Assistant
-    from phi.knowledge.text import TextKnowledgeBase
-    from phi.vectordb.lancedb import LanceDb
-    from phi.llm.openai import OpenAIChat
-    from phi.embedder.openai import OpenAIEmbedder
-    from transcript import extract_transcript
-
-    if "OPENAI_API_KEY" not in os.environ:
-    # OR set the key here as a variable
-        openai.api_key = "sk-..."
-
-    # The code below creates a file "transcript.txt" in the directory, the txt file will be used below
-    youtube_url = "https://www.youtube.com/watch?v=Xs33-Gzl8Mo" 
-    segment_duration = 20
-    transcript_text,dict_transcript = extract_transcript(youtube_url,segment_duration)
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataOpenaiSetup}
+    </CodeBlock>
 
 === "ollama_assistant.py"
 
-    ```python
-    from rich.prompt import Prompt
-    from phi.assistant import Assistant
-    from phi.knowledge.text import TextKnowledgeBase
-    from phi.vectordb.lancedb import LanceDb
-    from phi.llm.ollama import Ollama
-    from phi.embedder.ollama import OllamaEmbedder
-    from transcript import extract_transcript
-
-    # The code below creates a file "transcript.txt" in the directory, the txt file will be used below
-    youtube_url = "https://www.youtube.com/watch?v=Xs33-Gzl8Mo"
-    segment_duration = 20
-    transcript_text,dict_transcript = extract_transcript(youtube_url,segment_duration)
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataOllamaSetup}
+    </CodeBlock>
 
 === "transcript.py"
 
-    ``` python
-    from youtube_transcript_api import YouTubeTranscriptApi
-    import re
-
-    def smodify(seconds):
-        hours, remainder = divmod(seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
-        
-    def extract_transcript(youtube_url,segment_duration):
-        # Extract video ID from the URL
-        video_id = re.search(r'(?<=v=)[\w-]+', youtube_url)
-        if not video_id:
-            video_id = re.search(r'(?<=be/)[\w-]+', youtube_url)
-        if not video_id:
-            return None
-
-        video_id = video_id.group(0)
-
-        # Attempt to fetch the transcript
-        try:
-            # Try to get the official transcript
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
-        except Exception:
-            # If no official transcript is found, try to get auto-generated transcript
-            try:
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                for transcript in transcript_list:
-                    transcript = transcript.translate('en').fetch()
-            except Exception:
-                return None
-
-        # Format the transcript into 120s chunks
-        transcript_text,dict_transcript = format_transcript(transcript,segment_duration)
-        # Open the file in write mode, which creates it if it doesn't exist
-        with open("transcript.txt", "w",encoding="utf-8") as file:
-            file.write(transcript_text)
-        return transcript_text,dict_transcript
-
-    def format_transcript(transcript,segment_duration):
-        chunked_transcript = []
-        chunk_dict = []
-        current_chunk = []
-        current_time = 0
-        # 2 minutes in seconds
-        start_time_chunk = 0  # To track the start time of the current chunk
-
-        for segment in transcript:
-            start_time = segment['start']
-            end_time_x = start_time + segment['duration']
-            text = segment['text']
-            
-            # Add text to the current chunk
-            current_chunk.append(text)
-            
-            # Update the current time with the duration of the current segment
-            # The duration of the current segment is given by segment['start'] - start_time_chunk
-            if current_chunk:
-                current_time = start_time - start_time_chunk
-            
-            # If current chunk duration reaches or exceeds 2 minutes, save the chunk
-            if current_time >= segment_duration:
-                # Use the start time of the first segment in the current chunk as the timestamp
-                chunked_transcript.append(f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}] " + " ".join(current_chunk))
-                current_chunk = re.sub(r'[\xa0\n]', lambda x: '' if x.group() == '\xa0' else ' ', "\n".join(current_chunk))
-                chunk_dict.append({"timestamp":f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}]", "text": "".join(current_chunk)})
-                current_chunk = []  # Reset the chunk
-                start_time_chunk = start_time + segment['duration'] # Update the start time for the next chunk
-                current_time = 0  # Reset current time
-
-        # Add any remaining text in the last chunk
-        if current_chunk:
-            chunked_transcript.append(f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}] " + " ".join(current_chunk))
-            current_chunk = re.sub(r'[\xa0\n]', lambda x: '' if x.group() == '\xa0' else ' ', "\n".join(current_chunk))
-            chunk_dict.append({"timestamp":f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}]", "text": "".join(current_chunk)})
-
-        return "\n\n".join(chunked_transcript), chunk_dict
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataTranscriptModule}
+    </CodeBlock>
 
 !!! warning
     If creating Ollama assistant, download and install Ollama [from here](https://ollama.com/) and then run the Ollama instance in the background. Also, download the required models using `ollama pull <model-name>`. Check out the models [here](https://ollama.com/library) 
 
 
 **Run the following command to deactivate the virtual environment if needed**
-```python
+```bash
 deactivate
 ```
 
@@ -191,33 +102,15 @@ deactivate
 
 === "openai_assistant.py"
 
-    ```python
-    # Create knowledge Base with OpenAIEmbedder in LanceDB
-    knowledge_base = TextKnowledgeBase(
-        path="transcript.txt",
-        vector_db=LanceDb(
-            embedder=OpenAIEmbedder(api_key = openai.api_key),
-            table_name="transcript_documents",
-            uri="./t3mp/.lancedb",
-        ),
-        num_documents = 10
-    )
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataOpenaiKnowledgeBase}
+    </CodeBlock>
 
 === "ollama_assistant.py"
 
-    ```python
-    # Create knowledge Base with OllamaEmbedder in LanceDB
-    knowledge_base = TextKnowledgeBase(
-        path="transcript.txt",
-        vector_db=LanceDb(
-            embedder=OllamaEmbedder(model="nomic-embed-text",dimensions=768),
-            table_name="transcript_documents",
-            uri="./t2mp/.lancedb",
-        ),
-        num_documents = 10
-    )
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataOllamaKnowledgeBase}
+    </CodeBlock>
 Check out the list of **embedders** supported by **phidata** and their usage [here](https://docs.phidata.com/embedder/introduction).
 
 Here we have used `TextKnowledgeBase`, which loads text/docx files to the knowledge base.
@@ -240,18 +133,9 @@ Let's see all the parameters that `TextKnowledgeBase` takes -
 
     Here, a "Document" is a class in phidata. Since there is an option to let phidata create and manage embeddings, it splits our data into smaller chunks(as expected). It does not directly create embeddings on it. Instead, it takes each chunk and encapsulates it inside the object of the `Document` class along with various other metadata related to the chunk. Then embeddings are created on these `Document` objects and stored in vectorDB.
 
-    ```python
-    class Document(BaseModel):
-        """Model for managing a document"""
-
-        content: str # <--- here data of chunk is stored 
-        id: Optional[str] = None
-        name: Optional[str] = None
-        meta_data: Dict[str, Any] = {}
-        embedder: Optional[Embedder] = None
-        embedding: Optional[List[float]] = None
-        usage: Optional[Dict[str, Any]] = None
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataDocumentModel}
+    </CodeBlock>
 
 However, using phidata you can load many other types of data in the knowledge base(other than text). Check out [phidata Knowledge Base](https://docs.phidata.com/knowledge/introduction) for more information.
 
@@ -279,47 +163,15 @@ Now that the Knowledge Base is initialized, , we can go to **step 2**.
 
 === "openai_assistant.py"
 
-    ```python
-    # define an assistant with gpt-4o-mini llm and reference to the knowledge base created above
-    assistant = Assistant(
-        llm=OpenAIChat(model="gpt-4o-mini", max_tokens=1000, temperature=0.3,api_key = openai.api_key),
-        description="""You are an Expert in explaining youtube video transcripts. You are a bot that takes transcript of a video and answer the question based on it.
-        
-        This is transcript for the above timestamp: {relevant_document}
-        The user input is: {user_input}
-        generate highlights only when asked.
-        When asked to generate highlights from the video, understand the context for each timestamp and create key highlight points, answer in following way - 
-        [timestamp] - highlight 1
-        [timestamp] - highlight 2
-        ... so on
-        
-        Your task is to understand the user question, and provide an answer using the provided contexts. Your answers are correct, high-quality, and written by an domain expert. If the provided context does not contain the answer, simply state,'The provided context does not have the answer.'""",
-        knowledge_base=knowledge_base,
-        add_references_to_prompt=True,
-    )
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataOpenaiAssistant}
+    </CodeBlock>
 
 === "ollama_assistant.py"
 
-    ```python
-    # define an assistant with llama3.1 llm and reference to the knowledge base created above
-    assistant = Assistant(
-        llm=Ollama(model="llama3.1"),
-        description="""You are an Expert in explaining youtube video transcripts. You are a bot that takes transcript of a video and answer the question based on it.
-
-        This is transcript for the above timestamp: {relevant_document}
-        The user input is: {user_input}
-        generate highlights only when asked.
-        When asked to generate highlights from the video, understand the context for each timestamp and create key highlight points, answer in following way - 
-        [timestamp] - highlight 1
-        [timestamp] - highlight 2
-        ... so on
-
-        Your task is to understand the user question, and provide an answer using the provided contexts. Your answers are correct, high-quality, and written by an domain expert. If the provided context does not contain the answer, simply state,'The provided context does not have the answer.'""",
-        knowledge_base=knowledge_base,
-        add_references_to_prompt=True,
-    )
-    ```
+    <CodeBlock filename="Python" language="Python" icon="Python">
+      {PyPlatformsPhidataOllamaAssistant}
+    </CodeBlock>
 
 Assistants add **memory**, **knowledge**, and **tools** to LLMs. Here we will add only **knowledge** in this example. 
 
@@ -331,10 +183,9 @@ To know more about an creating assistant in phidata, check out [phidata docs](ht
 
 ## **Step 3** - Load data to Knowledge Base.
 
-```python
-# load out data into the knowledge_base (populating the LanceTable)
-assistant.knowledge_base.load(recreate=False)
-```
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyPlatformsPhidataLoadKnowledgeBase}
+</CodeBlock>
 The above code loads the data to the Knowledge Base(LanceDB Table) and now it is ready to be used by the assistant. 
 
 | Name| Type | Purpose | Default |
@@ -343,8 +194,8 @@ The above code loads the data to the Knowledge Base(LanceDB Table) and now it is
 |`upsert`|`bool`| If True and the vectorDB supports upsert, it will upsert documents to the vector db. | `False` |
 |`skip_existing`|`bool`| If True, skips documents that already exist in the vectorDB when inserting. |`True`|
 
-??? tip "What is upsert?"
-    Upsert is a database operation that combines "update" and "insert". It updates existing records if a document with the same identifier does exist, or inserts new records if no matching record exists. This is useful for maintaining the most current information without manually checking for existence.
+> **Tip · What is upsert?**  
+> Upsert is a database operation that combines “update” and “insert”. It updates existing records if a document with the same identifier exists, or inserts new records if no matching record exists. This keeps the knowledge base current without manual checks.
 
 During the Load operation, phidata directly interacts with the LanceDB library and performs the loading of the table with our data in the following steps -     
 
@@ -352,38 +203,26 @@ During the Load operation, phidata directly interacts with the LanceDB library a
 
 2. Then it **splits** our data into smaller **chunks**.
 
-    ??? question "How do they create chunks?"
-        **phidata** provides many types of **Knowledge Bases** based on the type of data. Most of them :material-information-outline:{ title="except LlamaIndexKnowledgeBase and LangChainKnowledgeBase"} has a property method called `document_lists` of type `Iterator[List[Document]]`. During the load operation, this property method is invoked. It traverses on the data provided by us (in this case, a text file(s)) using `reader`. Then it **reads**, **creates chunks**, and **encapsulates** each chunk inside a `Document` object and yields **lists of `Document` objects** that contain our data.
+    > **Question · How do they create chunks?**  
+    > **phidata** provides multiple knowledge-base types depending on the source data. Most of them (except the LlamaIndexKnowledgeBase and LangChainKnowledgeBase) expose a `document_lists` iterator. During the load operation, this iterator reads the input (for example, text files), splits it into chunks, wraps each chunk in a `Document`, and yields lists of those `Document` objects.
 
 3. Then **embeddings** are created on these chunks are **inserted** into the LanceDB Table 
 
-    ??? question "How do they insert your data as different rows in LanceDB Table?"
-        The chunks of your data are in the form - **lists of `Document` objects**. It was yielded in the step above.
-
-        for each `Document` in `List[Document]`, it does the following operations:
-        
-        - Creates embedding on `Document`.
-        - Cleans the **content attribute**(chunks of our data is here) of `Document`.
-        - Prepares data by creating `id` and loading `payload` with the metadata related to this chunk. (1)
-            { .annotate }
-
-            1.  Three columns will be added to the table - `"id"`, `"vector"`, and `"payload"` (payload contains various metadata including **`content`**)
-                
-        - Then add this data to LanceTable. 
+    > **Question · How do they insert the chunks into LanceDB?**  
+    > Each list of `Document` objects from the previous step is processed as follows:
+    >
+    > - Generate embeddings for every `Document`.
+    > - Clean the `content` field so only the text you care about is persisted.
+    > - Prepare a payload with the `id`, the embedding (`vector`), and any metadata needed for retrieval.
+    > - Add the prepared rows to the LanceDB table.
 
 4. Now the internal state of `knowledge_base` is changed (embeddings are created and loaded in the table ) and it **ready to be used by assistant**.
 
 ## **Step 4** - Start a cli chatbot with access to the Knowledge base  
 
-```python
-# start cli chatbot with knowledge base
-assistant.print_response("Ask me about something from the knowledge base")
-while True:
-    message = Prompt.ask(f"[bold] :sunglasses: User [/bold]")
-    if message in ("exit", "bye"):
-        break
-    assistant.print_response(message, markdown=True)
-```  
+<CodeBlock filename="Python" language="Python" icon="Python">
+  {PyPlatformsPhidataCliChat}
+</CodeBlock>  
 
 
 For more information and amazing cookbooks of phidata, read the [phidata documentation](https://docs.phidata.com/introduction) and also visit [LanceDB x phidata docmentation](https://docs.phidata.com/vectordb/lancedb).
