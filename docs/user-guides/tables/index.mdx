@@ -1,9 +1,104 @@
 ---
-title: "Common table operations"
+title: "Basic usage"
 sidebarTitle: "Basic usage"
-description: "Learn the basics of working with tables and managing multimodal and vector data in LanceDB."
+description: "Create tables, search vectors, and append data in LanceDB."
 ---
 
-<Warning>
-TODO: Migrate over the [basic usage](/quickstart/basic_usage) docs here
-</Warning>
+import { PyConnect } from '/snippets/connection.mdx';
+import {
+    PyQuickstartCreateTable,
+    PyQuickstartCreateTableNoOverwrite,
+    PyQuickstartVectorSearch1,
+    PyQuickstartOutputPandas,
+    PyQuickstartOpenTable,
+    PyQuickstartAddData,
+    PyQuickstartVectorSearch2,
+} from '/snippets/quickstart.mdx';
+
+This page continues from the quickstart hello world and walks through the core
+table operations you'll use before diving into schema changes and versioning.
+
+## Connect to a database
+
+If you're starting fresh, connect to a local LanceDB database path.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyConnect}
+    </CodeBlock>
+</CodeGroup>
+
+## Create a table and ingest data
+
+LanceDB stores records in Lance tables. Each row is a record and each column
+holds a field or related metadata. The simplest way to start is with a list of
+objects that includes a vector column and any metadata fields you care about.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartCreateTable}
+    </CodeBlock>
+</CodeGroup >
+
+The example above creates an `adventurers` table and ingests four records,
+overwriting the table if it already exists. The schema is inferred from your
+data unless you pass a `schema`.
+
+If you want to avoid overwriting an existing table, omit the overwrite mode.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartCreateTableNoOverwrite}
+    </CodeBlock>
+</CodeGroup >
+
+## Run a vector search
+
+Once your data is ingested, you can run vector similarity search. The query
+vector should match the dimensionality of your stored vectors.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartVectorSearch1}
+    </CodeBlock>
+</CodeGroup >
+
+The search returns the most similar vectors and their `_distance` scores. If you
+prefer Pandas, you can render the results as a DataFrame.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartOutputPandas}
+    </CodeBlock>
+</CodeGroup >
+
+## Add data and query again
+
+Connect to an existing table to append more records and re-run a search.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {PyQuickstartOpenTable}
+    </CodeBlock>
+</CodeGroup >
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python">
+    {PyQuickstartAddData}
+    </CodeBlock>
+</CodeGroup >
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python">
+    {PyQuickstartVectorSearch2}
+    </CodeBlock>
+</CodeGroup >
+
+The `mage` is the closest match to `wizard` in this example. From here you can
+iterate on your data and queries as your application evolves.
+
+## Next steps
+
+- [Define explicit schemas and column types](/user-guides/tables/schema).
+- [Learn how to update rows and manage consistency](/user-guides/tables/update).
+- [Explore table versioning workflows](/user-guides/tables/versioning).
