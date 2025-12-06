@@ -7,8 +7,7 @@ aliases:
   - "/docs/concepts/indexing/fts-index/"
   - "/docs/concepts/indexing/fts-index"
 ---
-import FtsIndexCreate from '/snippets/py/fts_index_create.mdx';
-import FtsIndexWait from '/snippets/py/fts_index_wait.mdx';
+import { PyFtsIndexCreate as FtsIndexCreate, PyFtsIndexWait as FtsIndexWait } from '/snippets/indexing.mdx';
 
 LanceDB Cloud and Enterprise provide performant full-text search based on BM25 so you can incorporate keyword-based search into retrieval solutions.
 
@@ -19,13 +18,17 @@ The `create_fts_index` API returns immediately, but index building happens async
 ## Creating FTS Indexes
 
 <CodeGroup>
-  <FtsIndexCreate />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {FtsIndexCreate}
+    </CodeBlock>
 </CodeGroup>
 
 Check FTS index status using the API:
 
 <CodeGroup>
-  <FtsIndexWait />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {FtsIndexWait}
+    </CodeBlock>
 </CodeGroup>
 
 ## Configuration Options

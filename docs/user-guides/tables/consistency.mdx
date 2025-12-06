@@ -5,9 +5,11 @@ description: Learn about consistency settings and versioning in LanceDB tables.
 weight: 5
 aliases: ["/tutorials/tables/consistency/", "/tutorials/tables/consistency"]
 ---
-import ConsistencyStrong from '/snippets/py/consistency_strong.mdx';
-import ConsistencyEventual from '/snippets/py/consistency_eventual.mdx';
-import ConsistencyCheckoutLatest from '/snippets/py/consistency_checkout_latest.mdx';
+import {
+    PyConsistencyStrong as ConsistencyStrong,
+    PyConsistencyEventual as ConsistencyEventual,
+    PyConsistencyCheckoutLatest as ConsistencyCheckoutLatest,
+} from '/snippets/tables.mdx';
 
 In LanceDB OSS, users can set the `read_consistency_interval` parameter on connections to achieve different levels of read consistency. This parameter determines how frequently the database synchronizes with the underlying storage system to check for updates made by other processes. If another process updates a table, the database will not see the changes until the next synchronization.
 
@@ -26,20 +28,26 @@ This is only tune-able in LanceDB OSS. In LanceDB Cloud, readers are always even
 To set strong consistency, set the interval to 0:
 
 <CodeGroup>
-<ConsistencyStrong/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ConsistencyStrong}
+    </CodeBlock>
 </CodeGroup>
 
 For eventual consistency, use a custom interval:
 
 <CodeGroup>
-<ConsistencyEventual/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ConsistencyEventual}
+    </CodeBlock>
 </CodeGroup>
 
 
 By default, a `Table` will never check for updates from other writers. To manually check for updates you can use `checkout_latest`:
 
 <CodeGroup>
-<ConsistencyCheckoutLatest/>
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {ConsistencyCheckoutLatest}
+    </CodeBlock>
 </CodeGroup>
 
 ## Handling bad vectors

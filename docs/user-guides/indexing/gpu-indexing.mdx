@@ -7,8 +7,7 @@ aliases:
   - "/docs/concepts/indexing/gpu-indexing/"
   - "/docs/concepts/indexing/gpu-indexing"
 ---
-import GpuIndexCuda from '/snippets/py/gpu_index_cuda.mdx';
-import GpuIndexMps from '/snippets/py/gpu_index_mps.mdx';
+import { PyGpuIndexCuda as GpuIndexCuda, PyGpuIndexMps as GpuIndexMps } from '/snippets/indexing.mdx';
 
 With LanceDB's GPU-powered indexing you can build vector indexes for billions of rows in just a few hours—dramatically improving ingestion speed.
 
@@ -29,13 +28,17 @@ Use the Python SDK with [PyTorch ≥ 2.0](https://pytorch.org/) to manually crea
 ### GPU Indexing on Linux
 
 <CodeGroup>
-  <GpuIndexCuda />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {GpuIndexCuda}
+    </CodeBlock>
 </CodeGroup>
 
 ### GPU Indexing on macOS (Apple Silicon)
 
 <CodeGroup>
-  <GpuIndexMps />
+    <CodeBlock filename="Python" language="Python" icon="Python">
+    {GpuIndexMps}
+    </CodeBlock>
 </CodeGroup>
 
 ## Performance Considerations
