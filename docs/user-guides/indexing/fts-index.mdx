@@ -32,13 +32,10 @@ Check FTS index status using the API:
     </CodeBlock>
 </CodeGroup>
 
-## Using FTS Indexes with Async Connections in LanceDB OSS
-
 <Note title="OSS Async Limitation">
 In LanceDB OSS, `create_fts_index` is not supported with `AsyncTable`. When working with async connections, use `create_index` with the `FTS` configuration instead.
-</Note>
 
-When using `connect_async()` in LanceDB OSS, create FTS indexes using `create_index` with the `FTS` configuration:
+<Expandable title="Code Example">
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -71,6 +68,9 @@ if __name__ == "__main__":
     ```
     </CodeBlock>
 </CodeGroup>
+
+</Expandable>
+</Note>
 
 ## Configuration Options
 
