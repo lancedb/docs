@@ -20,6 +20,34 @@ LanceDB provides a comprehensive suite of indexing strategies:
 Scalar indexes serve as a foundational optimization layer. They can be combined with vector search (prefilter or post-filter), full-text search, SQL scans, or key-value lookups for rapid primary-key retrievals.
 </Tip>
 
+## Supported Index Types
+
+LanceDB provides a comprehensive suite of indexing strategies for different data types and use cases:
+
+| Index | Use Case | Description |
+| :--------- | :------- | :---------- |
+| `HNSW` (Vector) | High recall and low latency vector searches. Ideal for applications requiring fast approximate nearest neighbor queries with high accuracy. | Hierarchical Navigable Small World—a graph-based approximate nearest neighbor algorithm.<br />Distance metrics: `l2` `cosine` `dot`<br />Quantizations: `PQ` `SQ`|
+| `IVF` (Vector) | Large-scale vector search with configurable accuracy/speed trade-offs. Supports binary vectors with hamming distance. | Inverted File Index—a partition-based approximate nearest neighbor algorithm that groups similar vectors into partitions for efficient search.<br />Distance metrics: `l2` `cosine` `dot` `hamming`<br />Quantizations: `None/Flat` `PQ` `SQ` `RQ`|
+| `BTree` (Scalar) | Numeric, temporal, and string columns with mostly distinct values. Best for highly selective queries on columns with many unique values. | Sorted index storing sorted copies of scalar columns with block headers in a btree cache. Header entries map to blocks of rows (4096 rows per block) for efficient disk reads. |
+| `Bitmap` (Scalar) | Low-cardinality columns with few thousand or fewer distinct values. Accelerates equality and range filters. | Stores a bitmap for each distinct value in the column, with one bit per row indicating presence. Memory-efficient for low-cardinality data. |
+| `LabelList` (Scalar) | List columns (e.g., tags, categories, keywords) requiring array containment queries. | Scalar index for `List<T>` columns using an underlying bitmap index structure to enable fast array membership lookups. |
+| `FTS` (Full-text) | String columns (e.g., title, description, content) requiring keyword-based search with BM25 ranking. | Full-text search index using BM25 ranking algorithm. Tokenizes text with configurable tokenization, stemming, stop word removal, and language-specific processing. |
+
+<Note>
+TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
+</Note>
+
+### Quantization Types
+
+Vector indexes can use different quantization methods to compress vectors and improve search performance:
+
+| Quantization | Use Case | Description |
+| :----------- | :------- | :---------- |
+| `PQ` (Product Quantization) | Default choice for most vector search scenarios. Use when you need to balance index size and recall. | Divides vectors into subvectors and quantizes each subvector independently. Provides a good balance between compression ratio and search accuracy. |
+| `SQ` (Scalar Quantization) | Use when you need faster indexing or when vector dimensions have consistent value ranges. | Quantizes each dimension independently. Simpler than PQ but typically provides less compression. |
+| `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. |
+| `None/Flat` | Use for binary vectors (with `hamming` distance) or when you need maximum recall and have sufficient storage. | No quantization—stores raw vectors. Provides the highest accuracy but requires more storage and memory. |
+
 ## Understanding the IVF-PQ Index
 
 An Approximate Nearest Neighbor (ANN) index re-represents data so that searches become faster (with a slight accuracy trade-off vs. brute-force search). LanceDB's disk-based IVF-PQ index is a variant of the Inverted File Index (IVF) that uses Product Quantization (PQ) to compress embeddings.
