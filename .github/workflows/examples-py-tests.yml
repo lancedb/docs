@@ -1,0 +1,28 @@
+name: Examples Pytests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    name: Run pytest on examples/py
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run pytest
+        run: uv run pytest examples/py
+
