@@ -1,14 +1,14 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "appearance": {
-    "default": "system",
+    "default": "light",
     "strict": false
   },
-  "theme": "aspen",
+  "theme": "mint",
   "name": "LanceDB",
   "banner": {
     "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
-    "dismissible": true 
+    "dismissible": true
   },
   "colors": {
     "primary": "#FF6B35",
@@ -67,13 +67,6 @@
                     ]
                   }
                 ]
-              },
-              {
-                "group": "Training",
-                "pages": [
-                  "training/index",
-                  "training/torch"
-                ]
               }
             ]
           },
@@ -90,17 +83,24 @@
                   "user-guides/tables/versioning",
                   "user-guides/tables/consistency"
                 ]
-          },
-          {
-            "group": "Indexing data",
-            "pages": [
-              "user-guides/indexing/index",
-              "user-guides/indexing/vector-index",
-              "user-guides/indexing/fts-index",
-              "user-guides/indexing/scalar-index",
-              "user-guides/indexing/gpu-indexing",
-              "user-guides/indexing/reindexing"
-            ]
+              },
+              {
+                "group": "Indexing data",
+                "pages": [
+                  "user-guides/indexing/index",
+                  "user-guides/indexing/vector-index",
+                  "user-guides/indexing/fts-index",
+                  "user-guides/indexing/scalar-index",
+                  "user-guides/indexing/gpu-indexing",
+                  "user-guides/indexing/reindexing"
+                ]
+              },
+              {
+                "group": "Training",
+                "pages": [
+                  "training/index",
+                  "training/torch"
+                ]
               }
             ]
           },
