@@ -5,59 +5,33 @@ description: "Multimodal lakehouse for AI."
 ---
 
 **LanceDB** is an open-source [multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/) for AI
-designed to manage petabyte-scale data. It caters to a range of users:
-
+designed to manage petabyte-scale data. It simultaneously caters to the needs of AI application engineers and AI researchers:
 
 <Steps>
-  <Step title="Software developers and AI engineers">
-    As a vector retrieval and memory layer for large-scale Generative AI and search applications leveraging
-    LLMs and embeddings -- such as RAG, chatbots, agents, e-commerce search & recommendation systems, and more.
+  <Step title="AI Engineers">
+    As a retrieval layer for large-scale Generative AI and search applications, such as RAG, chatbots, agents,
+    e-commerce search & recommendation systems, and more. LanceDB is easy-to-set-up, fast and highly
+    scalable (while being cost-effective) for these use cases.
   </Step>
-  <Step title="AI researchers, ML engineers and data scientists">
-    As a data management platform for large-scale AI and machine learning workflows -- including
-    model fine-tuning and training, feature engineering and explorative data analytics over
-    petabyte-size datasets.
+  <Step title="AI Researchers">
+    As a data management platform for researchers working on foundation model training, fine-tuning,
+    feature engineering and explorative data analysis over petabyte-size datasets with multimodal data.
+    Tasks that are painful with traditional data formats, such as metadata management, versioning, and
+    data evolution, become simple and efficient with LanceDB.
   </Step>
 </Steps>
 
 ## Products
 
-LanceDB offers a range of products to suit different needs, listed below.
+LanceDB offers a range of products, built to serve different needs.
 
-### LanceDB Cloud
-
-> Sign up for LanceDB Cloud: Serverless vector search with enterprise-grade performance!
-
-<a href="https://accounts.lancedb.com/sign-up" target="_blank">
-  <img 
-    src="/static/assets/images/get-started/main-cloud-cta.png" 
-    alt="LanceDB Cloud: Serverless vector search with enterprise-grade performance!"
-    noZoom
-  />
-</a>
-
-With LanceDB Cloud , you can build secure, scalable, and high-performance vector search solutions. Manage your
-Projects through the LanceDB Cloud UI , and connect via our simple REST API and SDKs in Python, Typescript and
-Rust .
-
-### LanceDB Enterprise
-
-LanceDB Enterprise is both a **private cloud** or a **BYOC** solution that transforms your data lake into a
-high-performance vector database or lakehouse that can operate at extreme scale.
-
-<Note>
-LanceDB Enterprise is designed for very large-scale workloads in private deployments, with
-high performance at extreme scale,
-or if you have strict security requirements, [contact us](mailto:contact@lancedb.com) to learn
-more.
-</Note>
+![](/static/assets/images/overview/lancedb-suite.png)
 
 ### LanceDB OSS
-
-LanceDB is also available as an open source embedded database. This is the
-simplest way to get started with LanceDB, with client SDKs available in Python, TypeScript
-and Rust. You can use LanceDB OSS to build search applications, RAG apps and more by running it
-entirely locally on your filesystem.
+The simplest way to get started with LanceDB is with the open source version. It's available as an embedded
+library, with client SDKs available in Python, TypeScript and Rust. You can use LanceDB OSS to build AI and
+search applications by running it entirely locally on your filesystem. See our quickstart guide
+and RAG tutorials below to get started in a few minutes.
 
 <Columns cols={2}>
 <Card
@@ -75,3 +49,30 @@ entirely locally on your filesystem.
     Learn how to build Retrieval-Augmented Generation (RAG) applications using LanceDB.
   </Card>
 </Columns>
+
+### LanceDB Enterprise
+
+[LanceDB Enterprise](/enterprise) is both a **private cloud** or a **BYOC** solution that transforms your data lake into a
+high-performance vector database or lakehouse that can operate at extreme scale. To get
+started with LanceDB Enterprise, reach out to us at [contact@lancedb.com](mailto:contact@lancedb.com).
+
+<Info>
+LanceDB Enterprise is designed for very large-scale workloads in private deployments, with
+high performance at extreme scale,
+or if you have strict security requirements, [contact us](mailto:contact@lancedb.com) to learn
+more.
+</Info>
+
+### LanceDB Cloud
+
+[LanceDB Cloud](/cloud) helps you build secure, scalable, and high-performance vector search solutions. Manage your
+projects through the LanceDB Cloud UI , and build your applications using our REST API or client SDKs in Python, Typescript and
+Rust.
+
+<Card
+  title="Serverless vector search with enterprise-grade performance"
+  img="/static/assets/images/get-started/main-cloud-cta.png"
+  href="https://cloud.lancedb.com"
+>
+Sign up for LanceDB Cloud by clicking here.
+</Card>
