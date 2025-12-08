@@ -1,0 +1,36 @@
+---
+title: "Geneva: Feature Engineering with LanceDB"
+sidebarTitle: Overview
+description: "Learn how to use Geneva, LanceDB's feature engineering tool, to transform raw data into meaningful features for AI models."
+icon: layer-group
+---
+
+When working with multimodal datasets at scale, Geneva, LanceDB's homegrown feature engineering framework, makes it easy to define, compute, and transform raw data into useful features for your AI applications.
+It comes all batteries-included, with distributed processing and UDFs at its core. 
+
+Geneva is designes to improve the productivity of AI engineers. It does so by streamlining feature engineering tasks. It is designed to reduce the time required to prototype, perform experiments, scale up, and move to production.
+
+<Info>
+Feature Engineering and the `geneva` Python package are currently available as part of [LanceDB Enterprise](/enterprise). Please [contact us](mailto:contact@lancedb.com) if you're interested in scaling up your feature
+engineering workloads for your AI and multimodal use cases.
+</Info>
+
+
+
+`geneva` uses Python [User Defined Functions (UDFs)](/geneva/udfs/) to define features as columns in a Lance dataset. Adding a feature is straightforward:
+
+1. Prototype your Python function in your favorite environment.
+2. Wrap the function with a small UDF decorator (see [UDFs](/geneva/udfs/)).
+3. Register the UDF as a virtual column using `Table.add_columns()`.
+4. Trigger a `backfill` operation (see [Backfilling](/geneva/jobs/backfilling/)).
+
+<Warning>
+You can build your Python feature generator function in an IDE or a notebook using your project's Python versions and dependencies. `geneva` will automate much of the dependency and version management needed to move from prototype to scale and production.
+</Warning>
+
+## Related Pages
+
+- **Overview**: [What is Feature Engineering?](/geneva/)
+- **UDFs**: [Using UDFs](/geneva/udfs/) · [Blob helpers](/geneva/udfs/blobs/)
+- **Jobs**: [Execution contexts](/geneva/jobs/contexts/) · [Startup optimizations](/geneva/jobs/startup/) · [Materialized views](/geneva/jobs/materialized-views/) · [Backfilling](/geneva/jobs/backfilling/) · [Performance](/geneva/jobs/performance/)
+- **Deployment**: [Deployment overview](/geneva/deployment/) · [Troubleshooting](/geneva/deployment/troubleshooting/)

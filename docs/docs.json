@@ -71,7 +71,7 @@
             ]
           },
           {
-            "group": "User guide",
+            "group": "LanceDB User Guide",
             "pages": [
               {
                 "group": "Table management",
@@ -102,6 +102,38 @@
                   "training/torch"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Feature Engineering (Geneva)",
+            "pages": [
+              "geneva/index",
+              "geneva/overview/index",
+              {
+                "group": "UDFs",
+                "pages": [
+                  "geneva/udfs/index",
+                  "geneva/udfs/blobs"
+                ]
+              },
+              {
+                "group": "Job execution",
+                "pages": [
+                  "geneva/jobs/backfilling",
+                  "geneva/jobs/startup",
+                  "geneva/jobs/materialized-views",
+                  "geneva/jobs/contexts",
+                  "geneva/jobs/performance"
+                ]
+              },
+              {
+                "group": "Deployment & scaling",
+                "pages": [
+                  "geneva/deployment/index",
+                  "geneva/deployment/troubleshooting"
+                ]
+              },
+              "geneva/reference"
             ]
           },
           {
