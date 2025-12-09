@@ -21,7 +21,6 @@ use lancedb::{connect, Result, Table as LanceDbTable};
 // --8<-- [start:connect]
 #[tokio::main]
 async fn main() -> Result<()> {
-// --8<-- [start:connect]
     if std::path::Path::new("data").exists() {
         std::fs::remove_dir_all("data").unwrap();
     }
@@ -49,6 +48,7 @@ async fn main() -> Result<()> {
     // --8<-- [end:drop_table]
     Ok(())
 }
+// --8<-- [end:connect]
 
 #[allow(dead_code)]
 async fn open_with_existing_tbl() -> Result<()> {
