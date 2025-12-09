@@ -4,3 +4,7 @@ export const PyConnect = "import lancedb\n\nuri = \"ex_lancedb\"\ndb = lancedb.c
 
 export const PyConnectCloud = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
 
+export const TsConnect = "import * as lancedb from \"@lancedb/lancedb\";\n\nasync function connectExample(uri: string) {\n  const db = await lancedb.connect(uri);\n  return db;\n}\n";
+
+export const TsConnectCloud = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\n";
+
