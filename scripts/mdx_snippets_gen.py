@@ -287,7 +287,7 @@ def render_module(
 def generate_modules(
     snippets_by_target: Mapping[str, Mapping[str, Mapping[str, SnippetRecord]]],
     output_root: Path,
-) -> Tuple[int, int]:
+) -> None:
     modules_written = 0
     total_exports = 0
 
@@ -296,6 +296,7 @@ def generate_modules(
         lang_map = snippets_by_target[target]
         existing_langs = parse_existing_module(module_path)
         for lang, snippets in existing_langs.items():
+            print(module_path, " -- ", lang)
             merged_lang = lang_map.setdefault(lang, {})
             existing_export_names = {rec.export_name for rec in merged_lang.values()}
             for snippet_name, record in snippets.items():
@@ -309,8 +310,9 @@ def generate_modules(
         module_content = render_module(target, lang_map)
         if write_if_changed(module_path, module_content):
             modules_written += 1
-
-    return modules_written, total_exports
+    print(
+        f"\nGenerated {total_exports} snippets\n---"
+    )
 
 
 def resolve_source_dirs(args_dirs: List[str] | None) -> List[Path]:
@@ -350,10 +352,7 @@ def main() -> int:
         return 0
 
     output_root = Path(args.output_dir)
-    modules_written, exports_written = generate_modules(snippets, output_root)
-    print(
-        f"Generated {exports_written} snippet exports across {modules_written} module(s) in {output_root}"
-    )
+    generate_modules(snippets, output_root)
     return 0
 
 
