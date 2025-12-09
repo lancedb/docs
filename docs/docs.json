@@ -1,14 +1,14 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "appearance": {
-    "default": "system",
+    "default": "light",
     "strict": false
   },
-  "theme": "aspen",
+  "theme": "mint",
   "name": "LanceDB",
   "banner": {
     "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
-    "dismissible": true 
+    "dismissible": true
   },
   "colors": {
     "primary": "#FF6B35",
@@ -45,13 +45,6 @@
                 ]
               },
               {
-                "group": "Cloud",
-                "pages": [
-                  "cloud/index",
-                  "cloud/get-started"
-                ]
-              },
-              {
                 "group": "LanceDB Enterprise",
                 "pages": [
                   "enterprise/index",
@@ -69,16 +62,16 @@
                 ]
               },
               {
-                "group": "Training",
+                "group": "LanceDB Cloud",
                 "pages": [
-                  "training/index",
-                  "training/torch"
+                  "cloud/index",
+                  "cloud/get-started"
                 ]
               }
             ]
           },
           {
-            "group": "User guide",
+            "group": "LanceDB User Guide",
             "pages": [
               {
                 "group": "Table management",
@@ -90,18 +83,57 @@
                   "user-guides/tables/versioning",
                   "user-guides/tables/consistency"
                 ]
+              },
+              {
+                "group": "Indexing data",
+                "pages": [
+                  "user-guides/indexing/index",
+                  "user-guides/indexing/vector-index",
+                  "user-guides/indexing/fts-index",
+                  "user-guides/indexing/scalar-index",
+                  "user-guides/indexing/gpu-indexing",
+                  "user-guides/indexing/reindexing"
+                ]
+              },
+              {
+                "group": "Training",
+                "pages": [
+                  "training/index",
+                  "training/torch"
+                ]
+              }
+            ]
           },
           {
-            "group": "Indexing data",
+            "group": "Feature Engineering (Geneva)",
             "pages": [
-              "user-guides/indexing/index",
-              "user-guides/indexing/vector-index",
-              "user-guides/indexing/fts-index",
-              "user-guides/indexing/scalar-index",
-              "user-guides/indexing/gpu-indexing",
-              "user-guides/indexing/reindexing"
-            ]
-              }
+              "geneva/index",
+              "geneva/overview/index",
+              {
+                "group": "UDFs",
+                "pages": [
+                  "geneva/udfs/index",
+                  "geneva/udfs/blobs"
+                ]
+              },
+              {
+                "group": "Job execution",
+                "pages": [
+                  "geneva/jobs/backfilling",
+                  "geneva/jobs/startup",
+                  "geneva/jobs/materialized-views",
+                  "geneva/jobs/contexts",
+                  "geneva/jobs/performance"
+                ]
+              },
+              {
+                "group": "Deployment & scaling",
+                "pages": [
+                  "geneva/deployment/index",
+                  "geneva/deployment/troubleshooting"
+                ]
+              },
+              "geneva/reference"
             ]
           },
           {
@@ -159,64 +191,64 @@
         "tab": "Integrations",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Integrations",
             "pages": [
-              "integrations/index"
-            ]
-          },
-          {
-            "group": "Embedding providers",
-            "pages": [
-              "integrations/embedding/aws",
-              "integrations/embedding/cohere",
-              "integrations/embedding/gemini",
-              "integrations/embedding/huggingface",
-              "integrations/embedding/ibm",
-              "integrations/embedding/imagebind",
-              "integrations/embedding/instructor",
-              "integrations/embedding/jina",
-              "integrations/embedding/ollama",
-              "integrations/embedding/openai",
-              "integrations/embedding/openclip",
-              "integrations/embedding/sentence-transformers",
-              "integrations/embedding/voyageai"
-            ]
-          },
-          {
-            "group": "Reranking",
-            "pages": [
-              "integrations/reranking/answerdotai",
-              "integrations/reranking/cohere",
-              "integrations/reranking/colbert",
-              "integrations/reranking/cross_encoder",
-              "integrations/reranking/jina",
-              "integrations/reranking/linear_combination",
-              "integrations/reranking/openai",
-              "integrations/reranking/rrf",
-              "integrations/reranking/voyageai"
-            ]
-          },
-          {
-            "group": "Frameworks",
-            "pages": [
-              "integrations/frameworks/genkit",
-              "integrations/frameworks/kiln",
-              "integrations/frameworks/langchain",
-              "integrations/frameworks/llamaIndex",
-              "integrations/frameworks/prompttools",
-              "integrations/frameworks/pydantic",
-              "integrations/frameworks/synthetic-data-kit"
-            ]
-          },
-          {
-            "group": "Platforms",
-            "pages": [
-              "integrations/platforms/dlt",
-              "integrations/platforms/duckdb",
-              "integrations/platforms/pandas_and_pyarrow",
-              "integrations/platforms/phidata",
-              "integrations/platforms/polars_arrow",
-              "integrations/platforms/voxel51"
+              "integrations/index",
+              {
+                "group": "Embedding Providers",
+                "pages": [
+                  "integrations/embedding/huggingface",
+                  "integrations/embedding/aws",
+                  "integrations/embedding/cohere",
+                  "integrations/embedding/gemini",
+                  "integrations/embedding/ibm",
+                  "integrations/embedding/imagebind",
+                  "integrations/embedding/instructor",
+                  "integrations/embedding/jina",
+                  "integrations/embedding/ollama",
+                  "integrations/embedding/openai",
+                  "integrations/embedding/openclip",
+                  "integrations/embedding/sentence-transformers",
+                  "integrations/embedding/voyageai"
+                ]
+              },
+              {
+                "group": "Rerankers",
+                "pages": [
+                  "integrations/reranking/answerdotai",
+                  "integrations/reranking/cohere",
+                  "integrations/reranking/colbert",
+                  "integrations/reranking/cross_encoder",
+                  "integrations/reranking/jina",
+                  "integrations/reranking/linear_combination",
+                  "integrations/reranking/openai",
+                  "integrations/reranking/rrf",
+                  "integrations/reranking/voyageai"
+                ]
+              },
+              {
+                "group": "Frameworks",
+                "pages": [
+                  "integrations/frameworks/pydantic",
+                  "integrations/frameworks/langchain",
+                  "integrations/frameworks/llamaIndex",
+                  "integrations/frameworks/genkit",
+                  "integrations/frameworks/kiln",
+                  "integrations/frameworks/prompttools",
+                  "integrations/frameworks/synthetic-data-kit"
+                ]
+              },
+              {
+                "group": "Platforms",
+                "pages": [
+                  "integrations/platforms/duckdb",
+                  "integrations/platforms/pandas_and_pyarrow",
+                  "integrations/platforms/polars_arrow",
+                  "integrations/platforms/dlt",
+                  "integrations/platforms/phidata",
+                  "integrations/platforms/voxel51"
+                ]
+              }
             ]
           }
         ]
