@@ -24,11 +24,13 @@ Geneva has been tested with Ray 2.44+ and Python 3.10.x and 3.12.x.
 
 You can run this code in your notebook to verify your environment matches your expectations:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 !python --version
 !pip show lancedb  # need 0.22.0b0+
 !echo $VIRTUAL_ENV
 ```
+</CodeGroup>
 
 ## Confirming Remote Ray Execution
 
@@ -36,23 +38,28 @@ Geneva allows you to specify the resources of your worker nodes. You can verify 
 
 You can get some basic information about resources available to your Ray:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 print(ray.available_resources())
 ```
+</CodeGroup>
 
 You can verify basic remote execution via Ray:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 @ray.remote
 def check_remote():
   return "Hello from a worker"
 
 print(ray.get(check_remote.remote()))
 ```
+</CodeGroup>
 
 You can also verify that versions of specific libraries are present in the execution environment:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 # does ray have cuda?
 @ray.remote
 def check_pyarrow():
@@ -61,12 +68,14 @@ def check_pyarrow():
 
 print(ray.get(check_pyarrow.remote()))
 ```
+</CodeGroup>
 
 > **Note**: You should execute Geneva code from a machine or VM that has the same architecture and OS type as the nodes in your cluster. This will allow for shared libraries to be shipped. For example, if you use a Mac to host a Jupyter notebook, Geneva will push Mac libraries to your Linux cluster and likely result in module not found errors due to OS/architecture differences.
 
 For GPU-dependent UDFs and jobs, you can verify that GPU worker nodes have the CUDA library:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 # does ray have cuda?
 @ray.remote(num_gpus=1)
 def check_cuda():
@@ -75,6 +84,7 @@ def check_cuda():
 
 print(ray.get(check_cuda.remote()))
 ```
+</CodeGroup>
 
 ## Confirming Sufficient Permissions
 
@@ -82,7 +92,8 @@ While your notebook or working environment may have credentials to read and writ
 
 Here we add `import geneva` to help trigger potential permissions problems:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 @ray.remote(num_gpus=1)
 def check_cuda():
     import geneva # this is currently required before other imports
@@ -91,6 +102,7 @@ def check_cuda():
 
 print(ray.get(check_cuda.remote()))
 ```
+</CodeGroup>
 
 ### GCE Permissions Errors in Job Logs
 
@@ -102,7 +114,8 @@ PermissionError: [Errno 13] google::cloud::Status(PERMISSION_DENIED: Permanent e
 
 This indicates that your workers and/or head node are not being run with the correct service account or with an account that has sufficient access. Please double check the service account's accesses and make sure to add your service account that has access to the buckets as a parameter to your Head and Worker specs. See `service_account="geneva-integ-test"` below:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 raycluster = ray_cluster(
     name= k8s_name,
     namespace=k8s_namespace,
@@ -128,6 +141,7 @@ raycluster = ray_cluster(
     ],
 )
 ```
+</CodeGroup>
 
 ## Serialization Errors
 
@@ -183,7 +197,8 @@ Geneva pulls in your UDFs so they can be sent to remote worker nodes. For the me
 
 **So instead of this:**
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 from google.cloud import storage
 storage_client = storage.Client() # this has unpickleable state
 bucket = storage_client.bucket(BUCKET_NAME) # this has a reference to storage_client
@@ -195,22 +210,25 @@ def udf_function(...)
   blob = bucket.blob(video_path) # the udf's closure captures the unpickleable storage_client
   ...
 ```
+</CodeGroup>
 
 **Do this:**
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 from google.cloud import storage
 
-...
+# ...
 
 @udf
 def udf_function(...)
-  ...
+  # ...
   storage_client = storage.Client() # this has unpickleable state
   bucket = storage_client.bucket(BUCKET_NAME)
   blob = bucket.blob(video_path) # blob is bytes and is pickleable so is safe
-  ...
+  # ...
 ```
+</CodeGroup>
 
 ### Disconnect or Serialization Errors with GPU Dependent UDFs
 

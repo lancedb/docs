@@ -17,15 +17,19 @@ If you are using a remote Ray cluster, you will need to have the notebook or scr
 
 To execute jobs without an external Ray cluster, you can just trigger the `Table.backfill` method. This will auto-create a local Ray cluster and is only suitable for prototyping on small datasets.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 tbl.backfill("area")
 ```
+</CodeGroup>
 
 Then, add column 'filename_len' and trigger the job:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 tbl.backfill("filename_len")  # trigger the job
 ```
+</CodeGroup>
 
 ## Existing Ray Cluster
 
@@ -35,7 +39,8 @@ This approach makes it easy to tailor resource requirements to your particular U
 
 You can then wrap your table backfill call with the RayCluster context.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 from geneva.runners.ray.raycluster import _HeadGroupSpec, _WorkerGroupSpec
 from geneva.runners.ray._mgr import ray_cluster
 
@@ -50,12 +55,14 @@ with ray_cluster(
 
     tbl.backfill("xy_product")
 ```
+</CodeGroup>
 
 > **Note**: If your Ray cluster is managed by KubeRay, you'll need to setup kubectl port forwarding setup so Geneva can connect.
 
 For more interactive usage, you can use this pattern:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 # this is a k8s pod spec.
 raycluster = ray_cluster(...)
 raycluster.__enter__() # equivalent of ray.init()
@@ -65,6 +72,7 @@ tbl.backfill("filename_len")
 
 raycluster.__exit__(None, None, None)
 ```
+</CodeGroup>
 
 ## Ray on Kubernetes
 
@@ -74,7 +82,8 @@ This approach makes it easy to tailor resource requirements to your particular U
 
 You can then wrap your table backfill call with the RayCluster context.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 from geneva.runners.ray.raycluster import _HeadGroupSpec, _WorkerGroupSpec
 from geneva.runners._mgr import ray_cluster
 
@@ -122,10 +131,12 @@ with ray_cluster(
 
     tbl.backfill("xy_product")
 ```
+</CodeGroup>
 
 For more interactive usage, you can use this pattern:
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 # this is a k8s pod spec.
 raycluster = ray_cluster(...)
 raycluster.__enter__() # equivalent of ray.init()
@@ -135,6 +146,7 @@ tbl.backfill("filename_len")
 
 raycluster.__exit__()
 ```
+</CodeGroup>
 
 ## Persistent Contexts
 
@@ -143,7 +155,9 @@ Geneva Execution Contexts can be reused and shared with team members using persi
 ### Define a Cluster
 
 A Geneva Cluster represents the compute resources used for distributed execution. Calling `define_cluster()` stores the Cluster metadata in persistent storage. The Cluster can then be referenced by name amd provisioned when creating an Execution Context.
-```python
+
+<CodeGroup>
+```python Python icon="Python"
 import sys
 from geneva.cluster import GenevaClusterType, K8sConfigMethod
 from geneva.runners.ray.raycluster import (
@@ -192,6 +206,7 @@ db.define_cluster(cluster_name, GenevaCluster(
     ),
 ))
 ```
+</CodeGroup>
 
 ### Define a Manifest
 
@@ -199,7 +214,8 @@ A Geneva Manifest represents the files and dependencies
 used in the execution environment. Calling `define_manifest()` packages files in the local environment and stores the Manifest metadata and files in persistent storage.
 The Manifest can then be referenced by name when creating an Execution Context. Persistent Manifests allow for deterministic execution environments that can be shared and reused.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 from geneva.manifest.mgr import GenevaManifest
 
 db = geneva.connect(my_db_uri)
@@ -215,6 +231,7 @@ db.define_manifest(
     ),
 )
 ```
+</CodeGroup>
 
 ### Create an Execution Context
 
@@ -222,17 +239,20 @@ An Execution Context represents the concrete execution environment used to execu
 
 Calling `context` will enter a context manager that will provision an execution cluster and execute the Job using the Cluster and Manifest definitions provided. Once completed, the context manager will automatically de-provision the cluster.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 db = geneva.connect(my_db_uri)
 tbl = db.get_table("my_table")
 
 with db.context(cluster=cluster_name, manifest=manifest_name):
     tbl.backfill("embedding", where="content is not null")
 ```
+</CodeGroup>
 
 In a notebook environment, you can manually enter and exit the context manager in multiple steps like so: 
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 ctx = db.context(cluster=cluster_name, manifest=manifest_name)
 ctx.__enter()__
 
@@ -240,3 +260,4 @@ ctx.__enter()__
 
 ctx.__exit__(None,None,None)
 ```
+</CodeGroup>

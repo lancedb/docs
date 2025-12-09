@@ -23,7 +23,8 @@ Just like with backfills, this operation is incremental, checkpointed, and run i
 
 Let's walk through an example using a raw video table as a base. We want to create a materialized view off the table that adds transcription columns to a subset of the values.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 from geneva import connect, udf
 import pyarrow as pa
 
@@ -40,10 +41,12 @@ raw_videos = db.create_table(
     primary_key="video_id"
 )
 ```
+</CodeGroup>
 
 Here's our UDFs, and the creation of a new empty materialized view.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 @udf
 def transcribe(video_uri) -> str:
   from whisper import load_model
@@ -67,20 +70,25 @@ q = raw_videos.search(None)
 
 view_table = db.create_materialized_view("table_view", q)
 ```
+</CodeGroup>
 
 To populate the values, we call `refresh`.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 # explicitly copy values from the source table, applying UDF on cols.
 db.refresh("table_view")
 ```
+</CodeGroup>
 
 Note that the UDF is stored on the destination materialized view table.
 
-```python
+<CodeGroup>
+```python Python icon="Python"
 raw_table.add(...)
 db.refresh("table_view")  # only materialize new or modified rows.
 ```
+</CodeGroup>
 
 The operation is incremental. So the next time refresh on the table is called, only new fragments with new data get materialized into the materialized view table.
 
