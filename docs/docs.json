@@ -227,26 +227,26 @@
                 ]
               },
               {
-                "group": "Frameworks",
+                "group": "AI Platforms & Frameworks",
                 "pages": [
-                  "integrations/frameworks/pydantic",
-                  "integrations/frameworks/langchain",
-                  "integrations/frameworks/llamaIndex",
-                  "integrations/frameworks/genkit",
-                  "integrations/frameworks/kiln",
-                  "integrations/frameworks/prompttools",
-                  "integrations/frameworks/synthetic-data-kit"
+                  "integrations/ai/langchain",
+                  "integrations/ai/llamaIndex",
+                  "integrations/ai/genkit",
+                  "integrations/ai/kiln",
+                  "integrations/ai/prompttools",
+                  "integrations/ai/synthetic-data-kit"
                 ]
               },
               {
-                "group": "Platforms",
+                "group": "Data Platforms & Frameworks",
                 "pages": [
-                  "integrations/platforms/duckdb",
-                  "integrations/platforms/pandas_and_pyarrow",
-                  "integrations/platforms/polars_arrow",
-                  "integrations/platforms/dlt",
-                  "integrations/platforms/phidata",
-                  "integrations/platforms/voxel51"
+                  "integrations/data/pydantic",
+                  "integrations/data/duckdb",
+                  "integrations/data/pandas_and_pyarrow",
+                  "integrations/data/polars_arrow",
+                  "integrations/data/dlt",
+                  "integrations/data/phidata",
+                  "integrations/data/voxel51"
                 ]
               }
             ]
@@ -302,5 +302,15 @@
     "metatags": {
       "robots": "noindex"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/integrations/platforms/:slug*",
+      "destination": "integrations/data/:slug*"
+    },
+    {
+      "source": "/integrations/frameworks/:slug*",
+      "destination": "integrations/ai/:slug*"
+    }
+  ]
 }
