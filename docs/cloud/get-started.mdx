@@ -52,7 +52,7 @@ db = lancedb.connect(
 )
 ```
 
-```ts TypeScript icon=js
+```ts TypeScript icon=js expandable=true
 import { connect, Index, Table } from '@lancedb/lancedb';
 import { FixedSizeList, Field, Float32, Schema, Utf8 } from 'apache-arrow';
 
@@ -95,7 +95,7 @@ vector_dim = len(sample_dataset[0]["keywords_embeddings"])
 print(f"Embedding dimension: {vector_dim}")
 ```
 
-```ts TypeScript icon=js
+```ts TypeScript icon=js expandable=true
 const BATCH_SIZE = 100; // HF API default limit
 const POLL_INTERVAL = 10000; // 10 seconds
 const MAX_RETRIES = 5;
@@ -236,7 +236,7 @@ table.alter_columns(dict(path="keywords_embeddings", data_type=pa.list_(pa.float
 print(f"Table '{table_name}' created successfully")
 ```
 
-```ts TypeScript icon=js
+```ts TypeScript icon=js expandable=true
 const tableName = "lancedb-cloud-quickstart";
 
 const dataWithEmbeddings: Document[] = sampleData;
@@ -282,7 +282,7 @@ table.create_index("cosine", vector_column_name="keywords_embeddings", wait_time
 print(table.index_stats("keywords_embeddings_idx"))
 ```
 
-```ts TypeScript icon=js
+```ts TypeScript icon=js expandable=true
 // Create a vector index
 await table.createIndex("embeddings", {
 config: Index.ivfPq({
@@ -319,7 +319,7 @@ print("Search results:")
 print(result)
 ```
 
-```ts TypeScript icon=js
+```ts TypeScript icon=js expandable=true
 // Perform semantic search with a new query
 const queryDocs = await loadDataset(datasetName, split, 1, targetSize);
 if (queryDocs.length === 0) {
@@ -356,7 +356,7 @@ print("Filtered search results (label > 2):")
 print(filtered_result)
 ```
 
-```ts TypeScript icon=js
+```ts TypeScript icon=js expandable=true
 const filteredResults = await table.search(queryDoc.embeddings)
     .where("label > 2")
     .limit(5)

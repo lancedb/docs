@@ -4,7 +4,7 @@ sidebarTitle: "Quickstart"
 description: "Get started with LanceDB in minutes."
 icon: rocket
 ---
-import { PyConnect, PyConnectCloud } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
 import {
     PyQuickstartCreateTable,
     PyQuickstartCreateTableNoOverwrite,
@@ -13,6 +13,13 @@ import {
     PyQuickstartOpenTable,
     PyQuickstartOutputPandas,
     PyQuickstartVectorSearch2,
+    TsQuickstartAddData,
+    TsQuickstartCreateTable,
+    TsQuickstartCreateTableNoOverwrite,
+    TsQuickstartOpenTable,
+    TsQuickstartOutputArray,
+    TsQuickstartVectorSearch1,
+    TsQuickstartVectorSearch2,
 } from '/snippets/quickstart.mdx';
 
 The easiest way to get started with LanceDB is the open source version, which is an embedded database that
@@ -45,6 +52,10 @@ and pointing to a local path -- no servers needed!
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyConnect}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    {TsConnect}
+    </CodeBlock>
 </CodeGroup >
 
 
@@ -58,6 +69,10 @@ that points to where your data is stored, and you're ready to go.
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyConnectCloud}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    {TsConnectCloud}
     </CodeBlock>
 </CodeGroup >
 
@@ -79,6 +94,10 @@ embedding model.
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyQuickstartCreateTable}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    {TsQuickstartCreateTable}
+    </CodeBlock>
 </CodeGroup >
 
 The code above creates a table named `adventurers` and ingests four records into it, by overwriting
@@ -91,6 +110,10 @@ omit the `mode="overwrite"` parameter -- this will raise a `ValueError` when try
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyQuickstartCreateTableNoOverwrite}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    {TsQuickstartCreateTableNoOverwrite}
     </CodeBlock>
 </CodeGroup >
 
@@ -109,10 +132,15 @@ Let's try and find the result that's most similar to it!
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyQuickstartVectorSearch1}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    {TsQuickstartVectorSearch1}
+    </CodeBlock>
 </CodeGroup >
 
-The example above outputs the top 2 most similar results of the vector search query
-as a Polars DataFrame, as it's easier to interpret the results when displayed in tabular format.
+The example above outputs the top 2 most similar results of the vector search query.
+Generally, across all client languages, you would typically gather the results as a list/array of objects.
+In Python, you can conveniently obtain the results as Polars or Pandas DataFrames.
 
 | id | text   | vector            | _distance |
 | --- | --- | --- | --- |
@@ -122,12 +150,17 @@ as a Polars DataFrame, as it's easier to interpret the results when displayed in
 It looks like the `knight` is the most similar adventurer to the `warrior` from our query!
 
 <Info>
-If you prefer Pandas, you can use the `to_pandas()` method to display the results as a Pandas DataFrame, see below.
+In Python, if you prefer working with Pandas, you can use the `to_pandas()` method to display the results
+as a Pandas DataFrame, see below.
 </Info>
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyQuickstartOutputPandas}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    {TsQuickstartOutputArray}
     </CodeBlock>
 </CodeGroup >
 
@@ -148,6 +181,10 @@ Append more records to the existing table using the `add()` method:
     <CodeBlock filename="Python" language="Python">
     {PyQuickstartAddData}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript">
+    {TsQuickstartAddData}
+    </CodeBlock>
 </CodeGroup >
 
 To verify that our new data was added, we can run a different query that looks for adventurers similar to `wizard`.
@@ -155,6 +192,10 @@ To verify that our new data was added, we can run a different query that looks f
 <CodeGroup >
     <CodeBlock filename="Python" language="Python">
     {PyQuickstartVectorSearch2}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript">
+    {TsQuickstartVectorSearch2}
     </CodeBlock>
 </CodeGroup >
 

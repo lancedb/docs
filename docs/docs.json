@@ -4,7 +4,7 @@
     "default": "light",
     "strict": false
   },
-  "theme": "mint",
+  "theme": "aspen",
   "name": "LanceDB",
   "banner": {
     "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",

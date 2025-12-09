@@ -24,7 +24,7 @@ Just like with backfills, this operation is incremental, checkpointed, and run i
 Let's walk through an example using a raw video table as a base. We want to create a materialized view off the table that adds transcription columns to a subset of the values.
 
 ```python
-from lancedb import connect
+from geneva import connect, udf
 import pyarrow as pa
 
 db = connect("/path/to/lancedb")
