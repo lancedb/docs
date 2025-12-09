@@ -96,6 +96,13 @@
                 ]
               },
               {
+                "group": "Embedding data",
+                "pages": [
+                  "embedding/index",
+                  "embedding/quickstart"
+                ]
+              },
+              {
                 "group": "Training",
                 "pages": [
                   "training/index",
