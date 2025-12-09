@@ -28,6 +28,9 @@ LANG_EXTENSIONS = {
     ".rs": "rs",
 }
 LANG_MARKERS = {"py": ["#"], "ts": ["//"], "rs": ["//"]}
+# Match each export block; we rely on the blank line we emit after each export to
+# avoid accidentally truncating on semicolons inside the JSON string literal.
+EXPORT_RE = re.compile(r"export const (\w+)\s*=\s*(.+?);\s*\n(?:\s*\n|$)", re.DOTALL)
 
 DEFAULT_SOURCE_DIRS = (
     Path("tests") / "py",
@@ -170,6 +173,43 @@ def to_js_literal(text: str) -> str:
     return json.dumps(text, ensure_ascii=False)
 
 
+def split_export_prefix(export_name: str) -> Tuple[str | None, str]:
+    for lang, prefix in LANG_PREFIX.items():
+        if export_name.startswith(prefix):
+            suffix = export_name[len(prefix) :]
+            return lang, suffix or export_name
+    return None, export_name
+
+
+def parse_existing_module(path: Path) -> Mapping[str, Mapping[str, SnippetRecord]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+
+    existing: Dict[str, Dict[str, SnippetRecord]] = {}
+    for match in EXPORT_RE.finditer(text):
+        export_name, literal = match.group(1), match.group(2).strip()
+        lang, snippet_suffix = split_export_prefix(export_name)
+        if not lang:
+            continue
+        try:
+            decoded = json.loads(literal)
+        except Exception:
+            decoded = literal.strip().strip(";")
+
+        record = SnippetRecord(
+            lang=lang,
+            snippet_name=snippet_suffix or export_name,
+            export_name=export_name,
+            text=decoded,
+            source_rel="(existing module)",
+        )
+        existing.setdefault(lang, {})[record.snippet_name] = record
+
+    return existing
+
+
 def iter_source_files(source_dirs: Iterable[Path]) -> Iterator[Path]:
     for root in source_dirs:
         for path in root.rglob("*"):
@@ -252,10 +292,21 @@ def generate_modules(
     total_exports = 0
 
     for target in sorted(snippets_by_target.keys()):
+        module_path = output_root / f"{target}.mdx"
         lang_map = snippets_by_target[target]
+        existing_langs = parse_existing_module(module_path)
+        for lang, snippets in existing_langs.items():
+            merged_lang = lang_map.setdefault(lang, {})
+            existing_export_names = {rec.export_name for rec in merged_lang.values()}
+            for snippet_name, record in snippets.items():
+                # If an export with the same name already exists (e.g., regenerated),
+                # prefer the newly generated snippet and skip the old one to avoid duplicates.
+                if record.export_name in existing_export_names:
+                    continue
+                merged_lang.setdefault(snippet_name, record)
+
         total_exports += sum(len(snippets) for snippets in lang_map.values())
         module_content = render_module(target, lang_map)
-        module_path = output_root / f"{target}.mdx"
         if write_if_changed(module_path, module_content):
             modules_written += 1
 
