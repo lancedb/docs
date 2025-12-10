@@ -4,7 +4,7 @@ sidebarTitle: "Full-Text Index"
 description: "Create and tune BM25-based full-text search indexes in LanceDB."
 mode: "wide"
 ---
-import { PyFtsIndexCreate as FtsIndexCreate, PyFtsIndexWait as FtsIndexWait } from '/snippets/indexing.mdx';
+import { PyFtsIndexAsync as FtsIndexAsync, PyFtsIndexCreate as FtsIndexCreate, PyFtsIndexWait as FtsIndexWait } from '/snippets/indexing.mdx';
 
 LanceDB Cloud and Enterprise provide performant full-text search based on BM25, allowing you to incorporate keyword-based search in your retrieval solutions.
 
@@ -28,40 +28,14 @@ Check FTS index status using the API:
     </CodeBlock>
 </CodeGroup>
 
-<Note title="OSS Async Limitation">
+<Note>
 In LanceDB OSS, `create_fts_index` is not supported with `AsyncTable`. When working with async connections, use `create_index` with the `FTS` configuration instead.
 
 <Expandable title="Code Example">
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    ```python
-import asyncio
-import lancedb
-import polars as pl
-from lancedb.index import FTS
-
-data = pl.DataFrame(
-    {
-        "id": [1, 2],
-        "text": ["His first language is spanish", "Her first language is english"],
-    }
-)
-
-async def main(data: pl.DataFrame):
-    uri = "ex_lancedb"
-    db = await lancedb.connect_async(uri)
-    tbl = await db.create_table("my_text", data=data, mode="overwrite")
-
-    await tbl.create_index("text", config=FTS(language="English"))
-
-    response = await tbl.search("spanish", query_type="fts")
-    result = await response.limit(1).to_polars()
-    print(result)
-
-if __name__ == "__main__":
-    asyncio.run(main(data))
-    ```
+    {FtsIndexAsync}
     </CodeBlock>
 </CodeGroup>
 
