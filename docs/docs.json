@@ -179,22 +179,6 @@
             ]
           },
           {
-            "group": "API & SDK Reference",
-            "pages": [
-              "api-reference/index",
-              {
-                "group": "REST API Reference",
-                "pages": [
-                  "api-reference/rest/index"
-                ],
-                "openapi": {
-                  "source": "api-reference/rest/openapi.yml",
-                  "directory": "api-reference/rest"
-                }
-              }
-            ]
-          },
-          {
             "group": "Support",
             "pages": [
               "troubleshooting",
@@ -302,6 +286,27 @@
             "group": "Demos",
             "pages": [
               "demos/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "api-reference/index",
+              {
+                "group": "REST API",
+                "pages": [
+                  "api-reference/rest/index"
+                ],
+                "openapi": {
+                  "source": "api-reference/rest/openapi.yml",
+                  "directory": "api-reference/rest"
+                }
+              }
             ]
           }
         ]
