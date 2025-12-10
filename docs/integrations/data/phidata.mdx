@@ -73,19 +73,19 @@ You need to create two files - `transcript.py` and `ollama_assistant.py` or `ope
 
 === "openai_assistant.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataOpenaiSetup}
     </CodeBlock>
 
 === "ollama_assistant.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataOllamaSetup}
     </CodeBlock>
 
 === "transcript.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataTranscriptModule}
     </CodeBlock>
 
@@ -102,13 +102,13 @@ deactivate
 
 === "openai_assistant.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataOpenaiKnowledgeBase}
     </CodeBlock>
 
 === "ollama_assistant.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataOllamaKnowledgeBase}
     </CodeBlock>
 Check out the list of **embedders** supported by **phidata** and their usage [here](https://docs.phidata.com/embedder/introduction).
@@ -133,7 +133,7 @@ Let's see all the parameters that `TextKnowledgeBase` takes -
 
     Here, a "Document" is a class in phidata. Since there is an option to let phidata create and manage embeddings, it splits our data into smaller chunks(as expected). It does not directly create embeddings on it. Instead, it takes each chunk and encapsulates it inside the object of the `Document` class along with various other metadata related to the chunk. Then embeddings are created on these `Document` objects and stored in vectorDB.
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataDocumentModel}
     </CodeBlock>
 
@@ -163,13 +163,13 @@ Now that the Knowledge Base is initialized, , we can go to **step 2**.
 
 === "openai_assistant.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataOpenaiAssistant}
     </CodeBlock>
 
 === "ollama_assistant.py"
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsPhidataOllamaAssistant}
     </CodeBlock>
 
@@ -183,7 +183,7 @@ To know more about an creating assistant in phidata, check out [phidata docs](ht
 
 ## **Step 3** - Load data to Knowledge Base.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPhidataLoadKnowledgeBase}
 </CodeBlock>
 The above code loads the data to the Knowledge Base(LanceDB Table) and now it is ready to be used by the assistant. 
@@ -220,7 +220,7 @@ During the Load operation, phidata directly interacts with the LanceDB library a
 
 ## **Step 4** - Start a cli chatbot with access to the Knowledge base  
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPhidataCliChat}
 </CodeBlock>  
 

@@ -41,7 +41,7 @@ Supported scalar index types:
 ### 1. Build the Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexBuild}
     </CodeBlock>
 </CodeGroup>
@@ -53,7 +53,7 @@ Supported scalar index types:
 ### 2. Check Index Status
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexWait}
     </CodeBlock>
 </CodeGroup>
@@ -63,7 +63,7 @@ Supported scalar index types:
 Update scalar indexes after inserts/deletes by calling `optimize()`.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexOptimize}
     </CodeBlock>
 </CodeGroup>
@@ -77,7 +77,7 @@ Cloud automates `optimize`, so new data remains queryable without extra steps.
 Scalar indexes speed up pure scalar filters:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexFilter}
     </CodeBlock>
 </CodeGroup>
@@ -85,7 +85,7 @@ Scalar indexes speed up pure scalar filters:
 They also accelerate hybrid searches that combine vector similarity with scalar prefilters:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexPrefilter}
     </CodeBlock>
 </CodeGroup>
@@ -102,7 +102,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 1. Define UUID Type
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidType}
     </CodeBlock>
 </CodeGroup>
@@ -110,7 +110,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 2. Generate UUID Data
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidData}
     </CodeBlock>
 </CodeGroup>
@@ -118,7 +118,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 3. Create Table with UUID Column
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidTable}
     </CodeBlock>
 </CodeGroup>
@@ -126,7 +126,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 4. Create and Wait for the Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidWait}
     </CodeBlock>
 </CodeGroup>
@@ -134,7 +134,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 5. Perform Operations with the UUID Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidUpsert}
     </CodeBlock>
 </CodeGroup>

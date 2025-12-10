@@ -55,7 +55,7 @@ You can configure the index beyond default parameters:
 - `num_sub_vectors`: Number of subvectors created during PQ (controls recall vs. memory)
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexConfigureIvf}
     </CodeBlock>
 </CodeGroup>
@@ -65,7 +65,7 @@ You can configure the index beyond default parameters:
 Connect to LanceDB and open the table you want to index.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexSetup}
     </CodeBlock>
 </CodeGroup>
@@ -75,7 +75,7 @@ Connect to LanceDB and open the table you want to index.
 Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. By default LanceDB uses Product Quantization; switch to `IVF_SQ` for scalar quantization.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBuildIvf}
     </CodeBlock>
 </CodeGroup>
@@ -85,7 +85,7 @@ Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` 
 Search using a random 1,536-dimensional embedding.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexQueryIvf}
     </CodeBlock>
 </CodeGroup>
@@ -112,7 +112,7 @@ Set the following when constructing an HNSW index:
 ### 1. Construct an HNSW Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBuildHnsw}
     </CodeBlock>
 </CodeGroup>
@@ -120,7 +120,7 @@ Set the following when constructing an HNSW index:
 ### 2. Query the HNSW Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexQueryHnsw}
     </CodeBlock>
 </CodeGroup>
@@ -139,7 +139,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 ### 1. Create Table and Schema
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBinarySchema}
     </CodeBlock>
 </CodeGroup>
@@ -147,7 +147,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 ### 2. Generate and Add Data
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBinaryAddData}
     </CodeBlock>
 </CodeGroup>
@@ -155,7 +155,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 ### 3. Construct the Binary Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBinaryBuildIndex}
     </CodeBlock>
 </CodeGroup>
@@ -163,7 +163,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 ### 4. Vector Search
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBinarySearch}
     </CodeBlock>
 </CodeGroup>
@@ -173,7 +173,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 Vector index creation is fast—usually a few minutes for a million 1,536-D vectors. Check status via the UI or APIs. The index name appends `_idx` to the column name. Use `wait_for_index()` to block until completion.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexCheckStatus}
     </CodeBlock>
 </CodeGroup>

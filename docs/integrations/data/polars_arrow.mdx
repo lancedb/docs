@@ -18,19 +18,19 @@ LanceDB supports [Polars](https://github.com/pola-rs/polars), a blazingly fast D
 
 Import the required libraries, including the optional Pydantic helpers if you plan to define schemas.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPolarsImports}
 </CodeBlock>
 
 Build a Polars `DataFrame`, convert it to Arrow, and use it directly when creating a LanceDB table.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPolarsCreateTable}
 </CodeBlock>
 
 Run vector search and keep the results as a Polars `DataFrame` for further processing or visualization.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPolarsVectorSearch}
 </CodeBlock>
 
@@ -38,7 +38,7 @@ Run vector search and keep the results as a Polars `DataFrame` for further proce
 
 When you want to operate on the entire table (potentially larger than RAM), convert to a Polars `LazyFrame` so you can chain transformations without loading everything at once.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPolarsLazyframe}
 </CodeBlock>
 
@@ -46,6 +46,6 @@ When you want to operate on the entire table (potentially larger than RAM), conv
 
 You can also describe your table via `LanceModel` and continue ingesting data from Polars. This is useful when multiple teams share a schema or when you want validation.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPolarsPydantic}
 </CodeBlock>
