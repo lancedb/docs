@@ -15,7 +15,7 @@ For scalar UDFs, blob columns are expected to be of type `BlobFile`
 
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 from lance.blob import BlobFile
 
 @udf
@@ -42,7 +42,7 @@ Defining UDFs that write out `Blob`s to a new column is straightforward.   Here 
 For scalar udfs, your udf will return `bytes`, explicitly set the `data_type` to `pa.large_binary()`, and add the `field_metadata` that specifies blob encoding.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 @udf(data_type=pa.large_binary(), field_metadata={"lance-encoding:blob": "true"})
 def generate_blob(text: str, multiplier: int) -> bytes:
     """UDF that generates blob data by repeating text."""
@@ -53,7 +53,7 @@ def generate_blob(text: str, multiplier: int) -> bytes:
 For `pa.RecordBatch` batched UDFs you the effort is similar:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 @udf(data_type=pa.large_binary(), field_metadata={"lance-encoding:blob": "true"})
 def batch_to_blob(batch: pa.RecordBatch) -> pa.Array:
     """UDF that converts RecordBatch rows to blob data."""

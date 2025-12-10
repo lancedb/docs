@@ -25,7 +25,7 @@ Geneva has been tested with Ray 2.44+ and Python 3.10.x and 3.12.x.
 You can run this code in your notebook to verify your environment matches your expectations:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 !python --version
 !pip show lancedb  # need 0.22.0b0+
 !echo $VIRTUAL_ENV
@@ -39,7 +39,7 @@ Geneva allows you to specify the resources of your worker nodes. You can verify 
 You can get some basic information about resources available to your Ray:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 print(ray.available_resources())
 ```
 </CodeGroup>
@@ -47,7 +47,7 @@ print(ray.available_resources())
 You can verify basic remote execution via Ray:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 @ray.remote
 def check_remote():
   return "Hello from a worker"
@@ -59,7 +59,7 @@ print(ray.get(check_remote.remote()))
 You can also verify that versions of specific libraries are present in the execution environment:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # does ray have cuda?
 @ray.remote
 def check_pyarrow():
@@ -75,7 +75,7 @@ print(ray.get(check_pyarrow.remote()))
 For GPU-dependent UDFs and jobs, you can verify that GPU worker nodes have the CUDA library:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # does ray have cuda?
 @ray.remote(num_gpus=1)
 def check_cuda():
@@ -93,7 +93,7 @@ While your notebook or working environment may have credentials to read and writ
 Here we add `import geneva` to help trigger potential permissions problems:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 @ray.remote(num_gpus=1)
 def check_cuda():
     import geneva # this is currently required before other imports
@@ -115,7 +115,7 @@ PermissionError: [Errno 13] google::cloud::Status(PERMISSION_DENIED: Permanent e
 This indicates that your workers and/or head node are not being run with the correct service account or with an account that has sufficient access. Please double check the service account's accesses and make sure to add your service account that has access to the buckets as a parameter to your Head and Worker specs. See `service_account="geneva-integ-test"` below:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 raycluster = ray_cluster(
     name= k8s_name,
     namespace=k8s_namespace,
@@ -198,7 +198,7 @@ Geneva pulls in your UDFs so they can be sent to remote worker nodes. For the me
 **So instead of this:**
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 from google.cloud import storage
 storage_client = storage.Client() # this has unpickleable state
 bucket = storage_client.bucket(BUCKET_NAME) # this has a reference to storage_client
@@ -215,7 +215,7 @@ def udf_function(...)
 **Do this:**
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 from google.cloud import storage
 
 # ...

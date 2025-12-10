@@ -59,7 +59,7 @@ To address these challenges, a data scientist or ML engineer typically embarks o
 
 1. **Engineer `popularity_score`:**  
    To create a more accurate measure of popularity, combine the average rating with the volume of reviews. A common approach is to use logarithmic scaling. This prevents products with massive review counts from overwhelming the score.
-     ```python Python icon="Python"
+     ```python Python icon="python"
      popularity_score = log(review_count + 1) * avg_rating
      ```
 
@@ -71,7 +71,7 @@ To address these challenges, a data scientist or ML engineer typically embarks o
 3. **Engineer `discount_pct`:**  
    To explicitly signal a "deal" to the model, calculate the discount percentage by combining the original and current prices.
    **Logic:**  
-     ```python Python icon="Python"
+     ```python Python icon="python"
      discount_pct = (original_price - price) / original_price
      ```
 
@@ -79,7 +79,7 @@ To address these challenges, a data scientist or ML engineer typically embarks o
    To contextualize a product's price, compare it to the average price within its category. This requires an aggregation step to compute the average price per category. Then, calculate the feature for each product.
    **Logic:**  
      For each product:
-     ```python Python icon="Python"
+     ```python Python icon="python"
      price_vs_cat_avg = price / avg_price_for_category
      ```
 

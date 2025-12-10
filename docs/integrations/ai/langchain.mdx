@@ -27,7 +27,7 @@ Integration of **Langchain** with **LanceDB** enables applications to retrieve t
 
 ## Quick Start
 You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model. Checkout Complete example here - [LangChain demo](../notebooks/langchain_example.ipynb)
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainQuickStart}
 </CodeBlock>
 
@@ -56,7 +56,7 @@ The exhaustive list of parameters for `LanceDB` vector store are :
 |`relevance_score_fn` |(Optional) `Callable[[float], float]` | Langchain relevance score function to be used.|`None`|
 |`limit`|`int`|Set the maximum number of results to return.|`DEFAULT_K` (it is 4)|
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainVectorStoreConfig}
 </CodeBlock>
 
@@ -75,7 +75,7 @@ This method turn texts into embedding and add it to the database.
 
 It returns list of ids of the added texts.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainAddTexts}
 </CodeBlock>
 
@@ -98,7 +98,7 @@ This method creates a scalar(for non-vector cols) or a vector index on a table.
 
 For index creation make sure your table has enough data in it. An ANN index is ususally not needed for datasets ~100K vectors. For large-scale (>1M) or higher dimension vectors, it is beneficial to create an ANN index.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainCreateIndex}
 </CodeBlock>
 
@@ -119,7 +119,7 @@ This method performs similarity search based on **text query**.
 
 Return documents most similar to the query **without relevance scores**.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainSimilaritySearch}
 </CodeBlock>
 
@@ -139,7 +139,7 @@ The method returns documents that are most similar to the specified **embedding 
 
 **It does not provide relevance scores.**
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainSimilaritySearchByVector}
 </CodeBlock>
 
@@ -158,7 +158,7 @@ Returns documents most similar to the **query string** along with their relevanc
 
 It gets called by base class's `similarity_search_with_relevance_scores` which selects relevance score based on our `_select_relevance_score_fn`.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainSimilaritySearchWithScores}
 </CodeBlock>
 
@@ -178,7 +178,7 @@ Similarity search using **query vector**.
 
 The method returns documents most similar to the specified embedding (query) vector, along with their relevance scores.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainSimilaritySearchByVectorWithScores}
 </CodeBlock>
 
@@ -200,7 +200,7 @@ Maximal marginal relevance optimizes for similarity to query AND diversity among
 
 Similarly, `max_marginal_relevance_search_by_vector()` function returns docs most similar to the embedding passed to the function using MMR. instead of a string query you need to pass the embedding to be searched for. 
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainMaxMarginalRelevance}
 </CodeBlock>
 
@@ -218,7 +218,7 @@ This method ddds images by automatically creating their embeddings and adds them
 
 It returns list of IDs of the added images.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainAddImages}
 </CodeBlock>
 

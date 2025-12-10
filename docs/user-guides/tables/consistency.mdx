@@ -28,7 +28,7 @@ This is only tune-able in LanceDB OSS. In LanceDB Cloud, readers are always even
 To set strong consistency, set the interval to 0:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ConsistencyStrong}
     </CodeBlock>
 </CodeGroup>
@@ -36,7 +36,7 @@ To set strong consistency, set the interval to 0:
 For eventual consistency, use a custom interval:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ConsistencyEventual}
     </CodeBlock>
 </CodeGroup>
@@ -45,7 +45,7 @@ For eventual consistency, use a custom interval:
 By default, a `Table` will never check for updates from other writers. To manually check for updates you can use `checkout_latest`:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ConsistencyCheckoutLatest}
     </CodeBlock>
 </CodeGroup>

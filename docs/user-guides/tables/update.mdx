@@ -65,7 +65,7 @@ This is an _empty_ table, with no data in it. To add or append data to a table, 
 as shown below.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AddDataToTable}
     </CodeBlock>
 </CodeGroup>
@@ -79,7 +79,7 @@ The vector column needs to be a `pyarrow.FixedSizeList` type.
 Pydantic models provide a more structured way to define your table schema:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AddDataPydanticModel}
     </CodeBlock>
 </CodeGroup>
@@ -100,7 +100,7 @@ class Document(BaseModel):
 This can be used as the type of a LanceDB table column:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AddDataNestedModel}
     </CodeBlock>
 </CodeGroup>
@@ -126,7 +126,7 @@ your table in one go. Data will be automatically compacted for the best query pe
 #### Python Batch Insertion
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {BatchDataInsertion}
     </CodeBlock>
 </CodeGroup>
@@ -156,7 +156,7 @@ See the [SQL queries](/docs/search/sql/sql-queries/) page for more information o
 </Note>
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateOperation}
     </CodeBlock>
 </CodeGroup>
@@ -175,7 +175,7 @@ Output:
 The `values` parameter is used to provide the new values for the columns as literal values. You can also use the `values_sql` / `valuesSql` parameter to provide SQL expressions for the new values. For example, you can use `values_sql="x + 1"` to increment the value of the `x` column by 1.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateUsingSql}
     </CodeBlock>
 </CodeGroup>
@@ -198,7 +198,7 @@ When rows are updated, they are moved out of the index. The row will still show 
 Remove rows that match a condition.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {DeleteOperation}
     </CodeBlock>
 </CodeGroup>
@@ -238,7 +238,7 @@ enable both `when_matched_update_all()` and `when_not_matched_insert_all()`.
 #### Setting Up the Example Table and Performing Upsert
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {UpsertOperation}
     </CodeBlock>
 </CodeGroup>
@@ -252,7 +252,7 @@ preventing duplicate rows. To do this with merge insert, enable just
 #### Setting Up the Example Table and Performing Insert-if-not-exists
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {InsertIfNotExists}
     </CodeBlock>
 </CodeGroup>
@@ -270,7 +270,7 @@ for the document that are not in the new data, with `when_not_matched_by_source_
 #### Setting Up the Example Table and Performing Replace Range
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ReplaceRangeOperation}
     </CodeBlock>
 </CodeGroup>

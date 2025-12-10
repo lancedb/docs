@@ -62,18 +62,18 @@ In this example, we will be fetching movie information from the [Open Movie Data
 
     The following code shows how you can configure dlt's REST API source to connect to the [OMDb API](https://www.omdbapi.com/), fetch all movies with the word "godzilla" in the title, and load it into a LanceDB table. The REST API source allows you to pull data from any API with minimal code, to learn more read the [dlt docs](https://dlthub.com/docs/dlt-ecosystem/verified-sources/rest_api).
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsDltPipeline}
     </CodeBlock>
 
     The script above will ingest the data into LanceDB as it is, i.e. without creating any embeddings. If we want to embed one of the fields (for example, `"Title"` that contains the movie titles), then we will use dlt's `lancedb_adapter` and modify the script as follows:  
     
     - Add the following import statement:
-        <CodeBlock filename="Python" language="Python" icon="Python">
+        <CodeBlock filename="Python" language="Python" icon="python">
           {PyPlatformsDltAdapterImport}
         </CodeBlock>
     - Modify the pipeline run like this:
-        <CodeBlock filename="Python" language="Python" icon="Python">
+        <CodeBlock filename="Python" language="Python" icon="python">
           {PyPlatformsDltAdapterUsage}
         </CodeBlock>
     This will use the embedding model specified inside `.dlt/secrets.toml` to embed the field `"Title"`.

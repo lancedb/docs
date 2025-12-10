@@ -96,6 +96,25 @@
                 ]
               },
               {
+                "group": "Search",
+                "pages": [
+                  "search/index",
+                  "search/vector-search",
+                  "search/multivector-search",
+                  "search/full-text-search",
+                  "search/hybrid-search",
+                  "search/filtering",
+                  "search/optimize-queries",
+                  {
+                    "group": "Enterprise SQL",
+                    "pages": [
+                      "search/sql/index",
+                      "search/sql/fts-sql"
+                    ]
+                  }
+                ]
+              },
+              {
                 "group": "Embedding data",
                 "pages": [
                   "embedding/index",

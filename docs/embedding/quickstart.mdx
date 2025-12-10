@@ -15,7 +15,7 @@ We support popular embedding models like OpenAI, Hugging Face, Sentence Transfor
 First, import the necessary LanceDB components:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 import lancedb
 from lancedb.pydantic import LanceModel, Vector
 from lancedb.embeddings import get_registry
@@ -32,7 +32,7 @@ from lancedb.embeddings import get_registry
 Establish a connection to your LanceDB instance:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # Enter your LanceDB connection URI for OSS, Cloud or Enterprise here
 db = lancedb.connect(...)
 ```
@@ -43,7 +43,7 @@ db = lancedb.connect(...)
 Choose and configure your embedding model:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 model = get_registry().get("sentence-transformers").create(name="BAAI/bge-small-en-v1.5", )
 ```
 </CodeGroup>
@@ -58,7 +58,7 @@ This creates a Sentence Transformers embedding function using the BGE model. You
 Create a Pydantic model that defines your table structure:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 class Words(LanceModel):
     text: str = model.SourceField()  
     vector: Vector(model.ndims()) = model.VectorField()
@@ -74,7 +74,7 @@ class Words(LanceModel):
 Create a table with your schema and add data:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 table = db.create_table("words", schema=Words)
 table.add([
     {"text": "hello world"},
@@ -95,7 +95,7 @@ Note: On LanceDB cloud, automatic query embedding is not supported. You need to 
 Search your data using natural language queries:
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 query = "greetings"
 actual = table.search(query).limit(1).to_pydantic(Words)[0]
 print(actual.text)
@@ -113,11 +113,11 @@ The search process:
 LanceDB currently supports the via SDKs in [Python, Typescript and Rust](/api-reference/).
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="python" icon="Python">
+    <CodeBlock filename="Python" language="python" icon="python">
     {PyImports}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
     {TsImports}
     </CodeBlock>
 </CodeGroup>
@@ -125,11 +125,11 @@ LanceDB currently supports the via SDKs in [Python, Typescript and Rust](/api-re
 Below are some examples of generating and querying embeddings when using the embedding registry. 
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="python" icon="Python">
+    <CodeBlock filename="Python" language="python" icon="python">
     {PyOpenaiEmbeddings}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
     {TsOpenaiEmbeddings}
     </CodeBlock>
 </CodeGroup>

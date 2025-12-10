@@ -100,12 +100,12 @@ The basic workflow shown below uses LanceDB to create a similarity index on your
 Let's jump on a quick example that demonstrates this workflow.
 
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsVoxel51LoadDataset}
 </CodeBlock>
 Make sure you install torch ([guide here](https://pytorch.org/get-started/locally/)) before proceeding. 
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsVoxel51ComputeSimilarity}
 </CodeBlock>
 
@@ -114,7 +114,7 @@ Make sure you install torch ([guide here](https://pytorch.org/get-started/locall
 
 Once the similarity index has been generated, we can query our data in FiftyOne by specifying the `brain_key`:
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsVoxel51SortBySimilarity}
 </CodeBlock>
 The returned result are of type - `DatasetView`.
@@ -131,7 +131,7 @@ The returned result are of type - `DatasetView`.
 
     This means that you can index an entire Dataset once and then perform searches on subsets of the dataset by constructing views that contain the images of interest.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsVoxel51Cleanup}
 </CodeBlock>
 
@@ -141,7 +141,7 @@ By default, calling `compute_similarity()` or `sort_by_similarity()` will use an
 
 To use the LanceDB backend, simply set the optional `backend` parameter of `compute_similarity()` to `"lancedb"`:
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsVoxel51BackendFlag}
 </CodeBlock>
 
@@ -174,7 +174,7 @@ Alternatively, you can **permanently** configure FiftyOne to use the LanceDB bac
 ```
 This will override the default `brain_config` and will set it according to your customization. You can check the configuration by running the following code : 
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsVoxel51BrainConfig}
 </CodeBlock>
 
@@ -206,7 +206,7 @@ There are two ways to specify/customize the parameters:
 
 2. **Directly passing to `compute_similarity()` to configure a specific new index** : 
 
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
       {PyPlatformsVoxel51BackendParams}
     </CodeBlock>
 

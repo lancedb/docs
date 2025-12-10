@@ -24,7 +24,7 @@ Just like with backfills, this operation is incremental, checkpointed, and run i
 Let's walk through an example using a raw video table as a base. We want to create a materialized view off the table that adds transcription columns to a subset of the values.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 from geneva import connect, udf
 import pyarrow as pa
 
@@ -46,7 +46,7 @@ raw_videos = db.create_table(
 Here's our UDFs, and the creation of a new empty materialized view.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 @udf
 def transcribe(video_uri) -> str:
   from whisper import load_model
@@ -75,7 +75,7 @@ view_table = db.create_materialized_view("table_view", q)
 To populate the values, we call `refresh`.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # explicitly copy values from the source table, applying UDF on cols.
 db.refresh("table_view")
 ```
@@ -84,7 +84,7 @@ db.refresh("table_view")
 Note that the UDF is stored on the destination materialized view table.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 raw_table.add(...)
 db.refresh("table_view")  # only materialize new or modified rows.
 ```

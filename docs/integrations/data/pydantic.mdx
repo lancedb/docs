@@ -20,25 +20,25 @@ integrate Pydantic with the rest of the LanceDB APIs.
 
 First, import the necessary LanceDB and Pydantic modules:
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksPydanticImports}
 </CodeBlock>
 
 Next, define your Pydantic model by inheriting from `LanceModel` and specifying your fields including a vector field:
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksPydanticBaseModel}
 </CodeBlock>
 
 Set the database connection URL:
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksPydanticSetUrl}
 </CodeBlock>
 
 Now you can create a table, add data, and perform vector search operations:
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksPydanticBaseExample}
 </CodeBlock>
 
@@ -48,7 +48,7 @@ Now you can create a table, add data, and perform vector search operations:
 LanceDB provides a `lancedb.pydantic.Vector` method to define a
 vector Field in a Pydantic Model.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksPydanticVectorField}
 </CodeBlock>
 
@@ -79,7 +79,7 @@ LanceDB supports to create Apache Arrow Schema from a
 `pydantic.BaseModel`
 via `lancedb.pydantic.pydantic_to_schema` method.
 
-<CodeBlock filename="Python" language="Python" icon="Python">
+<CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksPydanticTypeConversion}
 </CodeBlock>
 

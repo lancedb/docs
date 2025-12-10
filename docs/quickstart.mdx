@@ -49,11 +49,11 @@ Using LanceDB's open source version is as simple as importing LanceDB as a libra
 and pointing to a local path -- no servers needed!
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyConnect}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsConnect}
     </CodeBlock>
 </CodeGroup >
@@ -67,11 +67,11 @@ security, and automatic backups. Simply replace the local path with a remote `ur
 that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyConnectCloud}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsConnectCloud}
     </CodeBlock>
 </CodeGroup >
@@ -91,11 +91,11 @@ shown, but in n the real world, the embeddings would be much larger (thousands o
 embedding model.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartCreateTable}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartCreateTable}
     </CodeBlock>
 </CodeGroup >
@@ -108,11 +108,11 @@ If you do not want to overwrite the existing table, you can
 omit the `mode="overwrite"` parameter -- this will raise a `ValueError` when trying to create a table with the same name.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartCreateTableNoOverwrite}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartCreateTableNoOverwrite}
     </CodeBlock>
 </CodeGroup >
@@ -129,11 +129,11 @@ Our query is a vector that represents a `warrior`, which isn't in the data we in
 Let's try and find the result that's most similar to it!
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartVectorSearch1}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartVectorSearch1}
     </CodeBlock>
 </CodeGroup >
@@ -155,11 +155,11 @@ as a Pandas DataFrame, see below.
 </Info>
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartOutputPandas}
     </CodeBlock>
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="TypeScript">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartOutputArray}
     </CodeBlock>
 </CodeGroup >
@@ -170,7 +170,7 @@ As you obtain more data, you can append it to an existing table. In the same scr
 can connect to the LanceDB database and open an existing table as follows.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartOpenTable}
     </CodeBlock>
 </CodeGroup >

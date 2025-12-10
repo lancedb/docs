@@ -25,7 +25,7 @@ Thread level concurrency can be set with the `intra_applier_concurrency` paramet
 The two settings can be used in combination.  So if your UDF requires 1 CPU and you set `concurrency` to 10 and `intra_applier_concurrency` to 5, you will potentially have 50 instances of the UDFs running in parallel.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # backfill embeddings with 10 * 5 = 50 instances
 tbl.backfill("embedding", concurrency=10, intra_applier_concurrency=5)
 ```
@@ -41,7 +41,7 @@ Feature engineering jobs at scale can take days to complete.  Two settings can h
 The `num_frags` parameter lets you limit the number of fragments processed before the job is considered complete.  If you have a table with 1000 fragments, you could set `num_frags` to 1 to see how your UDF performs and if to validate the values generated.  You can then later run with a larger `num_frags` value or without the `num_frags` setting to complete the backfill.  Any fragments prevoiusly computed are not computed again.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # only backfill 2 fragments so experiement can be done on the sample
 tbl.backfill("embedding", num_frags=2)
 ```
@@ -50,7 +50,7 @@ tbl.backfill("embedding", num_frags=2)
 The `commit_granularity` parameter lets you specify how many fragments need to be ready to commit before a intermediate commit occurs and makes partial results visible to other readers.  So for our example with a table of 1000 fragments, you can set `commit_granularity` to 10 to see progress updates every 10 fragments.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # backfill all fragments and perform an intermediate commit every 10 fragments to expose incremental results.
 tbl.backfill("embedding", commit_granularity=10)
 ```
@@ -61,7 +61,7 @@ tbl.backfill("embedding", commit_granularity=10)
 Geneva allows you to specify SQL-style filters on the backfill operation. This lets you to apply backfills to a specified subset of the table's rows.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # only backfill video content whose filenames start with 'a'
 tbl.backfill("content", where="starts_with(filename, 'a')")
 # only backfill embeddings of only those videos with content
@@ -74,7 +74,7 @@ Geneva also allows you to incrementally add more rows or have jobs that just upd
 If new rows are added, we can run the same command and the new rows that meet the criteria will be updated.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # only backfill video content whose filenames start with 'a'
 tbl.backfill("content", where="starts_with(filename, 'a')")
 # only backfill embeddings of only those videos with content
@@ -85,7 +85,7 @@ tbl.backfill("embedding", where="content is not null")
 Or, you can use filters to add in or overwrite content in rows previously backfilled.
 
 <CodeGroup>
-```python Python icon="Python"
+```python Python icon="python"
 # only backfill video content whose filenames start with 'a' or 'b' but only if content not pulled previously
 tbl.backfill("content", where="(starts_with(filename, 'a') or starts_with(filename, 'b')) and content is null")
 # only backfill embeddings of only those videos with content and no prevoius embeddings

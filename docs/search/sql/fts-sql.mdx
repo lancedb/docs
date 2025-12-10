@@ -1,0 +1,353 @@
+---
+title: Full-Text Search with SQL
+sidebarTitle: FTS with SQL
+description: Use LanceDB's full-text search capabilities via SQL queries.
+---
+
+<Badge color="red">Enterprise-only</Badge>
+
+<Danger>
+This feature is currently in beta. The SQL syntax and JSON query format may change in future
+releases as we continue to refine and improve the FTS SQL interface. We recommend testing
+thoroughly and being prepared to update your queries as newer versions of LanceDB become available.
+</Danger>
+
+LanceDB provides support for full-text search via SQL queries using the `fts()` User-Defined Table Function (UDTF). This allows you to incorporate keyword-based search (based on BM25) in your SQL queries for powerful text retrieval.
+
+## Table Setup
+
+First, set up your FlightSQL client connection. See [SQL Queries documentation](/search/sql) for detailed client setup instructions.
+
+For the examples below, we assume you have a `run_query()` helper function that executes SQL and returns results.
+
+### Creating the Table
+
+Create a table with text data:
+
+<CodeGroup>
+```python Python icon="python"
+run_query("""
+    CREATE TABLE my_docs (
+        id INT,
+        text STRING,
+        category STRING,
+        author STRING
+    )
+""")
+```
+</CodeGroup>
+
+### Inserting Data
+
+Insert sample documents:
+
+<CodeGroup>
+```python Python icon="python"
+run_query("""
+    INSERT INTO my_docs VALUES
+    (1, 'The happy puppy runs merrily in the park', 'animals', 'Alice'),
+    (2, 'A curious kitten jumps quickly over the fence', 'animals', 'Bob'),
+    (3, 'The puppy catches a ball with great enthusiasm', 'sports', 'Alice'),
+    (4, 'Dogs and cats are wonderful companions', 'animals', 'Charlie'),
+    (5, 'Puppy training requires patience and dedication', 'training', 'Alice'),
+    (6, 'The clever cat runs crazily around the house', 'animals', 'Bob'),
+    (7, 'Running in the park is excellent exercise', 'sports', 'Charlie'),
+    (8, 'Machine learning models process text efficiently', 'technology', 'David'),
+    (9, 'The fuzzy puppy loves to play with toys', 'animals', 'Alice'),
+    (10, 'Natural language processing enables text search', 'technology', 'David')
+""")
+```
+</CodeGroup>
+
+### Creating FTS Index
+
+Create a full-text search index on the text column:
+
+<CodeGroup>
+```python Python icon="python"
+run_query("CREATE INDEX ON my_docs USING fts (text)")
+```
+</CodeGroup>
+
+<Card title="Phrase queries require position information" icon="lightbulb">
+To use phrase queries (exact phrase matching), create the index with `with_position = true`:
+</Card>
+
+<CodeGroup>
+```sql SQL icon="SQL"
+CREATE INDEX ON my_docs USING fts (text) WITH (with_position = true)
+```
+</CodeGroup>
+
+Without position information, phrase queries will not work. See the [Phrase Queries](#phrase-queries) section below for details.
+
+## Basic Full-Text Search
+
+Use the `fts()` UDTF in SQL queries with JSON-formatted search queries:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MatchQuery
+
+# Create a match query and convert to JSON
+query = MatchQuery("puppy", "text")
+json_query = query.to_json()
+
+# Execute FTS query via SQL - returns top 5 matches in arbitrary order
+result = run_query(f"""
+    SELECT id, text, category
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+
+print(result.to_pandas())
+# Output (4 documents match "puppy", showing all matches):
+#    id                                            text category
+# 0   1        The happy puppy runs merrily in the park  animals
+# 1   3  The puppy catches a ball with great enthusiasm   sports
+# 2   5 Puppy training requires patience and dedication training
+# 3   9         The fuzzy puppy loves to play with toys  animals
+```
+</CodeGroup>
+
+<Card title="Understanding result ordering and relevance scores" icon="lightbulb">
+FTS queries compute a BM25 relevance score for each matching document and by default return the top 5 matching results in **arbitrary order**:
+</Card>
+
+**For exact ordering by relevance**, select the special `_score` column and order by it:
+
+<CodeGroup>
+```sql SQL icon="SQL"
+-- ✅ Returns top 5 matching results ordered by relevance (highest first)
+SELECT id, text, _score FROM fts('my_docs', 'query')
+ORDER BY _score DESC
+LIMIT 5
+```
+</CodeGroup>
+
+<Info>
+**Key points:**
+- Without `ORDER BY _score DESC`, you get the top matching results but in arbitrary order
+- The `_score` column is optional - include it only when you need to see or order by relevance scores
+- `_score` uses the BM25 ranking algorithm to measure relevance
+</Info>
+
+## Advanced Query Types
+
+### Fuzzy Search
+
+Fuzzy search allows you to find matches even when the search terms contain typos:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MatchQuery
+
+# Search with fuzzy matching (allows 2 character edits)
+query = MatchQuery("pupy", "text", fuzziness=2)
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+
+print(result.to_pandas())
+# Output - fuzzy matching finds "puppy" despite the typo "pupy":
+#    id                                            text
+# 0   9         The fuzzy puppy loves to play with toys
+# 1   1        The happy puppy runs merrily in the park
+# 2   5 Puppy training requires patience and dedication
+# 3   3  The puppy catches a ball with great enthusiasm
+```
+</CodeGroup>
+
+### Phrase Queries
+
+Search for exact phrases in documents:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import PhraseQuery
+
+# Search for exact phrase
+query = PhraseQuery("happy puppy", "text")
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+For phrase queries to work, the FTS index must be created with `with_position=true`:
+
+<CodeGroup>
+```sql SQL icon="SQL"
+CREATE INDEX ON my_docs USING fts (text) WITH (with_position = true)
+```
+</CodeGroup>
+
+#### Phrase Queries with Slop
+
+Allow some flexibility in phrase matching with the `slop` parameter:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import PhraseQuery
+
+# Allow up to 2 words between "puppy" and "park"
+query = PhraseQuery("puppy park", "text", slop=2)
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+### Boolean Queries
+
+Combine multiple queries using boolean logic:
+
+#### AND Queries
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MatchQuery
+
+# Find documents containing both "puppy" AND "happy"
+query = MatchQuery("puppy", "text") & MatchQuery("happy", "text")
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+#### OR Queries
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MatchQuery
+
+# Find documents containing either "puppy" OR "kitten"
+query = MatchQuery("puppy", "text") | MatchQuery("kitten", "text")
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text, category
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+
+print(result.to_pandas())
+# Output shows results matching either term:
+#    id                                            text category
+# 0   2   A curious kitten jumps quickly over the fence  animals
+# 1   9         The fuzzy puppy loves to play with toys  animals
+# 2   5 Puppy training requires patience and dedication training
+# 3   1        The happy puppy runs merrily in the park  animals
+# 4   3  The puppy catches a ball with great enthusiasm   sports
+```
+</CodeGroup>
+
+### Boost Queries
+
+Control relevance by boosting or demoting certain terms:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MatchQuery, BoostQuery
+
+# Boost documents with "puppy", demote those with "kitten"
+query = BoostQuery(
+    positive=MatchQuery("puppy", "text"),
+    negative=MatchQuery("kitten", "text"),
+    negative_boost=0.2
+)
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+### Multi-Match Queries
+
+Search across multiple columns simultaneously:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MultiMatchQuery
+
+# Search "puppy" in both text and category columns
+query = MultiMatchQuery("puppy", ["text", "category"])
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text, category
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+#### Multi-Match with Field Boosting
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MultiMatchQuery
+
+# Boost matches in "text" column 2x more than "category"
+query = MultiMatchQuery("puppy", ["text", "category"], boosts=[2.0, 1.0])
+json_query = query.to_json()
+
+result = run_query(f"""
+    SELECT id, text, category
+    FROM fts('my_docs', '{json_query}')
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+## Combining FTS with SQL
+
+FTS queries can be combined with standard SQL features like WHERE clauses, GROUP BY, and JOINs:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.query import MatchQuery
+
+query = MatchQuery("puppy", "text")
+json_query = query.to_json()
+
+# Combine FTS with WHERE clause to filter by category
+result = run_query(f"""
+    SELECT id, text, category
+    FROM fts('my_docs', '{json_query}')
+    WHERE category = 'animals'
+    LIMIT 5
+""")
+```
+</CodeGroup>
+
+## Query Parameters Reference
+
+For detailed information about query parameters and options for `MatchQuery`, `PhraseQuery`, `BoostQuery`, and `MultiMatchQuery`, see the [Full-Text Search documentation](/search/full-text-search/).
+
+## Related Documentation
+
+- [Full-text search](/search/full-text-search/) - Learn about FTS capabilities and query types
+- [SQL queries](/search/sql) - General SQL query documentation
+- [Hybrid search](/search/hybrid-search/) - Combine FTS with vector search
