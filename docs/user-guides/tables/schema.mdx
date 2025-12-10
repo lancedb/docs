@@ -93,7 +93,7 @@ table = db.create_table(table_name, data, mode="overwrite")
 You can add new columns that are calculated from existing data using SQL expressions:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AddColumnsCalculated}
     </CodeBlock>
 </CodeGroup>
@@ -103,7 +103,7 @@ You can add new columns that are calculated from existing data using SQL express
 Add boolean columns with default values for status tracking:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AddColumnsDefaultValues}
     </CodeBlock>
 </CodeGroup>
@@ -113,7 +113,7 @@ Add boolean columns with default values for status tracking:
 Add timestamp columns that can contain NULL values:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AddColumnsNullable}
     </CodeBlock>
 </CodeGroup>
@@ -194,7 +194,7 @@ table = db.create_table(table_name, data, schema=schema, mode="overwrite")
 Change column names to better reflect their purpose:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AlterColumnsRename}
     </CodeBlock>
 </CodeGroup>
@@ -204,7 +204,7 @@ Change column names to better reflect their purpose:
 Convert column data types for better performance or compatibility:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AlterColumnsDataType}
     </CodeBlock>
 </CodeGroup>
@@ -214,7 +214,7 @@ Convert column data types for better performance or compatibility:
 Allow columns to contain NULL values:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AlterColumnsNullable}
     </CodeBlock>
 </CodeGroup>
@@ -224,7 +224,7 @@ Allow columns to contain NULL values:
 Apply several alterations in a single operation:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AlterColumnsMultiple}
     </CodeBlock>
 </CodeGroup>
@@ -281,7 +281,7 @@ table = db.create_table(table_name, data, mode="overwrite")
 Remove individual columns that are no longer needed:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {DropColumnsSingle}
     </CodeBlock>
 </CodeGroup>
@@ -291,7 +291,7 @@ Remove individual columns that are no longer needed:
 Remove several columns at once for efficiency:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {DropColumnsMultiple}
     </CodeBlock>
 </CodeGroup>
@@ -309,7 +309,7 @@ Vector columns (used for embeddings) have special considerations. When altering 
 A common schema evolution task is converting a generic list column to a fixed-size list for performance:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {AlterVectorColumn}
     </CodeBlock>
 </CodeGroup>

@@ -1,0 +1,55 @@
+---
+title: "Multimodal Feature Engineering with Geneva"
+sidebarTitle: Overview
+description: "Learn how to do multimodal feature engineering in LanceDB Enterprise to transform raw data into meaningful features for AI models."
+icon: layer-group
+keywords: ["geneva", "feature engineering", "add features"]
+---
+
+<Badge color="red">Enterprise-only</Badge>
+
+When working with multimodal data at scale, [LanceDB Enterprise](/enterprise) makes it easy
+to define, extract, and transform raw data into useful information and features for your
+AI applications. LanceDB Enterprise's _Multimodal Feature Engineering_ package is designed to improve
+the productivity of AI engineers operating at immense scale.
+
+With an API designed to leverage LanceDB's optimized data storage and retrieval, it
+streamlines prototyping extraction and transformation tasks, performing experiments, exploring your
+data, scaling up execution, and moving to production.
+
+<Card>
+Feature Engineering and the `geneva` Python package are currently only available as part of
+[LanceDB Enterprise](/enterprise). Please [contact us](mailto:contact@lancedb.com) if you're interested
+in scaling up your feature engineering workloads for your AI and multimodal use cases.
+</Card>
+
+The `geneva` package uses Python [User Defined Functions (UDFs)](/geneva/udfs/) to define features
+as columns in a Lance dataset. Adding a feature is straightforward:
+
+<Steps>
+  <Step>
+  Prototype your Python function in your favorite environment.
+  </Step>
+  <Step>
+  Wrap the function with a small UDF decorator (see [UDFs](/geneva/udfs/)).
+  </Step>
+  <Step>
+  Register the UDF as a virtual column using `Table.add_columns()`.
+  </Step>
+  <Step>
+  Trigger a `backfill` operation (see [Backfilling](/geneva/jobs/backfilling/)).
+  </Step>
+</Steps>
+
+<Tip>
+You can build your Python feature generator function in an IDE or a notebook using your project's Python versions and dependencies. `geneva` will automate much of the dependency and version management needed to move from prototype to scale and production.
+</Tip>
+
+## Continue learning
+
+Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:
+
+- **Overview**: [What is Feature Engineering?](/geneva/)
+- **UDFs**: [Using UDFs](/geneva/udfs/) · [Blob helpers](/geneva/udfs/blobs/)
+- **Jobs**: [Execution contexts](/geneva/jobs/contexts/) · [Startup optimizations](/geneva/jobs/startup/) · [Materialized views](/geneva/jobs/materialized-views/) · [Backfilling](/geneva/jobs/backfilling/) · [Performance](/geneva/jobs/performance/)
+- **Deployment**: [Deployment overview](/geneva/deployment/) · [Troubleshooting](/geneva/deployment/troubleshooting/)

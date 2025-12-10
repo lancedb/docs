@@ -36,7 +36,7 @@ Let's create a table with sample data to demonstrate LanceDB's versioning capabi
 First, let's create a table with some sample data:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningBasicSetup}
     </CodeBlock>
 </CodeGroup>
@@ -46,7 +46,7 @@ First, let's create a table with some sample data:
 After creating the table, let's check the initial version information:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningCheckInitialVersion}
     </CodeBlock>
 </CodeGroup>
@@ -60,7 +60,7 @@ When you modify data through operations like update or delete, LanceDB automatic
 Let's update some existing records to see versioning in action:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningUpdateData}
     </CodeBlock>
 </CodeGroup>
@@ -70,7 +70,7 @@ Let's update some existing records to see versioning in action:
 Now let's add more records to the table:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningAddData}
     </CodeBlock>
 </CodeGroup>
@@ -80,7 +80,7 @@ Now let's add more records to the table:
 Let's see how the versions have changed after our modifications:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningCheckVersionsAfterMod}
     </CodeBlock>
 </CodeGroup>
@@ -163,7 +163,7 @@ LanceDB supports fast rollbacks to any previous version without data duplication
 First, let's see all the versions we've created:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningListAllVersions}
     </CodeBlock>
 </CodeGroup>
@@ -173,7 +173,7 @@ First, let's see all the versions we've created:
 Now let's roll back to before we added the vector column:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningRollback}
     </CodeBlock>
 </CodeGroup>
@@ -246,7 +246,7 @@ Let's demonstrate how deletions also create new versions:
 First, let's return to the latest version:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningCheckoutLatest}
     </CodeBlock>
 </CodeGroup>
@@ -256,7 +256,7 @@ First, let's return to the latest version:
 Now let's delete some data to see how it affects versioning:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {VersioningDeleteData}
     </CodeBlock>
 </CodeGroup>

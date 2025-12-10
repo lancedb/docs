@@ -1,11 +1,7 @@
 ---
 title: "Scalar Indexes in LanceDB"
 sidebarTitle: "Scalar Index"
-description: "Use scalar indexes for efficient metadata filtering and hybrid searches."
-weight: 3
-aliases:
-  - "/docs/concepts/indexing/scalar-index/"
-  - "/docs/concepts/indexing/scalar-index"
+description: "Learn how to use scalar indexes in LanceDB for efficient metadata filtering and query optimization."
 ---
 import {
     PyScalarIndexBuild as ScalarIndexBuild,
@@ -20,89 +16,93 @@ import {
     PyScalarIndexUuidUpsert as ScalarIndexUuidUpsert,
 } from '/snippets/indexing.mdx';
 
-Scalar indexes organize scalar attributes (numbers, categories, timestamps) to accelerate filtering alongside vector data.
+Scalar indexes organize data by scalar attributes (e.g., numbers, categories) and enable fast filtering of vector data. They accelerate retrieval of scalar data associated with vectors, thus enhancing query performance.
 
-Supported scalar index types:
+LanceDB supports three types of scalar indexes:
 
-- `BTREE`: sorted values for binary search—best for high-cardinality columns.
-- `BITMAP`: tracks value presence—ideal for low-cardinality columns.
-- `LABEL_LIST`: optimized for `array_contains_any` / `array_contains_all` on `List<T>` columns.
+- `BTREE`: Stores column data in sorted order for binary search. Best for columns with many unique values.
+- `BITMAP`: Uses bitmaps to track value presence. Ideal for columns with few unique values (e.g., categories, tags).
+- `LABEL_LIST`: Special index for `List<T>` columns supporting `array_contains_all` and `array_contains_any` queries.
 
 ## Choosing the Right Index Type
 
-| Data Type | Filter | Index Type |
-|:----------|:-------|:-----------|
-| Numeric, string, temporal | `<`, `=`, `>`, `IN`, `BETWEEN`, `IS NULL` | `BTREE` |
-| Boolean or low-cardinality strings/numbers | `<`, `=`, `>`, `IN`, `BETWEEN`, `IS NULL` | `BITMAP` |
-| Low-cardinality lists | `array_has_any`, `array_has_all` | `LABEL_LIST` |
+| Data Type                                                       | Filter                                    | Index Type   |
+|:----------------------------------------------------------------|:------------------------------------------|:-------------|
+| Numeric, String, Temporal                                       | `<`, `=`, `>`, `in`, `between`, `is null` | `BTREE`      |
+| Boolean, numbers or strings with fewer than 1,000 unique values | `<`, `=`, `>`, `in`, `between`, `is null` | `BITMAP`     |
+| List of low cardinality of numbers or strings                   | `array_has_any`, `array_has_all`          | `LABEL_LIST` |
 
 ## Scalar Index Operations
 
 ### 1. Build the Index
 
+You can create multiple scalar indexes within a table. By default, the index will be `BTREE`, but you can always configure another type like `BITMAP`
+
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexBuild}
     </CodeBlock>
 </CodeGroup>
 
-<Note title="LanceDB Cloud & Enterprise">
-`create_scalar_index` returns immediately. Call `wait_for_index()` to block until indexing completes.
+<Note title="LanceDB Cloud and Enterprise">
+If you are using Cloud or Enterprise, the `create_scalar_index` API returns immediately, but the building of the scalar index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_scalar_index()` or call `wait_for_index()` on the table.
 </Note>
 
 ### 2. Check Index Status
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexWait}
     </CodeBlock>
 </CodeGroup>
 
 ### 3. Update the Index
 
-Update scalar indexes after inserts/deletes by calling `optimize()`.
+Updating the table data (adding, deleting, or modifying records) requires that you also update the scalar index. This can be done by calling `optimize`, which will trigger an update to the existing scalar index.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexOptimize}
     </CodeBlock>
 </CodeGroup>
 
 <Note title="LanceDB Cloud">
-Cloud automates `optimize`, so new data remains queryable without extra steps.
+New data added after creating the scalar index will still appear in search results if optimize is not used, but with increased latency due to a flat search on the unindexed portion. LanceDB Cloud automates the optimize process, minimizing the impact on search speed.
 </Note>
 
 ### 4. Run Indexed Searches
 
-Scalar indexes speed up pure scalar filters:
+The following scan will be faster if the column `book_id` has a scalar index:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexFilter}
     </CodeBlock>
 </CodeGroup>
 
-They also accelerate hybrid searches that combine vector similarity with scalar prefilters:
+Scalar indexes can also speed up scans containing a vector search or full text search, and a prefilter:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexPrefilter}
     </CodeBlock>
 </CodeGroup>
 
 ## Advanced: Index UUID Columns
 
-LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`, enabling efficient primary-key lookups.
+LanceDB supports scalar indexes on UUID columns (stored as `FixedSizeBinary(16)`), enabling efficient lookups and filtering on UUID-based primary keys.
 
-<Note title="FixedSizeBinary requirements">
-- Python SDK ≥ `0.22.0-beta.4`
-- TypeScript SDK ≥ `0.19.0-beta.4`
+<Note title="FixedSizeBinary Requirements">
+To use `FixedSizeBinary`, ensure you have:
+
+- Python SDK version [0.22.0-beta.4](https://github.com/lancedb/lancedb/releases/tag/python-v0.22.0-beta.4) or later
+- TypeScript SDK version [0.19.0-beta.4](https://github.com/lancedb/lancedb/releases/tag/v0.19.0-beta.4) or later
 </Note>
 
 ### 1. Define UUID Type
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidType}
     </CodeBlock>
 </CodeGroup>
@@ -110,7 +110,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 2. Generate UUID Data
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidData}
     </CodeBlock>
 </CodeGroup>
@@ -118,7 +118,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 3. Create Table with UUID Column
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidTable}
     </CodeBlock>
 </CodeGroup>
@@ -126,7 +126,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 4. Create and Wait for the Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidWait}
     </CodeBlock>
 </CodeGroup>
@@ -134,7 +134,7 @@ LanceDB supports scalar indexes on UUID columns stored as `FixedSizeBinary(16)`,
 ### 5. Perform Operations with the UUID Index
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {ScalarIndexUuidUpsert}
     </CodeBlock>
 </CodeGroup>

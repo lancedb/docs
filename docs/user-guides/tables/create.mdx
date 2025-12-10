@@ -40,7 +40,7 @@ Initialize a LanceDB connection and create a table
 
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {TablesBasicConnect}
     </CodeBlock>
 </CodeGroup>
@@ -50,7 +50,7 @@ LanceDB allows ingesting data from various sources - `dict`, `list[dict]`, `pd.D
 ### From list of tuples or dictionaries
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromDicts}
     </CodeBlock>
 </CodeGroup>
@@ -58,7 +58,7 @@ LanceDB allows ingesting data from various sources - `dict`, `list[dict]`, `pd.D
 ### From a Pandas DataFrame
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromPandas}
     </CodeBlock>
 </CodeGroup>
@@ -74,7 +74,7 @@ The **`vector`** column needs to be a [Vector](/docs/integrations/frameworks/pyd
 #### From a custom schema
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableCustomSchema}
     </CodeBlock>
 </CodeGroup>
@@ -87,7 +87,7 @@ under the hood. A deeper integration between LanceDB Tables and Polars DataFrame
 is on the way.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromPolars}
     </CodeBlock>
 </CodeGroup>
@@ -97,7 +97,7 @@ You can also create LanceDB tables directly from Arrow tables.
 LanceDB supports float16 data type!
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromArrow}
     </CodeBlock>
 </CodeGroup>
@@ -117,7 +117,7 @@ LanceDB only understands subclasses of `lancedb.pydantic.LanceModel`
 (which itself derives from `pydantic.BaseModel`).
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromPydantic}
     </CodeBlock>
 </CodeGroup>
@@ -127,7 +127,7 @@ LanceDB only understands subclasses of `lancedb.pydantic.LanceModel`
 Sometimes your data model may contain nested objects. For example, you may want to store the document string and the document source name as a nested Document object:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {TablesDocumentModel}
     </CodeBlock>
 </CodeGroup>
@@ -135,7 +135,7 @@ Sometimes your data model may contain nested objects. For example, you may want 
 This can be used as the type of a LanceDB table column:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableNestedSchema}
     </CodeBlock>
 </CodeGroup>
@@ -160,7 +160,7 @@ Note that neither Pydantic nor PyArrow automatically validates that input data
 is of the correct timezone, but this is easy to add as a custom field validator:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {TablesTzValidator}
     </CodeBlock>
 </CodeGroup>
@@ -181,7 +181,7 @@ LanceDB additionally supports PyArrow's `RecordBatch` Iterators or other generat
 Here's an example using using `RecordBatch` iterator for creating tables.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromIterator}
     </CodeBlock>
 </CodeGroup>
@@ -193,7 +193,7 @@ You can also use iterators of other types like Pandas DataFrame or Pylists direc
 If you forget the name of your table, you can always get a listing of all table names.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {OpenExistingTable}
     </CodeBlock>
 </CodeGroup>
@@ -204,7 +204,7 @@ You can create an empty table for scenarios where you want to add data to the ta
 An empty table can be initialized via a PyArrow schema.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateEmptyTable}
     </CodeBlock>
 </CodeGroup>
@@ -214,7 +214,7 @@ directly import `pydantic` but instead use `lancedb.pydantic` which is a subclas
 that has been extended to support LanceDB specific types like `Vector`.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {CreateEmptyTablePydantic}
     </CodeBlock>
 </CodeGroup>
@@ -226,7 +226,7 @@ Once the empty table has been created, you can add data to it, as explained in t
 Use the `drop_table()` method on the database to remove a table.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {DropTable}
     </CodeBlock>
 </CodeGroup>
