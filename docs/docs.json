@@ -74,7 +74,7 @@
             "group": "LanceDB User Guide",
             "pages": [
               {
-                "group": "Table management",
+                "group": "Tables",
                 "pages": [
                   "user-guides/tables/index",
                   "user-guides/tables/create",
@@ -85,7 +85,7 @@
                 ]
               },
               {
-                "group": "Indexing data",
+                "group": "Indexing",
                 "pages": [
                   "user-guides/indexing/index",
                   "user-guides/indexing/vector-index",
@@ -116,7 +116,15 @@
                 ]
               },
               {
-                "group": "Embedding data",
+                "group": "Reranking",
+                "pages": [
+                  "reranking/index",
+                  "reranking/custom-reranker",
+                  "reranking/eval"
+                ]
+              },
+              {
+                "group": "Embedding",
                 "pages": [
                   "embedding/index",
                   "embedding/quickstart"
