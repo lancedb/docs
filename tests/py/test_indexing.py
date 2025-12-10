@@ -7,7 +7,9 @@ import uuid
 
 import lancedb
 import numpy as np
+import polars as pl
 import pyarrow as pa
+import pytest
 
 
 def _make_vector_rows(count: int, dim: int, column: str = "vector"):
@@ -72,9 +74,7 @@ def test_vector_index_query_ivf(tmp_db):
         {"id": i, "keywords_embeddings": np.random.random(dim).tolist()}
         for i in range(512)
     ]
-    table = tmp_db.create_table(
-        "vector_index_query_ivf", data, mode="overwrite"
-    )
+    table = tmp_db.create_table("vector_index_query_ivf", data, mode="overwrite")
     table.create_index(
         metric="cosine",
         vector_column_name="keywords_embeddings",
@@ -82,11 +82,9 @@ def test_vector_index_query_ivf(tmp_db):
 
     # --8<-- [start:vector_index_query_ivf]
     tbl = table
-    tbl.search(np.random.random((1536))) \
-        .limit(2) \
-        .nprobes(20) \
-        .refine_factor(10) \
-        .to_pandas()
+    tbl.search(np.random.random((1536))).limit(2).nprobes(20).refine_factor(
+        10
+    ).to_pandas()
     # --8<-- [end:vector_index_query_ivf]
 
 
@@ -103,9 +101,7 @@ def test_vector_index_hnsw(tmp_db):
 
     # --8<-- [start:vector_index_query_hnsw]
     tbl = table
-    tbl.search(np.random.random((16))) \
-        .limit(2) \
-        .to_pandas()
+    tbl.search(np.random.random((16))).limit(2).to_pandas()
     # --8<-- [end:vector_index_query_hnsw]
 
 
@@ -256,10 +252,7 @@ def test_scalar_index_prefilter(tmp_db):
 
     db = tmp_db
     table = db.open_table("book_with_embeddings")
-    table.search([1.2] * 2) \
-        .where("book_id != 3") \
-        .limit(10) \
-        .to_pandas()
+    table.search([1.2] * 2).where("book_id != 3").limit(10).to_pandas()
     # --8<-- [end:scalar_index_prefilter]
 
 
@@ -326,10 +319,9 @@ def test_scalar_index_uuid(tmp_db):
         {"id": uuid.uuid4().bytes, "name": "Charlie"},
     ]
 
-    table.merge_insert("id") \
-        .when_matched_update_all() \
-        .when_not_matched_insert_all() \
-        .execute(new_users)
+    table.merge_insert(
+        "id"
+    ).when_matched_update_all().when_not_matched_insert_all().execute(new_users)
     # --8<-- [end:scalar_index_uuid_upsert]
 
 
@@ -364,6 +356,45 @@ def test_fts_index_wait(tmp_db):
     index_name = "text_idx"
     table.wait_for_index([index_name])
     # --8<-- [end:fts_index_wait]
+
+
+@pytest.mark.asyncio
+async def test_fts_index_async(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    # --8<-- [start:fts_index_async]
+    import asyncio
+
+    import lancedb
+    import polars as pl
+    from lancedb.index import FTS
+
+    data = pl.DataFrame(
+        {
+            "id": [1, 2],
+            "text": [
+                "His first language is spanish",
+                "Her first language is english",
+            ],
+        }
+    )
+
+    async def main(data: pl.DataFrame):
+        uri = "ex_lancedb"
+        db = await lancedb.connect_async(uri)
+        tbl = await db.create_table("my_text", data=data, mode="overwrite")
+
+        await tbl.create_index("text", config=FTS(language="English"))
+
+        response = await tbl.search("spanish", query_type="fts")
+        result = await response.limit(1).to_polars()
+        print(result)
+
+    if __name__ == "__main__":
+        asyncio.run(main(data))
+    # --8<-- [end:fts_index_async]
+
+    await main(data)
 
 
 def test_gpu_index_snippets(tmp_db, monkeypatch):
@@ -416,4 +447,3 @@ def test_reindexing_incremental(tmp_db):
     table.add([{"vector": [3.1, 4.1], "text": "Frodo was a happy puppy"}])
     table.optimize()
     # --8<-- [end:reindexing_incremental]
-
