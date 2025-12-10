@@ -15,7 +15,7 @@ Use quantization when:
 - Index build time and query latency matter
 
 LanceDB currently exposes multiple quantized vector index types, including:
-- `IVF_PQ` – Inverted File index with Product Quantization (default). See the [vector indexing guide](/user-guides/indexing/vector-index) for `IVF_PQ` examples.
+- `IVF_PQ` – Inverted File index with Product Quantization (default). See the [vector indexing guide](/indexing/vector-index) for `IVF_PQ` examples.
 - `IVF_RQ` – Inverted File index with **RaBitQ** quantization (binary, 1 bit per dimension). See [below](#rabitq-quantization) for details.
 
 `IVF_PQ` is the default indexing option in LanceDB and works well in many cases. However, in cases where more drastic compression is needed, RaBitQ is also a reasonable option.

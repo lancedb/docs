@@ -76,24 +76,24 @@
               {
                 "group": "Tables",
                 "pages": [
-                  "user-guides/tables/index",
-                  "user-guides/tables/create",
-                  "user-guides/tables/schema",
-                  "user-guides/tables/update",
-                  "user-guides/tables/versioning",
-                  "user-guides/tables/consistency"
+                  "tables/index",
+                  "tables/create",
+                  "tables/schema",
+                  "tables/update",
+                  "tables/versioning",
+                  "tables/consistency"
                 ]
               },
               {
                 "group": "Indexing",
                 "pages": [
-                  "user-guides/indexing/index",
-                  "user-guides/indexing/vector-index",
-                  "user-guides/indexing/fts-index",
-                  "user-guides/indexing/scalar-index",
-                  "user-guides/indexing/gpu-indexing",
-                  "user-guides/indexing/quantization",
-                  "user-guides/indexing/reindexing"
+                  "indexing/index",
+                  "indexing/vector-index",
+                  "indexing/fts-index",
+                  "indexing/scalar-index",
+                  "indexing/gpu-indexing",
+                  "indexing/quantization",
+                  "indexing/reindexing"
                 ]
               },
               {
