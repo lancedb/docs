@@ -10,29 +10,14 @@ Vector search is a technique used to search for similar items based on their vec
 
 Raw data (e.g. text, images, audio, etc.) is converted into embeddings via an embedding model, which are then stored in a vector database like LanceDB. To perform similarity search at scale, an index is created on the stored embeddings, which can then used to perform fast lookups.
 
-## Supported Distance Metrics
-
-Distance metrics determine how LanceDB compares vectors to find similar matches. Euclidean or `l2` is the default, and used for general-purpose similarity, `cosine` for unnormalized embeddings, `dot` for normalized embeddings (best performance), or `hamming` for binary vectors. 
-
-<Warning>
-Ensure you always use the same distance metric that your embedding model was trained with. Most modern embedding models use cosine similarity, so `cosine` is often the best choice. However, if your vectors are normalized, you should use `dot` for best performance.
-</Warning>
-
-The right metric improves both search accuracy and query performance. Currently, LanceDB supports the following metrics:
-
-| Metric    | Description                                                                                                                                                                                                                                                          | Default |
-| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------ |
-| `l2`      | [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance) - measures the straight-line distance between two points in vector space. Calculated as the square root of the sum of squared differences between corresponding vector components.            | ✓       |
-| `cosine`  | [Cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) - measures the cosine of the angle between two vectors, ranging from -1 to 1. Computed as the dot product divided by the product of vector magnitudes. Use for unnormalized vectors.            | x       |
-| `dot`     | [Dot product](https://en.wikipedia.org/wiki/Dot_product) - calculates the sum of products of corresponding vector components. Provides raw similarity scores without normalization, sensitive to vector magnitudes. Use for normalized vectors for best performance. | x       |
-| `hamming` | [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) - counts the number of positions where corresponding bits differ between binary vectors. Only applicable to binary vectors stored as packed uint8 arrays.                                         | x       |
-
-### Configure Distance Metric
+## Configure Distance Metric
 
 By default, `l2` will be used as metric type. You can specify the metric type as
 `cosine` or `dot` if required.
 
-**Note:** You can configure the distance metric during search only if there’s no vector index. If a vector index exists, the distance metric will always be the one you specified when creating the index.
+<Warning>
+Ensure you use the same distance metric that your embedding model was trained with. Most modern embedding models use `cosine`, but if your vectors are normalized, `dot` usually performs best.
+</Warning>
 
 <CodeGroup>
 ```python Python icon="python"
@@ -40,7 +25,7 @@ tbl.search(np.random.random((1536))).distance_type("cosine").limit(10).to_list()
 ```
 
 ```ts TypeScript icon="square-js"
-const results2 = await (
+const results = await (
   tbl.search(Array(128).fill(1.2)) as lancedb.VectorQuery
   )
   .distanceType("cosine")
@@ -49,7 +34,12 @@ const results2 = await (
 ```
 </CodeGroup>
 
-Here you can see the same search but using `cosine` similarity instead of `l2` distance. The result focuses on vector direction rather than absolute distance, which works better for normalized embeddings.
+<Note>
+You can configure the distance metric during search only if there's no vector index. If a vector index exists, the distance metric will always be the one you specified when creating the index.
+
+See Supported distance metrics at [/user-guides/indexing/vector-index#supported-distance-metrics](/user-guides/indexing/vector-index#supported-distance-metrics).
+</Note>
+
 
 ## Vector Search With ANN Index
 

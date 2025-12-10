@@ -11,6 +11,10 @@ import {
 
 LanceDB provides support for Full-Text Search via Lance, allowing you to incorporate keyword-based search (based on BM25) in your retrieval solutions.
 
+<Info title="Need index build steps and parameters?">
+Index creation and tuning live under [/user-guides/indexing/fts-index](/user-guides/indexing/fts-index).
+</Info>
+
 ## Basic Usage
 
 Consider that we have a LanceDB table named `my_table`, whose string column `text` we want to index and query via keyword search, the FTS index must be created before you can search via keywords.

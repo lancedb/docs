@@ -19,6 +19,10 @@ import {
 
 LanceDB offers two main vector indexing algorithms: **Inverted File (IVF)** and **Hierarchically Navigable Small Worlds (HNSW)**. You can create multiple vector indexes within a Lance table. This guide walks through common configurations and build patterns.
 
+<Info title="Looking for query examples?">
+Vector query patterns and tuning live under [/search/vector-search](/search/vector-search) and hybrid workflows under [/search/hybrid-search](/search/hybrid-search).
+</Info>
+
 ### Option 1: Self-Hosted Indexing
 
 **Manual, Sync or Async:** If using LanceDB Open Source, you will have to build indexes manually, as well as reindex and tune indexing parameters. The Python SDK lets you do this *sychronously and asychronously*.
@@ -40,6 +44,21 @@ You can create a new index with different parameters using `create_index` - this
 
 Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
 </Note>
+
+## Supported Distance Metrics
+
+Distance metrics determine how LanceDB compares vectors to find similar matches. Choose the metric when creating the index; queries must use the same metric configured on the index.
+
+| Metric    | Description | Default |
+| :-------- | :---------- | :------ |
+| `l2`      | Euclidean distance—straight-line distance between two points in vector space. Calculated as the square root of the sum of squared differences between corresponding vector components. | ✓ |
+| `cosine`  | Cosine similarity—angle between two vectors, ranging from -1 to 1. Use for unnormalized vectors. | x |
+| `dot`     | Dot product—sum of products of corresponding vector components. Use for normalized vectors for best performance. | x |
+| `hamming` | Hamming distance—counts differing bit positions between binary vectors stored as packed uint8 arrays. | x |
+
+<Warning title="Match the index metric">
+If a vector index exists, the distance metric is fixed to what you chose at index creation. Changing metrics requires rebuilding the index.
+</Warning>
 
 ## Example: Construct an IVF Index
 
