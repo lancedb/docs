@@ -1,7 +1,7 @@
 ---
 title: "Scalar Indexes in LanceDB"
 sidebarTitle: "Scalar Index"
-description: "Use scalar indexes for efficient metadata filtering and hybrid searches."
+description: "Learn how to use scalar indexes in LanceDB for efficient metadata filtering and query optimization."
 weight: 3
 aliases:
   - "/docs/concepts/indexing/scalar-index/"
@@ -20,7 +20,7 @@ import {
     PyScalarIndexUuidUpsert as ScalarIndexUuidUpsert,
 } from '/snippets/indexing.mdx';
 
-Scalar indexes organize scalar attributes (numbers, categories, timestamps) to accelerate filtering alongside vector data.
+Scalar indexes organize scalar attributes (numbers, categories, timestamps) to accelerate filtering alongside vector data. They speed up retrieval of scalar metadata associated with vectors and improve hybrid query performance.
 
 Supported scalar index types:
 
@@ -33,12 +33,14 @@ Supported scalar index types:
 | Data Type | Filter | Index Type |
 |:----------|:-------|:-----------|
 | Numeric, string, temporal | `<`, `=`, `>`, `IN`, `BETWEEN`, `IS NULL` | `BTREE` |
-| Boolean or low-cardinality strings/numbers | `<`, `=`, `>`, `IN`, `BETWEEN`, `IS NULL` | `BITMAP` |
+| Boolean or strings/numbers with fewer than ~1,000 unique values | `<`, `=`, `>`, `IN`, `BETWEEN`, `IS NULL` | `BITMAP` |
 | Low-cardinality lists | `array_has_any`, `array_has_all` | `LABEL_LIST` |
 
 ## Scalar Index Operations
 
 ### 1. Build the Index
+
+Create multiple scalar indexes within a table. By default LanceDB builds a `BTREE` index, but you can configure other types like `BITMAP` when appropriate.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -60,7 +62,7 @@ Supported scalar index types:
 
 ### 3. Update the Index
 
-Update scalar indexes after inserts/deletes by calling `optimize()`.
+Update scalar indexes after inserts, deletes, or updates by calling `optimize()`.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -69,7 +71,7 @@ Update scalar indexes after inserts/deletes by calling `optimize()`.
 </CodeGroup>
 
 <Note title="LanceDB Cloud">
-Cloud automates `optimize`, so new data remains queryable without extra steps.
+Cloud automates `optimize`, so new data remains queryable without extra steps. New data still appears in results without optimizing, but queries will run a slower flat scan on the unindexed portion until optimization finishes.
 </Note>
 
 ### 4. Run Indexed Searches

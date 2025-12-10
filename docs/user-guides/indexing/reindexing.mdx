@@ -1,39 +1,35 @@
 ---
 title: "Reindexing and Incremental Indexing in LanceDB"
 sidebarTitle: "Reindexing"
-description: "Keep indexes fresh with incremental indexing workflows in LanceDB OSS and Cloud."
-weight: 5
-aliases:
-  - "/docs/concepts/indexing/reindexing/"
-  - "/docs/concepts/indexing/reindexing"
+description: "Learn how to efficiently update and manage indexes in LanceDB using incremental indexing, including best practices for adding new records without full reindexing."
 ---
 import { PyReindexingIncremental as ReindexingIncremental } from '/snippets/indexing.mdx';
 
 ## Reindexing and Incremental Indexing
 
-Reindexing updates indexes after new data arrives so queries continue to perform well. For ANN search, new data always appears in results, but if it is not indexed yet LanceDB falls back to brute-force search for the new segments—which increases latency.
+Reindexing is the process of updating the index to account for new data, keeping good performance for queries. This applies to either a full-text search (FTS) index or a vector index. For ANN search, new data will always be included in query results, but queries on tables with unindexed data will fallback to slower search methods for the new parts of the table. This is another important operation to run periodically as your data grows, as it also improves performance. This is especially important if you're appending large amounts of data to an existing dataset.
 
 <Tip>
-When you add data to a table with an existing index (vector or FTS), LanceDB doesn't update the index until a reindex operation finishes.
+When adding new data to a dataset that has an existing index (either FTS or vector), LanceDB doesn't immediately update the index until a reindex operation is complete.
 </Tip>
 
-> Both LanceDB OSS and Cloud support reindexing, but the workflows differ depending on the index type.
+> Both LanceDB OSS and Cloud support reindexing, but the process (at least for now) is different for each, depending on the type of index.
 
-While a reindex job runs, LanceDB combines results from the existing index with exhaustive search on new data. The more unindexed data accumulates, the higher the latency cost.
+When a reindex job is triggered in the background, the entire data is reindexed, but in the interim as new queries come in, LanceDB will combine results from the existing index with exhaustive kNN search on the new data. This is done to ensure that you're still searching on all your data, but it does come at a performance cost. The more data that you add without reindexing, the impact on latency (due to exhaustive search) can be noticeable.
 
 ## Incremental Indexing in LanceDB Cloud
 
-**LanceDB Cloud & Enterprise** support incremental reindexing automatically. When new data lands, a background job rebuilds indexes so they stay in sync with the data size.
+**LanceDB Cloud & Enterprise** support incremental reindexing through an automated background process. When new data is added to a table, the system automatically triggers a new index build. As the dataset grows, indexes are continuously updated in the background.
 
-> During rebuilding, queries still cover all data but brute-force search handles the new rows. Use `fast_search=True` to limit searches to indexed data only.
+> While indexes are being rebuilt, queries use brute force methods on unindexed rows, which may temporarily increase latency. To avoid this, set `fast_search=True` to search only indexed data.
 
-<Note title="Checking index status">
-Use `index_stats()` to monitor the number of unindexed rows. The value drops to zero once background indexing completes.
+<Note title="Checking Index Status">
+Use `index_stats()` to view the number of unindexed rows. This will be zero when indexes are fully up-to-date.
 </Note>
 
 ## Incremental Indexing in LanceDB OSS
 
-LanceDB OSS also supports incremental indexing—you can append records without rebuilding the entire index, then optimize when convenient.
+**LanceDB OSS** supports incremental indexing, which means you can add new records to the table without reindexing the entire table.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -41,11 +37,11 @@ LanceDB OSS also supports incremental indexing—you can append records without 
     </CodeBlock>
 </CodeGroup>
 
-<Note title="Performance considerations">
-New data added after building an index still appears in search results, but searches require a flat scan over the unindexed portion until reindexing completes. Cloud & Enterprise automate this merging process to minimize the impact.
+<Note title="Performance Considerations">
+New data added after creating the FTS index will appear in search results while the incremental index is still in progress, but with increased latency due to a flat search on the unindexed portion. LanceDB Cloud & Enterprise automate this merging process, minimizing the impact on search speed.
 </Note>
 
 ## FTS Index Reindexing
 
-FTS reindexing is supported in LanceDB OSS, Cloud, and Enterprise. Trigger a rebuild whenever a significant amount of text data remains unindexed.
+FTS Reindexing is **supported in LanceDB OSS, Cloud & Enterprise**. However, it requires manual rebuilding when a significant amount of new data needs to be reindexed.
 

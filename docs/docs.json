@@ -92,6 +92,7 @@
                   "user-guides/indexing/fts-index",
                   "user-guides/indexing/scalar-index",
                   "user-guides/indexing/gpu-indexing",
+                  "user-guides/indexing/quantization",
                   "user-guides/indexing/reindexing"
                 ]
               },

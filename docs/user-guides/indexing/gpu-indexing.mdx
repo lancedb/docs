@@ -2,28 +2,28 @@
 title: "GPU-Powered Vector Indexing in LanceDB"
 sidebarTitle: "GPU Indexing"
 description: "Accelerate IVF and HNSW index builds with GPU acceleration in LanceDB."
-weight: 4
-aliases:
-  - "/docs/concepts/indexing/gpu-indexing/"
-  - "/docs/concepts/indexing/gpu-indexing"
 ---
 import { PyGpuIndexCuda as GpuIndexCuda, PyGpuIndexMps as GpuIndexMps } from '/snippets/indexing.mdx';
 
-With LanceDB's GPU-powered indexing you can build vector indexes for billions of rows in just a few hours—dramatically improving ingestion speed.
+With LanceDB's GPU-powered indexing you can create vector indexes for billions of rows in just a few hours. This can significantly accelerate your vector search operations. 
 
-> Internal tests show GPU indexing processing billions of vectors in under four hours.
+> In our tests, LanceDB's GPU-powered indexing can process billions of vectors in under four hours, providing significant performance improvements over CPU-based indexing.
 
 ## Automatic GPU Indexing in LanceDB Enterprise
 
 <Info>
-Automatic GPU indexing is currently available only in LanceDB Enterprise. [Contact us](mailto:contact@lancedb.com) to enable the feature.
+Automatic GPU Indexing is currently only available in LanceDB Enterprise. Please [contact us](mailto:contact@lancedb.com) to enable this feature for your deployment.
 </Info>
 
-Whenever you call `create_index`, Enterprise automatically selects GPU resources to build IVF or HNSW indexes. Indexing is asynchronous; call `wait_for_index()` to block until completion.
+Whenever you call `create_index`, the backend will use GPU resources to build either the IVF or HNSW indexes. The system automatically selects the optimal GPU configuration based on your data size and available hardware.
+
+This process is also asynchronous by default, but you can use `wait_for_index` to convert it into a synchronous process by waiting until the index is built.
 
 ## Manual GPU Indexing in LanceDB OSS
 
-Use the Python SDK with [PyTorch ≥ 2.0](https://pytorch.org/) to manually create IVF_PQ indexes on GPUs. GPU indexing currently requires the synchronous SDK. Specify the device via the `accelerator` parameter (`"cuda"` on Linux/NVIDIA, `"mps"` on Apple Silicon).
+You can use the Python SDK to manually create the IVF_PQ index. You will need [PyTorch>2.0](https://pytorch.org/). Please keep in mind that GPU based indexing is currently only supported by the synchronous SDK.
+
+You can specify the GPU device to train IVF partitions via `accelerator`. Specify parameters `cuda` or `mps` (on Apple Silicon) to enable GPU training.
 
 ### GPU Indexing on Linux
 
@@ -43,12 +43,12 @@ Use the Python SDK with [PyTorch ≥ 2.0](https://pytorch.org/) to manually crea
 
 ## Performance Considerations
 
-- GPU memory usage scales with `num_partitions` and vector dimension.
-- Ensure GPU memory comfortably exceeds the dataset you're indexing.
-- Batch size is tuned automatically based on available GPU memory.
-- Larger batches further improve throughput.
+- GPU memory usage scales with `num_partitions` and vector dimensions
+- For optimal performance, ensure GPU memory exceeds dataset size
+- Batch size is automatically tuned based on available GPU memory
+- Indexing speed improves with larger batch sizes
 
 ## Troubleshooting
 
-If you encounter `AssertionError: Torch not compiled with CUDA enabled`, [install a PyTorch build that includes CUDA support](https://pytorch.org/get-started/locally/).
+If you encounter the error `AssertionError: Torch not compiled with CUDA enabled`, you need to [install PyTorch with CUDA support](https://pytorch.org/get-started/locally/).
 
