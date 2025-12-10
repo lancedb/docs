@@ -5,6 +5,9 @@ description: Learn how to transform raw data into meaningful features for AI mod
 icon: grip-horizontal
 ---
 
+This section introduces the concept of feature engineering using an example of a product
+recommendation system.
+
 <iframe
   className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/VAO4407nHTM?si=mwS7m8aArzvFR_8T"
@@ -18,11 +21,7 @@ icon: grip-horizontal
   <iframe width="560" height="315" src="https://www.youtube.com/embed/VAO4407nHTM?si=mwS7m8aArzvFR_8T" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div> */}
 
-<Info>
-We prepared a tutorial on how to build an advanced product search engine using LanceDB's Feature Engineering. [Check it out here!](/docs/tutorials/mmlh/)
-</Info>
-
-If you want your AI models to work well—whether for search, recommendations, or anything else—you need good data. But raw data is usually messy and incomplete. Before you can train a model or use it for search, you have to turn that raw data into clear, meaningful features.
+For your AI models to work well — whether for search, recommendations, or anything else — you need good data. But raw data is usually messy and incomplete. Before you can train a model or use it for search, you have to turn that raw data into clear, meaningful features.
 
 Feature engineering is the process of cleaning up your data and creating new signals that actually help your model learn or make better predictions. This step is just as important for preparing training data as it is for powering your AI in production.
 
@@ -30,7 +29,7 @@ It can take some work to get from raw data to useful features. Let's look at a s
 
 ## The Challenge: Manual Feature Engineering
 
-Imagine we are building a product recommendation system for a large e-commerce platform. The goal is to find items that are genuinely "similar" to a product a user is currently viewing.
+Imagine you are building a product recommendation system for a large e-commerce platform. The goal is to find items that are genuinely "similar" to a product a user is currently viewing.
 
 This notion of "similarity" must be sophisticated. It goes far beyond a simple text match on the product description. It needs to incorporate nuanced business concepts like popularity, value, brand equity, and key product attributes.
 
@@ -60,8 +59,7 @@ To address these challenges, a data scientist or ML engineer typically embarks o
 
 1. **Engineer `popularity_score`:**  
    To create a more accurate measure of popularity, combine the average rating with the volume of reviews. A common approach is to use logarithmic scaling. This prevents products with massive review counts from overwhelming the score.
-   **Logic:**  
-     ```python
+     ```python Python icon="python"
      popularity_score = log(review_count + 1) * avg_rating
      ```
 
@@ -73,7 +71,7 @@ To address these challenges, a data scientist or ML engineer typically embarks o
 3. **Engineer `discount_pct`:**  
    To explicitly signal a "deal" to the model, calculate the discount percentage by combining the original and current prices.
    **Logic:**  
-     ```python
+     ```python Python icon="python"
      discount_pct = (original_price - price) / original_price
      ```
 
@@ -81,7 +79,7 @@ To address these challenges, a data scientist or ML engineer typically embarks o
    To contextualize a product's price, compare it to the average price within its category. This requires an aggregation step to compute the average price per category. Then, calculate the feature for each product.
    **Logic:**  
      For each product:
-     ```python
+     ```python Python icon="python"
      price_vs_cat_avg = price / avg_price_for_category
      ```
 
@@ -112,7 +110,7 @@ As data grows, so does complexity. You might need to generate features from new 
 
 Managing this at scale means dealing with distributed systems, scheduling, and monitoring. You must ensure that feature pipelines are reliable and reproducible. Experimenting with new features or updating existing ones can require major engineering work. This slows down iteration and innovation. Infrastructure challenges, such as orchestrating batch and streaming jobs, handling dependencies, and scaling inference, often become the main bottleneck.
 
-In short, the biggest challenge in modern feature engineering is not just coming up with good features. It is also about building infrastructure that can handle complex, multi-modal operations. The goal is to deliver fresh, high-quality features quickly and reliably at massive scale. 
+In short, the biggest challenge in modern feature engineering is not just coming up with good features. It is also about building infrastructure that can handle complex, multimodal operations. The goal is to deliver fresh, high-quality features quickly and reliably at massive scale. 
 
 ## Trying the Tutorial
 

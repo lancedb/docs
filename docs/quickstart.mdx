@@ -4,7 +4,7 @@ sidebarTitle: "Quickstart"
 description: "Get started with LanceDB in minutes."
 icon: rocket
 ---
-import { PyConnect, PyConnectCloud } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
 import {
     PyQuickstartCreateTable,
     PyQuickstartCreateTableNoOverwrite,
@@ -13,6 +13,13 @@ import {
     PyQuickstartOpenTable,
     PyQuickstartOutputPandas,
     PyQuickstartVectorSearch2,
+    TsQuickstartAddData,
+    TsQuickstartCreateTable,
+    TsQuickstartCreateTableNoOverwrite,
+    TsQuickstartOpenTable,
+    TsQuickstartOutputArray,
+    TsQuickstartVectorSearch1,
+    TsQuickstartVectorSearch2,
 } from '/snippets/quickstart.mdx';
 
 The easiest way to get started with LanceDB is the open source version, which is an embedded database that
@@ -42,8 +49,12 @@ Using LanceDB's open source version is as simple as importing LanceDB as a libra
 and pointing to a local path -- no servers needed!
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyConnect}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnect}
     </CodeBlock>
 </CodeGroup >
 
@@ -56,8 +67,12 @@ security, and automatic backups. Simply replace the local path with a remote `ur
 that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyConnectCloud}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnectCloud}
     </CodeBlock>
 </CodeGroup >
 
@@ -76,8 +91,12 @@ shown, but in n the real world, the embeddings would be much larger (thousands o
 embedding model.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartCreateTable}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartCreateTable}
     </CodeBlock>
 </CodeGroup >
 
@@ -89,8 +108,12 @@ If you do not want to overwrite the existing table, you can
 omit the `mode="overwrite"` parameter -- this will raise a `ValueError` when trying to create a table with the same name.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartCreateTableNoOverwrite}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartCreateTableNoOverwrite}
     </CodeBlock>
 </CodeGroup >
 
@@ -106,13 +129,18 @@ Our query is a vector that represents a `warrior`, which isn't in the data we in
 Let's try and find the result that's most similar to it!
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartVectorSearch1}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartVectorSearch1}
     </CodeBlock>
 </CodeGroup >
 
-The example above outputs the top 2 most similar results of the vector search query
-as a Polars DataFrame, as it's easier to interpret the results when displayed in tabular format.
+The example above outputs the top 2 most similar results of the vector search query.
+Generally, across all client languages, you would typically gather the results as a list/array of objects.
+In Python, you can conveniently obtain the results as Polars or Pandas DataFrames.
 
 | id | text   | vector            | _distance |
 | --- | --- | --- | --- |
@@ -122,12 +150,17 @@ as a Polars DataFrame, as it's easier to interpret the results when displayed in
 It looks like the `knight` is the most similar adventurer to the `warrior` from our query!
 
 <Info>
-If you prefer Pandas, you can use the `to_pandas()` method to display the results as a Pandas DataFrame, see below.
+In Python, if you prefer working with Pandas, you can use the `to_pandas()` method to display the results
+as a Pandas DataFrame, see below.
 </Info>
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartOutputPandas}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartOutputArray}
     </CodeBlock>
 </CodeGroup >
 
@@ -137,7 +170,7 @@ As you obtain more data, you can append it to an existing table. In the same scr
 can connect to the LanceDB database and open an existing table as follows.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="Python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyQuickstartOpenTable}
     </CodeBlock>
 </CodeGroup >
@@ -148,6 +181,10 @@ Append more records to the existing table using the `add()` method:
     <CodeBlock filename="Python" language="Python">
     {PyQuickstartAddData}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript">
+    {TsQuickstartAddData}
+    </CodeBlock>
 </CodeGroup >
 
 To verify that our new data was added, we can run a different query that looks for adventurers similar to `wizard`.
@@ -155,6 +192,10 @@ To verify that our new data was added, we can run a different query that looks f
 <CodeGroup >
     <CodeBlock filename="Python" language="Python">
     {PyQuickstartVectorSearch2}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript">
+    {TsQuickstartVectorSearch2}
     </CodeBlock>
 </CodeGroup >
 
