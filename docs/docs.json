@@ -202,11 +202,13 @@
             "group": "Tutorials",
             "pages": [
               "tutorials/index",
+              "tutorials/search/index",
               {
-                "group": "RAG",
+                "group": "RAG & Agents",
                 "pages": [
-                  "tutorials/rag/index",
-                  "tutorials/rag/time-travel-rag/index"
+                  "tutorials/agents/index",
+                  "tutorials/agents/time-travel-rag/index",
+                  "tutorials/agents/multimodal-agent/index"
                 ]
               }
             ]
@@ -358,6 +360,14 @@
     {
       "source": "/integrations/frameworks/:slug*",
       "destination": "integrations/ai/:slug*"
+    },
+    {
+      "source": "/tutorials/rag/:slug*",
+      "destination": "tutorials/agents/:slug*"
+    },
+    {
+      "source": "/tutorials/vector-search/:slug*",
+      "destination": "tutorials/search/:slug*"
     }
   ]
 }
