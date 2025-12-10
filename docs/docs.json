@@ -123,6 +123,13 @@
                 ]
               },
               {
+                "group": "Storage",
+                "pages": [
+                  "storage/index",
+                  "storage/configuration"
+                ]
+              },
+              {
                 "group": "Training",
                 "pages": [
                   "training/index",
