@@ -1,7 +1,8 @@
 ---
 title: "LanceDB Enterprise FAQ"
 sidebarTitle: "LanceDB Enterprise"
-description: "Commonly asked asked questions about LanceDB Enterprise."
+description: "Commonly asked questions about LanceDB Enterprise."
+icon: "server"
 mode: wide
 ---
 
@@ -45,26 +46,25 @@ file is created. Subsequent reads always load the latest manifest file to
 ensure the most up-to-date data.
 
 However, this increases query latency and can place significant load on the storage system 
-under high concurrency. We offer the following parameter to adjust consistency level: 
+under high concurrency. We offer the `weak_read_consistency_interval_seconds` parameter
+to adjust consistency level (whose default value is zero). This parameter Defines the interval 
+(in seconds) at which the system checks for table updates from other processes.
 
-- `weak_read_consistency_interval_seconds` (default: 0) – Defines the interval 
-  (in seconds) at which the system checks for table updates from other processes.
-
-Recommended Setting: 
+<Tip>
+**Recommended Setting**
 
 To balance consistency and performance, setting `weak_read_consistency_interval_seconds` to 30–60 seconds is often a 
 good trade-off. This reduces unnecessary cloud storage operations while still 
 keeping data reasonably fresh for most applications.
 
-<Warning>
-This setting only affects read operations. Write operations always remain strongly consistent.
-</Warning>
+Note that **this setting only affects read operations**. Write operations always remain strongly consistent.
+</Tip>
 
 ### Indexing
 
 #### Can I use GPU for indexing?
-Yes! Please contact the LanceDB team to enable GPU-based indexing for your deployment.
-Then you just need to call `create_index`, and the backend will use GPU for indexing.
+Yes! Please [contact](mailto:support@lancedb.com) the LanceDB team to enable GPU-based indexing for
+your deployment. Then you just need to call `create_index`, and the backend will use GPU for indexing.
 LanceDB is able to index a few billion vectors under 4 hours.
 
 ### Cluster Configuration
@@ -90,12 +90,12 @@ LanceDB uses Prometheus for metrics collection and OpenTelemetry (OTel) to expor
 metrics with data enrichment. The LanceDB team will work with you to integrate the 
 monitoring metrics with your preferred dashboard.
 
-### Others
+### Other
 
 #### How do I check the Lance version of my dataset?
 Upgrade to a recent pylance version (v0.18.0+), then use _LanceDataset.data_storage_version_
 
-```bash
+```py
 >>> lance.dataset("my_dataset").data_storage_version
 '2.0'
 ```

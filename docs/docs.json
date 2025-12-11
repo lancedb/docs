@@ -4,7 +4,7 @@
     "default": "light",
     "strict": false
   },
-  "theme": "aspen",
+  "theme": "mint",
   "name": "LanceDB",
   "banner": {
     "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
@@ -71,10 +71,10 @@
             ]
           },
           {
-            "group": "LanceDB User Guide",
+            "group": "User Guide",
             "pages": [
               {
-                "group": "Tables",
+                "group": "Working with tables",
                 "pages": [
                   "tables/index",
                   "tables/create",
@@ -124,7 +124,7 @@
                 ]
               },
               {
-                "group": "Embedding",
+                "group": "Embeddings",
                 "pages": [
                   "embedding/index",
                   "embedding/quickstart"
@@ -196,26 +196,6 @@
         ]
       },
       {
-        "tab": "Tutorials",
-        "groups": [
-          {
-            "group": "Tutorials",
-            "pages": [
-              "tutorials/index",
-              "tutorials/search/index",
-              {
-                "group": "RAG & Agents",
-                "pages": [
-                  "tutorials/agents/index",
-                  "tutorials/agents/time-travel-rag/index",
-                  "tutorials/agents/multimodal-agent/index"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
         "tab": "Integrations",
         "groups": [
           {
@@ -275,6 +255,26 @@
                   "integrations/data/dlt",
                   "integrations/data/phidata",
                   "integrations/data/voxel51"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Tutorials",
+        "groups": [
+          {
+            "group": "Tutorials",
+            "pages": [
+              "tutorials/index",
+              "tutorials/search/index",
+              {
+                "group": "RAG & Agents",
+                "pages": [
+                  "tutorials/agents/index",
+                  "tutorials/agents/time-travel-rag/index",
+                  "tutorials/agents/multimodal-agent/index"
                 ]
               }
             ]
