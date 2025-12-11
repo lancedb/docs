@@ -1,7 +1,8 @@
 ---
-title: "Indexing Data in LanceDB"
-sidebarTitle: "Indexing Data"
+title: "Indexing Data"
+sidebarTitle: "Overview"
 description: "Optimize search performance in LanceDB using vector indexes, full-text search, and scalar indexes. Understand IVF-PQ indexing for efficient vector similarity search."
+icon: "list"
 ---
 
 Embeddings for a given dataset are made searchable via an **index**. The index is constructed by using data structures that store the embeddings such that it's very efficient to perform scans and lookups on them. 
@@ -67,7 +68,7 @@ Quantization is a compression technique used to reduce the dimensionality of an 
 
 Product quantization (PQ) works by dividing a large, high-dimensional vector of size into equally sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
 
-![](/assets/docs/ivfpq_pq_desc.png)
+![](/static/assets/images/indexing/ivfpq_pq_desc.png)
 
 It's important to remember that quantization is a *lossy process*, i.e., the reconstructed vector is not identical to the original vector. This results in a trade-off between the size of the index and the accuracy of the search results.
 
@@ -86,10 +87,10 @@ While PQ helps with reducing the size of the index, IVF primarily addresses sear
 
 In IVF, the PQ vector space is divided into *Voronoi cells*, which are essentially partitions that consist of all the points in the space that are within a threshold distance of the given region's seed point. These seed points are initialized by running K-means over the stored vectors. The centroids of K-means turn into the seed points which then each define a region. These regions are then are used to create an inverted index that correlates each centroid with a list of vectors in the space, allowing a search to be restricted to just a subset of vectors in the index.
 
-![](/assets/docs/ivfpq_ivf_desc.webp)
+![](/static/assets/images/indexing/ivfpq_ivf_desc.webp)
 
 During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
-![](/assets/docs/ivfpq_query_vector.webp)
+![](/static/assets/images/indexing/ivfpq_query_vector.webp)
 
 ## HNSW Index Implementation
 

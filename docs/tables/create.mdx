@@ -1,9 +1,8 @@
 ---
-title: Working With Tables in LanceDB
-sidebarTitle: "Table Management"
-description: Learn about different methods to create tables in LanceDB, including from various data sources and empty tables.
-weight: 1
-aliases: ["/tutorials/tables/create/", "/tutorials/tables/create"]
+title: Ingesting Data
+sidebarTitle: "Ingesting data"
+description: Learn about different methods to ingest data into tables in LanceDB, including from various data sources and empty tables.
+icon: "cookie"
 ---
 import {
     PyCreateTableFromDicts as CreateTableFromDicts,
@@ -68,7 +67,7 @@ Data is converted to Arrow before being written to disk. For maximum control ove
 </Note>
 
 <Note title="Vector Column Type">
-The **`vector`** column needs to be a [Vector](/docs/integrations/frameworks/pydantic/#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
+The **`vector`** column needs to be a [Vector](/integrations/data/pydantic#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
 </Note>
 
 #### From a custom schema

@@ -2,6 +2,7 @@
 title: "LanceDB: Frequently Asked Questions"
 sidebarTitle: "LanceDB OSS"
 description: "Commonly asked questions about LanceDB OSS."
+icon: "code"
 mode: wide
 ---
 
@@ -55,7 +56,7 @@ For example, if you're retrieving the top 10 results and set `refine_factor` to 
 
 When using an IVF-PQ index, there's a trade-off between recall and latency at query time. You can improve recall by increasing the number of probes and the `refine_factor`. In our benchmark on the GIST-1M dataset, we show that it's possible to achieve >0.95 recall with a latency of under 10 ms on most systems, using ~50 probes and a `refine_factor` of 50. This is, of course, subject to the dataset at hand and a quick sensitivity study can be performed on your own data. You can find more details on the benchmark in a past [blog post](https://medium.com/etoai/benchmarking-lancedb-92b01032874a).
 
-![](/assets/docs/recall-vs-latency.webp)
+![](/static/assets/images/recall-vs-latency.webp)
 
 ### How much data can LanceDB practically manage without affecting performance?
 

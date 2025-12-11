@@ -14,3 +14,5 @@ ex_lancedb
 sample-lancedb
 fuzzy-example
 boost-example
+.DS_Store
+.vscode

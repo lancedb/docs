@@ -1,9 +1,8 @@
 ---
-title: "Ingesting Data in LanceDB Tables"
-sidebarTitle: "Working with Data"
+title: "Updating and Modifying Table Data"
+sidebarTitle: "Update/modify data"
 description: "Learn how to update and modify data in LanceDB. Includes incremental updates, batch modifications, and best practices for data maintenance."
-weight: 2
-aliases: ["/tutorials/tables/update/", "/tutorials/tables/update", "/tutorials/tables/sql.md"]
+icon: "clone"
 ---
 import {
     PyAddDataToTable as AddDataToTable,
@@ -27,10 +26,8 @@ Once you have created a table, there are several ways to modify its data. You ca
 These operations allow you to keep your table data current and maintain it exactly as needed for your use case. Let's look at each of these operations in detail.
 
 <Note>
-These examples demonstrate common usage patterns. For complete API details and advanced options, refer to our SDK [documentation page](/docs/reference/) and navigate to your client language of choice.
+These examples demonstrate common usage patterns. For complete API details and advanced options, refer to our SDK [documentation page](/reference/) and navigate to your client language of choice.
 </Note>
-
-[^1]: The `vectordb` package is a legacy package that is deprecated in favor of `@lancedb/lancedb`. The `vectordb` package will continue to receive bug fixes and security updates until September 2024. We recommend all new projects use `@lancedb/lancedb`. See the [migration guide](/docs/migration/) for more information.
 
 ## Connecting to LanceDB
 
@@ -152,7 +149,7 @@ Updating nested columns is not yet supported.
 | `values_sql` | `dict` | The values to update. The keys are the column names and the values are the SQL expressions to set. For example, `{'x': 'x + 1'}` will increment the value of the `x` column by 1. |
 
 <Note title="SQL syntax">
-See the [SQL queries](/docs/search/sql/sql-queries/) page for more information on the supported SQL syntax.
+See the [SQL queries](/search/sql/) page for more information on the supported SQL syntax.
 </Note>
 
 <CodeGroup>
@@ -219,7 +216,7 @@ The merge insert command is a flexible API that can be used to perform `upsert`,
 <Tip title="Use scalar indexes to speed up merge insert">
 The merge insert command performs a join between the input data and the target table `on` the key you provide. This requires scanning that entire column, which can be expensive for large tables. To speed up this operation, create a scalar index on the join column, which will allow LanceDB to find matches without scanning the whole table.
 
-Read more about scalar indices in the [Scalar Index](/docs/indexing/scalar-index/) guide.
+Read more about scalar indices in the [Scalar Index](/indexing/scalar-index/) guide.
 </Tip>
 
 <Tip title="HTTP 400 on Merge Insert">

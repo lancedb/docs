@@ -2,6 +2,7 @@
 title: "Vector Search"
 sidebarTitle: Vector search
 description: "Learn how to run vector search queries in LanceDB. Includes best practices, tips and examples."
+icon: "arrow-up-right-dots"
 ---
 
 Vector search is a technique used to search for similar items based on their vector representations, called embeddings. It is also known as similarity search, nearest neighbor search, or approximate nearest neighbor search.
@@ -10,7 +11,7 @@ Vector search is a technique used to search for similar items based on their vec
 
 Raw data (e.g. text, images, audio, etc.) is converted into embeddings via an embedding model, which are then stored in a vector database like LanceDB. To perform similarity search at scale, an index is created on the stored embeddings, which can then used to perform fast lookups.
 
-## Supported Distance Metrics
+## Supported distance metrics
 
 Distance metrics determine how LanceDB compares vectors to find similar matches. Euclidean or `l2` is the default, and used for general-purpose similarity, `cosine` for unnormalized embeddings, `dot` for normalized embeddings (best performance), or `hamming` for binary vectors. 
 

@@ -2,6 +2,7 @@
 title: "Reranking Search Results"
 sidebarTitle: "Overview"
 description: "Use a reranker to improve search relevance."
+icon: "sort-amount-down"
 keywords: ["re-ranking", "reranker", "rerank"]
 ---
 
@@ -14,7 +15,7 @@ with models from Cohere, Sentence-Transformers, and more.
 To use a reranker, you perform a search and then pass the results to the `rerank()` method.
 
 <CodeGroup>
-```python
+```python Python icon="python"
 import lancedb
 from lancedb.rerank import CohereReranker
 
@@ -46,7 +47,7 @@ You can find more details about these and other rerankers in the [integrations](
 Most rerankers support reranking based on multiple vectors. To rerank based on multiple vectors, you can pass a list of vectors to the `rerank` method. Here's an example of how to rerank based on multiple vector columns using the `CrossEncoderReranker`:
 
 <CodeGroup>
-```python
+```python Python icon="python"
 from lancedb.rerankers import CrossEncoderReranker
 
 reranker = CrossEncoderReranker()

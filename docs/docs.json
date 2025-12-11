@@ -4,7 +4,7 @@
     "default": "light",
     "strict": false
   },
-  "theme": "aspen",
+  "theme": "mint",
   "name": "LanceDB",
   "banner": {
     "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
@@ -71,29 +71,29 @@
             ]
           },
           {
-            "group": "LanceDB User Guide",
+            "group": "User Guide",
             "pages": [
               {
-                "group": "Tables",
+                "group": "Working with tables",
                 "pages": [
-                  "user-guides/tables/index",
-                  "user-guides/tables/create",
-                  "user-guides/tables/schema",
-                  "user-guides/tables/update",
-                  "user-guides/tables/versioning",
-                  "user-guides/tables/consistency"
+                  "tables/index",
+                  "tables/create",
+                  "tables/schema",
+                  "tables/update",
+                  "tables/versioning",
+                  "tables/consistency"
                 ]
               },
               {
                 "group": "Indexing",
                 "pages": [
-                  "user-guides/indexing/index",
-                  "user-guides/indexing/vector-index",
-                  "user-guides/indexing/fts-index",
-                  "user-guides/indexing/scalar-index",
-                  "user-guides/indexing/gpu-indexing",
-                  "user-guides/indexing/quantization",
-                  "user-guides/indexing/reindexing"
+                  "indexing/index",
+                  "indexing/vector-index",
+                  "indexing/fts-index",
+                  "indexing/scalar-index",
+                  "indexing/gpu-indexing",
+                  "indexing/quantization",
+                  "indexing/reindexing"
                 ]
               },
               {
@@ -124,7 +124,7 @@
                 ]
               },
               {
-                "group": "Embedding",
+                "group": "Embeddings",
                 "pages": [
                   "embedding/index",
                   "embedding/quickstart"
@@ -179,22 +179,6 @@
             ]
           },
           {
-            "group": "API & SDK Reference",
-            "pages": [
-              "api-reference/index",
-              {
-                "group": "REST API Reference",
-                "pages": [
-                  "api-reference/rest/index"
-                ],
-                "openapi": {
-                  "source": "api-reference/rest/openapi.yml",
-                  "directory": "api-reference/rest"
-                }
-              }
-            ]
-          },
-          {
             "group": "Support",
             "pages": [
               "troubleshooting",
@@ -205,24 +189,6 @@
                   "faq/faq-oss",
                   "faq/faq-cloud",
                   "faq/faq-enterprise"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Tutorials",
-        "groups": [
-          {
-            "group": "Tutorials",
-            "pages": [
-              "tutorials/index",
-              {
-                "group": "RAG",
-                "pages": [
-                  "tutorials/rag/index",
-                  "tutorials/rag/time-travel-rag/index"
                 ]
               }
             ]
@@ -296,12 +262,55 @@
         ]
       },
       {
+        "tab": "Tutorials",
+        "groups": [
+          {
+            "group": "Tutorials",
+            "pages": [
+              "tutorials/index",
+              "tutorials/search/index",
+              {
+                "group": "RAG & Agents",
+                "expanded": true,
+                "pages": [
+                  "tutorials/agents/index",
+                  "tutorials/agents/time-travel-rag/index",
+                  "tutorials/agents/multimodal-agent/index"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Demos",
         "groups": [
           {
             "group": "Demos",
             "pages": [
               "demos/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "api-reference/index",
+              {
+                "group": "REST API",
+                "expanded": true,
+                "pages": [
+                  "api-reference/rest/index"
+                ],
+                "openapi": {
+                  "source": "api-reference/rest/openapi.yml",
+                  "directory": "api-reference/rest"
+                }
+              }
             ]
           }
         ]
@@ -353,6 +362,14 @@
     {
       "source": "/integrations/frameworks/:slug*",
       "destination": "integrations/ai/:slug*"
+    },
+    {
+      "source": "/tutorials/rag/:slug*",
+      "destination": "tutorials/agents/:slug*"
+    },
+    {
+      "source": "/tutorials/vector-search/:slug*",
+      "destination": "tutorials/search/:slug*"
     }
   ]
 }

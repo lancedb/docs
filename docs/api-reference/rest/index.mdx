@@ -1,20 +1,29 @@
 ---
 title: REST API Reference
 sidebarTitle: "Overview"
-description: "API reference for LanceDB Cloud."
+description: "API reference for LanceDB"
 weight: 6
 ---
 
-**LanceDB Cloud REST API** allows you to interact with your remote table using standard HTTP requests. 
+[Lance REST Namespace](https://lance.org/format/namespace/rest/catalog-spec/?h=rest) spec
+is an OpenAPI protocol that enables reading, writing and managing Lance tables by connecting
+those metadata services or building a custom metadata server in a standardized way.
 
-<Tip>[LanceDB Quickstart](/docs/quickstart/) will get you up and running in 5 minutes!</Tip>
-
-Our [SDK section](/docs/api-reference/) covers SDK examples in Python, Typescript and Rust. 
+LanceDB OSS allows you to interface with Lance tables via the REST Namespace.
+However, LanceDB's Cloud and Enterprise products provide an extended REST API with
+additional endpoints for managing projects, tables, and data.
+If you have specific needs or questions about the Enterprise/Cloud REST API Namespace,
+please [contact us](mailto:support@lancedb.com).
 
 ## Authentication
 
+<Badge color="blue">Cloud</Badge>
+<Badge color="red">Enterprise</Badge>
+
 All HTTP requests to LanceDB APIs must contain an <u>x-api-key</u> header that specifies a valid API key and
 must be encoded as JSON or Arrow RPC.
+
+The tutorial below demonstrates how to connect to LanceDB Cloud using the REST API.
 
 ### Get the API Key
 
@@ -59,5 +68,15 @@ You can always check from the LanceDB Cloud Dashboard:
 
 ![words](/static/assets/images/api-reference/words.png)
 
-That's it - you're connected! Now, you can start adding data and querying it.
-The best way to start is to try the [LanceDB Quickstart](/docs/quickstart/) or read the [documentation site](https://lancedb.com/documentation/).
+That's it -- you're connected! Now, you can start adding data and querying it.
+You can visit the tutorial section to build your own applications with LanceDB.
+
+<Card
+   title="Tutorials"
+   icon="book"
+   href="/tutorials/"
+>
+   Check out our tutorials on building various applications with LanceDB.
+</Card>
+
+

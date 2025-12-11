@@ -2,6 +2,7 @@
 title: "Multivector Search"
 sidebarTitle: Multivector search
 description: Learn how to perform multivector search in LanceDB to handle multiple vector embeddings per document, ideal for late interaction models like ColBERT and ColPaLi.
+icon: "braille"
 ---
 
 LanceDB's multivector support enables you to store and search multiple vector embeddings for a single item. 
@@ -35,7 +36,7 @@ $$
 \text{MaxSim}(Q, D) = \sum_{i=1}^{|Q|} \max_{j=1}^{|D|} \text{sim}(q_i, d_j)
 $$
 
-Where $sim$ is the similarity function (e.g. cosine distance).
+Where $sim$ is the similarity function (e.g. cosine similarity).
 
 $$
 Q = \{q_1, q_2, ..., q_{|Q|}\}

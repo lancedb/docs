@@ -1,15 +1,15 @@
 ---
 title: "Time-Travel RAG with versioned data"
-sidebarTitle: "Time-Travel RAG"
+sidebarTitle: "Time-travel RAG"
 description: "Learn how to build production-ready RAG systems with LanceDB's time-travel capabilities for regulatory compliance and audit trails."
 ---
 
-<Card icon="code" href="/components/columns">
+<Tip>
 All the scripts and code for this tutorial are available in the
 [vectorDB recipes](https://github.com/lancedb/vectordb-recipes/tree/main/examples/time-travel-rag) repository. 
-</Card>
+</Tip>
 
-## Use Case: Financial Services Regulatory Knowledge Base
+## Use case: Financial services regulatory knowledge base
 
 Imagine you're a major investment bank. Your team is tasked with building a critical Retrieval-Augmented Generation (RAG) system. This system must provide instant, accurate answers to compliance officers about ever-changing financial regulations. A wrong or out-of-date answer isn't just an inconvenience—it could lead to multi-million dollar fines, reputational damage, and regulatory audits.
 
@@ -19,9 +19,10 @@ Your knowledge base is a living entity, constantly evolving with:
 * New internal policy documents and interpretations.
 * A/B testing of different embedding models and text chunking strategies to improve accuracy.
 
-This dynamic environment creates a series of high-stakes challenges that standard [vector databases](/index) are ill-equipped to handle.
+This dynamic environment creates a series of high-stakes challenges that traditional
+vector databases are ill-equipped to handle.
 
-## Main Pain Points
+## Pain points solved by LanceDB
 
 1. "Our RAG gave different answers yesterday versus today. Which version was used in the official compliance report?" Without versioning, you can't prove what the AI knew at a specific point in time, making audits impossible.
 
@@ -31,9 +32,9 @@ This dynamic environment creates a series of high-stakes challenges that standar
 
 4. "We need to A/B test a new chunking strategy, but we can't disrupt the production system or duplicate the entire dataset." Experimentation is vital for improvement, but it can't come at the cost of production stability or a massive infrastructure bill.
 
-LanceDB's [zero-copy, automatic versioning]() and [time-travel capabilities]() directly address these critical enterprise pain points, providing the foundation for a reliable, auditable, and production-ready RAG system.
+LanceDB's [zero-cost data evolution](/tables/schema) and [time-travel capabilities](/tables/versioning#time-travel) directly address these critical enterprise pain points, providing the foundation for a reliable, auditable, and production-ready RAG system.
 
-## The Dataset: The U.S. Federal Register
+## Dataset: The U.S. Federal Register
 
 To make this use case realistic, we'll use a perfect real-world dataset: The U.S. Federal Register, the official daily journal of the United States Government.
 
@@ -176,14 +177,3 @@ Control Centers. The 60-day notice comment period ended on July 23, 2024, with n
 
 ✅ A/B test complete. Notice the difference in relevance (distance score) between models. This showcases how LanceDB enables [experimentation with different embedding models](/docs/embeddings/) without disrupting production systems.
 ```
-
-## Related Documentation
-
-To learn more about the concepts and features used in this tutorial:
-
-- **[RAG Fundamentals](/docs/tutorials/rag/)** - Explore other RAG techniques and applications
-- **[Vector Search](/docs/search/)** - Learn about LanceDB's search capabilities
-- **[Embedding Models](/docs/integrations/embedding/)** - Understand different embedding strategies
-- **[Table Management](/tutorials/tables/)** - Master LanceDB table operations and versioning
-- **[Enterprise Features](/docs/enterprise/)** - Discover production-ready capabilities
-- **[Performance Optimization](/docs/enterprise/benchmark)** - Learn about LanceDB's performance characteristics -->

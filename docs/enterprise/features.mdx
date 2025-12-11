@@ -2,6 +2,7 @@
 title: "LanceDB Enterprise vs OSS"
 sidebarTitle: "Differentiating features"
 description: "Key benefits and differentiating features of LanceDB Enterprise over LanceDB OSS."
+icon: "grip-vertical"
 ---
 
 Modern AI workloads produce petabytes of multimodal data that must be queried in real time. On top of that, enterprise AI systems must stay completely private and air-gapped.
@@ -29,7 +30,7 @@ LanceDB Enterprise is a distributed cluster that spans many machines (unlike Lan
 LanceDB OSS is directly embedded into your service. The process owns all CPU, memory, and storage, so scale is limited to what the host can provide. 
 LanceDB Enterprise separates work into routers, execution nodes, and background workers. New nodes join the cluster through a discovery service; they register, replicate metadata, and begin answering traffic without a restart. A distributed control plane watches node health, shifts load away from unhealthy nodes, and enforces consensus rules that prevent split-brain events.
 
-Read More: [LanceDB Enterprise Architecture](/docs/overview/enterprise/architecture/)
+Read More: [LanceDB Enterprise Architecture](/enterprise/architecture/)
 
 ### Latency of data retrieval
 
@@ -37,7 +38,7 @@ With Lance OSS every query fetches data from S3, GCS, or Azure Blob. Each round 
 
 LanceDB Enterprise uses NVMe SSDs as a hybrid cache, before the data store is even accessed. The first read fills the cache, and subsequent reads come from the local disk and return in tens of milliseconds. Parallel chunked reads further reduce tail latency. This gap matters when the application serves interactive dashboards or real-time recommendations.
 
-Read More: [LanceDB Enterprise Performance](/docs/overview/enterprise/benchmark/)
+Read More: [LanceDB Enterprise Performance](/enterprise/benchmarks/)
 
 ### Throughput of search queries
 
@@ -57,7 +58,7 @@ Vector indexes fragment when data is inserted, updated, or deleted. Fragmentatio
 
 LanceDB Enterprise runs compaction jobs in the background. It copies data to a scratch space, rebuilds the index, swaps the old files atomically, and frees disk space. Production traffic continues uninterrupted.
 
-Read More: [Indexing in LanceDB](/docs/concepts/indexing/)
+Read More: [Indexing in LanceDB](/indexing/)
 
 ### Deployment and governance
 
@@ -65,7 +66,7 @@ When you work with LanceDB OSS, it is included as part of your binary, Docker, o
 
 LanceDB Enterprise comes in two flavors. The Bring-Your-Own-Cloud (BYOC) template installs the control plane, routers, and nodes inside your VPC, so data never leaves your account. The managed SaaS option hands day-to-day operations to the vendor, including patching, scaling, and 24×7 monitoring. Both enterprise modes support private networking, role-based access control, audit logs, and single sign-on.
 
-Read More: [LanceDB Enterprise Performance](/docs/overview/enterprise/deployment/)
+Read More: [LanceDB Enterprise Performance](/enterprise/deployment/)
 
 ## Which option is best?
 
