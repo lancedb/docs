@@ -271,6 +271,7 @@
               "tutorials/search/index",
               {
                 "group": "RAG & Agents",
+                "expanded": true,
                 "pages": [
                   "tutorials/agents/index",
                   "tutorials/agents/time-travel-rag/index",
@@ -301,6 +302,7 @@
               "api-reference/index",
               {
                 "group": "REST API",
+                "expanded": true,
                 "pages": [
                   "api-reference/rest/index"
                 ],
