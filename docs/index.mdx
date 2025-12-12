@@ -5,34 +5,47 @@ description: "Multimodal lakehouse for AI."
 icon: "/static/assets/logo/lancedb-icon-gray.svg"
 ---
 
-**LanceDB** is an open-source [multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/) for AI
-designed to manage petabyte-scale data. It simultaneously caters to the needs of AI application engineers and AI researchers:
+**LanceDB** is an open-source [multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/)
+designed to manage petabyte-scale data for AI/ML workloads. It's designed for both AI application
+builders and researchers.
 
 <Steps>
   <Step title="AI Engineers">
-    As a retrieval layer for large-scale Generative AI and search applications, such as RAG, chatbots, agents,
-    e-commerce search & recommendation systems, and more. LanceDB is easy to set up, fast and highly
-    scalable (while being cost-effective) for these use cases.
+    Use LanceDB as the retrieval + data layer for production AI: RAG, agents, semantic search,
+    recommendation systems, and more.
+    Keep multimodal data, metadata and embeddings in the same table and query them with vector search,
+    full-text search (and SQL where it fits). Add add new features (columns in your tables) at zero-cost
+    as your application evolves.
   </Step>
   <Step title="AI Researchers">
-    As a data management platform for researchers working on foundation model training, fine-tuning,
-    feature engineering and explorative data analysis over petabyte-size datasets with multimodal data.
-    Tasks that are painful with traditional data formats, such as metadata management, versioning, and
-    data evolution, become simple and efficient with LanceDB.
+  Use LanceDB to curate, explore and distribute large multimodal datasets for training and fine-tuning models.
+  LanceDB comes with built-in table versioning, schema evolution, and fast random access, making it practical to do
+  dataset slicing, exploratory analysis and shuffles on large, evolving corpora.
   </Step>
 </Steps>
 
-## Products
-
-LanceDB offers a range of products, built to serve different needs.
+The LanceDB suite of products is built on top of the [Lance format](/lance), an open lakehouse
+format for multimodal AI.
 
 ![](/static/assets/images/overview/lancedb-suite.png)
 
+## Use cases
+
+LanceDB is built for AI, and caters to broad variety of workloads:
+
+- **Search**: Build high-performance search and retrieval applications using LanceDB's optimized storage, including vector search, full-text search, and hybrid search with secondary indexes.
+- **Feature Engineering**: Supports feature extraction and data transformation, extending tables both vertically and horizontally with minimal I/O overhead.
+- **Training**: Efficiently access and manage large-scale multimodal datasets for training and fine-tuning AI models.
+- **Exploratory Data Analysis**: Analyze and search through petabyte-scale multimodal datasets, including
+video and point cloud data, to gain insights and inform model development.
+
+## Choose how you run LanceDB
+
+Depending on your needs, you can choose one of three ways to run LanceDB.
+
 ### LanceDB OSS
-The simplest way to get started with LanceDB is with the open source version. It's available as an embedded
-library, with client SDKs available in Python, TypeScript and Rust. You can use LanceDB OSS to build AI and
-search applications by running it entirely locally on your filesystem. See our quickstart guide
-and RAG tutorials below to get started in a few minutes.
+The fastest way to get started is the open-source embedded library, with client SDKs in Python, TypeScript
+and Rust. Run it locally during development, then use the same data model and APIs as you scale up. Start here:
 
 <Columns cols={2}>
 <Card
@@ -43,35 +56,36 @@ and RAG tutorials below to get started in a few minutes.
     Get started with LanceDB in minutes.
 </Card>
   <Card
-    title="Build a RAG App"
+    title="Basic Table Operations"
     icon="search"
-    href="/tutorials/rag/"
+    href="/tables/"
   >
-    Learn how to build Retrieval-Augmented Generation (RAG) applications using LanceDB.
+    Create tables, search vectors, and modify data in LanceDB.
   </Card>
 </Columns>
 
 ### LanceDB Enterprise
 
-[LanceDB Enterprise](/enterprise) is both a **private cloud** or a **BYOC** solution that transforms your data lake into a
-high-performance vector database or lakehouse that can operate at extreme scale. To get
-started with LanceDB Enterprise, reach out to us at [contact@lancedb.com](mailto:contact@lancedb.com).
+[LanceDB Enterprise](/enterprise) is for private deployments (private cloud or BYOC) and teams that want a
+broader “multimodal lakehouse” workflow on top of the same core table abstraction: search, exploratory data analysis,
+feature engineering, and training-oriented data access—without building bespoke infrastructure to manage
+petabyte-scale multimodal datasets. To get started, reach out at [contact@lancedb.com](mailto:contact@lancedb.com).
 
 <Info>
+**Built with scale, performance, and security in mind.**
+
 LanceDB Enterprise is designed for very large-scale workloads in private deployments, with
-high performance at extreme scale,
-or if you have strict security requirements, [contact us](mailto:contact@lancedb.com) to learn
-more.
+high performance at extreme scale, or if you have strict security requirements.
 </Info>
 
 ### LanceDB Cloud
 
-[LanceDB Cloud](/cloud) helps you build secure, scalable, and high-performance vector search solutions. Manage your
-projects through the LanceDB Cloud UI, and build your applications using our REST API or client SDKs in Python, Typescript and
-Rust.
+[LanceDB Cloud](/cloud) is a managed option for deploying LanceDB-backed vector search. Easily
+create and manage projects in the Cloud UI, and integrate via REST API or client SDKs
+(Python, TypeScript, Rust).
 
 <Card
-  title="Serverless vector search with enterprise-grade performance"
+  title="Serverless vector search"
   img="/static/assets/images/get-started/main-cloud-cta.png"
   href="https://cloud.lancedb.com"
 >

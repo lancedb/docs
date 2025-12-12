@@ -11,20 +11,24 @@ features designed specifically for AI workloads.
 
 <Card
   title="Lance format documentation"
-  icon="book"
+  icon="/static/assets/logo/lance-logo-gray.svg"
   href="https://lance.org/quickstart"
 >
-  Explore the Lance format documentation by clicking here.
+  Learn more about the Lance format by reading the docs.
 </Card>
 
-## Why Lance?
+## How Lance Enables the Multimodal Lakehouse
 
-The Lance format enables LanceDB to serve as a unified data store that eliminates the need for separate
-databases. Unlike traditional vector databases that only store embeddings, LanceDB functions as
-a _lakehouse_, storing both the original data and its vector representations in the same efficient
-format.
+Lance is a file format, table format, and catalog spec for multimodal AI, allowing developers to build a
+complete open lakehouse on top of object storage to power AI workflows. The format brings
+high-performance vector search, full-text search, random access, and feature engineering capabilities
+to a single unified system, eliminating the need for multiple specialized databases.
 
-## Key advantages of the Lance format
+Unlike traditional vector databases that only store embeddings alongside the metadata, LanceDB's
+multimodal lakehouse stores both the original data (including image, video or audio bytes)
+and its vector representations alongside traditional tabular data in the same efficient format.
+
+## Advantages of the Lance format
 
 Advantage | Description
 --- | ---
@@ -34,7 +38,7 @@ ML-optimized | Designed for training and inference workloads with fast random ac
 Query performance | Columnar storage enables blazing-fast vector search and analytics
 Cloud-native | Seamless integration with cloud object stores (S3, GCS, Azure Blob)
 
-## Key Lance features
+## Key concepts
 
 The following concepts are core to the Lance format:
 
@@ -51,7 +55,7 @@ The following concepts are core to the Lance format:
 </Steps>
 
 
-## Data versioning
+### Data versioning
 
 Data in Lance tables are versioned -- this helps keep LanceDB scalable and consistent.
 We do not immediately blow away old versions when creating new ones because other clients might be
@@ -62,7 +66,7 @@ Each version contains metadata and just the new/updated data in your transaction
 versions, they aren't 100 duplicates of the same data. However, they do have 100x the metadata overhead
 of a single version, which can result in slower queries.
 
-## Data compaction
+### Data compaction
 
 As you insert more data, your dataset will grow and you'll need to perform compaction to maintain query
 throughput (i.e., keep latencies down to a minimum). Compaction is the process of merging fragments
@@ -77,16 +81,7 @@ Compaction performs the following tasks in the background:
 - Removes dropped columns from fragments
 - Merges small fragments into larger ones
 
-<Card icon="lightbulb">
-Depending on the use case and dataset, optimal compaction will have different requirements. As a rule of
-thumb:
-
-- It's always better to use batch inserts rather than adding 1 row at a time (to avoid too small fragments). If single-row inserts are unavoidable, run compaction on a regular basis to merge them into larger fragments.
-- Keep the number of fragments under 100, which is suitable for most use cases (for really large datasets
-of >500M rows, more fragments might be needed)
-</Card>
-
-## Data deletion and recovery
+### Data deletion and recovery
 
 Although Lance allows you to delete rows from a dataset, it does not actually delete the data immediately.
 It simply marks the row as deleted in the `DataFile` that represents a fragment.
@@ -98,7 +93,7 @@ exists based on your backup policy.
 
 <Card
   title="Learn more about Lance"
-  icon="earth"
+  icon="/static/assets/logo/lance-logo-gray.svg"
   href="https://lance.org/quickstart"
 >
   Lance is a separate open source project. Check out its documentation to learn more.
