@@ -235,17 +235,6 @@
                 ]
               },
               {
-                "group": "AI Platforms & Frameworks",
-                "pages": [
-                  "integrations/ai/langchain",
-                  "integrations/ai/llamaIndex",
-                  "integrations/ai/genkit",
-                  "integrations/ai/kiln",
-                  "integrations/ai/prompttools",
-                  "integrations/ai/synthetic-data-kit"
-                ]
-              },
-              {
                 "group": "Data Platforms & Frameworks",
                 "pages": [
                   "integrations/data/pydantic",
@@ -255,6 +244,17 @@
                   "integrations/data/dlt",
                   "integrations/data/phidata",
                   "integrations/data/voxel51"
+                ]
+              },
+              {
+                "group": "AI Platforms & Frameworks",
+                "pages": [
+                  "integrations/ai/langchain",
+                  "integrations/ai/llamaIndex",
+                  "integrations/ai/genkit",
+                  "integrations/ai/kiln",
+                  "integrations/ai/prompttools",
+                  "integrations/ai/synthetic-data-kit"
                 ]
               }
             ]

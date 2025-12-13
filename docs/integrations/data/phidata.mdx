@@ -1,7 +1,6 @@
 ---
-title: "phidata"
+title: "Phidata"
 sidebarTitle: "PhiData"
-weight: 6
 ---
 
 import {
@@ -17,7 +16,7 @@ import {
   PyPlatformsPhidataTranscriptModule,
 } from '/snippets/integrations.mdx';
 
-**phidata** is a framework for building **AI Assistants** with long-term memory, contextual knowledge, and the ability to take actions using function calling. It helps turn general-purpose LLMs into specialized assistants tailored to your use case by extending its capabilities using **memory**, **knowledge**, and **tools**. 
+[Phidata](https://docs.phidata.com/introduction) is a framework for building **AI Assistants** with long-term memory, contextual knowledge, and the ability to take actions using function calling. It helps turn general-purpose LLMs into specialized assistants tailored to your use case by extending its capabilities using **memory**, **knowledge**, and **tools**. 
 
 - **Memory**: Stores chat history in a **database** and enables LLMs to have long-term conversations.
 - **Knowledge**: Stores information in a **vector database** and provides LLMs with business context. (Here we will use LanceDB)
@@ -25,93 +24,88 @@ import {
 
 ![example](https://raw.githubusercontent.com/lancedb/assets/refs/heads/main/docs/assets/integration/phidata_assistant.png)
 
-Memory & knowledge make LLMs smarter while tools make them autonomous.
+Memory & knowledge make LLMs _smarter_ while tools make them _autonomous_.
 
-LanceDB is a vector database and its integration into phidata makes it easy for us to provide a **knowledge base** to LLMs. It enables us to store information as [embeddings](/docs/embeddings/understanding-embeddings/) and search for the **results** similar to ours using **query**. 
+LanceDB is a vector database and its integration into Phidata makes it easy for us to provide a **knowledge base** to LLMs. It enables us to store information as embeddings and search for the **results** similar to ours using **query**. 
 
-??? Question "What is Knowledge Base?"
-    Knowledge Base is a database of information that the Assistant can search to improve its responses. This information is stored in a vector database and provides LLMs with business context, which makes them respond in a context-aware manner.
+<Info>
+**What is a Knowledge Base?**
 
-    While any type of storage can act as a knowledge base, vector databases offer the best solution for retrieving relevant results from dense information quickly.
+Knowledge Base is a database of information that the Assistant can search to improve its responses. This information is stored in a vector database and provides LLMs with business context, which makes them respond in a context-aware manner.
 
-Let's see how using LanceDB inside phidata helps in making LLM more useful:
+While any type of storage can act as a knowledge base, vector databases offer the best solution for retrieving relevant results from dense information quickly.
+</Info>
+
+Let's see how using LanceDB inside Phidata helps in making LLM more useful:
 
 ## Prerequisites: install and import necessary dependencies
 
 **Create a virtual environment**
 
 1. install virtualenv package
-    ```bash
-    pip install virtualenv
-    ```
+<CodeBlock filename="bash" language="bash" icon="terminal">
+pip install virtualenv
+</CodeBlock>
 2. Create a directory for your project and go to the directory and create a virtual environment inside it.
-    ```bash
-    mkdir phi
-    ```
-    ```bash
-    cd phi
-    ```
-    ```bash
-    python -m venv phidata_
-    ```
+<CodeBlock filename="bash" language="bash" icon="terminal">
+mkdir phi
+</CodeBlock>
+<CodeBlock filename="bash" language="bash" icon="terminal">
+cd phi
+</CodeBlock>
+<CodeBlock filename="bash" language="bash" icon="terminal">
+python -m venv phidata_
+</CodeBlock>
 
 **Activating virtual environment**
 
 1. from inside the project directory, run the following command to activate the virtual environment.
-    ```bash
-    phidata_/Scripts/activate
-    ```
+<CodeBlock filename="bash" language="bash" icon="terminal">
+phidata_/Scripts/activate
+</CodeBlock>
 
 **Install the following packages in the virtual environment**
-```bash
+<CodeBlock filename="bash" language="bash" icon="terminal">
 pip install lancedb phidata youtube_transcript_api openai ollama numpy pandas
-```
+</CodeBlock>
 
 **Create python files and import necessary libraries**
 
-You need to create two files - `transcript.py` and `ollama_assistant.py` or `openai_assistant.py`
+You need to create two files -- `transcript.py` and `ollama_assistant.py` or `openai_assistant.py`
 
-=== "openai_assistant.py"
+<CodeBlock filename="openai_assistant.py" language="Python" icon="python">
+  {PyPlatformsPhidataOpenaiSetup}
+</CodeBlock>
 
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataOpenaiSetup}
-    </CodeBlock>
+<CodeBlock filename="ollama_assistant.py" language="Python" icon="python">
+  {PyPlatformsPhidataOllamaSetup}
+</CodeBlock>
 
-=== "ollama_assistant.py"
+<CodeBlock filename="transcript.py" language="Python" icon="python">
+  {PyPlatformsPhidataTranscriptModule}
+</CodeBlock>
 
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataOllamaSetup}
-    </CodeBlock>
-
-=== "transcript.py"
-
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataTranscriptModule}
-    </CodeBlock>
-
-!!! warning
-    If creating Ollama assistant, download and install Ollama [from here](https://ollama.com/) and then run the Ollama instance in the background. Also, download the required models using `ollama pull <model-name>`. Check out the models [here](https://ollama.com/library) 
-
+<Warning>
+If creating Ollama assistant, download and install Ollama [from here](https://ollama.com/) and then run the Ollama instance in the background. Also, download the required models using `ollama pull <model-name>`. Check out the models [here](https://ollama.com/library)
+</Warning>
 
 **Run the following command to deactivate the virtual environment if needed**
-```bash
+<CodeBlock filename="bash" language="bash" icon="terminal">
 deactivate
-```
+</CodeBlock>
 
 ## **Step 1** - Create a Knowledge Base for AI Assistant using LanceDB
 
-=== "openai_assistant.py"
+<CodeBlock filename="openai_assistant.py" language="Python" icon="python">
+  {PyPlatformsPhidataOpenaiKnowledgeBase}
+</CodeBlock>
 
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataOpenaiKnowledgeBase}
-    </CodeBlock>
 
-=== "ollama_assistant.py"
+<CodeBlock filename="ollama_assistant.py" language="Python" icon="python">
+  {PyPlatformsPhidataOllamaKnowledgeBase}
+</CodeBlock>
 
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataOllamaKnowledgeBase}
-    </CodeBlock>
-Check out the list of **embedders** supported by **phidata** and their usage [here](https://docs.phidata.com/embedder/introduction).
+Check out the list of **embedders** supported by **Phidata** and their usage [here](https://docs.phidata.com/embedder/introduction).
 
 Here we have used `TextKnowledgeBase`, which loads text/docx files to the knowledge base.
 
@@ -121,9 +115,9 @@ Let's see all the parameters that `TextKnowledgeBase` takes -
 |:----|:-----|:--------|:--------|
 |`path`|`Union[str, Path]`| Path to text file(s). It can point to a single text file or a directory of text files.| provided by user |
 |`formats`|`List[str]`| File formats accepted by this knowledge base. |`[".txt"]`|
-|`vector_db`|`VectorDb`| Vector Database for the Knowledge Base. phidata provides a wrapper around many vector DBs, you can import it like this - `from phi.vectordb.lancedb import LanceDb` | provided by user |
+|`vector_db`|`VectorDb`| Vector Database for the Knowledge Base. Phidata provides a wrapper around many vector DBs, you can import it like this - `from phi.vectordb.lancedb import LanceDb` | provided by user |
 |`num_documents`|`int`| Number of results (documents/vectors) that vector search should return. |`5`|
-|`reader`|`TextReader`| phidata provides many types of reader objects which read data, clean it and create chunks of data, encapsulate each chunk inside an object of the `Document` class, and return **`List[Document]`**.  | `TextReader()` |
+|`reader`|`TextReader`| Phidata provides many types of reader objects which read data, clean it and create chunks of data, encapsulate each chunk inside an object of the `Document` class, and return **`List[Document]`**.  | `TextReader()` |
 |`optimize_on`|`int`| It is used to specify the number of documents on which to optimize the vector database. Supposed to create an index. |`1000`|
 
 ??? Tip "Wonder! What is `Document` class?"
@@ -131,47 +125,43 @@ Let's see all the parameters that `TextKnowledgeBase` takes -
     
     When the user queries over vectorDB, the queries are converted into embeddings, and a nearest neighbor search is performed over these query embeddings which returns the embeddings that correspond to most semantically similar chunks(parts of our data) present in vectorDB. 
 
-    Here, a "Document" is a class in phidata. Since there is an option to let phidata create and manage embeddings, it splits our data into smaller chunks(as expected). It does not directly create embeddings on it. Instead, it takes each chunk and encapsulates it inside the object of the `Document` class along with various other metadata related to the chunk. Then embeddings are created on these `Document` objects and stored in vectorDB.
+    Here, a "Document" is a class in Phidata. Since there is an option to let Phidata create and manage embeddings, it splits our data into smaller chunks(as expected). It does not directly create embeddings on it. Instead, it takes each chunk and encapsulates it inside the object of the `Document` class along with various other metadata related to the chunk. Then embeddings are created on these `Document` objects and stored in vectorDB.
 
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataDocumentModel}
-    </CodeBlock>
+<CodeBlock filename="Python" language="Python" icon="python">
+  {PyPlatformsPhidataDocumentModel}
+</CodeBlock>
 
-However, using phidata you can load many other types of data in the knowledge base(other than text). Check out [phidata Knowledge Base](https://docs.phidata.com/knowledge/introduction) for more information.
+However, using Phidata you can load many other types of data in the knowledge base(other than text). Check out [Phidata Knowledge Base](https://docs.phidata.com/knowledge/introduction) for more information.
 
 Let's dig deeper into the `vector_db` parameter and see what parameters `LanceDb` takes -
 
 | Name| Type | Purpose | Default |
 |:----|:-----|:--------|:--------|
-|`embedder`|`Embedder`| phidata provides many Embedders that abstract the interaction with embedding APIs and utilize it to generate embeddings. Check out other embedders [here](https://docs.phidata.com/embedder/introduction) | `OpenAIEmbedder` |
+|`embedder`|`Embedder`| Phidata provides many Embedders that abstract the interaction with embedding APIs and utilize it to generate embeddings. Check out other embedders [here](https://docs.phidata.com/embedder/introduction) | `OpenAIEmbedder` |
 |`distance`|`List[str]`| The choice of distance metric used to calculate the similarity between vectors, which directly impacts search results and performance in vector databases. |`Distance.cosine`|
-|`connection`|`lancedb.db.LanceTable`| LanceTable can be accessed through `.connection`. You can connect to an existing table of LanceDB, created outside of phidata, and utilize it. If not provided, it creates a new table using `table_name` parameter and adds it to `connection`. |`None`|
+|`connection`|`lancedb.db.LanceTable`| LanceTable can be accessed through `.connection`. You can connect to an existing table of LanceDB, created outside of Phidata, and utilize it. If not provided, it creates a new table using `table_name` parameter and adds it to `connection`. |`None`|
 |`uri`|`str`| It specifies the directory location of **LanceDB database** and establishes a connection that can be used to interact with the database. | `"/tmp/lancedb"` |
 |`table_name`|`str`|  If `connection` is not provided, it initializes and connects to a new **LanceDB table** with a specified(or default) name in the database present at `uri`. |`"phi"`|
 |`nprobes`|`int`| It refers to the number of partitions that the search algorithm examines to find the nearest neighbors of a given query vector. Higher values will yield better recall (more likely to find vectors if they exist) at the expense of latency. |`20`|
 
 
-!!! note
-    Since we just initialized the KnowledgeBase. The VectorDB table that corresponds to this Knowledge Base is not yet populated with our data. It will be populated in **Step 3**, once we perform the `load` operation. 
-    
-    You can check the state of the LanceDB table using - `knowledge_base.vector_db.connection.to_pandas()`
+<Note>
+Since we just initialized the KnowledgeBase. The VectorDB table that corresponds to this Knowledge Base is not yet populated with our data. It will be populated in **Step 3**, once we perform the `load` operation. 
+
+You can check the state of the LanceDB table using - `knowledge_base.vector_db.connection.to_pandas()`
+</Note>
 
 Now that the Knowledge Base is initialized, , we can go to **step 2**.
 
 ## **Step 2** -  Create an assistant with our choice of LLM and reference to the knowledge base.
 
+<CodeBlock filename="openai_assistant.py" language="Python" icon="python">
+  {PyPlatformsPhidataOpenaiAssistant}
+</CodeBlock>
 
-=== "openai_assistant.py"
-
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataOpenaiAssistant}
-    </CodeBlock>
-
-=== "ollama_assistant.py"
-
-    <CodeBlock filename="Python" language="Python" icon="python">
-      {PyPlatformsPhidataOllamaAssistant}
-    </CodeBlock>
+<CodeBlock filename="ollama_assistant.py" language="Python" icon="python">
+  {PyPlatformsPhidataOllamaAssistant}
+</CodeBlock>
 
 Assistants add **memory**, **knowledge**, and **tools** to LLMs. Here we will add only **knowledge** in this example. 
 
@@ -179,7 +169,7 @@ Whenever we will give a query to LLM, the assistant will retrieve relevant infor
 
 - The `add_references_to_prompt=True` always adds information from the knowledge base to the prompt, regardless of whether it is relevant to the question.
 
-To know more about an creating assistant in phidata, check out [phidata docs](https://docs.phidata.com/assistants/introduction) here.
+To know more about an creating assistant in Phidata, check out [Phidata docs](https://docs.phidata.com/assistants/introduction) here.
 
 ## **Step 3** - Load data to Knowledge Base.
 
@@ -197,14 +187,14 @@ The above code loads the data to the Knowledge Base(LanceDB Table) and now it is
 > **Tip · What is upsert?**  
 > Upsert is a database operation that combines “update” and “insert”. It updates existing records if a document with the same identifier exists, or inserts new records if no matching record exists. This keeps the knowledge base current without manual checks.
 
-During the Load operation, phidata directly interacts with the LanceDB library and performs the loading of the table with our data in the following steps -     
+During the Load operation, Phidata directly interacts with the LanceDB library and performs the loading of the table with our data in the following steps -     
 
 1. **Creates** and **initializes** the table if it does not exist.
 
 2. Then it **splits** our data into smaller **chunks**.
 
     > **Question · How do they create chunks?**  
-    > **phidata** provides multiple knowledge-base types depending on the source data. Most of them (except the LlamaIndexKnowledgeBase and LangChainKnowledgeBase) expose a `document_lists` iterator. During the load operation, this iterator reads the input (for example, text files), splits it into chunks, wraps each chunk in a `Document`, and yields lists of those `Document` objects.
+    > **Phidata** provides multiple knowledge-base types depending on the source data. Most of them (except the LlamaIndexKnowledgeBase and LangChainKnowledgeBase) expose a `document_lists` iterator. During the load operation, this iterator reads the input (for example, text files), splits it into chunks, wraps each chunk in a `Document`, and yields lists of those `Document` objects.
 
 3. Then **embeddings** are created on these chunks are **inserted** into the LanceDB Table 
 
@@ -222,7 +212,7 @@ During the Load operation, phidata directly interacts with the LanceDB library a
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyPlatformsPhidataCliChat}
-</CodeBlock>  
+</CodeBlock>
 
 
-For more information and amazing cookbooks of phidata, read the [phidata documentation](https://docs.phidata.com/introduction) and also visit [LanceDB x phidata docmentation](https://docs.phidata.com/vectordb/lancedb).
+For more information and amazing cookbooks of Phidata, read the [Phidata documentation](https://docs.phidata.com/introduction) and also visit [LanceDB x Phidata docmentation](https://docs.phidata.com/vectordb/lancedb).

@@ -26,7 +26,7 @@ Once you have created a table, there are several ways to modify its data. You ca
 These operations allow you to keep your table data current and maintain it exactly as needed for your use case. Let's look at each of these operations in detail.
 
 <Note>
-These examples demonstrate common usage patterns. For complete API details and advanced options, refer to our SDK [documentation page](/reference/) and navigate to your client language of choice.
+These examples demonstrate common usage patterns. For complete API details and advanced options, refer to our SDK [documentation page](/api-reference/) and navigate to your client language of choice.
 </Note>
 
 ## Connecting to LanceDB
@@ -201,7 +201,7 @@ Remove rows that match a condition.
 </CodeGroup>
 
 <Warning title="Soft Deletion">
-Delete operations soft delete rows. Rows are hard deleted later by compaction and cleanup operations that happen in the background on LanceDB Cloud and Enterprise. The default retention on Cloud is 30 days. During this time, these rows are still accessible to query or restore by accessing old table versions (see [Versioning & Reproducibility in LanceDB](/tutorials/tables/versioning/)).
+Delete operations soft delete rows. Rows are hard deleted later by compaction and cleanup operations that happen in the background on LanceDB Cloud and Enterprise. The default retention on Cloud is 30 days. During this time, these rows are still accessible to query or restore by accessing old table versions (see [Versioning & Reproducibility in LanceDB](/tables/versioning/)).
 </Warning>
 
 <Warning title="Index Deletion">
