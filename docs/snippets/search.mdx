@@ -8,9 +8,9 @@ export const PyBasicHybridSearch = "data = [\n    {\"text\": \"rebel spaceships 
 
 export const PyBasicHybridSearchAsync = "uri = \"data/sample-lancedb\"\nasync_db = await lancedb.connect_async(uri)\ndata = [\n    {\"text\": \"rebel spaceships striking from a hidden base\"},\n    {\"text\": \"have won their first victory against the evil Galactic Empire\"},\n    {\"text\": \"during the battle rebel spies managed to steal secret plans\"},\n    {\"text\": \"to the Empire's ultimate weapon the Death Star\"},\n]\nasync_tbl = await async_db.create_table(\"documents_async\", schema=Documents)\n# ingest docs with auto-vectorization\nawait async_tbl.add(data)\n# Create a fts index before the hybrid search\nawait async_tbl.create_index(\"text\", config=FTS())\ntext_query = \"flower moon\"\n# hybrid search with default re-ranker\nawait (await async_tbl.search(\"flower moon\", query_type=\"hybrid\")).to_pandas()\n";
 
-export const PyClassDefinition = "class Metadata(BaseModel):\n    source: str\n    timestamp: datetime\n\n\nclass Document(BaseModel):\n    content: str\n    meta: Metadata\n\n\nclass LanceSchema(LanceModel):\n    id: str\n    vector: Vector(1536)\n    payload: Document\n";
-
 export const PyClassDocuments = "class Documents(LanceModel):\n    vector: Vector(embeddings.ndims()) = embeddings.VectorField()\n    text: str = embeddings.SourceField()\n";
+
+export const PyClassDefinition = "class Metadata(BaseModel):\n    source: str\n    timestamp: datetime\n\n\nclass Document(BaseModel):\n    content: str\n    meta: Metadata\n\n\nclass LanceSchema(LanceModel):\n    id: str\n    vector: Vector(1536)\n    payload: Document\n";
 
 export const PyCreateTableAsyncWithNestedSchema = "# Let's add 100 sample rows to our dataset\ndata = [\n    LanceSchema(\n        id=f\"id{i}\",\n        vector=np.random.randn(1536),\n        payload=Document(\n            content=f\"document{i}\",\n            meta=Metadata(source=f\"source{i % 10}\", timestamp=datetime.now()),\n        ),\n    )\n    for i in range(100)\n]\n\nasync_tbl = await async_db.create_table(\"documents_async\", data=data)\n";
 

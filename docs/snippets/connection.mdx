@@ -8,3 +8,7 @@ export const TsConnect = "import * as lancedb from \"@lancedb/lancedb\";\n\nasyn
 
 export const TsConnectCloud = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\n";
 
+export const RsConnect = "async fn connect_example(uri: &str) {\n    let db = connect(uri).execute().await.unwrap();\n    let _ = db;\n}\n";
+
+export const RsConnectCloud = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\n";
+

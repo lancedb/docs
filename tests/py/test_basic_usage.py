@@ -1,188 +1,170 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright The LanceDB Authors
 
-from random import randint, random
-
 # --8<-- [start:basic_imports]
+import json
+
 import lancedb
 import pandas as pd
 import polars as pl
 import pyarrow as pa
-
 # --8<-- [end:basic_imports]
 import pytest
 
+data_path = "tests/camelot.json"
 
 def test_basic_usage(db_path_factory):
     uri = "./basic_usage_db"
     uri = db_path_factory("basic_usage_db")
     db = lancedb.connect(uri)
 
-    # --8<-- [start:basic_create_table]
-    data = [
-        {"id": "1", "text": "unicorn", "vector": [0.4, 0.1, 0.7]},
-        {"id": "2", "text": "dragon", "vector": [0.8, 0.7, 0.1]},
-        {"id": "3", "text": "centaur", "vector": [0.3, 0.3, 0.6]},
-    ]
+    # --8<-- [start:data_load]
+    with open(data_path, "r") as f:
+        data = json.load(f)
+    # --8<-- [end:data_load]
 
-    table = db.create_table("creatures", data=data, mode="overwrite")
+    # --8<-- [start:basic_create_table]
+    table = db.create_table("camelot", data=data, mode="overwrite")
     # --8<-- [end:basic_create_table]
-    assert len(table) == 4
+    assert len(table) == 8
+
+    # --8<-- [start:basic_open_table]
+    table = db.open_table("camelot")
+    # --8<-- [end:basic_open_table]
 
     # --8<-- [start:basic_create_table_pandas]
     pandas_df = pd.DataFrame(data)
-    db.create_table("camp_roster", data=pandas_df, mode="overwrite")
+    table_pd = db.create_table("camelot_pd", data=pandas_df, mode="overwrite")
     # --8<-- [end:basic_create_table_pandas]
+    assert len(table_pd) == 8
+    db.drop_table("camelot_pd")
+
+    # --8<-- [start:basic_create_table_polars]
+    polars_df = pl.DataFrame(data)
+    table_pl = db.create_table("camelot_pl", data=polars_df, mode="overwrite")
+    # --8<-- [end:basic_create_table_polars]
+    assert len(table_pl) == 8
+    db.drop_table("camelot_pl")
 
     # --8<-- [start:basic_create_empty_table]
-    schema = pa.schema([pa.field("vector", pa.list_(pa.float32(), list_size=3))])
-    db.create_table("empty_table", schema=schema, mode="overwrite")
-    # --8<-- [end:basic_create_empty_table]
-    # --8<-- [start:basic_open_table]
-    table = db.open_table("creatures")
-    # --8<-- [end:basic_open_table]
-    # --8<-- [start:basic_table_names]
-    assert "creatures" in db.table_names()
-    # --8<-- [end:basic_table_names]
-    # --8<-- [start:basic_add_data]
-    recruits = [
-        {"id": "7", "text": "mage", "vector": [0.6, 0.3, 0.4], "level": 11},
-        {"id": "8", "text": "bard", "vector": [0.3, 0.8, 0.4], "level": 9},
-    ]
-    table.add(recruits)
-
-    df = pd.DataFrame(recruits)
-    table.add(df)
-    # --8<-- [end:basic_add_data]
-    # --8<-- [start:basic_vector_search]
-    query_vector = [0.8, 0.3, 0.8]
-    table.search(query_vector).limit(2).to_pandas()
-    # --8<-- [end:basic_vector_search]
-    table.add(
+    schema = pa.schema(
         [
-            {
-                "id": f"scout-{i}",
-                "text": "scout",
-                "vector": random(3),
-                "level": int(randint(15, 25)),
-            }
-            for i in range(50)
+            pa.field("id", pa.uint16()),
+            pa.field("name", pa.string()),
+            pa.field("role", pa.string()),
+            pa.field("description", pa.string()),
+            pa.field("vector", pa.list_(pa.float32(), 4)),
+            pa.field(
+                "stats",
+                pa.struct(
+                    [
+                        pa.field("strength", pa.int8()),
+                        pa.field("courage", pa.int8()),
+                        pa.field("magic", pa.int8()),
+                        pa.field("wisdom", pa.int8()),
+                    ]
+                ),
+            ),
         ]
     )
+    db.create_table("camelot_pa", schema=schema, mode="overwrite")
+    # --8<-- [end:basic_create_empty_table]
+    assert "camelot_pa" in db.table_names()
+    db.drop_table("camelot_pa")
+
+    # --8<-- [start:basic_add_data]
+    magical_characters = [
+        {
+            "id": 9,
+            "name": "Morgan le Fay",
+            "role": "Sorceress",
+            "description": "A powerful enchantress, Arthur's half-sister, and a complex figure who oscillates between aiding and opposing Camelot.",
+            "vector": [0.10, 0.84, 0.25, 0.70],
+            "stats": { "strength": 2, "courage": 3, "magic": 5, "wisdom": 4 }
+        },
+        {
+            "id": 10,
+            "name": "The Lady of the Lake",
+            "role": "Mystical Guardian",
+            "description": "A mysterious supernatural figure associated with Avalon, known for giving Arthur the sword Excalibur.",
+            "vector": [0.00, 0.90, 0.58, 0.88],
+            "stats": { "strength": 2, "courage": 3, "magic": 5, "wisdom": 5 }
+        }
+    ]
+    table.add(magical_characters)
+    # --8<-- [end:basic_add_data]
+    assert len(table) == 10
+
+    # --8<-- [start:basic_vector_search]
+    query_vector = [0.03, 0.85, 0.61, 0.90]
+    table.search(query_vector).limit(5).to_polars()
+    # --8<-- [end:basic_vector_search]
+
     # --8<-- [start:basic_add_columns]
-    table.add_columns({"power_score": "cast((level * 1.5) as float)"})
+    table.add_columns(
+        {
+            "power": "cast(((stats.strength + stats.courage + stats.magic + stats.wisdom) / 4.0) as float)"
+        }
+    )
     # --8<-- [end:basic_add_columns]
+    assert "power" in table.schema.names
+
+    # Run examples to illustrate search
+    # --8<-- [start:basic_vector_search_q1]
+    # Who are the characters similar to  "wizard"?
+    query_vector_1 = [0.03, 0.85, 0.61, 0.90]
+    r1 = (
+        table.search(query_vector_1)
+        .limit(5)
+        .select(["name", "role", "description"])
+        .to_polars()
+    )
+    print(r1)
+    # --8<-- [end:basic_vector_search_q1]
+
+    # --8<-- [start:basic_vector_search_q2]
+    # Who are the characters similar to "wizard" with high magic stats?
+    query_vector_2 = [0.03, 0.85, 0.61, 0.90]
+    r2 = (
+        table.search()
+        .where("stats.magic > 3")
+        .select(["name", "role", "description"])
+        .limit(5)
+        .to_polars()
+    )
+    print(r2)
+    # --8<-- [end:basic_vector_search_q2]
+
+    # --8<-- [start:basic_vector_search_q3]
+    # Who are the strongest characters?
+    r3 = (
+        table.search()
+        .where("stats.strength > 3")
+        .select(["name", "role", "description"])
+        .limit(5)
+        .to_polars()
+    )
+    print(r3)
+    # --8<-- [end:basic_vector_search_q3]
+
+    # --8<-- [start:basic_vector_search_q4]
+    # Who are the strongest characters?
+    r4 = (
+        table.search()
+        .select(["name", "role", "description", "power"])
+        .to_polars()
+    )
+    print(r4)
+    # --8<-- [end:basic_vector_search_q4]
 
     # --8<-- [start:basic_drop_columns]
-    table.drop_columns(["power_level"])
+    table.drop_columns(["power"])
     # --8<-- [end:basic_drop_columns]
     # --8<-- [start:basic_delete_rows]
-    table.delete('text = "rogue"')
+    table.delete('role = "Traitor Knight"')
     # --8<-- [end:basic_delete_rows]
+    assert len(table) == 9
     # --8<-- [start:basic_drop_table]
-    db.drop_table("creatures")
+    db.drop_table("camelot")
     # --8<-- [end:basic_drop_table]
-
-
-@pytest.mark.asyncio
-async def test_working_with_tables_async(db_path_factory):
-    uri = db_path_factory("adventure-db-async")
-    # --8<-- [start:basic_async_connect]
-    db = await lancedb.connect_async(str(uri))
-    # --8<-- [end:basic_async_connect]
-    # --8<-- [start:basic_async_create_table]
-    data = [
-        {"id": "1", "text": "knight", "vector": [0.9, 0.4, 0.8], "level": 12},
-        {"id": "2", "text": "ranger", "vector": [0.8, 0.4, 0.7], "level": 10},
-        {"id": "9", "text": "priest", "vector": [0.6, 0.2, 0.6], "level": 8},
-        {"id": "4", "text": "rogue", "vector": [0.7, 0.4, 0.7], "level": 9},
-    ]
-
-    table = await db.create_table("adventurers_async", data=data, mode="overwrite")
-    # --8<-- [end:basic_async_create_table]
-    # --8<-- [start:basic_async_create_table_pandas]
-    df = pd.DataFrame(
-        [
-            {"id": "1", "text": "knight", "vector": [0.9, 0.4, 0.8], "level": 12},
-            {"id": "2", "text": "ranger", "vector": [0.8, 0.4, 0.7], "level": 10},
-            {"id": "9", "text": "priest", "vector": [0.6, 0.2, 0.6], "level": 8},
-            {"id": "4", "text": "rogue", "vector": [0.7, 0.4, 0.7], "level": 9},
-        ]
-    )
-
-    await db.create_table("camp_roster_async", data=df, mode="overwrite")
-    # --8<-- [end:basic_async_create_table_pandas]
-    # --8<-- [start:basic_async_create_empty_table]
-    schema = pa.schema([pa.field("vector", pa.list_(pa.float32(), list_size=3))])
-    await db.create_table("empty_table_async", schema=schema, mode="overwrite")
-    # --8<-- [end:basic_async_create_empty_table]
-    # --8<-- [start:basic_async_open_table]
-    table = await db.open_table("adventurers_async")
-    # --8<-- [end:basic_async_open_table]
-    # --8<-- [start:basic_async_table_names]
-    assert "adventurers_async" in await db.table_names()
-    # --8<-- [end:basic_async_table_names]
-    # --8<-- [start:basic_async_add_data]
-    # Option 1: Add a list of dicts to a table
-    data = [
-        {"id": "7", "text": "mage", "vector": [0.6, 0.3, 0.4], "level": 11},
-        {"id": "8", "text": "bard", "vector": [0.3, 0.8, 0.4], "level": 9},
-    ]
-    await table.add(data)
-
-    # Option 2: Add a pandas DataFrame to a table
-    df = pd.DataFrame(data)
-    await table.add(df)
-    # --8<-- [end:basic_async_add_data]
-    # Add sufficient data for training
-    data = [
-        {
-            "id": f"scout-{x}",
-            "text": "scout",
-            "vector": random(3),
-            "level": int(randint(15, 25)),
-        }
-        for x in range(100)
-    ]
-    await table.add(data)
-    # --8<-- [start:basic_async_vector_search]
-    await table.vector_search([0.8, 0.3, 0.8]).limit(2).to_polars()
-    # --8<-- [end:basic_async_vector_search]
-    # --8<-- [start:basic_async_add_columns]
-    await table.add_columns({"power_score": "cast((level * 1.5) as float)"})
-    # --8<-- [end:basic_async_add_columns]
-    # --8<-- [start:basic_async_alter_columns]
-    await table.alter_columns(
-        {
-            "path": "power_score",
-            "rename": "power_level",
-            "data_type": pa.float64(),
-            "nullable": True,
-        }
-    )
-    # --8<-- [end:basic_async_alter_columns]
-    # --8<-- [start:basic_async_alter_columns_vector]
-    await table.alter_columns(
-        {
-            "path": "vector",
-            "data_type": pa.list_(pa.float16(), list_size=3),
-        }
-    )
-    # --8<-- [end:basic_async_alter_columns_vector]
-    # Change it back since we can get a panic with fp16
-    await table.alter_columns(
-        {
-            "path": "vector",
-            "data_type": pa.list_(pa.float32(), list_size=3),
-        }
-    )
-    # --8<-- [start:basic_async_drop_columns]
-    await table.drop_columns(["power_level"])
-    # --8<-- [end:basic_async_drop_columns]
-    await table.vector_search([0.7, 0.3, 0.5]).limit(2).to_pandas()
-    # --8<-- [start:basic_async_delete_rows]
-    await table.delete('text = "rogue"')
-    # --8<-- [end:basic_async_delete_rows]
-    # --8<-- [start:basic_async_drop_table]
-    await db.drop_table("adventurers_async")
-    # --8<-- [end:basic_async_drop_table]
+    assert "camelot" not in db.table_names()
