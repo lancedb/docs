@@ -16,3 +16,5 @@ fuzzy-example
 boost-example
 .DS_Store
 .vscode
+node_modules
+tests/rs/target

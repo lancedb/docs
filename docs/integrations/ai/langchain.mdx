@@ -1,7 +1,7 @@
 ---
 title: "LangChain"
 sidebarTitle: "LangChain"
-weight: 1
+
 ---
 
 import {
@@ -26,7 +26,8 @@ LangChain streamlines these stages (in figure above) by providing pre-built comp
 Integration of **Langchain** with **LanceDB** enables applications to retrieve the most relevant data by comparing query vectors against stored vectors, facilitating effective information retrieval. It results in better and context aware replies and actions by the LLMs.
 
 ## Quick Start
-You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model. Checkout Complete example here - [LangChain demo](../notebooks/langchain_example.ipynb)
+You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model.
+
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainQuickStart}
 </CodeBlock>
@@ -49,12 +50,12 @@ The exhaustive list of parameters for `LanceDB` vector store are :
 |`table_name` |(Optional) `str`| Name of your table in the database.|`'vectorstore'`|
 |`api_key` |(Optional `str`) |API key to use for LanceDB cloud database.|`None`|
 |`region` |(Optional) `str`| Region to use for LanceDB cloud database.|Only for LanceDB Cloud : `None`.|
-|`mode` |(Optional) `str` |Mode to use for adding data to the table. Valid values are "append" and "overwrite".|`'overwrite'`|
-|`table`| (Optional) `Any`|You can connect to an existing table of LanceDB, created outside of langchain, and utilize it.|`None`|
-|`distance`|(Optional) `str`|The choice of distance metric used to calculate the similarity between vectors.|`'l2'`|
-|`reranker` |(Optional) `Any`|The reranker to use for LanceDB.|`None`|
+|`mode` |(Optional) `str` | Mode to use for adding data to the table. Valid values are "append" and "overwrite".|`'overwrite'`|
+|`table`| (Optional) `Any`| You can connect to an existing table of LanceDB, created outside of langchain, and utilize it.|`None`|
+|`distance`|(Optional) `str`| The choice of distance metric used to calculate the similarity between vectors.|`'l2'`|
+|`reranker` |(Optional) `Any`| The reranker to use for LanceDB.|`None`|
 |`relevance_score_fn` |(Optional) `Callable[[float], float]` | Langchain relevance score function to be used.|`None`|
-|`limit`|`int`|Set the maximum number of results to return.|`DEFAULT_K` (it is 4)|
+|`limit`|`int`|Set the maximum number of results to return.| `DEFAULT_K` (it is 4)|
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainVectorStoreConfig}
@@ -62,7 +63,7 @@ The exhaustive list of parameters for `LanceDB` vector store are :
 
 ### Methods 
 
-##### add_texts()
+##### `add_texts()`
 
 This method turn texts into embedding and add it to the database.
 
