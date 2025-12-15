@@ -36,4 +36,3 @@ fn connect_cloud_config() -> (String, String, String) {
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
-

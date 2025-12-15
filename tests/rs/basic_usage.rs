@@ -14,7 +14,7 @@ type BatchIter = RecordBatchIterator<
 // --8<-- [start:basic_imports]
 use arrow_array::types::Float32Type;
 use arrow_array::{
-    FixedSizeListArray, Int16Array, Int8Array, RecordBatch, RecordBatchIterator, StringArray,
+    FixedSizeListArray, Int8Array, Int16Array, RecordBatch, RecordBatchIterator, StringArray,
     StructArray,
 };
 use arrow_schema::{DataType, Field, FieldRef, Schema};
@@ -50,10 +50,7 @@ fn camelot_schema() -> Arc<Schema> {
         Field::new("description", DataType::Utf8, false),
         Field::new(
             "vector",
-            DataType::FixedSizeList(
-                Arc::new(Field::new("item", DataType::Float32, true)),
-                4,
-            ),
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 4),
             false,
         ),
         Field::new(
@@ -119,10 +116,7 @@ fn characters_to_record_batch(schema: Arc<Schema>, characters: &[Character]) -> 
     .unwrap()
 }
 
-fn characters_to_reader(
-    schema: Arc<Schema>,
-    characters: &[Character],
-) -> BatchIter {
+fn characters_to_reader(schema: Arc<Schema>, characters: &[Character]) -> BatchIter {
     let batch = characters_to_record_batch(schema.clone(), characters);
     RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema)
 }
@@ -140,8 +134,8 @@ async fn main() {
     let db = connect(uri).execute().await.unwrap();
 
     // --8<-- [start:data_load]
-    let data: Vec<Character> = serde_json::from_str(&fs::read_to_string(camelot_json_path()).unwrap())
-        .unwrap();
+    let data: Vec<Character> =
+        serde_json::from_str(&fs::read_to_string(camelot_json_path()).unwrap()).unwrap();
     // --8<-- [end:data_load]
 
     let schema = camelot_schema();
@@ -168,10 +162,7 @@ async fn main() {
         Field::new("description", DataType::Utf8, false),
         Field::new(
             "vector",
-            DataType::FixedSizeList(
-                Arc::new(Field::new("item", DataType::Float32, true)),
-                4,
-            ),
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 4),
             false,
         ),
         Field::new(

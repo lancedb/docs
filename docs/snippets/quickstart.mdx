@@ -14,8 +14,6 @@ export const PyQuickstartVectorSearch1 = "# Let's search for vectors similar to 
 
 export const PyQuickstartVectorSearch2 = "# Let's search for vectors similar to \"wizard\"\nquery_vector = [0.7, 0.3, 0.5]\n\nresults = table.search(query_vector).limit(2).to_polars()\nprint(results)\n";
 
-export const TsQuickstartOutputPandas = "result = await table.search(queryVector).limit(2).toArray();\n";
-
 export const TsQuickstartAddData = "const moreData = [\n  { id: \"7\", text: \"mage\", vector: [0.6, 0.3, 0.4] },\n  { id: \"8\", text: \"bard\", vector: [0.3, 0.8, 0.4] },\n];\n\n// Add data to table\nawait table.add(moreData);\n";
 
 export const TsQuickstartCreateTable = "const data = [\n  { id: \"1\", text: \"knight\", vector: [0.9, 0.4, 0.8] },\n  { id: \"2\", text: \"ranger\", vector: [0.8, 0.4, 0.7] },\n  { id: \"9\", text: \"priest\", vector: [0.6, 0.2, 0.6] },\n  { id: \"4\", text: \"rogue\", vector: [0.7, 0.4, 0.7] },\n];\nlet table = await db.createTable(\"adventurers\", data, { mode: \"overwrite\" });\n";
@@ -26,7 +24,25 @@ export const TsQuickstartOpenTable = "table = await db.openTable(\"adventurers\"
 
 export const TsQuickstartOutputArray = "result = await table.search(queryVector).limit(2).toArray();\n";
 
+export const TsQuickstartOutputPandas = "result = await table.search(queryVector).limit(2).toArray();\n";
+
 export const TsQuickstartVectorSearch1 = "// Let's search for vectors similar to \"warrior\"\nlet queryVector = [0.8, 0.3, 0.8];\n\nlet result = await table.search(queryVector).limit(2).toArray();\n";
 
 export const TsQuickstartVectorSearch2 = "// Let's search for vectors similar to \"wizard\"\nqueryVector = [0.7, 0.3, 0.5];\n\nconst results = await table.search(queryVector).limit(2).toArray();\nconsole.log(results);\n";
+
+export const RsQuickstartAddData = "let more_data = vec![\n    Adventurer {\n        id: \"7\".to_string(),\n        text: \"mage\".to_string(),\n        vector: [0.6, 0.3, 0.4],\n    },\n    Adventurer {\n        id: \"8\".to_string(),\n        text: \"bard\".to_string(),\n        vector: [0.3, 0.8, 0.4],\n    },\n];\n\n// Add data to table\ntable\n    .add(adventurers_to_reader(schema.clone(), &more_data))\n    .execute()\n    .await\n    .unwrap();\n";
+
+export const RsQuickstartCreateTable = "// Define an arrow schema named adventurers_schema beforehand (omitted here for brevity)\nlet schema = adventurers_schema();\nlet data = vec![\n    Adventurer {\n        id: \"1\".to_string(),\n        text: \"knight\".to_string(),\n        vector: [0.9, 0.4, 0.8],\n    },\n    Adventurer {\n        id: \"2\".to_string(),\n        text: \"ranger\".to_string(),\n        vector: [0.8, 0.4, 0.7],\n    },\n    Adventurer {\n        id: \"9\".to_string(),\n        text: \"priest\".to_string(),\n        vector: [0.6, 0.2, 0.6],\n    },\n    Adventurer {\n        id: \"4\".to_string(),\n        text: \"rogue\".to_string(),\n        vector: [0.7, 0.4, 0.7],\n    },\n];\n// Create a new table with the data, overwriting if it already exists\nlet mut table = db\n    .create_table(\"adventurers\", adventurers_to_reader(schema.clone(), &data))\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await\n    .unwrap();\n";
+
+export const RsQuickstartCreateTableNoOverwrite = "table = db\n    .create_table(\"adventurers\", adventurers_to_reader(schema.clone(), &data))\n    .execute()\n    .await\n    .unwrap();\n";
+
+export const RsQuickstartDefineStruct = "// Define a struct representing the data schema\n#[derive(Debug, Clone, Serialize, Deserialize)]\nstruct Adventurer {\n    id: String,\n    text: String,\n    vector: [f32; 3],\n}\n";
+
+export const RsQuickstartOpenTable = "let table: Table = db.open_table(\"adventurers\").execute().await.unwrap();\n";
+
+export const RsQuickstartOutputArray = "let result: DataFrame = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(2)\n    .select(Select::Columns(vec![\"text\".to_string()]))\n    .execute()\n    .await\n    .unwrap()\n    .into_polars()\n    .await\n    .unwrap();\nlet text_col = result.column(\"text\").unwrap().str().unwrap();\nlet top_two = vec![\n    text_col.get(0).unwrap().to_string(),\n    text_col.get(1).unwrap().to_string(),\n];\n";
+
+export const RsQuickstartVectorSearch1 = "// Let's search for vectors similar to \"warrior\"\nlet query_vector = [0.8, 0.3, 0.8];\n\nlet result: DataFrame = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(2)\n    .select(Select::Columns(vec![\"text\".to_string()]))\n    .execute()\n    .await\n    .unwrap()\n    .into_polars()\n    .await\n    .unwrap();\n";
+
+export const RsQuickstartVectorSearch2 = "// Let's search for vectors similar to \"wizard\"\nlet query_vector = [0.7, 0.3, 0.5];\n\nlet result: DataFrame = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(2)\n    .select(Select::Columns(vec![\"text\".to_string()]))\n    .execute()\n    .await\n    .unwrap()\n    .into_polars()\n    .await\n    .unwrap();\nlet text_col = result.column(\"text\").unwrap().str().unwrap();\nlet top_two = vec![\n    text_col.get(0).unwrap().to_string(),\n    text_col.get(1).unwrap().to_string(),\n];\n";
 

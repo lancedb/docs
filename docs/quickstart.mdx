@@ -4,13 +4,15 @@ sidebarTitle: "Quickstart"
 description: "Get started with LanceDB in minutes."
 icon: rocket
 ---
-import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectCloud, RsConnect, RsConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
 import {
     PyQuickstartCreateTable,
     PyQuickstartVectorSearch1,
     PyQuickstartOutputPandas,
+    RsQuickstartCreateTable,
+    RsQuickstartDefineStruct,
+    RsQuickstartVectorSearch1,
     TsQuickstartCreateTable,
-    TsQuickstartOutputArray,
     TsQuickstartVectorSearch1,
 } from '/snippets/quickstart.mdx';
 
@@ -48,6 +50,11 @@ and pointing to a local path -- no servers needed!
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsConnect}
     </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    { "// Rust imports go here\n" }
+    {RsConnect}
+    </CodeBlock>
 </CodeGroup >
 
 
@@ -66,15 +73,21 @@ that points to where your data is stored, and you're ready to go.
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsConnectCloud}
     </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsConnectCloud}
+    </CodeBlock>
 </CodeGroup >
 
 For enormous scale and more advanced use cases beyond just search -- like
 feature engineering, model training and more, check out [LanceDB Enterprise](/enterprise).
 
-## 3. Create and query a table
+## 3. Obtain data and ingest into LanceDB
 
-Create a small table and ingest four records. The schema is inferred unless you
-pass one explicitly.
+Let's look at an example. We have the following records of characters in an adventure board game.
+The vector field is a list of floats. In the real world, these would contain hundreds of
+floating-point values and be generated via an embedding model, but the example below shows
+a simple version with just 3 values.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -84,10 +97,24 @@ pass one explicitly.
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartCreateTable}
     </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartDefineStruct}
+    {RsQuickstartCreateTable}
+    </CodeBlock>
 </CodeGroup >
 
-Now run a first vector similarity search. The query vector should match your
-stored vector dimensionality.
+Note that LanceDB requires at least one of the schema and the data to create a table.
+If you do not mention a schema parameter, it's inferred from the data.
+
+## 4. Run a vector similarity search
+
+Now, let's perform a vector similarity search. The query vector should have the same
+dimensionality as your data vectors. The search returns the most similar vectors based
+on Euclidean distance.
+
+Our query is a vector that represents a warrior, which isn't in the data we ingested.
+We'll find the result that's most similar to it!
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -97,21 +124,27 @@ stored vector dimensionality.
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartVectorSearch1}
     </CodeBlock>
-</CodeGroup >
 
-Collect the results as arrays or data frames.
-
-<Info>
-In Python, if you prefer working with Pandas, you can use the `to_pandas()` method to display the results
-as a Pandas DataFrame.
-<Expandable title="Code Example">
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyQuickstartOutputPandas}
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartVectorSearch1}
     </CodeBlock>
 </CodeGroup >
-</Expandable>
+
+<Accordion title="If you prefer working with Pandas, you can also get results as a Pandas DataFrame">
+  Use the `to_pandas()` method to convert query results into a Pandas DataFrame.
+  <CodeBlock filename="Python" language="Python" icon="python">
+  {PyQuickstartOutputPandas}
+  </CodeBlock>
+</Accordion>
+
+Depending on your language, you can collect query results as a list/array of objects or DataFrames
+to be used downstream in your application.
+
+<Info>
+See the full code for these examples (including helper functions) in the
+[docs repo](https://github.com/lancedb/docs/tree/main/tests).
 </Info>
+
 
 ## What's next?
 
