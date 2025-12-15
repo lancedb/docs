@@ -1,0 +1,56 @@
+name: Docs Check
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  broken-links-and-openapi:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout lance-namespace (upstream spec)
+        uses: actions/checkout@v4
+        with:
+          repository: lance-format/lance-namespace
+          ref: main
+          path: lance-namespace
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Mintlify CLI
+        run: npm install -g mintlify@latest
+
+      - name: Check broken links
+        run: |
+          set -euo pipefail
+          if command -v mint >/dev/null 2>&1; then
+            (cd docs && mint broken-links)
+          elif command -v mintlify >/dev/null 2>&1; then
+            (cd docs && mintlify broken-links)
+          else
+            (cd docs && npx -y mintlify@latest broken-links)
+          fi
+
+      - name: Copy lance-namespace REST API spec
+        run: |
+          set -euo pipefail
+          test -s lance-namespace/docs/src/rest.yaml
+          cp lance-namespace/docs/src/rest.yaml docs/api-reference/rest/openapi.yml
+
+      - name: Ensure OpenAPI spec is synced with source
+        run: |
+          set -euo pipefail
+          if ! git diff --exit-code -- docs/api-reference/rest/openapi.yml; then
+            echo "::error::docs/api-reference/rest/openapi.yml differs from upstream lance-format/lance-namespace (docs/src/rest.yaml). Commit the updated file."
+            exit 1
+          fi
