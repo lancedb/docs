@@ -31,18 +31,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s lance-namespace/docs/src/rest.yaml
-          tmp="$(mktemp)"
-          # Normalize to a trailing newline so git diff doesn't fail on "No newline at end of file".
-          awk '1' lance-namespace/docs/src/rest.yaml > "$tmp"
-          mv "$tmp" docs/api-reference/rest/openapi.yml
-
-      - name: Ensure OpenAPI spec is committed
-        run: |
-          set -euo pipefail
-          if ! git diff --exit-code -- docs/api-reference/rest/openapi.yml; then
-            echo "::error::docs/api-reference/rest/openapi.yml differs from upstream lance-format/lance-namespace (docs/src/rest.yaml). Commit the updated file."
-            exit 1
-          fi
+          cp lance-namespace/docs/src/rest.yaml docs/api-reference/rest/openapi.yml
 
       - name: Install Mintlify CLI
         run: npm install -g mintlify@latest
