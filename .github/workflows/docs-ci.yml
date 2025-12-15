@@ -51,6 +51,6 @@ jobs:
         run: |
           set -euo pipefail
           if ! git diff --exit-code -- docs/api-reference/rest/openapi.yml; then
-            echo "::error::docs/api-reference/rest/openapi.yml differs from upstream lance-format/lance-namespace (docs/src/rest.yaml). Commit the updated file."
+            echo "::error::docs/api-reference/rest/openapi.yml differs from upstream lance-format/lance-namespace (https://github.com/lance-format/lance-namespace/blob/main/docs/src/rest.yaml).\nCommit the updated file."
             exit 1
           fi
