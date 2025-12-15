@@ -4,13 +4,15 @@ sidebarTitle: "Quickstart"
 description: "Get started with LanceDB in minutes."
 icon: rocket
 ---
-import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectCloud, RsConnect, RsConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
 import {
     PyQuickstartCreateTable,
     PyQuickstartVectorSearch1,
     PyQuickstartOutputPandas,
+    RsQuickstartCreateTable,
+    RsQuickstartDefineStruct,
+    RsQuickstartVectorSearch1,
     TsQuickstartCreateTable,
-    TsQuickstartOutputArray,
     TsQuickstartVectorSearch1,
 } from '/snippets/quickstart.mdx';
 
@@ -48,6 +50,11 @@ and pointing to a local path -- no servers needed!
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsConnect}
     </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    { "// Rust imports go here\n" }
+    {RsConnect}
+    </CodeBlock>
 </CodeGroup >
 
 
@@ -66,15 +73,24 @@ that points to where your data is stored, and you're ready to go.
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsConnectCloud}
     </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsConnectCloud}
+    </CodeBlock>
 </CodeGroup >
 
 For enormous scale and more advanced use cases beyond just search -- like
 feature engineering, model training and more, check out [LanceDB Enterprise](/enterprise).
 
-## 3. Create and query a table
+## 3. Obtain data and ingest into LanceDB
 
-Create a small table and ingest four records. The schema is inferred unless you
-pass one explicitly.
+Let's look at an example. We have the following records of characters in an adventure board game.
+The vector column holds 3-dimensional embeddings representing each character.
+
+To ingest the data into LanceDB, obtain data of the required shape
+and pass in the data object to the `create_table` method as shown below.
+Note that LanceDB tables require a schema. If you don't provide one, LanceDB
+will infer it from the data.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -84,10 +100,27 @@ pass one explicitly.
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartCreateTable}
     </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartDefineStruct}
+    {RsQuickstartCreateTable}
+    </CodeBlock>
 </CodeGroup >
 
-Now run a first vector similarity search. The query vector should match your
-stored vector dimensionality.
+<Warning>
+The `vector` arrays here are synthetic and for demonstration purposes only. In your real-world
+applications, you'd generate these vectors from the raw text fields using a suitable embedding model.
+</Warning>
+
+## 4. Run a vector similarity search
+
+Now, let's perform a vector similarity search. The query vector should have the same
+dimensionality as your data vectors and be generated using the same embedding model.
+The search returns the most similar vectors based on a chosen distance metric (default is L2,
+or Euclidean distance).
+
+Our query is a vector that represents a "warrior". Let's find the result that's most similar
+to it!
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -97,21 +130,30 @@ stored vector dimensionality.
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsQuickstartVectorSearch1}
     </CodeBlock>
-</CodeGroup >
 
-Collect the results as arrays or data frames.
-
-<Info>
-In Python, if you prefer working with Pandas, you can use the `to_pandas()` method to display the results
-as a Pandas DataFrame.
-<Expandable title="Code Example">
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyQuickstartOutputPandas}
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartVectorSearch1}
     </CodeBlock>
 </CodeGroup >
-</Expandable>
+
+The example for Python above shows how to convert results to a Polars DataFrame.
+Depending on your language, you can collect query results as a list/array of objects or DataFrames
+to be used downstream in your application.
+
+<Accordion title="Pandas users in Python can get results as a Pandas DataFrame">
+  Use the `to_pandas()` method to convert query results into a Pandas DataFrame.
+  <CodeBlock filename="Python" language="Python" icon="python">
+  {PyQuickstartOutputPandas}
+  </CodeBlock>
+</Accordion>
+
+
+<Info>
+See the full code for these examples (including helper functions) in the
+`quickstart` file for the appropriate client language in the
+[docs repo](https://github.com/lancedb/docs/tree/main/tests).
 </Info>
+
 
 ## What's next?
 
@@ -122,7 +164,7 @@ allows you to find the most relevant data based on semantic similarity.
 Note that LanceDB is much more than "just a vector database" -- it's
 [a multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/).
 There's a lot more you can do with it! Continue
-to the [Table management](/tables) guide to build on
+to the [Table management](/tables/) guide to build on
 this example with schema options, appending data, updates, and versioning.
 
 As you explore LanceDB further, you can combine vector search with other techniques like filtering based
