@@ -27,6 +27,23 @@ jobs:
         with:
           node-version: 20
 
+      - name: Copy lance-namespace REST API spec
+        run: |
+          set -euo pipefail
+          test -s lance-namespace/docs/src/rest.yaml
+          tmp="$(mktemp)"
+          # Normalize to a trailing newline so git diff doesn't fail on "No newline at end of file".
+          awk '1' lance-namespace/docs/src/rest.yaml > "$tmp"
+          mv "$tmp" docs/api-reference/rest/openapi.yml
+
+      - name: Ensure OpenAPI spec is committed
+        run: |
+          set -euo pipefail
+          if ! git diff --exit-code -- docs/api-reference/rest/openapi.yml; then
+            echo "::error::docs/api-reference/rest/openapi.yml differs from upstream lance-format/lance-namespace (docs/src/rest.yaml). Commit the updated file."
+            exit 1
+          fi
+
       - name: Install Mintlify CLI
         run: npm install -g mintlify@latest
 
@@ -39,18 +56,4 @@ jobs:
             (cd docs && mintlify broken-links)
           else
             (cd docs && npx -y mintlify@latest broken-links)
-          fi
-
-      - name: Copy lance-namespace REST API spec
-        run: |
-          set -euo pipefail
-          test -s lance-namespace/docs/src/rest.yaml
-          cp lance-namespace/docs/src/rest.yaml docs/api-reference/rest/openapi.yml
-
-      - name: Ensure OpenAPI spec is synced with source
-        run: |
-          set -euo pipefail
-          if ! git diff --exit-code -- docs/api-reference/rest/openapi.yml; then
-            echo "::error::docs/api-reference/rest/openapi.yml differs from upstream lance-format/lance-namespace (https://github.com/lance-format/lance-namespace/blob/main/docs/src/rest.yaml).\nCommit the updated file."
-            exit 1
           fi
