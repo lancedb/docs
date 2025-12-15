@@ -1,0 +1,53 @@
+name: Sync OpenAPI Spec
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout lance-namespace (upstream spec)
+        uses: actions/checkout@v4
+        with:
+          repository: lance-format/lance-namespace
+          ref: main
+          path: lance-namespace
+
+      - name: Copy lance-namespace REST API spec
+        run: |
+          set -euo pipefail
+          test -s lance-namespace/docs/src/rest.yaml
+          tmp="$(mktemp)"
+          # Normalize to a trailing newline so git diff doesn't fail on "No newline at end of file".
+          awk '1' lance-namespace/docs/src/rest.yaml > "$tmp"
+          mv "$tmp" docs/api-reference/rest/openapi.yml
+
+      - name: Create pull request
+        id: cpr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "chore(docs): sync OpenAPI spec"
+          commit-message: "chore(docs): sync OpenAPI spec"
+          body: |
+            Syncs `docs/api-reference/rest/openapi.yml` from `lance-format/lance-namespace` (`docs/src/rest.yaml`).
+          branch: "chore/sync-openapi"
+          delete-branch: true
+
+      - name: Enable auto-merge (when checks pass)
+        if: steps.cpr.outputs.pull-request-number != ''
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.cpr.outputs.pull-request-number }}
+          merge-method: squash
