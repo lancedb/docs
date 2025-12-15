@@ -85,9 +85,12 @@ feature engineering, model training and more, check out [LanceDB Enterprise](/en
 ## 3. Obtain data and ingest into LanceDB
 
 Let's look at an example. We have the following records of characters in an adventure board game.
-The vector field is a list of floats. In the real world, these would contain hundreds of
-floating-point values and be generated via an embedding model, but the example below shows
-a simple version with just 3 values.
+The vector column holds 3-dimensional embeddings representing each character.
+
+To ingest the data into LanceDB, obtain data of the required shape
+and pass in the data object to the `create_table` method as shown below.
+Note that LanceDB tables require a schema. If you don't provide one, LanceDB
+will infer it from the data.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -104,17 +107,20 @@ a simple version with just 3 values.
     </CodeBlock>
 </CodeGroup >
 
-Note that LanceDB requires at least one of the schema and the data to create a table.
-If you do not mention a schema parameter, it's inferred from the data.
+<Warning>
+The `vector` arrays here are synthetic and for demonstration purposes only. In your real-world
+applications, you'd generate these vectors from the raw text fields using a suitable embedding model.
+</Warning>
 
 ## 4. Run a vector similarity search
 
 Now, let's perform a vector similarity search. The query vector should have the same
-dimensionality as your data vectors. The search returns the most similar vectors based
-on Euclidean distance.
+dimensionality as your data vectors and be generated using the same embedding model.
+The search returns the most similar vectors based on a chosen distance metric (default is L2,
+or Euclidean distance).
 
-Our query is a vector that represents a warrior, which isn't in the data we ingested.
-We'll find the result that's most similar to it!
+Our query is a vector that represents a "warrior". Let's find the result that's most similar
+to it!
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -130,18 +136,21 @@ We'll find the result that's most similar to it!
     </CodeBlock>
 </CodeGroup >
 
-<Accordion title="If you prefer working with Pandas, you can also get results as a Pandas DataFrame">
+The example for Python above shows how to convert results to a Polars DataFrame.
+Depending on your language, you can collect query results as a list/array of objects or DataFrames
+to be used downstream in your application.
+
+<Accordion title="Pandas users in Python can get results as a Pandas DataFrame">
   Use the `to_pandas()` method to convert query results into a Pandas DataFrame.
   <CodeBlock filename="Python" language="Python" icon="python">
   {PyQuickstartOutputPandas}
   </CodeBlock>
 </Accordion>
 
-Depending on your language, you can collect query results as a list/array of objects or DataFrames
-to be used downstream in your application.
 
 <Info>
 See the full code for these examples (including helper functions) in the
+`quickstart` file for the appropriate client language in the
 [docs repo](https://github.com/lancedb/docs/tree/main/tests).
 </Info>
 
