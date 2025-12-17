@@ -97,7 +97,8 @@ def test_basic_usage(db_path_factory):
 
     # --8<-- [start:basic_vector_search]
     query_vector = [0.03, 0.85, 0.61, 0.90]
-    table.search(query_vector).limit(5).to_polars()
+    result = table.search(query_vector).limit(5).to_polars()
+    print(result)
     # --8<-- [end:basic_vector_search]
 
     # --8<-- [start:basic_add_columns]

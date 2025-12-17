@@ -155,8 +155,10 @@ document: struct<content: string not null, source: string not null> not null
 
 #### Validators
 
-Note that neither Pydantic nor PyArrow automatically validates that input data
-is of the correct timezone, but this is easy to add as a custom field validator:
+Because `LanceModel` inherits from Pydantic's `BaseModel`, you can combine them with Pydantic's
+[field validators](https://docs.pydantic.dev/latest/concepts/validators). The example
+below shows how to add a validator to ensure that only valid timezone-aware datetime objects are used
+for a `created_at` field.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -164,12 +166,7 @@ is of the correct timezone, but this is easy to add as a custom field validator:
     </CodeBlock>
 </CodeGroup>
 
-When you run this code it should print "A ValidationError was raised."
-
-#### Pydantic custom types
-
-LanceDB does NOT yet support converting pydantic custom types. If this is something you need,
-please file a feature request on the [LanceDB Github repo](https://github.com/lancedb/lancedb/issues/new).
+When you run this code it, should raise the `ValidationError`.
 
 ### Using Iterators / Writing Large Datasets
 
@@ -198,7 +195,9 @@ If you forget the name of your table, you can always get a listing of all table 
 </CodeGroup>
 
 ## Creating empty table
-You can create an empty table for scenarios where you want to add data to the table later. An example would be when you want to collect data from a stream/external file and then add it to a table in batches.
+You can create an empty table for scenarios where you want to add data to the table later.
+An example would be when you want to collect data from a stream/external file and then add it to a table in
+batches.
 
 An empty table can be initialized via a PyArrow schema.
 
@@ -218,7 +217,8 @@ that has been extended to support LanceDB specific types like `Vector`.
     </CodeBlock>
 </CodeGroup>
 
-Once the empty table has been created, you can add data to it, as explained in the next section on [working with data](/tables/update).
+Once the empty table has been created, you can append to it or modify its contents,
+as explained in the [updating and modifying tables](/tables/update) section.
 
 ## Drop a table
 

@@ -124,6 +124,7 @@ async fn main() {
         .into_polars()
         .await
         .unwrap();
+    println!("{result:?}");
     // --8<-- [end:quickstart_vector_search_1]
     let text_col = result.column("text").unwrap().str().unwrap();
     assert_eq!(text_col.get(0).unwrap(), "knight");
@@ -141,6 +142,7 @@ async fn main() {
         .into_polars()
         .await
         .unwrap();
+    println!("{result:?}");
     let text_col = result.column("text").unwrap().str().unwrap();
     let top_two = vec![
         text_col.get(0).unwrap().to_string(),
@@ -192,6 +194,7 @@ async fn main() {
         .into_polars()
         .await
         .unwrap();
+    println!("{result:?}");
     let text_col = result.column("text").unwrap().str().unwrap();
     let top_two = vec![
         text_col.get(0).unwrap().to_string(),
