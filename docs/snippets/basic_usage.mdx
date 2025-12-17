@@ -22,7 +22,7 @@ export const PyBasicImports = "import json\n\nimport lancedb\nimport pandas as p
 
 export const PyBasicOpenTable = "table = db.open_table(\"camelot\")\n";
 
-export const PyBasicVectorSearch = "query_vector = [0.03, 0.85, 0.61, 0.90]\ntable.search(query_vector).limit(5).to_polars()\n";
+export const PyBasicVectorSearch = "query_vector = [0.03, 0.85, 0.61, 0.90]\nresult = table.search(query_vector).limit(5).to_polars()\nprint(result)\n";
 
 export const PyBasicVectorSearchQ1 = "# Who are the characters similar to  \"wizard\"?\nquery_vector_1 = [0.03, 0.85, 0.61, 0.90]\nr1 = (\n    table.search(query_vector_1)\n    .limit(5)\n    .select([\"name\", \"role\", \"description\"])\n    .to_polars()\n)\nprint(r1)\n";
 
@@ -52,7 +52,7 @@ export const TsBasicImports = "import * as lancedb from \"@lancedb/lancedb\";\ni
 
 export const TsBasicOpenTable = "table = await db.openTable(\"camelot\");\n";
 
-export const TsBasicVectorSearch = "const queryVector = [0.03, 0.85, 0.61, 0.9];\nawait table.search(queryVector).limit(5).toArray();\n";
+export const TsBasicVectorSearch = "const queryVector = [0.03, 0.85, 0.61, 0.9];\nconst result = await table.search(queryVector).limit(5).toArray();\nconsole.log(result);\n";
 
 export const TsBasicVectorSearchQ1 = "// Who are the characters similar to  \"wizard\"?\nconst queryVector1 = [0.03, 0.85, 0.61, 0.9];\nconst r1 = await table\n  .search(queryVector1)\n  .limit(5)\n  .select([\"name\", \"role\", \"description\"])\n  .toArray();\nconsole.log(r1);\n";
 
@@ -88,7 +88,7 @@ export const RsBasicImports = "use arrow_array::types::Float32Type;\nuse arrow_a
 
 export const RsBasicOpenTable = "table = db.open_table(\"camelot\").execute().await.unwrap();\n";
 
-export const RsBasicVectorSearch = "let query_vector = [0.03, 0.85, 0.61, 0.90];\nlet _ = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(5)\n    .execute()\n    .await\n    .unwrap()\n    .try_collect::<Vec<_>>()\n    .await\n    .unwrap();\n";
+export const RsBasicVectorSearch = "let query_vector = [0.03, 0.85, 0.61, 0.90];\nlet result = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(5)\n    .execute()\n    .await\n    .unwrap()\n    .try_collect::<Vec<_>>()\n    .await\n    .unwrap();\nprintln!(\"{result:?}\");\n";
 
 export const RsBasicVectorSearchQ1 = "// Who are the characters similar to  \"wizard\"?\nlet query_vector_1 = [0.03, 0.85, 0.61, 0.90];\nlet r1 = table\n    .query()\n    .nearest_to(&query_vector_1)\n    .unwrap()\n    .limit(5)\n    .select(Select::Columns(vec![\n        \"name\".to_string(),\n        \"role\".to_string(),\n        \"description\".to_string(),\n    ]))\n    .execute()\n    .await\n    .unwrap()\n    .try_collect::<Vec<_>>()\n    .await\n    .unwrap();\nprintln!(\"{r1:?}\");\n";
 

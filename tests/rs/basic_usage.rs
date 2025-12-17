@@ -222,7 +222,7 @@ async fn main() {
 
     // --8<-- [start:basic_vector_search]
     let query_vector = [0.03, 0.85, 0.61, 0.90];
-    let _ = table
+    let result = table
         .query()
         .nearest_to(&query_vector)
         .unwrap()
@@ -233,6 +233,7 @@ async fn main() {
         .try_collect::<Vec<_>>()
         .await
         .unwrap();
+    println!("{result:?}");
     // --8<-- [end:basic_vector_search]
 
     // --8<-- [start:basic_add_columns]

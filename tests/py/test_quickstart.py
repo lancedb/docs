@@ -31,12 +31,14 @@ def test_quickstart(db_path_factory):
 
     # Ensure you run `pip install polars` beforehand
     result = table.search(query_vector).limit(2).to_polars()
+    print(result)
     # --8<-- [end:quickstart_vector_search_1]
     assert result.head(1)["text"][0] == "knight"
 
     # --8<-- [start:quickstart_output_pandas]
     # Ensure you run `pip install pandas` beforehand
     result = table.search(query_vector).limit(2).to_pandas()
+    print(result)
     # --8<-- [end:quickstart_output_pandas]
     assert result.iloc[0]["text"] == "knight"
 
@@ -63,7 +65,6 @@ def test_quickstart(db_path_factory):
     print(results)
     # --8<-- [end:quickstart_vector_search_2]
     assert results.head(1)["text"][0] == "mage"
-
 
 
 

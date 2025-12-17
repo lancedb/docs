@@ -30,11 +30,13 @@ test("quickstart example (async)", async () => {
     let queryVector = [0.8, 0.3, 0.8];
 
     let result = await table.search(queryVector).limit(2).toArray();
+    console.table(result);
     // --8<-- [end:quickstart_vector_search_1]
     expect(result[0].text).toBe("knight");
 
     // --8<-- [start:quickstart_output_array]
     result = await table.search(queryVector).limit(2).toArray();
+    console.table(result);
     // --8<-- [end:quickstart_output_array]
     expect(result[0].text).toBe("knight");
 
@@ -58,7 +60,7 @@ test("quickstart example (async)", async () => {
     queryVector = [0.7, 0.3, 0.5];
 
     const results = await table.search(queryVector).limit(2).toArray();
-    console.log(results);
+    console.table(results);
     // --8<-- [end:quickstart_vector_search_2]
     expect(results[0].text).toBe("mage");
   });
