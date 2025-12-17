@@ -234,9 +234,9 @@ initial testing).
     </CodeBlock>
 </CodeGroup >
 
-<Note>
+<Warning>
 If you want to avoid overwriting an existing table, omit the overwrite mode.
-</Note>
+</Warning>
 
 ### From Pandas DataFrames
 <Badge color="green">Python Only</Badge>
@@ -287,14 +287,13 @@ do so by defining an Arrow schema explicitly.
 Once the empty table is defined, LanceDB is ready to accept new data via
 the `add` method, as shown in the next section.
 
-<Tip>
-**Display table schema**
-
+<Card title="Display table schema" icon="book">
 LanceDB tables are type-aware, leveraging Apache Arrow under the hood.
-In Python, you can display a given table's schema using the `schema` property.
-For example running `print(table.schema)` would show something like the following:
+You can display a given table's schema using the `schema` property or
+method. For example, in Python, running `print(table.schema)` would show
+something like the following:
 
-```
+```txt expandable=true
 id: int64
 name: string
 role: string
@@ -307,7 +306,7 @@ stats: struct<courage: int64, magic: int64, strength: int64, wisdom: int64>
   child 2, strength: int64
   child 3, wisdom: int64
 ```
-</Tip>
+</Card>
 
 ## Append data to a table
 
