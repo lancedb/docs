@@ -1,4 +1,4 @@
-# Writing guide
+# Writing Guide
 
 This is a documentation site built in [Mintlify](https://www.mintlify.com/docs). Writing in Mintlify is similar to `README.md`
 docs you may be used to writing in markdown -- the main difference is that Mintlify uses MDX files (Markdown + JSX) files
@@ -83,7 +83,7 @@ Collapsible text content here....
 Math equations are supported via standard KaTeX plugins. You can write any LaTeX-style equation and get it rendered on the
 page by enclosing it in `$$` symbols.
 
-```
+```mdx
 $$
 E = mc^2
 $$
@@ -112,7 +112,7 @@ import * as lancedb from "@lancedb/lancedb";
 use lancedb::connect;
 ```
 </CodeGroup>
-```
+
 
 This will allow you to include code snippets from multiple languages, grouped together on the docs page so that the user
 can click on their language of choice via tabs.
@@ -141,11 +141,9 @@ import { PyConnect, TsConnect, RsConnect } from '/snippets/connection.mdx';
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    { "// Rust imports go here\n" }
     {RsConnect}
     </CodeBlock>
 </CodeGroup >
-
 ```
 
 ### Option 3: Vanilla backticks
