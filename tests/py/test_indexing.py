@@ -36,16 +36,14 @@ def test_vector_index_configure_ivf(tmp_db):
 
 def test_vector_index_setup(tmp_db):
     tmp_db.create_table(
-        "vector_index_setup",
+        "vector-index-tbl",
         _make_vector_rows(8, 4),
         mode="overwrite",
     )
 
-    # --8<-- [start:vector_index_setup]
-    import lancedb
-
     db = tmp_db
-    table_name = "vector_index_setup"
+    # --8<-- [start:vector_index_setup]
+    table_name = "vector-index-tbl"
     table = db.open_table(table_name)
     # --8<-- [end:vector_index_setup]
 
@@ -54,12 +52,14 @@ def test_vector_index_setup(tmp_db):
 
 def test_vector_index_build_ivf(tmp_db):
     table = tmp_db.create_table(
-        "vector_index_build_ivf",
+        "vector-index-build-ivf",
         _make_vector_rows(512, 4, column="keywords_embeddings"),
         mode="overwrite",
     )
-
+    db = tmp_db
     # --8<-- [start:vector_index_build_ivf]
+    table_name = "vector-index-build-ivf"
+    table = db.open_table(table_name)
     table.create_index(
         metric="cosine",
         vector_column_name="keywords_embeddings",
@@ -119,7 +119,7 @@ def test_vector_index_hnsw(tmp_db):
 
 
 def test_vector_index_binary(tmp_db):
-    table_name = "test-hamming"
+    table_name = "hamming-index-tbl"
     ndim = 256
     schema = pa.schema(
         [
@@ -328,14 +328,14 @@ def test_scalar_index_uuid(tmp_db):
 
 def test_fts_index_create(tmp_db):
     table = tmp_db.create_table(
-        "fts_index_create",
+        "fts-index-create",
         [{"text": "hello world", "vector": [0.1, 0.2]}],
         mode="overwrite",
     )
 
     db = tmp_db
     # --8<-- [start:fts_index_create]
-    table_name = "fts_index_create"
+    table_name = "fts-index-create"
     table = db.open_table(table_name)
     table.create_fts_index("text")
     # --8<-- [end:fts_index_create]
@@ -345,13 +345,18 @@ def test_fts_index_create(tmp_db):
 
 def test_fts_index_wait(tmp_db):
     table = tmp_db.create_table(
-        "fts_index_wait",
+        "fts-index-wait",
         [{"text": "full text search"}],
         mode="overwrite",
     )
+    
+    db = tmp_db
+    # --8<-- [start:fts_index_wait]
+    table_name = "fts-index-wait"
+
+    table = db.open_table(table_name)
     table.create_fts_index("text")
 
-    # --8<-- [start:fts_index_wait]
     index_name = "text_idx"
     table.wait_for_index([index_name])
     # --8<-- [end:fts_index_wait]
@@ -441,11 +446,8 @@ def test_reindexing_incremental(tmp_db):
         [{"vector": [3.1, 4.1], "text": "Frodo was a happy puppy"}],
         mode="overwrite",
     )
-
-    # --8<-- [start:reindexing_incremental]
-    import lancedb
-
     db = tmp_db
+    # --8<-- [start:reindexing_incremental]
     table = db.open_table("reindexing_incremental")
     table.add([{"vector": [3.1, 4.1], "text": "Frodo was a happy puppy"}])
     table.optimize()

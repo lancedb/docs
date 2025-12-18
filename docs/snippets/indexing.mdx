@@ -2,15 +2,15 @@
 
 export const PyFtsIndexAsync = "import asyncio\n\nimport lancedb\nimport polars as pl\nfrom lancedb.index import FTS\n\ndata = pl.DataFrame(\n    {\n        \"id\": [1, 2],\n        \"text\": [\n            \"His first language is spanish\",\n            \"Her first language is english\",\n        ],\n    }\n)\n\nasync def main(data: pl.DataFrame):\n    uri = \"ex_lancedb\"\n    db = await lancedb.connect_async(uri)\n    tbl = await db.create_table(\"my_text\", data=data, mode=\"overwrite\")\n\n    await tbl.create_index(\"text\", config=FTS(language=\"English\"))\n\n    response = await tbl.search(\"spanish\", query_type=\"fts\")\n    result = await response.limit(1).to_polars()\n    print(result)\n    return result\n\nif __name__ == \"__main__\":\n    asyncio.run(main(data))\n";
 
-export const PyFtsIndexCreate = "table_name = \"fts_index_create\"\ntable = db.open_table(table_name)\ntable.create_fts_index(\"text\")\n";
+export const PyFtsIndexCreate = "table_name = \"fts-index-create\"\ntable = db.open_table(table_name)\ntable.create_fts_index(\"text\")\n";
 
-export const PyFtsIndexWait = "index_name = \"text_idx\"\ntable.wait_for_index([index_name])\n";
+export const PyFtsIndexWait = "table_name = \"fts-index-wait\"\n\ntable = db.open_table(table_name)\ntable.create_fts_index(\"text\")\n\nindex_name = \"text_idx\"\ntable.wait_for_index([index_name])\n";
 
 export const PyGpuIndexCuda = "table.create_index(\n    num_partitions=256,\n    num_sub_vectors=96,\n    accelerator=\"cuda\",\n)\n";
 
 export const PyGpuIndexMps = "table.create_index(\n    num_partitions=256,\n    num_sub_vectors=96,\n    accelerator=\"mps\",\n)\n";
 
-export const PyReindexingIncremental = "import lancedb\n\ndb = tmp_db\ntable = db.open_table(\"reindexing_incremental\")\ntable.add([{\"vector\": [3.1, 4.1], \"text\": \"Frodo was a happy puppy\"}])\ntable.optimize()\n";
+export const PyReindexingIncremental = "table = db.open_table(\"reindexing_incremental\")\ntable.add([{\"vector\": [3.1, 4.1], \"text\": \"Frodo was a happy puppy\"}])\ntable.optimize()\n";
 
 export const PyScalarIndexBuild = "tbl = db.open_table(\"scalar_index_build\")\ntbl.create_scalar_index(\"book_id\")\ntbl.create_scalar_index(\"publisher\", index_type=\"BITMAP\")\n";
 
@@ -42,7 +42,7 @@ export const PyVectorIndexBinarySearch = "query = np.random.randint(0, 2, size=n
 
 export const PyVectorIndexBuildHnsw = "table.create_index(index_type=\"IVF_HNSW_SQ\")\n";
 
-export const PyVectorIndexBuildIvf = "table.create_index(\n    metric=\"cosine\",\n    vector_column_name=\"keywords_embeddings\",\n)\n";
+export const PyVectorIndexBuildIvf = "table_name = \"vector-index-build-ivf\"\ntable = db.open_table(table_name)\ntable.create_index(\n    metric=\"cosine\",\n    vector_column_name=\"keywords_embeddings\",\n)\n";
 
 export const PyVectorIndexCheckStatus = "index_name = \"keywords_embeddings_idx\"\ntable.wait_for_index([index_name])\nprint(table.index_stats(index_name))\n";
 
@@ -52,5 +52,5 @@ export const PyVectorIndexQueryHnsw = "tbl = table\ntbl.search(np.random.random(
 
 export const PyVectorIndexQueryIvf = "tbl = table\ntbl.search(np.random.random((1536))).limit(2).nprobes(20).refine_factor(\n    10\n).to_pandas()\n";
 
-export const PyVectorIndexSetup = "import lancedb\n\ndb = tmp_db\ntable_name = \"vector_index_setup\"\ntable = db.open_table(table_name)\n";
+export const PyVectorIndexSetup = "table_name = \"vector-index-tbl\"\ntable = db.open_table(table_name)\n";
 
