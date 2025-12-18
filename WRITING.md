@@ -40,7 +40,7 @@ keywords: ["lance"]
 ---
 ```
 
-> ![NOTE]
+> [!NOTE]
 > The example above showed a custom SVG icon in the `/static/assets/` directory of this repo, but you can pick stock
 > icons from [fontawesome.com](https://fontawesome.com/icons) by searching for a high-level concept by name.
 
@@ -189,7 +189,7 @@ You can check for broken lines in the site by running the following command.
 mint broken-links
 ```
 
-> ![NOTE]
+> [!NOTE]
 > The broken link checker **only** checks for internal (relative) links to other pages within this docs repo.
 > It cannot check external site links.
 

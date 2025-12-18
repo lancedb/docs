@@ -1,23 +1,35 @@
 # LanceDB Mintlify Documentation
 
-Home of the new LanceDB documentation on Mintlify.
+Home of the [LanceDB](https://lancedb.com/) documentation. Built using [Mintlify](https://www.mintlify.com/).
 
 ## Development
 
 Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify) to preview the documentation changes locally. To install, use the following command
 
-```
+```bash
 npm i -g mintlify
 ```
 
 Run the following commands at the root of the documentation (`/docs/` in this repo, where `docs.json` is located).
 
-```
+```bash
 cd docs
 mint dev
 ```
 
+Check broken links (applies to internal links within this docs site only):
+
+```bash
+mint broken-links
+```
+
 ## Generate snippets
+
+To generate snippets, use `uv` to sync your local Python environment so that you can run the Python script described below.
+
+```bash
+uv sync
+```
 
 The Python, TypeScript and Rust code snippets used in the documentation are tested prior to use in the docs. These tests are located in the `tests/` directory. Run the tests locally for each language
 when building the docs locally.
@@ -38,17 +50,20 @@ make rs
 make snippets
 ```
 
+The generated snippets are placed in the appropriate file in `/docs/snippets/` directory, making them
+available for importing in the corresponding file.
+
 The following sequence of steps are run:
 
-1. Run tests for py, ts, rs files to verify that the code works
-2. Generate MDX snippets
-3. Import MDX snippets in the corresponding documentation page
-4. Add the NDX snippet inside a `<CodeBlock>` component in Mintlify
+1. Run tests for py, ts, rs files that contain new code you added, and verify that the tests pass locally
+2. Generate MDX snippets via the `make snippets` command
+3. Import MDX snippets in the corresponding MDX docs page
+4. Include the MDX snippet as a parameter inside a `<CodeBlock>` JSX component in Mintlify
 
-This ensures that the code in the docs is in line with the latest LanceDB API
+Creating and using snippets for code blocks in the MDX files helps ensure that we are placing
+code that's been tested (per recent LanceDB releases) in the hands of users.
 
 > [!NOTE]
-> Do not add code snippets manually inside triple-backticks! Write the tests to the `tests` directory,
-> then generate the snippets programmatically via the Makefile commands. This helps ensure that
-> the documentation shows code that was actually run by a human, and by CI.
-
+> As far as possible, do not add code snippets manually inside triple-backticks! Write the tests for
+> the required language in `tests/*` directory, then generate the snippets programmatically via the Makefile
+> commands.
