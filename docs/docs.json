@@ -1,7 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "appearance": {
-    "default": "light",
     "strict": false
   },
   "theme": "mint",
