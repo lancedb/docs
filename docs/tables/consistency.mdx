@@ -10,17 +10,18 @@ import {
     PyConsistencyCheckoutLatest as ConsistencyCheckoutLatest,
 } from '/snippets/tables.mdx';
 
-In LanceDB OSS, users can set the `read_consistency_interval` parameter on connections to achieve different levels of read consistency. This parameter determines how frequently the database synchronizes with the underlying storage system to check for updates made by other processes. If another process updates a table, the database will not see the changes until the next synchronization.
+You can set the `read_consistency_interval` parameter on connections to achieve different levels of read consistency. This parameter determines how frequently the database synchronizes with the underlying storage system to check for updates made by other processes. If another process updates a table, the database will not see the changes until the next synchronization.
 
 There are three possible settings for `read_consistency_interval`:
 
 1. **Unset (default)**: The database does not check for updates to tables made by other processes. This provides the best query performance, but means that clients may not see the most up-to-date data. This setting is suitable for applications where the data does not change during the lifetime of the table reference.
 2. **Zero seconds (Strong consistency)**: The database checks for updates on every read. This provides the strongest consistency guarantees, ensuring that all clients see the latest committed data. However, it has the most overhead. This setting is suitable when consistency matters more than having high QPS.
-3. **Custom interval (Eventual consistency)**: The database checks for updates at a custom interval, such as every 5 seconds. This provides eventual consistency, allowing for some lag between write and read operations. Performance wise, this is a middle ground between strong consistency and no consistency check. This setting is suitable for applications where immediate consistency is not critical, but clients should see updated data eventually.
+3. **Custom interval (Eventual consistency)**: The database checks for updates at a custom interval, such as every 5 seconds. This provides eventual consistency, allowing for some lag between write and read operations. Performance-wise, this is a middle ground between strong consistency and no consistency check. This setting is suitable for applications where immediate consistency is not critical, but clients should see updated data eventually.
 
-<Tip title="Consistency in LanceDB Cloud">
-This is only tune-able in LanceDB OSS. In LanceDB Cloud, readers are always eventually consistent.
-</Tip>
+<Info>
+In LanceDB <Badge color="red">Enterprise</Badge>, read consistency are tunable via the configuration
+settings. In LanceDB <Badge color="purple">Cloud</Badge>, readers are always strongly consistent.
+</Info>
 
 ## Configuring Consistency Parameters
 

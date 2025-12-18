@@ -447,7 +447,8 @@ Clearly, the strongest characters are all Knights of the Round Table!
 <Badge color="green">Python Only</Badge>
 
 You can leverage a full SQL engine like DuckDB to run more complex queries that involve
-sorting, aggregations, joins, and so on by converting LanceDB tables to DuckDB tables.
+sorting, aggregations, joins, etc. To do this, you convert the LanceDB tables to an Arrow table,
+which can be natively queried by DuckDB.
 
 <CodeGroup>
 ```python Python icon="python"
