@@ -276,7 +276,8 @@
                   "tutorials/agents/time-travel-rag/index",
                   "tutorials/agents/multimodal-agent/index"
                 ]
-              }
+              },
+              "tutorials/feature-engineering/index"
             ]
           }
         ]
