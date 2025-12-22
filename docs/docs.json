@@ -78,6 +78,7 @@
                   "tables/index",
                   "tables/create",
                   "tables/schema",
+                  "tables/multimodal",
                   "tables/update",
                   "tables/versioning",
                   "tables/consistency"
