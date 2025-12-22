@@ -9,13 +9,17 @@ Modern machine learning models can be trained to convert raw data into embedding
 of floating point numbers. The position of an embedding in vector space captures the semantics of
 the data, so vectors that are close to each other are considered similar.
 
-LanceDB provides an embedding function registry that automatically generates vector embeddings
+LanceDB provides an embedding function registry in OSS as well as its Cloud and Enterprise versions
+([see below](#embeddings-in-lancedb-cloud-and-enterprise)).
+that automatically generates vector embeddings
 during data ingestion and querying. The API abstracts embedding generation, allowing you to focus
 on your application logic.
 
-## Embedding function registry
+## Embedding Registry
 
-You can get a supported embedding function from the registry, and then use it in your table schema. 
+<Badge color="green">OSS</Badge>
+
+In LanceDB OSS, you can get a supported embedding function from the registry, and then use it in your table schema. 
 Once configured, the embedding function will automatically generate embeddings when you insert data
 into the table. And when you query the table, you can provide a query string or other input, and the
 embedding function will generate an embedding for it.
@@ -98,12 +102,14 @@ LanceDB supports most popular embedding providers.
 
 You can find all supported embedding models in the [integrations](/integrations/embedding) section.
 
-## Embedding function on LanceDB cloud
-When using embedding functions on LanceDB cloud, during the ingestion time the embeddings are
-generated on the client side, and stored in the cloud. We don't yet support model inference on the
-cloud side so automatic query generation during search is not supported. You can manually generate
-the embeddings for your queries using the same embedding function and pass the vector to the search
-function.
+## Embeddings in LanceDB Cloud and Enterprise
+Currently, the embedding registry on LanceDB <Badge color="purple">Cloud</Badge> or
+<Badge color="red">Enterprise</Badge> supports automatic generation of embeddings during data ingestion,
+generated on the client side (and stored on the remote table). We don't yet support automatic query-time
+embedding generation when sending queries, though this is planned for a future release.
+
+For now, you can manually generate the embeddings at query time using the same embedding function that
+was used during ingestion, and pass the embeddings to the search function.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -132,8 +138,8 @@ results = table.search(query_vector).limit(5).to_pandas()
 
 ## Custom Embedding Functions
 
-You can implement your own embedding function by inheriting from `TextEmbeddingFunction` (for text)
-or `EmbeddingFunction` (for multimodal data).
+You can always implement your own embedding function by inheriting from `TextEmbeddingFunction`
+(for text) or `EmbeddingFunction` (for multimodal data).
 
 <CodeGroup>
 ```python Python icon="python"

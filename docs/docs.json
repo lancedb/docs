@@ -1,7 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "appearance": {
-    "default": "light",
     "strict": false
   },
   "theme": "mint",
@@ -277,7 +276,8 @@
                   "tutorials/agents/time-travel-rag/index",
                   "tutorials/agents/multimodal-agent/index"
                 ]
-              }
+              },
+              "tutorials/feature-engineering/index"
             ]
           }
         ]

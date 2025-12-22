@@ -85,7 +85,8 @@ test("basic usage examples (async)", async () => {
 
     // --8<-- [start:basic_vector_search]
     const queryVector = [0.03, 0.85, 0.61, 0.9];
-    await table.search(queryVector).limit(5).toArray();
+    const result = await table.search(queryVector).limit(5).toArray();
+    console.log(result);
     // --8<-- [end:basic_vector_search]
 
     // --8<-- [start:basic_add_columns]

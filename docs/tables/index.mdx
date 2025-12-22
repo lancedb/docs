@@ -234,9 +234,9 @@ initial testing).
     </CodeBlock>
 </CodeGroup >
 
-<Note>
+<Warning>
 If you want to avoid overwriting an existing table, omit the overwrite mode.
-</Note>
+</Warning>
 
 ### From Pandas DataFrames
 <Badge color="green">Python Only</Badge>
@@ -287,14 +287,13 @@ do so by defining an Arrow schema explicitly.
 Once the empty table is defined, LanceDB is ready to accept new data via
 the `add` method, as shown in the next section.
 
-<Tip>
-**Display table schema**
-
+<Card title="Display table schema" icon="book">
 LanceDB tables are type-aware, leveraging Apache Arrow under the hood.
-In Python, you can display a given table's schema using the `schema` property.
-For example running `print(table.schema)` would show something like the following:
+You can display a given table's schema using the `schema` property or
+method. For example, in Python, running `print(table.schema)` would show
+something like the following:
 
-```
+```txt expandable=true
 id: int64
 name: string
 role: string
@@ -307,7 +306,7 @@ stats: struct<courage: int64, magic: int64, strength: int64, wisdom: int64>
   child 2, strength: int64
   child 3, wisdom: int64
 ```
-</Tip>
+</Card>
 
 ## Append data to a table
 
@@ -378,8 +377,8 @@ the desired columns).
 | Queen Guinevere | Queen of Camelot | Arthur's queen, admired for he… |
 | Sir Galahad | Knight of the Round Table | The purest and most virtuous k… |
 
-We have Merlin, The Lady of the Lake, and Morgan le Fay in the top results, which
-makes sense.
+We have Merlin, The Lady of the Lake, and Morgan le Fay in the top results, who
+all have magical abilities.
 
 Next, let's try to answer a more complex question that involves filtering on a
 nested struct field. Filtering is done using the `where` method, where you can
@@ -408,15 +407,15 @@ pass in SQL-like expressions.
 | Morgan le Fay | Sorceress | A powerful enchantress, Arthur… |
 
 Only three characters have magical abilities greater than 3. Merlin is
-clearly the most magical of them all.
+clearly the most magical of them all!
 
 ## Filtered search
 
 You can also run traditional analytics-style search queries that do not
 involve vectors. For example, let's find the strongest characters in
 the dataset. In the query below, we leave the `search` method empty to indicate
-that we don't want to use any vector for similarity search (in TypeScript, use `query()` instead),
-and use the `where` method to filter on the `strength` field.
+that we don't want to use any vector for similarity search (in TypeScript/Rust,
+use `query()` instead), and use the `where` method to filter on the `strength` field.
 
 > Q3: _Who are the strongest characters?_
 
@@ -448,7 +447,8 @@ Clearly, the strongest characters are all Knights of the Round Table!
 <Badge color="green">Python Only</Badge>
 
 You can leverage a full SQL engine like DuckDB to run more complex queries that involve
-sorting, aggregations, joins, and so on by converting LanceDB tables to DuckDB tables.
+sorting, aggregations, joins, etc. To do this, you convert the LanceDB tables to an Arrow table,
+which can be natively queried by DuckDB.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -471,30 +471,10 @@ print(duckdb_tbl)
 | Sir Percival | Knight of the Round Table | A loyal and innocent knight whose bravery and … |
 | Mordred | Traitor Knight | Arthur's treacherous son or nephew who ultimat… |
 
-## Delete data
-
-You can delete rows from a LanceDB table using the `delete` method with
-a filtering expression.
-
-Say we want to throw away Mordred, the traitor knight, from our table.
-
-<CodeGroup >
-    <CodeBlock filename="Python" language="Python">
-    {PyBasicDeleteRows}
-    </CodeBlock>
-
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsBasicDeleteRows}
-    </CodeBlock>
-
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsBasicDeleteRows}
-    </CodeBlock>
-</CodeGroup>
-
-This will delete the row(s) where the `role` column matches "Traitor Knight".
-You can verify that the row has been deleted by running a search query again,
-and confirming that Mordred no longer appears in the results.
+<Info>
+Under the hood, Lance tables are Arrow-based, leveraging Arrow's type system. This is why
+it's trivial to query a Lance table using DuckDB, which also natively supports Arrow tables.
+</Info>
 
 ## Add column
 
@@ -516,9 +496,9 @@ of each character's strength, courage, magic, and wisdom stats.
     </CodeBlock>
 </CodeGroup>
 
-The example above shows how a `cast` expression can be used to ensure the
-average total stats is available as a float column, that is then converted to
-an Arrow float type under the hood for the Lance table.
+The example above sums up the individual stats and divides by 4 to compute the average.
+The resulting average total stats is cast to an Arrow float type under the hood for the
+Lance table.
 
 We can display the results of this column in descending order of power.
 
@@ -539,11 +519,11 @@ We can display the results of this column in descending order of power.
 </CodeGroup>
 
 Note that LanceDB's `where` only filters rows, but doesn't sort them by applying an `ORDER BY`
-clause that you may be used to when working with SQL databases. In TypeScript, you can sort the
-returned array in application code.
+clause that you may be used to when working with SQL databases. 
 
-<Badge color="green">Python Only</Badge>
-You can also sort the results after converting them to a Polars DataFrame, as shown in the example above.
+You can also sort the results after converting them to a Polars DataFrame.
+In TypeScript/Rust, you can sort the
+returned array in application code.
 
 ```python Python icon="python"
 # Sort Polars DataFrame by power in descending order
@@ -558,9 +538,33 @@ print(r1.sort("power", descending=True).limit(5))
 | Sir Lancelot | Knight of the Round Table | Arthur's most skilled knight, … | 3.5 |
 | Sir Gawain | Knight of the Round Table | A noble and honorable knight k… | 3.5 |
 
-Merlin and Sir Galahad top the list of powerful characters when considering all their
-abilities! Sir Lancelot and the Lady of the Lake follow closely behind.
+Merlin and Sir Galahad are the most powerful characters when considering the average of
+all their abilities! Sir Lancelot and the Lady of the Lake follow closely behind.
 
+## Delete data
+
+You can delete rows from a LanceDB table using the `delete` method with
+a filtering expression.
+
+Say we want to remove Mordred, the traitor knight, from our table.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python">
+    {PyBasicDeleteRows}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBasicDeleteRows}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBasicDeleteRows}
+    </CodeBlock>
+</CodeGroup>
+
+This will delete the row(s) where the `role` value matches "Traitor Knight".
+You can verify that the row has been deleted by running a search query again,
+and confirming that Mordred no longer appears in the results.
 
 ## Drop column
 

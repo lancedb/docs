@@ -89,15 +89,15 @@ Scalar indexes can also speed up scans containing a vector search or full text s
     </CodeBlock>
 </CodeGroup>
 
-## Advanced: Index UUID Columns
+## Index UUID Columns
 
 LanceDB supports scalar indexes on UUID columns (stored as `FixedSizeBinary(16)`), enabling efficient lookups and filtering on UUID-based primary keys.
 
-<Note title="FixedSizeBinary Requirements">
-To use `FixedSizeBinary`, ensure you have:
+<Note>
+**To use `FixedSizeBinary`, ensure you have:**
 
-- Python SDK version [0.22.0-beta.4](https://github.com/lancedb/lancedb/releases/tag/python-v0.22.0-beta.4) or later
-- TypeScript SDK version [0.19.0-beta.4](https://github.com/lancedb/lancedb/releases/tag/v0.19.0-beta.4) or later
+- Python SDK version `0.22.0` or later
+- TypeScript SDK version `0.19.0` or later
 </Note>
 
 ### 1. Define UUID Type
