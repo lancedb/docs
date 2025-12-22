@@ -22,11 +22,11 @@ LanceDB offers two main vector indexing algorithms: **Inverted File (IVF)** and 
 
 ### Option 1: Self-Hosted Indexing
 
-**Manual, Sync or Async:** If using LanceDB Open Source, you will have to build indexes manually, as well as reindex and tune indexing parameters. The Python SDK lets you do this *sychronously and asychronously*.
+**Manual, Sync or Async:** If using LanceDB Open Source, you will have to build indexes manually, as well as reindex and tune indexing parameters. The Python SDK lets you do this *synchronously and asynchronously*.
 
 ### Option 2: Automated Indexing
 
-**Automatic and Async:** Indexing is automatic in LanceDB Cloud/Enterprise. As soon as data is updated, our system automates index optimization. *This is done asychronously*.
+**Automatic and Async:** Indexing is automatic in LanceDB Cloud/Enterprise. As soon as data is updated, our system automates index optimization. *This is done asynchronously*.
 
 Here is what happens in the background - when a table contains a single vector column named `vector`, LanceDB automatically:
 
