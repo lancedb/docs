@@ -548,6 +548,44 @@ def test_embedding_voyageai_usage() -> None:
     # --8<-- [end:embedding_voyageai_usage]
 
 
+def test_embedding_voyageai_multimodal() -> None:
+    require_env("VOYAGE_API_KEY")
+
+    # --8<-- [start:embedding_voyageai_multimodal]
+    import tempfile
+    from pathlib import Path
+
+    import lancedb
+    from lancedb.embeddings import EmbeddingFunctionRegistry
+    from lancedb.pydantic import LanceModel, Vector
+
+    # Create multimodal embedding function with custom dimension
+    voyageai = (
+        EmbeddingFunctionRegistry.get_instance()
+        .get("voyageai")
+        .create(name="voyage-multimodal-3.5", output_dimension=512)
+    )
+
+    class ImageModel(LanceModel):
+        image_uri: str = voyageai.SourceField()
+        vector: Vector(voyageai.ndims()) = voyageai.VectorField()
+
+    db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "voyageai-multimodal"))
+    tbl = db.create_table("images", schema=ImageModel, mode="overwrite")
+
+    # Add images using URLs
+    tbl.add(
+        [
+            {"image_uri": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/300px-PNG_transparency_demonstration_1.png"},
+        ]
+    )
+
+    # Search with text query
+    results = tbl.search("dice").limit(1).to_list()
+    print(results)
+    # --8<-- [end:embedding_voyageai_multimodal]
+
+
 # Reranking integrations
 
 
