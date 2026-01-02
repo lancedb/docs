@@ -77,6 +77,7 @@
                 "pages": [
                   "tables/index",
                   "tables/create",
+                  "tables/multimodal",
                   "tables/schema",
                   "tables/update",
                   "tables/versioning",
