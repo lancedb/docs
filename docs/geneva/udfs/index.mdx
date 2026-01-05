@@ -64,6 +64,25 @@ def recordbatch_filename_len(batch: pa.RecordBatch) -> pa.Array:
 
 > **Note**:  Batch UDFS require you to specify `data_type` in the ``@udf`` decorator for batched UDFs which defines `pyarrow.DataType` of the returned `pyarrow.Array`.
 
+### Struct fields and list inputs
+
+You can pass nested `struct` fields directly into a UDF by specifying `input_columns` with dot notation. For list-typed inputs, Geneva can pass a NumPy array when the argument is annotated as `np.ndarray` (use `np.ndarray | None` for nullable lists).
+
+```python
+import numpy as np
+import pyarrow as pa
+from geneva import udf
+
+struct_type = pa.struct([("vals", pa.list_(pa.int32()))])
+schema = pa.schema([pa.field("info", struct_type)])
+
+@udf(data_type=pa.int32(), input_columns=["info.vals"])
+def sum_vals(vals: np.ndarray | None) -> int | None:
+    if vals is None:
+        return None
+    assert isinstance(vals, np.ndarray)
+    return int(np.sum(vals))
+```
 
 ### Stateful UDFs
 
