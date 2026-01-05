@@ -388,6 +388,7 @@ paths:
       - $ref: '#/components/parameters/id'
       - $ref: '#/components/parameters/delimiter'
       - $ref: '#/components/parameters/with_table_uri'
+      - $ref: '#/components/parameters/load_detailed_metadata'
     post:
       tags:
         - Table
@@ -398,7 +399,7 @@ paths:
         Describe the detailed information for table `id`.
 
         REST NAMESPACE ONLY
-        REST namespace passes `with_table_uri` as a query parameter instead of in the request body.
+        REST namespace passes `with_table_uri` and `load_detailed_metadata` as query parameters instead of in the request body.
       requestBody:
         required: true
         content:
@@ -1835,6 +1836,17 @@ components:
       schema:
         type: boolean
         default: false
+    load_detailed_metadata:
+      name: load_detailed_metadata
+      description: |
+        Whether to load detailed metadata that requires opening the dataset.
+        When false (default), only `location` is required in the response.
+        When true, the response includes additional metadata such as `version`, `schema`, and `stats`.
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
 
   schemas:
     ErrorResponse:
@@ -1890,9 +1902,47 @@ components:
             or anything that the implementation can recognize to trace specific occurrence of the error.
           example: /v1/table/production$users/describe
 
+    Identity:
+      type: object
+      description: |
+        Identity information of a request.
+      properties:
+        api_key:
+          type: string
+          description: |
+            API key for authentication.
+
+            REST NAMESPACE ONLY
+            This is passed via the `x-api-key` header.
+        auth_token:
+          type: string
+          description: |
+            Bearer token for authentication.
+
+            REST NAMESPACE ONLY
+            This is passed via the `Authorization` header
+            with the Bearer scheme (e.g., `Bearer <token>`).
+
+    Context:
+      type: object
+      description: |
+        Arbitrary context for a request as key-value pairs.
+        How to use the context is custom to the specific implementation.
+
+        REST NAMESPACE ONLY
+        Context entries are passed via HTTP headers using the naming convention
+        `x-lance-ctx-<key>: <value>`. For example, a context entry
+        `{"trace_id": "abc123"}` would be sent as the header `x-lance-ctx-trace_id: abc123`.
+      additionalProperties:
+        type: string
+
     CreateNamespaceRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -1930,6 +1980,10 @@ components:
     ListNamespacesRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -1957,6 +2011,10 @@ components:
     DescribeNamespaceRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -1980,6 +2038,10 @@ components:
     DropNamespaceRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2017,6 +2079,10 @@ components:
     NamespaceExistsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2054,6 +2120,10 @@ components:
       required:
         - location
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2089,6 +2159,10 @@ components:
     ListTablesRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2118,6 +2192,10 @@ components:
     DescribeTableRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2135,43 +2213,80 @@ components:
             Default is false.
           type: boolean
           default: false
+        load_detailed_metadata:
+          description: |
+            Whether to load detailed metadata that requires opening the dataset.
+            When true, the response must include all detailed metadata such as `version`, `schema`, and `stats`
+            which require reading the dataset.
+            When not set, the implementation can decide whether to return detailed metadata
+            and which parts of detailed metadata to return.
+          type: boolean
+        vend_credentials:
+          description: |
+            Whether to include vended credentials in the response `storage_options`.
+            When true, the implementation should provide vended credentials for accessing storage.
+            When not set, the implementation can decide whether to return vended credentials.
+          type: boolean
 
     DescribeTableResponse:
       type: object
       properties:
         table:
           type: string
-          description: Table name
+          description: |
+            Table name.
+            Only populated when `load_detailed_metadata` is true.
         namespace:
           type: array
           items:
             type: string
-          description: The namespace identifier as a list of parts
+          description: |
+            The namespace identifier as a list of parts.
+            Only populated when `load_detailed_metadata` is true.
         version:
           type: integer
           format: int64
           minimum: 0
+          description: |
+            Table version number.
+            Only populated when `load_detailed_metadata` is true.
         location:
           type: string
-          description: Table storage location (e.g., S3/GCS path)
+          description: |
+            Table storage location (e.g., S3/GCS path).
         table_uri:
           type: string
           description: |
-            Table URI. Unlike location, this field must be a complete and valid URI
+            Table URI. Unlike location, this field must be a complete and valid URI.
+            Only returned when `with_table_uri` is true.
         schema:
           $ref: '#/components/schemas/JsonArrowSchema'
+          description: |
+            Table schema in JSON Arrow format.
+            Only populated when `load_detailed_metadata` is true.
         storage_options:
           type: object
           description: |
             Configuration options to be used to access storage. The available
             options depend on the type of storage in use. These will be
             passed directly to Lance to initialize storage access.
+            When `vend_credentials` is true, this field may include vended credentials.
+            If the vended credentials are temporary, the `expires_at_millis` key should be
+            included to indicate the millisecond timestamp when the credentials expire.
           additionalProperties:
             type: string
         stats:
           $ref: '#/components/schemas/TableBasicStats'
           nullable: true
-          description: Table statistics
+          description: |
+            Table statistics.
+            Only populated when `load_detailed_metadata` is true.
+        metadata:
+          type: object
+          description: |
+            Optional table metadata as key-value pairs.
+          additionalProperties:
+            type: string
 
     TableBasicStats:
       type: object
@@ -2191,6 +2306,10 @@ components:
     CountTableRowsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2220,6 +2339,10 @@ components:
       description: |
         Request for inserting records into a table, excluding the Arrow IPC stream.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2245,6 +2368,10 @@ components:
       description: |
         Request for merging or inserting records into a table, excluding the Arrow IPC stream.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2315,6 +2442,10 @@ components:
       required:
         - updates
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2361,6 +2492,10 @@ components:
       required:
         - predicate
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2388,6 +2523,10 @@ components:
         - vector
         - k
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2498,6 +2637,10 @@ components:
         - column
         - index_type
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2568,6 +2711,10 @@ components:
     ListTableIndicesRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2623,6 +2770,10 @@ components:
     DescribeTableIndexStatsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2735,6 +2886,10 @@ components:
       description: |
         Request for creating a table, excluding the Arrow IPC stream.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2778,6 +2933,10 @@ components:
 
         **Deprecated**: Use `DeclareTableRequest` instead.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2787,6 +2946,12 @@ components:
           description: |
             Optional storage location for the table.
             If not provided, the namespace implementation should determine the table location.
+        vend_credentials:
+          description: |
+            Whether to include vended credentials in the response `storage_options`.
+            When true, the implementation should provide vended credentials for accessing storage.
+            When not set, the implementation can decide whether to return vended credentials.
+          type: boolean
 
     CreateEmptyTableResponse:
       type: object
@@ -2815,6 +2980,10 @@ components:
       description: |
         Request for declaring a table.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2824,6 +2993,12 @@ components:
           description: |
             Optional storage location for the table.
             If not provided, the namespace implementation should determine the table location.
+        vend_credentials:
+          description: |
+            Whether to include vended credentials in the response `storage_options`.
+            When true, the implementation should provide vended credentials for accessing storage.
+            When not set, the implementation can decide whether to return vended credentials.
+          type: boolean
 
     DeclareTableResponse:
       type: object
@@ -2847,6 +3022,10 @@ components:
     TableExistsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2873,6 +3052,10 @@ components:
     DescribeTransactionRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2955,6 +3138,10 @@ components:
       required:
         - actions
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -2983,6 +3170,10 @@ components:
         If the table and its data can be immediately deleted, return information of the deleted table.
         Otherwise, return a transaction ID that client can use to track deletion progress.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3010,6 +3201,10 @@ components:
       description: |
          The table content remains available in the storage.
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3185,6 +3380,10 @@ components:
       required:
         - tag
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3210,6 +3409,10 @@ components:
         - tag
         - version
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3236,6 +3439,10 @@ components:
       required:
         - tag
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3258,6 +3465,10 @@ components:
         - tag
         - version
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3282,6 +3493,10 @@ components:
     ListTableTagsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3331,6 +3546,10 @@ components:
       required:
         - version
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3354,6 +3573,10 @@ components:
       required:
         - new_table_name
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3378,6 +3601,10 @@ components:
     UpdateTableSchemaMetadataRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3404,6 +3631,10 @@ components:
     ListTableVersionsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3453,6 +3684,10 @@ components:
       required:
         - query
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3479,6 +3714,10 @@ components:
         - vector
         - k
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3597,6 +3836,10 @@ components:
       required:
         - new_columns
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3674,6 +3917,10 @@ components:
       required:
         - alterations
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3754,6 +4001,10 @@ components:
       required:
         - columns
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3781,6 +4032,10 @@ components:
     GetTableStatsRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
@@ -3877,6 +4132,10 @@ components:
     DropTableIndexRequest:
       type: object
       properties:
+        identity:
+          $ref: '#/components/schemas/Identity'
+        context:
+          $ref: '#/components/schemas/Context'
         id:
           type: array
           items:
