@@ -73,7 +73,7 @@ raycluster.__exit__(None, None, None)
 
 ## Ray on Kubernetes
 
-Geneva uses KubeRay to deploy Ray on Kubernetes. To do so, you need to create an ExecutionContext, which needs two things:
+Geneva uses KubeRay to deploy Ray on Kubernetes. To do so, you need to create an execution context, which needs two things:
 
 - a Geneva Cluster. This includes the name, resource demands, Docker images, and other Ray configurations
 - a Geneva Manifest. This includes the python packages and any local files that each worker will need
@@ -129,14 +129,14 @@ cluster = GenevaClusterBuilder()
         .build()
 
 db.define_cluster("my_geneva_cluster", cluster)
-# define_cluster stores the cluster metadata in persistent storage. The Cluster can then be referenced by name and provisioned when creating an Execution Context.
+# define_cluster stores the cluster metadata in persistent storage. The Cluster can then be referenced by name and provisioned when creating an execution context.
 ```
 </CodeGroup>
 
 ### Define a Manifest
 
 A Geneva Manifest represents the files and dependencies used in the execution environment. Calling `define_manifest()` packages files in the local environment and stores the Manifest metadata and files in persistent storage.
-The Manifest can then be referenced by name when creating an Execution Context. Persistent Manifests allow for deterministic execution environments that can be shared and reused.
+The Manifest can then be referenced by name when creating an execution context. Persistent Manifests allow for deterministic execution environments that can be shared and reused.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -166,7 +166,7 @@ This manifest contains a couple ways to get files and resources to the Ray worke
 
 ### Create an Execution Context
 
-An Execution Context represents the concrete execution environment used to execute a distributed Job.
+An execution context represents the concrete execution environment used to execute a distributed Job.
 
 Calling `context` will enter a context manager that will provision an execution cluster and execute the Job using the Cluster and Manifest definitions provided. Once completed, the context manager will automatically de-provision the cluster.
 
