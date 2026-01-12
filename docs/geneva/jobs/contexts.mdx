@@ -7,10 +7,10 @@ icon: circle-nodes
 
 Geneva automatically packages and deploys your Python execution environment to its worker nodes. This ensures that distributed execution occurs in the same environment and dependencies as your prototype.
 
-We currently support one processing backend: **Ray**. Geneva jobs can be deployed on a Kubernetes cluster on demand or on an existing Ray cluster. There are 3 ways to connect to a Ray cluster: 
+We currently support one processing backend: **Ray**. There are 3 ways to connect to a Ray cluster: 
 
 1. Local Ray
-2. KubeRay
+2. KubeRay: create a cluster on demand in your Kubernetes cluster.
 3. Existing Ray Cluster
 
 ## Ray Clusters
@@ -163,10 +163,6 @@ This manifest contains a couple ways to get files and resources to the Ray worke
   - you can see these zip files by setting `.local_zip_output_dir(path)` in the builder, or set `.delete_local_zips(True)` if you don't care
   - you can set `skip_site_packages=True` if you don't want to upload your entire local `site_packages`. This is useful, for example, for the `pyarrow` or many-libraries cases we mentioned earlier. In that case, you will probably need `pip` and `py_modules`:
 - `pip` and `py_modules`: packages that you want to be installed, but are not installed locally. These are passed in to Ray's [RuntimeEnv](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html#ray-runtime-env-runtimeenv), which has more details about how they are included. In short, `pip` is a list of packages that you want it to install from pip, and `py_modules` is a list of local or remote zip files that Ray unzips and adds to workers' PYTHONPATHs.
-
-<Card icon="lightbulb">
-If you are using a remote Ray cluster, you will need to have the notebook or script that code is packaged on running the same CPU architecture / OS. By default, Ray clusters are run in Linux. If you host a Jupyter service on a Mac, Geneva will attempt to deploy Mac shared libraries to a Linux cluster and result in "Module not found" errors. You can instead use a hosted Jupyter notebook, or host your Jupyter or Python environment on a Linux VM or container.
-</Card>
 
 ## Putting it all together: Execution Contexts
 
