@@ -1,0 +1,89 @@
+---
+title: Geneva on Kubernetes Deployments using Helm
+sidebarTitle: Deployment with Helm
+description: Learn how to deploy Geneva on Kubernetes using the Geneva Helm Chart
+icon: cogs
+---
+
+<Tip>
+**Feature Engineering is deployed automatically in LanceDB Enterprise**
+
+Feature Engineering is deployed automatically as part of [LanceDB Enterprise](/enterprise/).
+
+In self-managed environments, Geneva can be installed into existing Kubernetes clusters using Helm.
+
+Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
+</Tip>
+
+## Pre-requisites
+
+- An existing Kubernetes cluster
+- An existing node pool(s) for Geneva workloads. By default, Geneva uses node selector
+`{"geneva.lancedb.com/ray-head": "true"}` for Ray head nodes, and
+`{"geneva.lancedb.com/ray-worker-cpu": "true"}` and `{"geneva.lancedb.com/ray-worker-gpu": "true"}`
+for Ray CPU worker and Ray GPU worker nodes respectively. This can be overridden in the Geneva client.
+
+For more information on deploying the required cloud resources, see the [manual deployment instructions](/enterprise/deployment/).
+
+# Geneva Helm Chart
+
+The Helm chart includes resources required for running [Geneva](https://lancedb.com/docs/geneva/) in Kubernetes.
+
+It includes services, service accounts, RBAC roles, etc. that are used by the Geneva client to manage resources.
+
+## Install
+
+1. Authenticate with Kubernetes cluster
+2. Configure Helm chart values
+
+In values.yaml, configure the service account, node selectors, and cloud resources, if applicable.
+
+```
+geneva:
+  # Object storage root URI
+  rootUri:
+    value: "s3://my-data-bucket"
+
+  serviceAccount:
+    # Service account for Geneva worker pods and services
+    annotations:
+      # Set per-CSP annotations to provide access to CSP resources, i.e.
+      # eks.amazonaws.com/role-arn: arn:aws:iam::0123456789:role/geneva_service_role
+      # iam.gke.io/gcp-service-account: geneva-service-account@my-project.iam.gserviceaccount.com
+
+  gcp:
+    # GCP service account email for the Geneva client.
+    # It should have access to the GKS cluster and "roles/storage.objectUser"
+    # permissions on the object storage bucket.
+    # e.g., geneva-client-sa@project-id.iam.gserviceaccount.com
+    clientServiceAccount: ""
+
+  aws:
+    # AWS IAM role ARN to be assumed by the Geneva client.
+    # This role should have an access entry to the cluster with username matching the role ARN.
+    # It should also have r/w access to the object storage bucket.
+    # e.g., arn:aws:iam::123456789012:role/geneva-client-role
+    clientRoleArn: ""
+```
+
+3. Install kuberay operator
+```bash
+export NAMESPACE=geneva
+
+helm repo add kuberay https://ray-project.github.io/kuberay-helm/
+helm repo update
+helm install kuberay-operator kuberay/kuberay-operator -n $NAMESPACE --create-namespace
+```
+4. Install NVIDIA device plugin (if using GPU nodes)
+
+For GPU support, the NVIDIA device plugin must be installed in your EKS cluster:
+
+```bash
+curl https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml > nvidia-device-plugin.yml
+kubectl apply -f nvidia-device-plugin.yml
+```
+
+5. Install Geneva Helm chart
+```bash
+helm install geneva ./geneva -n $NAMESPACE --create-namespace
+```
