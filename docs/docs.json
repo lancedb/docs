@@ -172,6 +172,7 @@
                 "group": "Deployment & scaling",
                 "pages": [
                   "geneva/deployment/index",
+                  "geneva/deployment/helm",
                   "geneva/deployment/troubleshooting"
                 ]
               },

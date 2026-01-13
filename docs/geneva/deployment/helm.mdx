@@ -1,5 +1,5 @@
 ---
-title: Geneva on Kubernetes Deployments using Helm
+title: Deploy Geneva using Helm
 sidebarTitle: Deployment with Helm
 description: Learn how to deploy Geneva on Kubernetes using the Geneva Helm Chart
 icon: cogs
@@ -8,11 +8,7 @@ icon: cogs
 <Tip>
 **Feature Engineering is deployed automatically in LanceDB Enterprise**
 
-Feature Engineering is deployed automatically as part of [LanceDB Enterprise](/enterprise/).
-
-In self-managed environments, Geneva can be installed into existing Kubernetes clusters using Helm.
-
-Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
+In self-managed environments, Geneva can be installed into existing Kubernetes clusters using Helm. Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
 </Tip>
 
 ## Pre-requisites
@@ -23,7 +19,7 @@ Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Ch
 `{"geneva.lancedb.com/ray-worker-cpu": "true"}` and `{"geneva.lancedb.com/ray-worker-gpu": "true"}`
 for Ray CPU worker and Ray GPU worker nodes respectively. This can be overridden in the Geneva client.
 
-For more information on deploying the required cloud resources, see the [manual deployment instructions](/enterprise/deployment/).
+For more information on deploying the required cloud resources, see the [manual deployment instructions](/geneva/deployment/).
 
 # Geneva Helm Chart
 
