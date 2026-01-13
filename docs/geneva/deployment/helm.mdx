@@ -18,6 +18,7 @@ In self-managed environments, Geneva can be installed into existing Kubernetes c
 `{"geneva.lancedb.com/ray-head": "true"}` for Ray head nodes, and
 `{"geneva.lancedb.com/ray-worker-cpu": "true"}` and `{"geneva.lancedb.com/ray-worker-gpu": "true"}`
 for Ray CPU worker and Ray GPU worker nodes respectively. This can be overridden in the Geneva client.
+- Geneva Helm chart. Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
 
 For more information on deploying the required cloud resources, see the [manual deployment instructions](/geneva/deployment/).
 
@@ -29,7 +30,7 @@ It includes services, service accounts, RBAC roles, etc. that are used by the Ge
 
 ## Install
 
-1. Authenticate with Kubernetes cluster
+1. Authenticate with Kubernetes cluster, i.e. update kubeconfig
 2. Configure Helm chart values
 
 In values.yaml, configure the service account, node selectors, and cloud resources, if applicable.
