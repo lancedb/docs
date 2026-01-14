@@ -34,7 +34,7 @@ Geneva will package up your local environment and send it to each worker node, s
 
 ### KubeRay
 
-If you have a Kubernetes cluster with KubeRay, you can connect to it by defining a Geneva cluster. A Geneva cluster represents the resource needs, Docker images, and other Ray configurations necessary to run your job. Make sure that the resources requested will fit inside the Kubernetes cluster you're connecting to. Here is an example Geneva cluster definition:
+If you have a Kubernetes cluster with kuberay-operator, you can use Geneva to automatically provision RayClusters. To do so, define a Geneva cluster, representing the resource needs, Docker images, and other Ray configurations necessary to run your job. Make sure your cluster has adequate compute resources to provision the RayCluster. Here is an example Geneva cluster definition:
 
 <CodeGroup>
 ```python Python icon="python"
@@ -45,7 +45,7 @@ from geneva.cluster.builder import GenevaClusterBuilder
 from geneva.cluster import K8sConfigMethod
 from geneva.runners.ray.raycluster import get_ray_image
 
-db = geneva.connect("s3://geneva-integ-test-devland-us-east-1/dantasse-geneva-demo")
+db = geneva.connect("s3://my-bucket/my-db")
 
 ray_version = ray.__version__
 python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -64,7 +64,6 @@ cluster = (
         # config when running inside a pod in the cluster)
         .head_group(
             service_account=service_account,
-            image=get_ray_image(ray_version, python_version),
             cpus=2,
             node_selector={"geneva.lancedb.com/ray-head":""}, # k8s label required for head in your cluster
         )
@@ -72,7 +71,6 @@ cluster = (
             cpus=4,
             memory="8Gi",
             service_account=service_account,
-            image=get_ray_image(ray_version, python_version),
             node_selector={"geneva.lancedb.com/ray-worker-cpu":""}, # k8s label for cpu worker in your cluster
         )
         .add_gpu_worker_group(
@@ -88,13 +86,17 @@ cluster = (
 
 db.define_cluster(cluster_name, cluster)
 # define_cluster stores the cluster metadata in persistent storage. The Cluster can then be referenced by name and provisioned when creating an execution context.
+
+table = db.get_table("my_table")
+with db.context(cluster=cluster_name):
+    table.backfill("my_udf")
 ```
 See [the API docs](https://lancedb.github.io/geneva/api/cluster/) for all the parameters GenevaClusterBuilder can use.
 
 </CodeGroup>
 
 ### External Ray cluster
-If you already have a Ray cluster (specified through some other means), Geneva can execute jobs against it too. You do so by defining a Geneva cluster which has the address of the cluster. Here's an example:
+If you already have a Ray cluster, Geneva can execute jobs against it too. You do so by defining a Geneva cluster which has the address of the cluster. Here's an example:
 
 <CodeGroup>
 ```python Python icon="python"
