@@ -1,0 +1,214 @@
+---
+title: Error Handling in Geneva UDFs
+sidebarTitle: Error Handling
+description: Learn how configure retry, skip, and fail behaviors for UDFs.
+icon: exclamation
+---
+
+Geneva provides three ways to handle errors, in increasing complexity: factory functions, exception matchers, and full Tenacity control.
+
+## Quick Start: Factory Functions
+
+Use factory functions for common error handling patterns:
+
+```python
+from geneva import udf, retry_transient
+import pyarrow as pa
+
+@udf(data_type=pa.int32(), on_error=retry_transient())
+def my_udf(x: int) -> int:
+    # Will retry on network errors (ConnectionError, TimeoutError, OSError)
+    return call_external_api(x)
+```
+
+Geneva provides four built-in factory functions:
+
+| Function | Behavior |
+|----------|----------|
+| `retry_transient()` | Retry `ConnectionError`, `TimeoutError`, `OSError` with exponential backoff |
+| `retry_all()` | Retry any exception with exponential backoff |
+| `skip_on_error()` | Return `None` for any exception (skip the row) |
+| `fail_fast()` | Fail immediately on any exception (default behavior) |
+
+### Customizing Retry Behavior
+
+Factory functions accept parameters to customize behavior:
+
+```python
+from geneva import udf, retry_transient, retry_all
+
+# Increase max attempts
+@udf(data_type=pa.int32(), on_error=retry_transient(max_attempts=5))
+def more_retries(x: int) -> int:
+    ...
+
+# Change backoff strategy
+@udf(data_type=pa.int32(), on_error=retry_all(max_attempts=3, backoff="fixed"))
+def fixed_backoff(x: int) -> int:
+    ...
+```
+
+**Parameters:**
+- `max_attempts` (int): Maximum number of attempts (default: 3)
+- `backoff` (str): Backoff strategy between retries
+  - `"exponential"` (default): 1s, 2s, 4s, 8s... with jitter, capped at 60s
+  - `"fixed"`: Fixed 1s delay between attempts
+  - `"linear"`: 1s, 2s, 3s, 4s... capped at 60s
+
+## Custom Exception Handling: Matchers
+
+For fine-grained control, use `Retry`, `Skip`, and `Fail` matchers:
+
+```python
+from geneva import udf, Retry, Skip, Fail
+
+@udf(
+    data_type=pa.int32(),
+    on_error=[
+        Retry(ConnectionError, TimeoutError, max_attempts=3),
+        Retry(ValueError, match="rate limit", max_attempts=5),
+        Skip(ValueError),  # Other ValueErrors - skip the row
+        Fail(AuthError),   # Auth failures - fail immediately
+    ]
+)
+def custom_handling(x: int) -> int:
+    ...
+```
+
+**How matching works:**
+1. Matchers are evaluated in order (first match wins)
+2. More specific matchers should come before general ones
+3. Unmatched exceptions fail the job
+
+### Exception Matchers
+
+| Matcher | Behavior | Parameters |
+|---------|----------|------------|
+| `Retry(...)` | Retry with backoff, then fail | `max_attempts`, `backoff`, `match` |
+| `Skip(...)` | Return `None` for that row | `match` |
+| `Fail(...)` | Fail the job immediately | `match` |
+
+**Syntax:**
+```python
+# Single exception
+Retry(ConnectionError)
+
+# Multiple exceptions
+Retry(ConnectionError, TimeoutError, OSError)
+
+# With parameters
+Retry(ConnectionError, max_attempts=5, backoff="fixed")
+
+# With message matching
+Retry(ValueError, match="rate limit")
+```
+
+### Message Matching
+
+Use the `match` parameter to filter exceptions by their message content. The pattern is a regex:
+
+```python
+from geneva import Retry, Skip
+
+# Simple substring (works because regex matches substrings)
+Retry(ValueError, match="rate limit")
+# Matches: ValueError("rate limit exceeded")
+
+# Regex pattern
+Retry(ValueError, match=r"rate.?limit")
+# Matches: ValueError("rate limit")
+# Matches: ValueError("ratelimit")
+# Matches: ValueError("rate_limit")
+
+# Case-insensitive matching (use (?i) flag)
+Retry(ValueError, match=r"(?i)rate limit")
+# Matches: ValueError("Rate Limit exceeded")
+# Matches: ValueError("RATE LIMIT hit")
+
+# Regex alternation (match multiple patterns)
+Retry(ValueError, match=r"429|rate.?limit|throttl")
+# Matches: ValueError("Error 429")
+# Matches: ValueError("rate limit exceeded")
+# Matches: ValueError("Request throttled")
+```
+
+For example, using matchers to distinguish error types:
+
+```python
+@udf(
+    data_type=pa.string(),
+    on_error=[
+        # Retry rate limits with more attempts
+        Retry(ValueError, match="rate limit", max_attempts=10),
+        # Skip invalid input
+        Skip(ValueError, match="invalid"),
+        # Fail on other ValueErrors
+        Fail(ValueError),
+    ]
+)
+def api_call(x: str) -> str:
+    ...
+```
+
+
+### Behavior Summary
+
+| Outcome | What Happens | When to Use |
+|---------|--------------|-------------|
+| **Retry** | Retry with backoff, then fail/skip | Transient errors: network issues, rate limits, timeouts |
+| **Skip** | Return `None` for that row | Bad input data, row-specific failures, optional enrichment |
+| **Fail** | Kill the job immediately | Fatal errors: auth failures, configuration errors |
+
+## Advanced: Full Tenacity Control
+
+For power users who need custom callbacks or complex retry conditions, omit `on_error` and use `error_handling=`:
+
+```python
+from geneva import udf
+from geneva.debug.error_store import ErrorHandlingConfig, UDFRetryConfig
+from tenacity import wait_random_exponential, stop_after_delay
+
+@udf(
+    data_type=pa.int32(),
+    error_handling=ErrorHandlingConfig(
+        retry_config=UDFRetryConfig(
+            retry=my_custom_retry_condition,
+            stop=stop_after_delay(300),
+            wait=wait_random_exponential(min=1, max=120),
+            before_sleep=my_logging_callback,
+        ),
+    ),
+)
+def power_user_udf(x: int) -> int:
+    ...
+```
+
+Note: `on_error=` and `error_handling=` cannot be used together.
+
+## Restrictions
+
+- **Skip behavior** only works with scalar UDFs (functions that process one row at a time)
+- For batch UDFs that receive `RecordBatch`, use `Retry` or `Fail` only
+- **All Retry matchers must use the same backoff strategy.** You cannot mix different backoff strategies in the same `on_error` list:
+
+```python
+@udf(on_error=[
+    Retry(ConnectionError, backoff="exponential"),
+    Retry(TimeoutError, backoff="fixed"),  # Error: different backoff!
+])
+
+@udf(on_error=[
+    Retry(ConnectionError, backoff="fixed"),
+    Retry(TimeoutError, backoff="fixed"),  # Same backoff - OK
+])
+```
+
+- **Invalid regex patterns are rejected at construction time:**
+
+```python
+# This will raise ValueError due to the unclosed bracket
+Retry(ValueError, match=r"[invalid")  
+
+# But this will work:
+Retry(ValueError, match=r"rate.?limit")
+```
