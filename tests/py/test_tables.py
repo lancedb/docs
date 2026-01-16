@@ -562,217 +562,201 @@ def test_replace_range_operation(tmp_db):
 # ============================================================================
 
 
-def test_add_columns_calculated(tmp_db):
-    # --8<-- [start:add_columns_calculated]
+def _setup_schema_add_table(tmp_db, data=None):
+    # --8<-- [start:schema_add_setup]
     table_name = "schema_evolution_add_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 3,
-            "name": "Headphones",
-            "price": 150.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 4,
-            "name": "Monitor",
-            "price": 350.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 5,
-            "name": "Keyboard",
-            "price": 80.00,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800.00,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 3,
+                "name": "Headphones",
+                "price": 150.00,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    table = tmp_db.create_table(table_name, data, mode="overwrite")
+    # --8<-- [end:schema_add_setup]
+    return table
 
-    table = db.create_table(table_name, data, mode="overwrite")
 
+def _setup_schema_alter_table(tmp_db, data=None):
+    # --8<-- [start:schema_alter_setup]
+    table_name = "schema_evolution_alter_example"
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800,
+                "discount_price": 720.0,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    schema = pa.schema(
+        {
+            "id": pa.int64(),
+            "name": pa.string(),
+            "price": pa.int32(),
+            "discount_price": pa.float64(),
+            "vector": pa.list_(pa.float32(), 128),
+        }
+    )
+    table = tmp_db.create_table(table_name, data, schema=schema, mode="overwrite")
+    # --8<-- [end:schema_alter_setup]
+    return table
+
+
+def _setup_schema_drop_table(tmp_db, data=None):
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "temp_col1": "X",
+                "temp_col2": 100,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800.00,
+                "temp_col1": "Y",
+                "temp_col2": 200,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    return tmp_db.create_table("schema_evolution_drop_example", data, mode="overwrite")
+
+
+def test_add_columns_calculated(tmp_db):
+    table = _setup_schema_add_table(tmp_db)
+
+    # --8<-- [start:add_columns_calculated]
     # Add a discounted price column (10% discount)
     table.add_columns({"discounted_price": "cast((price * 0.9) as float)"})
     # --8<-- [end:add_columns_calculated]
+    assert "discounted_price" in table.schema.names
 
 
 def test_add_columns_default_values(tmp_db):
-    # --8<-- [start:add_columns_default_values]
-    table_name = "schema_evolution_add_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800.00,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    table = db.create_table(table_name, data, mode="overwrite")
+    table = _setup_schema_add_table(tmp_db)
 
+    # --8<-- [start:add_columns_default_values]
     # Add a stock status column with default value
     table.add_columns({"in_stock": "cast(true as boolean)"})
     # --8<-- [end:add_columns_default_values]
+    assert "in_stock" in table.schema.names
 
 
 def test_add_columns_nullable(tmp_db):
-    # --8<-- [start:add_columns_nullable]
-    table_name = "schema_evolution_add_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    table = db.create_table(table_name, data, mode="overwrite")
+    table = _setup_schema_add_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
+    )
 
+    # --8<-- [start:add_columns_nullable]
     # Add a nullable timestamp column
     table.add_columns({"last_ordered": "cast(NULL as timestamp)"})
     # --8<-- [end:add_columns_nullable]
+    assert "last_ordered" in table.schema.names
 
 
 def test_alter_columns_rename(tmp_db):
+    table = _setup_schema_alter_table(tmp_db)
+
     # --8<-- [start:alter_columns_rename]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800,
-            "discount_price": 720.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
-    )
-
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     # Rename discount_price to sale_price
     table.alter_columns({"path": "discount_price", "rename": "sale_price"})
     # --8<-- [end:alter_columns_rename]
+    assert "sale_price" in table.schema.names
+    assert "discount_price" not in table.schema.names
 
 
 def test_alter_columns_data_type(tmp_db):
-    # --8<-- [start:alter_columns_data_type]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
+    table = _setup_schema_alter_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
     )
 
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
+    # --8<-- [start:alter_columns_data_type]
     # Change price from int32 to int64 for larger numbers
     table.alter_columns({"path": "price", "data_type": pa.int64()})
     # --8<-- [end:alter_columns_data_type]
+    assert table.schema.field("price").type == pa.int64()
 
 
 def test_alter_columns_nullable(tmp_db):
-    # --8<-- [start:alter_columns_nullable]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
+    table = _setup_schema_alter_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
     )
 
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
+    # --8<-- [start:alter_columns_nullable]
     # Make the name column nullable
     table.alter_columns({"path": "name", "nullable": True})
     # --8<-- [end:alter_columns_nullable]
+    assert table.schema.field("name").nullable is True
 
 
 def test_alter_columns_multiple(tmp_db):
-    # --8<-- [start:alter_columns_multiple]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
+    table = _setup_schema_alter_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
     )
-
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
     table.alter_columns({"path": "discount_price", "rename": "sale_price"})
 
+    # --8<-- [start:alter_columns_multiple]
     # Rename, change type, and make nullable in one operation
     table.alter_columns(
         {
@@ -783,66 +767,40 @@ def test_alter_columns_multiple(tmp_db):
         }
     )
     # --8<-- [end:alter_columns_multiple]
+    assert "final_price" in table.schema.names
+    assert table.schema.field("final_price").nullable is True
 
 
 def test_drop_columns_single(tmp_db):
+    table = _setup_schema_drop_table(tmp_db)
+
     # --8<-- [start:drop_columns_single]
-    table_name = "schema_evolution_drop_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "temp_col1": "X",
-            "temp_col2": 100,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800.00,
-            "temp_col1": "Y",
-            "temp_col2": 200,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 3,
-            "name": "Headphones",
-            "price": 150.00,
-            "temp_col1": "Z",
-            "temp_col2": 300,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-
-    table = db.create_table(table_name, data, mode="overwrite")
-
     # Remove the first temporary column
     table.drop_columns(["temp_col1"])
     # --8<-- [end:drop_columns_single]
+    assert "temp_col1" not in table.schema.names
 
 
 def test_drop_columns_multiple(tmp_db):
+    table = _setup_schema_drop_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "temp_col1": "X",
+                "temp_col2": 100,
+                "vector": np.random.random(128).tolist(),
+            },
+        ],
+    )
+
     # --8<-- [start:drop_columns_multiple]
-    table_name = "schema_evolution_drop_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "temp_col1": "X",
-            "temp_col2": 100,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-
-    table = db.create_table(table_name, data, mode="overwrite")
-
     # Remove the second temporary column
     table.drop_columns(["temp_col2"])
     # --8<-- [end:drop_columns_multiple]
+    assert "temp_col2" not in table.schema.names
 
 
 def test_alter_vector_column(tmp_db):
