@@ -14,6 +14,9 @@ Trigger distributed jobs to populate column values in your LanceDB table using U
 ### [Materialized Views](/geneva/jobs/materialized-views/)
 Create declarative materialized views to manage batch updates of expensive operations. Optimize data layouts for training and simplify orchestration.
 
+### [Checkpointing](/geneva/jobs/checkpointing/)
+Understand how Geneva checkpoints batches and fragments to make distributed jobs restartable, incremental, and idempotent.
+
 ### [Startup Optimizations](/geneva/jobs/startup/)
 Optimize job and session startup times for faster interactive development and production workflows. Learn about caching, pre-warming, and performance tuning.
 
@@ -25,7 +28,7 @@ Understand how Geneva automatically packages and deploys your Python execution e
 ## Key Features
 
 - **Distributed Processing**: Scale feature computation across multiple nodes
-- **Checkpointing**: Resume jobs from failures without losing progress
+- **Checkpointing**: Resume jobs from failures without losing progress. See [Checkpointing](/geneva/jobs/checkpointing/).
 - **Incremental Updates**: Only process new or modified data
 - **Multiple Backends**: Support for Ray on Kubernetes and standalone clusters
 - **Environment Management**: Automatic dependency packaging and deployment
