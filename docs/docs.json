@@ -209,6 +209,7 @@
                   "integrations/embedding/huggingface",
                   "integrations/embedding/aws",
                   "integrations/embedding/cohere",
+                  "integrations/embedding/colpali",
                   "integrations/embedding/gemini",
                   "integrations/embedding/ibm",
                   "integrations/embedding/imagebind",
@@ -230,6 +231,7 @@
                   "integrations/reranking/cross_encoder",
                   "integrations/reranking/jina",
                   "integrations/reranking/linear_combination",
+                  "integrations/reranking/mrr",
                   "integrations/reranking/openai",
                   "integrations/reranking/rrf",
                   "integrations/reranking/voyageai"

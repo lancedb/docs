@@ -26,8 +26,8 @@ Accepted Arguments
 | --- | --- | --- | --- |
 | `model_name` | `str` | `"gpt-4-turbo-preview"` | The name of the reranker model to use.|
 | `column` | `str` | `"text"` | The name of the column to use as input to the cross encoder model. |
-| `return_score` | str | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", will return only the `_relevance_score. If "all" is supported, will return relevance score along with the vector and/or fts scores depending on query type. |
-| `api_key` | str | `None` | The API key to use. If None, will use the OPENAI_API_KEY environment variable.
+| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", will return only the `_relevance_score. If "all" is supported, will return relevance score along with the vector and/or fts scores depending on query type. |
+| `api_key` | `str` | `None` | The API key to use. If None, will use the OPENAI_API_KEY environment variable.
 
 
 ## Supported Scores for each query type
