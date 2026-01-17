@@ -26,7 +26,7 @@ export const PyBasicVectorSearch = "query_vector = [0.03, 0.85, 0.61, 0.90]\nres
 
 export const PyBasicVectorSearchQ1 = "# Who are the characters similar to  \"wizard\"?\nquery_vector_1 = [0.03, 0.85, 0.61, 0.90]\nr1 = (\n    table.search(query_vector_1)\n    .limit(5)\n    .select([\"name\", \"role\", \"description\"])\n    .to_polars()\n)\nprint(r1)\n";
 
-export const PyBasicVectorSearchQ2 = "# Who are the characters similar to \"wizard\" with high magic stats?\nquery_vector_2 = [0.03, 0.85, 0.61, 0.90]\nr2 = (\n    table.search()\n    .where(\"stats.magic > 3\")\n    .select([\"name\", \"role\", \"description\"])\n    .limit(5)\n    .to_polars()\n)\nprint(r2)\n";
+export const PyBasicVectorSearchQ2 = "# Who are the characters with high magic stats?\nquery_vector_2 = [0.03, 0.85, 0.61, 0.90]\nr2 = (\n    table.search(query_vector_2)\n    .where(\"stats.magic > 3\")\n    .select([\"name\", \"role\", \"description\"])\n    .limit(5)\n    .to_polars()\n)\nprint(r2)\n";
 
 export const PyBasicVectorSearchQ3 = "# Who are the strongest characters?\nr3 = (\n    table.search()\n    .where(\"stats.strength > 3\")\n    .select([\"name\", \"role\", \"description\"])\n    .limit(5)\n    .to_polars()\n)\nprint(r3)\n";
 
