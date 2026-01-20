@@ -128,9 +128,17 @@ def func(...):
 
 #### checkpoint_size
 
-`checkpoint_size` controls how many rows are processed before checkpointing, and therefore reporting and saving progress. 
+`checkpoint_size` controls how many rows are processed before checkpointing, and therefore reporting and saving progress.
 
-By default, Geneva uses adaptive checkpoint sizing, so you don't need to set this parameter. This is because UDFs can be quite varied -- some can be simple operations where thousands of calls can be completed per second, while others may be slow and require 30s per row. So a simple default like "write every 1000 rows" might write once a second or once every 8 hours! Geneva will avoid this by adapting its checkpointing rate to your task. But if you want to see writes more or less frequently, you can set `checkpoint_size` manually.
+UDFs can be quite varied: some can be simple operations where thousands of calls can be completed per second, while others may be slow and require 30s per row. So a simple default like "every 1000 rows" might write once a second or once every 8 hours!
+
+Geneva will handle this internally, using an experimental feature that will adapt checkpoint sizing as a UDF progresses. However, if you want to see writes more or less frequently, you can set this manually. There are three parameters:
+
+- `checkpoint_size`: the seed for the initial checkpoint size
+- `min_checkpoint_size`: the minimum value that Geneva will use while adapting checkpoint size
+- `max_checkpoint_size`: the maximum value that Geneva will use while adapting checkpoint size
+
+Therefore, to force a checkpoint size (and effectively disable adaptive batch sizing), set all three of these parameters to the same value.
 
 ### Error handling
 
