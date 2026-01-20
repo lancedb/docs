@@ -33,6 +33,16 @@ Control retry behavior for commits and version conflicts.
 | `GENEVA_VERSION_CONFLICT_MAX_RETRIES` | `10` | Maximum number of retries for version conflicts during commit. Version conflicts occur when concurrent backfills commit to the same fragments. Prevents infinite loops when concurrent commits keep conflicting. |
 | `GENEVA_WRITER_STALL_IDLE_ROUNDS` | `6` | Number of idle rounds (5s each) before considering a writer stalled during drain. With many concurrent backfills, resource contention can slow writers without them being truly stalled. |
 
+## Lance Retry Configuration
+
+This section configures retry logic for Lance I/O operations. Retries occur on `OSError`, `ValueError`, and `RuntimeError("Too many concurrent writers")` exceptions, and are retried with exponential backoff with jitter.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENEVA_RETRY_LANCE_ATTEMPTS` | `7` | Maximum number of retry attempts for Lance I/O operations. |
+| `GENEVA_RETRY_LANCE_INITIAL_SECS` | `0.5` | Initial wait time in seconds for exponential backoff when retrying Lance I/O operations. |
+| `GENEVA_RETRY_LANCE_MAX_SECS` | `120.0` | Maximum wait time in seconds for exponential backoff when retrying Lance I/O operations. |
+
 ## Other Configuration
 
 | Variable | Default | Description |
