@@ -155,7 +155,8 @@
                 "group": "UDFs",
                 "pages": [
                   "geneva/udfs/index",
-                  "geneva/udfs/blobs"
+                  "geneva/udfs/blobs",
+                  "geneva/udfs/error_handling"
                 ]
               },
               {

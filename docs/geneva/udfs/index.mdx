@@ -21,17 +21,9 @@ from geneva import udf
 @udf
 def area_udf(x: int, y: int) -> int:
     return x * y
-
-@udf
-def download_udf(filename:str) -> bytes:
-    import requests
-    resp = requests.get(filename)
-    res.raise_for_status()
-    return resp.content
-
 ```
 
-This UDF will take the value of x and value of y from each row and return the product.  The `@udf` wrapper is all that is needed.
+This UDF will take the value of `x` and value of `y` from each row and return the product.  The `@udf` wrapper is all that is needed.
 
 ### Batched UDFs
 
@@ -120,7 +112,7 @@ class OpenAIEmbedding(Callable):
 The `udf` can have extra annotations that specify resource requirements and operational characteristics.
 These are just add parameters to the `udf(...)`.
 
-### Resources requirements for UDFs
+### Resource requirements for UDFs
 
 Some workers may require specific resources such as gpus, cpus and certain amounts of RAM.
 
@@ -134,17 +126,37 @@ def func(...):
 
 ### Operational parameters for UDFs
 
-UDFs can be quite varied -- some can be simple operations where thousands of calls can be completed per second, while others may be slow and require 30s per row.
+#### checkpoint_size
 
-In LanceDB, the default number of rows per fragment is 1024 * 1024 rows.  Conside a captioning UDF that takes 30s per row.   It could take a year (!) before any results show up! (e.g. 30s/row * 1024*1024 rows/fragment => 30M s/fragment => 8.3k hours/fragment -> 347 days/fragment).  To enable these to be parallelized, we provide a `batch_size` setting so the work can be split between workers and so that that partial results are checkpointed more frequently to enable finer-grained progress and job recovery.
+`checkpoint_size` controls how many rows are processed before checkpointing, and therefore reporting and saving progress.
 
-By default `batch_size` is 100 computed rows per checkpoint.  So for an expensive captioning UDF that can take 30s per row, you may get a checkpoint every 3000s (50mins).  With 100 gpus, our job could finish in 3.5 days!  For cheap operations that can compute 100 rows per second you'd potentially be checkpointing every second.  Tuning this can help you see progress more frequently.
+UDFs can be quite varied: some can be simple operations where thousands of calls can be completed per second, while others may be slow and require 30s per row. So a simple default like "every 1000 rows" might write once a second or once every 8 hours!
+
+Geneva will handle this internally, using an experimental feature that will adapt checkpoint sizing as a UDF progresses. However, if you want to see writes more or less frequently, you can set this manually. There are three parameters:
+
+- `checkpoint_size`: the seed for the initial checkpoint size
+- `min_checkpoint_size`: the minimum value that Geneva will use while adapting checkpoint size
+- `max_checkpoint_size`: the maximum value that Geneva will use while adapting checkpoint size
+
+Therefore, to force a checkpoint size (and effectively disable adaptive batch sizing), set all three of these parameters to the same value.
+
+### Error handling
+
+Depending on the UDF, you may want Geneva to ignore rows that hit failures, retry, or fail the entire job. For simple cases, Geneva provides a simple parameter, `on_error`, with the following options:
+
+| Function | Behavior |
+|----------|----------|
+| `retry_transient()` | Retry `ConnectionError`, `TimeoutError`, `OSError` with exponential backoff |
+| `retry_all()` | Retry any exception with exponential backoff |
+| `skip_on_error()` | Return `None` for any exception (skip the row) |
+| `fail_fast()` | Fail immediately on any exception (default behavior) |
+
+If those are not specific enough, Geneva also provides [many more error handling options](/geneva/udfs/error_handling).
 
 ## Registering Features with UDFs
 
 Registering a feature is done by providing the `Table.add_columns()` function a new column name and the Geneva UDF.
 
-Let's start by obtaining the table `tbl`
 ```python
 import geneva
 import numpy as np
@@ -251,14 +263,13 @@ The next section shows you how to change your column definition by `alter`ing th
 
 ## Altering UDFs
 
-
 You now want to revise the code.  To make the change, you'd update the UDF used to compute the column using the `alter_columns` API and the updated function.  The example below replaces the definition of column `area` to use the `area_udf_v2` function.
 
 ```python
 table.alter_columns({"path": "area", "udf": area_udf_v2} )
 ```
 
-After making this change, the existing data already in the table does not change.   However,  when you perform your next basic `backfill` operation,  all values would be recalculated and updated.  If you only wanted some rows updated , you could perform a filtered backfill, targeting the specific rows that need the new upates.   
+After making this change, the existing data already in the table does not change. However, when you perform your next basic `backfill` operation, all values would be recalculated and updated. If you only wanted some rows updated, you could perform a filtered backfill, targeting the specific rows that need the new upates.   
 
 For example, this filter would only update the rows where area was currently null. 
 ```python
