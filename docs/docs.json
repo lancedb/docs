@@ -156,7 +156,8 @@
                 "pages": [
                   "geneva/udfs/index",
                   "geneva/udfs/blobs",
-                  "geneva/udfs/error_handling"
+                  "geneva/udfs/error_handling",
+                  "geneva/udfs/advanced-configuration"
                 ]
               },
               {
