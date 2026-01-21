@@ -261,7 +261,6 @@ def test_open_existing_table(tmp_db):
 
 def test_create_empty_table(tmp_db):
     # --8<-- [start:create_empty_table]
-    import lancedb
     import pyarrow as pa
 
     schema = pa.schema(
@@ -278,7 +277,6 @@ def test_create_empty_table(tmp_db):
 
 def test_create_empty_table_pydantic(tmp_db):
     # --8<-- [start:create_empty_table_pydantic]
-    import lancedb
     from lancedb.pydantic import LanceModel, Vector
 
     class Item(LanceModel):
@@ -311,8 +309,9 @@ def test_drop_table(tmp_db):
 
 
 def test_add_data_to_table(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:add_data_to_table]
-    import lancedb
     import pyarrow as pa
 
     # create an empty table with schema
@@ -332,14 +331,16 @@ def test_add_data_to_table(tmp_db):
     )
 
     table_name = "basic_ingestion_example"
-    db = tmp_db
     table = db.create_table(table_name, schema=schema, mode="overwrite")
     # Add data
     table.add(data)
     # --8<-- [end:add_data_to_table]
+    assert table.count_rows() == len(data)
 
 
 def test_add_data_pydantic_model(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:add_data_pydantic_model]
     from lancedb.pydantic import LanceModel, Vector
 
@@ -357,12 +358,14 @@ def test_add_data_pydantic_model(tmp_db):
 
     # Create table with Pydantic model schema
     table_name = "pydantic_example"
-    db = tmp_db
     table = db.create_table(table_name, schema=Content, mode="overwrite")
     # --8<-- [end:add_data_pydantic_model]
+    assert table.count_rows() == 0
 
 
 def test_add_data_nested_model(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:add_data_nested_model]
     from lancedb.pydantic import LanceModel, Vector
     from pydantic import BaseModel
@@ -378,12 +381,14 @@ def test_add_data_nested_model(tmp_db):
 
     # Create table with nested schema
     table_name = "nested_model_example"
-    db = tmp_db
     table = db.create_table(table_name, schema=NestedSchema, mode="overwrite")
     # --8<-- [end:add_data_nested_model]
+    assert table.count_rows() == 0
 
 
 def test_batch_data_insertion(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:batch_data_insertion]
     import pyarrow as pa
 
@@ -407,19 +412,19 @@ def test_batch_data_insertion(tmp_db):
     )
     # Create table with batches
     table_name = "batch_ingestion_example"
-    db = tmp_db
     table = db.create_table(table_name, make_batches(), schema=schema, mode="overwrite")
     # --8<-- [end:batch_data_insertion]
+    assert table.count_rows() == 10
 
 
 def test_update_operation(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:update_operation]
-    import lancedb
     import pandas as pd
 
     # Create a table from a pandas DataFrame
     data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-    db = tmp_db
     tbl = db.create_table("test_table", data, mode="overwrite")
     # Update the table where x = 2
     tbl.update(where="x = 2", values={"vector": [10, 10]})
@@ -427,45 +432,51 @@ def test_update_operation(tmp_db):
     df = tbl.to_pandas()
     print(df)
     # --8<-- [end:update_operation]
+    assert df.loc[df["x"] == 2, "vector"].iloc[0] == [10, 10]
 
 
 def test_update_using_sql(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:update_using_sql]
-    import lancedb
     import pandas as pd
 
     # Create a table from a pandas DataFrame
     data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-    db = tmp_db
     tbl = db.create_table("test_table", data, mode="overwrite")
-    # Update the table where x = 2
+    # Update all rows: increment x by 1
     tbl.update(values_sql={"x": "x + 1"})
     print(tbl.to_pandas())
     # --8<-- [end:update_using_sql]
+    assert sorted(tbl.to_pandas()["x"].tolist()) == [2, 3, 4]
 
 
 def test_delete_operation(tmp_db):
-    # --8<-- [start:delete_operation]
     db = tmp_db
-    # Create table first
-    data = [
-        {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
-        {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
-        {"vector": [10.2, 100.8], "item": "baz", "price": 30.0},
-    ]
-    table = db.create_table("update_table_example", data, mode="overwrite")
+    table = db.create_table(
+        "update_table_example",
+        [
+            {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
+            {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
+            {"vector": [10.2, 100.8], "item": "baz", "price": 30.0},
+        ],
+        mode="overwrite",
+    )
 
+    # --8<-- [start:delete_operation]
     # delete data
     predicate = "price = 30.0"
     table.delete(predicate)
     # --8<-- [end:delete_operation]
+    assert table.count_rows() == 2
 
 
 def test_upsert_operation(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:upsert_operation]
     # Create example table
     users_table_name = "users_example"
-    db = tmp_db
     table = db.create_table(
         users_table_name,
         [
@@ -493,12 +504,14 @@ def test_upsert_operation(tmp_db):
     # Verify results - should be 3 records total
     print(f"Total users: {table.count_rows()}")  # 3
     # --8<-- [end:upsert_operation]
+    assert table.count_rows() == 3
 
 
 def test_insert_if_not_exists(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:insert_if_not_exists]
     # Create example table
-    db = tmp_db
     table = db.create_table(
         "domains",
         [
@@ -520,12 +533,14 @@ def test_insert_if_not_exists(tmp_db):
     # Verify count - should be 3 (original 2 plus 1 new)
     print(f"Total domains: {table.count_rows()}")  # 3
     # --8<-- [end:insert_if_not_exists]
+    assert table.count_rows() == 3
 
 
 def test_replace_range_operation(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:replace_range_operation]
     # Create example table with document chunks
-    db = tmp_db
     table = db.create_table(
         "chunks",
         [
@@ -555,6 +570,7 @@ def test_replace_range_operation(tmp_db):
     # Verify count for doc_id = 1 - should be 1
     print(f"Chunks for doc_id = 1: {table.count_rows('doc_id = 1')}")  # 1
     # --8<-- [end:replace_range_operation]
+    assert table.count_rows("doc_id = 1") == 1
 
 
 # ============================================================================
