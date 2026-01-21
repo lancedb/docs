@@ -11,6 +11,35 @@ Triggering backfill creates a distributed job to run the UDF and populate the co
 
 **Checkpoints**: Each batch of UDF execution is checkpointed so that partial results are not lost in case of job failures. Jobs can resume and avoid most of the expense of having to recalculate values.
 
+## Adaptive checkpoint sizing
+
+Geneva can automatically adjust checkpoint sizes during a backfill. It starts with small checkpoints (faster proof-of-life) and grows them as it observes stable throughput, while staying within safe bounds. Planning and progress estimation still use your configured checkpoint size (`batch_size`), but the actual checkpoint chunks can be smaller when adaptive sizing is enabled.
+
+Adaptive sizing is always clamped to bounds:
+
+- `max_checkpoint_size`: Upper bound. Defaults to the job's checkpoint size (`batch_size`) and is capped at that value if you set a larger max.
+- `min_checkpoint_size`: Lower bound. Defaults to 1.
+
+When `min_checkpoint_size == max_checkpoint_size`, adaptive sizing is disabled and checkpoints are fixed-size.
+
+You can set adaptive bounds in two places:
+
+- On the UDF definition via `@udf(..., min_checkpoint_size=..., max_checkpoint_size=...)`
+- On the backfill call via `table.backfill(..., min_checkpoint_size=..., max_checkpoint_size=...)`
+
+Backfill-level values take precedence over UDF defaults.
+
+<CodeGroup>
+```python Python icon="python"
+@udf(min_checkpoint_size=25, max_checkpoint_size=200)
+def embed_udf(text):
+    ...
+
+# Override the UDF defaults for this run
+tbl.backfill("embedding", min_checkpoint_size=10, max_checkpoint_size=100)
+```
+</CodeGroup>
+
 ## Managing concurrency
 
 One way to speed up the execution of a job to give it more resources and to have it work in parallel.  There are a few settings you can use on the backfill command to tune this.
