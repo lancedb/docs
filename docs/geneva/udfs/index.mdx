@@ -136,9 +136,9 @@ def func(...):
 
 UDFs can be quite varied -- some can be simple operations where thousands of calls can be completed per second, while others may be slow and require 30s per row.
 
-In LanceDB, the default number of rows per fragment is 1024 * 1024 rows.  Conside a captioning UDF that takes 30s per row.   It could take a year (!) before any results show up! (e.g. 30s/row * 1024*1024 rows/fragment => 30M s/fragment => 8.3k hours/fragment -> 347 days/fragment).  To enable these to be parallelized, we provide a `batch_size` setting so the work can be split between workers and so that that partial results are checkpointed more frequently to enable finer-grained progress and job recovery.
+In LanceDB, the default number of rows per fragment is 1024 * 1024 rows.  Conside a captioning UDF that takes 30s per row.   It could take a year (!) before any results show up! (e.g. 30s/row * 1024*1024 rows/fragment => 30M s/fragment => 8.3k hours/fragment -> 347 days/fragment).  To enable these to be parallelized, we provide a `checkpoint_size` setting so the work can be split between workers and so that that partial results are checkpointed more frequently to enable finer-grained progress and job recovery.
 
-By default `batch_size` is 100 computed rows per checkpoint.  So for an expensive captioning UDF that can take 30s per row, you may get a checkpoint every 3000s (50mins).  With 100 gpus, our job could finish in 3.5 days!  For cheap operations that can compute 100 rows per second you'd potentially be checkpointing every second.  Tuning this can help you see progress more frequently.
+By default `checkpoint_size` is 100 computed rows per checkpoint.  So for an expensive captioning UDF that can take 30s per row, you may get a checkpoint every 3000s (50mins).  With 100 gpus, our job could finish in 3.5 days!  For cheap operations that can compute 100 rows per second you'd potentially be checkpointing every second.  Tuning this can help you see progress more frequently.
 
 ## Registering Features with UDFs
 

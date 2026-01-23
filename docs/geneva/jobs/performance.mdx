@@ -26,7 +26,7 @@ The `Table.backfill(..) ` method has several optional arguments to tune performa
 
 `commit_granularity` controls how frequently fragments are committed so that partical results can be come visible to table readers.  
 
-Setting `batch_size` smaller introduces finer-grained checkpoints and can help provide more frequent proof of life as a job is being executed.  This is useful if the computation on your data is expensive.
+Setting `checkpoint_size` smaller introduces finer-grained checkpoints and can help provide more frequent proof of life as a job is being executed.  This is useful if the computation on your data is expensive.
 
 Reference:
 * [`backfill` API](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.backfill)
