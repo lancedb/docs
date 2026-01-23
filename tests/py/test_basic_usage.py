@@ -124,10 +124,10 @@ def test_basic_usage(db_path_factory):
     # --8<-- [end:basic_vector_search_q1]
 
     # --8<-- [start:basic_vector_search_q2]
-    # Who are the characters similar to "wizard" with high magic stats?
+    # Who are the characters with high magic stats?
     query_vector_2 = [0.03, 0.85, 0.61, 0.90]
     r2 = (
-        table.search()
+        table.search(query_vector_2)
         .where("stats.magic > 3")
         .select(["name", "role", "description"])
         .limit(5)
