@@ -13,7 +13,7 @@ Triggering backfill creates a distributed job to run the UDF and populate the co
 
 ## Adaptive checkpoint sizing
 
-Geneva can automatically adjust checkpoint sizes during a backfill. It starts with small checkpoints (faster proof-of-life) and grows them as it observes stable throughput, while staying within safe bounds. Planning and progress estimation still use your configured checkpoint size (`checkpoint_size`), but the actual checkpoint chunks can be smaller when adaptive sizing is enabled.
+Geneva can automatically adjust checkpoint sizes during a backfill. It starts with small checkpoints (faster proof-of-life) and grows them as it observes stable throughput, while staying within safe bounds. Planning still uses your configured checkpoint size (`checkpoint_size`), but the actual checkpoint chunks can be smaller when adaptive sizing is enabled.
 
 Adaptive sizing is always clamped to bounds:
 
