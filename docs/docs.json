@@ -167,6 +167,7 @@
                   "geneva/jobs/startup",
                   "geneva/jobs/materialized-views",
                   "geneva/jobs/contexts",
+                  "geneva/jobs/console",
                   "geneva/jobs/performance"
                 ]
               },
