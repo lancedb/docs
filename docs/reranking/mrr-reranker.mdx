@@ -1,0 +1,52 @@
+---
+title: MRR Reranker
+sidebarTitle: "MRR Reranker"
+description: Learn about the MRR Reranker for hybrid search in LanceDB.
+icon: "code"
+---
+
+The `MRRReranker` class in LanceDB reranks search results using the Mean Reciprocal Rank (MRR) algorithm.
+This reranker is particularly useful in scenarios where the relevance of the top result is more important
+than the relevance of lower-ranked results.
+
+## Mean Reciprocal Rank (MRR)
+
+Mean Reciprocal Rank is a statistic measure for evaluating the effectiveness of a search algorithm.
+It calculates the average of the reciprocal ranks of results for a sample of queries.
+The reciprocal rank of a query response is the multiplicative inverse of the rank of the first correct answer.
+
+## When to Use MRR vs RRF
+
+- **MRR**: Use when the primary goal is to ensure that the most relevant result appears at the top.
+- **RRF (Reciprocal Rank Fusion)**: Use when combining results from multiple sources, and you want to balance their contributions.
+
+## Configuring Weights
+
+The `MRRReranker` allows you to configure the importance of vector and FTS (Full-Text Search) results
+through the `weight_vector` and `weight_fts` parameters.
+
+- `weight_vector`: A float between 0.0 and 1.0, default is 0.5.
+- `weight_fts`: A float between 0.0 and 1.0, default is 0.5.
+
+These weights determine the influence of each type of result in the final ranking.
+
+## Example
+
+Below is an example of how to use the `MRRReranker` class:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.rerankers import MRRReranker
+
+# Initialize the reranker with custom weights
+reranker = MRRReranker(weight_vector=0.7, weight_fts=0.3)
+
+# Perform a hybrid rerank
+reranked_results = reranker.rerank_hybrid(query="example query", vector_results=vector_results, fts_results=fts_results)
+```
+</CodeGroup>
+
+<Card icon="lightbulb">
+The `vector_results` and `fts_results` are expected to be PyArrow tables, which can be easily manipulated
+and converted to other formats like Pandas DataFrames for further analysis.
+</Card>
