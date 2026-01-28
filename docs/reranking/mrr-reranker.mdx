@@ -1,0 +1,39 @@
+---
+title: MRR Reranker
+sidebarTitle: "MRR Reranker"
+description: Learn how to use the MRR Reranker in LanceDB for hybrid search.
+icon: "sort-numeric-up"
+---
+
+The MRR (Mean Reciprocal Rank) Reranker is used to reorder search results to improve relevance by considering the rank position of the first relevant result. It is particularly useful in scenarios where the position of the first relevant result is more important than the overall ranking of all results.
+
+## When to Use MRR vs RRF
+
+- **MRR**: Best used when the primary goal is to ensure that the first relevant result appears as high as possible in the search results.
+- **RRF (Reciprocal Rank Fusion)**: More suitable when combining results from multiple sources, as it considers the rank of results from each source.
+
+## Configuring Weights
+
+The `MRRReranker` class allows you to configure weights for vector and FTS (Full-Text Search) results. These weights determine the influence of each type of search result in the final reranking.
+
+- `weight_vector`: Weight for vector search results (default is 0.5).
+- `weight_fts`: Weight for FTS search results (default is 0.5).
+
+## Example Code
+
+Below is an example of how to use the `MRRReranker` class in LanceDB:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.rerankers import MRRReranker
+
+# Initialize the MRR Reranker with custom weights
+reranker = MRRReranker(weight_vector=0.6, weight_fts=0.4)
+
+# Assume `vector_results` and `fts_results` are obtained from previous searches
+query = "example search query"
+reranked_results = reranker.rerank_hybrid(query, vector_results, fts_results)
+```
+</CodeGroup>
+
+This example demonstrates initializing the `MRRReranker` with specific weights and using it to rerank hybrid search results.

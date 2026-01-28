@@ -120,7 +120,8 @@
                 "pages": [
                   "reranking/index",
                   "reranking/custom-reranker",
-                  "reranking/eval"
+                  "reranking/eval",
+                  "reranking/mrr-reranker"
                 ]
               },
               {
