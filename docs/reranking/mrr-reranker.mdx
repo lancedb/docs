@@ -1,0 +1,32 @@
+---
+title: MRR Reranker
+sidebarTitle: "MRR Reranker"
+description: Understand and implement the MRR Reranker for hybrid search in LanceDB.
+icon: "code"
+---
+
+## Introduction to MRR Algorithm
+
+The Mean Reciprocal Rank (MRR) is a statistic measure for evaluating a process that produces a list of possible responses to a sample of queries, ordered by probability of correctness. The reciprocal rank of a query response is the multiplicative inverse of the rank of the first correct answer.
+
+## When to Use MRR vs RRF
+
+MRR is particularly useful when you are interested in the position of the first relevant result. It is different from the Reciprocal Rank Fusion (RRF) which considers multiple relevant results and their ranks.
+
+## Configuring Weights
+
+The `MRRReranker` class allows you to configure weights for vector and FTS search results. By default, both `weight_vector` and `weight_fts` are set to 0.5, allowing an equal contribution from both search types.
+
+## Example Code
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.rerankers import MRRReranker
+
+# Initialize the MRRReranker with custom weights
+reranker = MRRReranker(weight_vector=0.7, weight_fts=0.3)
+
+# Example usage with query, vector_results, and fts_results
+reranked_results = reranker.rerank_hybrid(query="example query", vector_results=vector_results, fts_results=fts_results)
+```
+</CodeGroup>
