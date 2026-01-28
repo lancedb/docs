@@ -1,0 +1,119 @@
+---
+title: Backfill Conflicts
+sidebarTitle: Conflicts
+description: Learn how Geneva handles conflicts during backfill operations and what to do when they occur.
+icon: code-merge
+---
+
+## Overview
+
+Geneva backfills operate on a **point-in-time snapshot** of your table. When other operations modify the table during or between backfills, conflicts can occur. Geneva 0.9.x automatically handles most conflict scenarios, reducing unnecessary recomputation and enabling graceful recovery.
+
+## Safe Operations During Backfill
+
+These operations can safely run while a backfill is in progress:
+
+| Operation | Why It's Safe |
+|-----------|---------------|
+| `merge_insert` (INSERT-only) | Creates new fragments without modifying existing ones |
+| `add()` / append data | Creates new fragments without modifying existing ones |
+| Read operations (`search`, `to_arrow`) | Read-only, no fragment modification |
+| Adding new columns | Schema change only, no fragment rewrite |
+
+## Operations That Cause Conflicts
+
+These operations can conflict with running backfills:
+
+| Operation | What Happens |
+|-----------|--------------|
+| `compact_files()` / `optimize()` | Reorganizes fragments, invalidating the backfill's snapshot |
+| `merge_insert` with updates | Modifies existing rows, causing fragment conflicts |
+| `delete()` | Modifies existing fragments |
+
+<Warning>
+When a conflict occurs, affected fragments fail gracefully. The backfill completes what it can, and you can re-run it to process the remaining rows.
+</Warning>
+
+## How Geneva Handles Conflicts
+
+### Concurrent Backfills on Different Columns
+
+When multiple backfills run on the same table but different columns, Geneva handles version conflicts automatically:
+
+1. Each backfill writes to different column files (field IDs)
+2. If a commit conflict occurs, Geneva retries at the latest version
+3. The retry merges the new column data without overwriting other columns
+
+This is controlled by the `GENEVA_VERSION_CONFLICT_MAX_RETRIES` environment variable (default: 10). See [Advanced Configuration](/geneva/udfs/advanced-configuration) for details.
+
+### Compaction Between Backfills
+
+When you run compaction between backfills (not during), Geneva handles it efficiently:
+
+| Scenario | Behavior |
+|----------|----------|
+| Backfill, compact, re-backfill (same UDF) | Already-computed rows are skipped via `WHERE <col> IS NULL` |
+| Partial backfill, compact, resume | Incremental processing continues from where it left off |
+| Backfill, `alter_columns` (new UDF), re-backfill | Full reprocessing with new UDF (intentional) |
+
+<Note>
+Geneva's default behavior is to skip rows that already have values (`WHERE <col> IS NULL`). This means compaction doesn't cause unnecessary recomputation.
+</Note>
+
+## Recovery Steps
+
+When a conflict occurs during a backfill:
+
+1. **Wait** for any concurrent operations (compaction, updates) to complete
+2. **Re-run** the backfill:
+   ```python
+   tbl.backfill("column_name")
+   ```
+3. **Only uncomputed rows** will be processed (rows with NULL values in the target column)
+
+Checkpoints from the previous run are preserved, so you won't lose progress on successfully computed rows.
+
+## Best Practices
+
+### Sequence Your Operations
+
+For the smoothest experience, sequence your operations:
+
+```
+1. Complete all data ingestion
+2. Run backfill to compute UDF columns
+3. Run compaction/optimization
+```
+
+### Use INSERT-Only Operations During Backfill
+
+If you need to add data while a backfill is running, use INSERT-only operations:
+
+```python
+# Safe: INSERT-only merge_insert
+tbl.merge_insert("id").when_not_matched_insert_all().execute(new_data)
+
+# Unsafe: Updates to existing rows
+tbl.merge_insert("id").when_matched_update_all().execute(data)  # May conflict
+```
+
+### Monitor Backfill Progress
+
+Use async backfills to monitor progress and handle errors:
+
+```python
+fut = tbl.backfill_async("column_name")
+while not fut.done():
+    time.sleep(1)
+# Check for errors before subsequent operations
+result = fut.result()
+```
+
+### Disable Auto-Compaction During Large Backfills
+
+If using LanceDB Cloud or Enterprise with auto-compaction enabled, consider disabling it during large backfill operations to avoid conflicts.
+
+## Related
+
+- [Backfilling](/geneva/jobs/backfilling) - Triggering and configuring backfill operations
+- [Advanced Configuration](/geneva/udfs/advanced-configuration) - Environment variables for retry behavior
