@@ -1,0 +1,81 @@
+---
+title: MRR Reranker
+sidebarTitle: MRR Reranker
+description: Learn how to use the MRR Reranker for hybrid search in LanceDB.
+icon: "search"
+---
+
+The **Mean Reciprocal Rank (MRR)** algorithm is a statistical measure used for evaluating any process that produces a list of possible responses to a sample of queries, ordered by probability of correctness.
+
+## Overview
+
+MRR is particularly useful in scenarios where the order of results is critical. It is commonly used in information retrieval and question answering systems to evaluate the effectiveness of search algorithms.
+
+## When to Use MRR vs RRF
+
+While both MRR and Reciprocal Rank Fusion (RRF) are used for reranking, they serve different purposes:
+- **MRR** is best when the primary goal is to have the correct answer as high as possible in the ranking.
+- **RRF** is useful when combining results from multiple systems, as it tends to be more robust to outliers.
+
+## Configuring Weights
+
+The `MRRReranker` class allows you to configure the weights for vector and full-text search results:
+
+- `weight_vector`: Weight for vector search results (default is 0.5)
+- `weight_fts`: Weight for full-text search results (default is 0.5)
+
+These weights should sum to 1.0 to ensure balanced influence from both search types.
+
+## Example Code
+
+### Python
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.rerankers import MRRReranker
+
+reranker = MRRReranker(weight_vector=0.6, weight_fts=0.4)
+
+results = (
+    table.search(
+        "example query",
+        query_type="hybrid",
+        vector_column_name="vector",
+        fts_columns="text",
+    )
+    .rerank(reranker)
+    .limit(10)
+    .to_pandas()
+)
+
+print("MRR Reranked results:")
+print(results)
+```
+</CodeGroup>
+
+### TypeScript
+
+<CodeGroup>
+```typescript TypeScript icon="square-js"
+import { MRRReranker } from "@lancedb/rerankers";
+
+const reranker = new MRRReranker({ weightVector: 0.6, weightFts: 0.4 });
+
+const results = await table
+  .query()
+  .fullTextSearch("example query")
+  .nearestTo(queryVector)
+  .rerank(reranker)
+  .select(["text"])
+  .limit(10)
+  .toArray();
+
+console.log("MRR Reranked results:");
+console.log(results);
+```
+</CodeGroup>
+
+## Additional Notes
+
+- Ensure that the sum of `weight_vector` and `weight_fts` is equal to 1.0 for balanced reranking.
+- MRR is particularly effective in scenarios where the correct result should be prioritized at the top of the list.
