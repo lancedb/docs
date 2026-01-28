@@ -1,0 +1,35 @@
+---
+title: Mean Reciprocal Rank Reranker
+sidebarTitle: "MRR Algorithm"
+description: Learn about LanceDB's Mean Reciprocal Rank (MRR) reranker for hybrid search.
+---
+
+import { PyRerankingMrrUsage } from '/snippets/integrations.mdx';
+
+# Mean Reciprocal Rank Reranker
+
+The Mean Reciprocal Rank (MRR) reranker is used in LanceDB's hybrid search to evaluate the search scores based on the rank positions of documents. This reranker is particularly useful when the focus is on the position of the first relevant document.
+
+> **Note:** Supported query type – Hybrid search.
+
+## When to Use MRR vs RRF
+
+- **MRR** is ideal when you want to prioritize the ranking of the first relevant document in the search results.
+- **RRF** is better suited for scenarios where a balanced consideration of multiple relevant documents is needed.
+
+## Configuration
+
+The `MRRReranker` can be configured with the following parameters:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `weight_vector` | `float` | `0.5` | Weight for vector search results (0.0 to 1.0). |
+| `weight_fts` | `float` | `0.5` | Weight for FTS search results (0.0 to 1.0). |
+
+## Example Code
+
+<CodeGroup>
+  <CodeBlock filename="Python" language="Python" icon="python">
+    {PyRerankingMrrUsage}
+  </CodeBlock>
+</CodeGroup>
