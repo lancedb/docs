@@ -1,0 +1,51 @@
+---
+title: MRR Reranker
+sidebarTitle: "MRR Reranker"
+description: Learn how to use the MRR Reranker in LanceDB for hybrid search.
+icon: "search"
+---
+
+The **Mean Reciprocal Rank (MRR)** is a statistical measure used for evaluating the effectiveness of a search algorithm. It is particularly useful in scenarios where the order of the results is important, and you want to prioritize the highest-ranked relevant result.
+
+## When to Use MRR vs RRF
+
+- **MRR**: Use when you want to emphasize the importance of the top-ranked result. MRR is ideal for applications where the first correct answer is significantly more valuable than subsequent answers.
+- **RRF (Reciprocal Rank Fusion)**: Use when you want to combine results from multiple sources and balance their contributions. RRF is more suitable when you need a balanced approach to merging results from different search techniques.
+
+## Configuring Weights
+
+The `MRRReranker` class allows you to configure weights for vector and full-text search (FTS) results. This flexibility enables you to adjust the influence of each search type in the final ranking.
+
+- **weight_vector**: Weight for vector search results (range: 0.0 to 1.0).
+- **weight_fts**: Weight for FTS search results (range: 0.0 to 1.0).
+
+## Example Code
+
+Below is an example of how to use the `MRRReranker` class in a hybrid search scenario:
+
+<CodeGroup>
+```python Python icon="python"
+from lancedb.rerankers import MRRReranker
+import lancedb
+
+# Connect to LanceDB
+uri = "data/sample-lancedb"
+db = lancedb.connect(uri)
+
+# Create an instance of MRRReranker
+reranker = MRRReranker(weight_vector=0.7, weight_fts=0.3)
+
+# Perform hybrid search with MRR reranking
+results = (
+    db.search("example query", query_type="hybrid")
+    .rerank(reranker)
+    .limit(10)
+    .to_pandas()
+)
+
+print("MRR Reranker results:")
+print(results)
+```
+</CodeGroup>
+
+By configuring the weights, you can tailor the reranking to prioritize either vector or FTS results based on your application's needs.
