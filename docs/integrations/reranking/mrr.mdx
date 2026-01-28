@@ -1,0 +1,49 @@
+---
+title: Mean Reciprocal Rank Reranker
+sidebarTitle: "MRR Algorithm"
+description: Learn about LanceDB's Mean Reciprocal Rank (MRR) reranker for hybrid and multivector search.
+
+---
+
+import { PyRerankingMrrUsage } from '/snippets/integrations.mdx';
+
+# Mean Reciprocal Rank Reranker
+
+The Mean Reciprocal Rank (MRR) reranker is used to evaluate search results based on the rank of the first relevant document. It is particularly useful when the goal is to prioritize the retrieval of the first relevant result.
+
+> **Note:** Supported query types – Hybrid search and Multivector search.
+
+## When to Use MRR vs RRF
+
+- **MRR** is ideal when the primary objective is to quickly find the first relevant result.
+- **RRF** is better suited for scenarios where a more comprehensive ranking of multiple relevant results is desired.
+
+## Configuration of Weights
+
+The MRR reranker allows configuration of weights for vector and FTS search results:
+
+| Argument | Type | Default | Description |
+| --- | --- | --- | --- |
+| `weight_vector` | `float` | `0.5` | Weight for vector search results (0.0 to 1.0). |
+| `weight_fts` | `float` | `0.5` | Weight for FTS search results (0.0 to 1.0). |
+| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", returns only the `_relevance_score`. If "all", returns all scores from vector and FTS search along with relevance score. |
+
+## Supported Scores for each Query Type
+
+### Hybrid Search
+|`return_score`| Status | Description |
+| --- | --- | --- |
+| `relevance` | ✅ Supported | Returned rows only have the `_relevance_score` column. |
+| `all` | ✅ Supported | Returned rows have vector(`_distance`) and FTS(`score`) along with Hybrid Search score(`_relevance_score`). |
+
+### Multivector Search
+|`return_score`| Status | Description |
+| --- | --- | --- |
+| `relevance` | ✅ Supported | Returned rows only have the `_relevance_score` column. |
+| `all` | ✅ Supported | Returned rows have vector(`_distance`) and FTS(`score`) along with Multivector Search score(`_relevance_score`). |
+
+<CodeGroup>
+  <CodeBlock filename="Python" language="Python" icon="python">
+    {PyRerankingMrrUsage}
+  </CodeBlock>
+</CodeGroup>
