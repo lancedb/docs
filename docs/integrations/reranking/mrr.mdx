@@ -1,0 +1,40 @@
+---
+title: Mean Reciprocal Rank Reranker
+sidebarTitle: "MRR Algorithm"
+description: Learn about LanceDB's Mean Reciprocal Rank (MRR) reranker for hybrid search.
+
+---
+
+# Mean Reciprocal Rank Reranker
+
+The Mean Reciprocal Rank (MRR) reranker is used to evaluate and rank search results based on the position of the first relevant document. It is particularly useful when the primary goal is to have relevant documents appear as early as possible in the search results.
+
+MRR is suitable for scenarios where the user is interested in the first relevant result, making it different from RRF, which considers multiple relevant documents.
+
+> **Note:** Supported query type – Hybrid search.
+
+## Configuration
+
+The MRR reranker allows you to configure the weights for vector and full-text search results:
+
+| Argument     | Type   | Default | Description                                                        |
+|--------------|--------|---------|--------------------------------------------------------------------|
+| `weight_vector` | `float` | `0.5`   | Weight for vector search results (0.0 to 1.0).                     |
+| `weight_fts`    | `float` | `0.5`   | Weight for full-text search results (0.0 to 1.0).                  |
+
+## Example Usage
+
+<CodeGroup>
+  <CodeBlock filename="Python" language="Python" icon="python">
+    {PyRerankingMrrUsage}
+  </CodeBlock>
+</CodeGroup>
+
+## Supported Scores for each query type
+You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:
+
+### Hybrid Search
+|`return_score`| Status | Description |
+| --- | --- | --- |
+| `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |
+| `all` | ✅ Supported | Results have vector(`_distance`) and FTS(`score`) along with Hybrid Search score(`_relevance_score`). |
