@@ -7,7 +7,7 @@ icon: code-merge
 
 ## Overview
 
-Geneva backfills operate on a **point-in-time snapshot** of your table. When other operations modify the table during or between backfills, conflicts can occur. Geneva 0.9.x automatically handles most conflict scenarios, reducing unnecessary recomputation and enabling graceful recovery.
+Geneva backfills operate on a **point-in-time snapshot** of your table. When other operations modify the table during or between backfills, conflicts can occur. Geneva >=0.9.0 automatically handles most conflict scenarios, reducing unnecessary recomputation and enabling graceful recovery.
 
 ## Safe Operations During Backfill
 
@@ -15,7 +15,7 @@ These operations can safely run while a backfill is in progress:
 
 | Operation | Why It's Safe |
 |-----------|---------------|
-| `merge_insert` (INSERT-only) | Creates new fragments without modifying existing ones |
+| `merge_insert` (Insert-only) | Creates new fragments without modifying existing ones |
 | `add()` / append data | Creates new fragments without modifying existing ones |
 | Read operations (`search`, `to_arrow`) | Read-only, no fragment modification |
 | Adding new columns | Schema change only, no fragment rewrite |
@@ -85,9 +85,9 @@ For the smoothest experience, sequence your operations:
 3. Run compaction/optimization
 ```
 
-### Use INSERT-Only Operations During Backfill
+### Use Insert-Only Operations During Backfill
 
-If you need to add data while a backfill is running, use INSERT-only operations:
+If you need to add data while a backfill is running, use insert-only operations:
 
 ```python
 # Safe: INSERT-only merge_insert
