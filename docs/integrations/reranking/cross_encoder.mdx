@@ -26,7 +26,7 @@ Accepted Arguments
 | `model_name` | `str` | `""cross-encoder/ms-marco-TinyBERT-L-6"` | The name of the reranker model to use.|
 | `column` | `str` | `"text"` | The name of the column to use as input to the cross encoder model. |
 | `device` | `str` | `None` | The device to use for the cross encoder model. If None, will use "cuda" if available, otherwise "cpu". |
-| `return_score` | str | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", will return only the `_relevance_score. If "all" is supported, will return relevance score along with the vector and/or fts scores depending on query type. |
+| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", will return only the `_relevance_score. If "all" is supported, will return relevance score along with the vector and/or fts scores depending on query type. |
 
 ## Supported Scores for each query type
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:

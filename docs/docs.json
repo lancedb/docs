@@ -77,6 +77,7 @@
                 "pages": [
                   "tables/index",
                   "tables/create",
+                  "tables/multimodal",
                   "tables/schema",
                   "tables/update",
                   "tables/versioning",
@@ -154,16 +155,20 @@
                 "group": "UDFs",
                 "pages": [
                   "geneva/udfs/index",
-                  "geneva/udfs/blobs"
+                  "geneva/udfs/blobs",
+                  "geneva/udfs/error_handling",
+                  "geneva/udfs/advanced-configuration"
                 ]
               },
               {
                 "group": "Job execution",
                 "pages": [
                   "geneva/jobs/backfilling",
+                  "geneva/jobs/conflicts",
                   "geneva/jobs/startup",
                   "geneva/jobs/materialized-views",
                   "geneva/jobs/contexts",
+                  "geneva/jobs/console",
                   "geneva/jobs/performance"
                 ]
               },
@@ -171,6 +176,7 @@
                 "group": "Deployment & scaling",
                 "pages": [
                   "geneva/deployment/index",
+                  "geneva/deployment/helm",
                   "geneva/deployment/troubleshooting"
                 ]
               },
@@ -207,6 +213,7 @@
                   "integrations/embedding/huggingface",
                   "integrations/embedding/aws",
                   "integrations/embedding/cohere",
+                  "integrations/embedding/colpali",
                   "integrations/embedding/gemini",
                   "integrations/embedding/ibm",
                   "integrations/embedding/imagebind",
@@ -228,6 +235,7 @@
                   "integrations/reranking/cross_encoder",
                   "integrations/reranking/jina",
                   "integrations/reranking/linear_combination",
+                  "integrations/reranking/mrr",
                   "integrations/reranking/openai",
                   "integrations/reranking/rrf",
                   "integrations/reranking/voyageai"
@@ -346,7 +354,7 @@
   },
   "integrations": {
     "ga4": {
-      "measurementId": "G-GD6BL36RN7"
+      "measurementId": "G-1TMC2PR69E"
     }
   },
   "redirects": [

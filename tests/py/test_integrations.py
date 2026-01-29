@@ -262,6 +262,53 @@ def test_embedding_imagebind_examples() -> None:
     # --8<-- [end:embedding_imagebind_text_search]
 
 
+def test_embedding_colpali_examples() -> None:
+    require_flag("RUN_COLPALI_SNIPPETS")
+    pytest.importorskip("colpali_engine")
+
+    # --8<-- [start:embedding_colpali_setup]
+    import tempfile
+    from pathlib import Path
+
+    import lancedb
+    import pandas as pd
+    import requests
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, MultiVector
+
+    db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "colpali-demo"))
+    func = get_registry().get("colpali").create()
+
+    class Images(LanceModel):
+        label: str
+        image_uri: str = func.SourceField()
+        image_bytes: bytes = func.SourceField()
+        vector: MultiVector(func.ndims()) = func.VectorField()
+        vec_from_bytes: MultiVector(func.ndims()) = func.VectorField()
+
+    table = db.create_table("images", schema=Images)
+    labels = ["cat", "dog", "horse"]
+    uris = [
+        "http://farm1.staticflickr.com/53/167798175_7c7845bbbd_z.jpg",
+        "http://farm9.staticflickr.com/8387/8602747737_2e5c2a45d4_z.jpg",
+        "http://farm9.staticflickr.com/8216/8434969557_d37882c42d_z.jpg",
+    ]
+    image_bytes = [requests.get(uri).content for uri in uris]
+    table.add(
+        pd.DataFrame({"label": labels, "image_uri": uris, "image_bytes": image_bytes})
+    )
+    # --8<-- [end:embedding_colpali_setup]
+
+    # --8<-- [start:embedding_colpali_text_search]
+    actual = (
+        table.search("a furry pet", vector_column_name="vector")
+        .limit(1)
+        .to_pydantic(Images)[0]
+    )
+    print(actual.label)
+    # --8<-- [end:embedding_colpali_text_search]
+
+
 def test_embedding_instructor_usage() -> None:
     require_flag("RUN_INSTRUCTOR_SNIPPETS")
 
@@ -546,6 +593,44 @@ def test_embedding_voyageai_usage() -> None:
 
     tbl.add(data)
     # --8<-- [end:embedding_voyageai_usage]
+
+
+def test_embedding_voyageai_multimodal() -> None:
+    require_env("VOYAGE_API_KEY")
+
+    # --8<-- [start:embedding_voyageai_multimodal]
+    import tempfile
+    from pathlib import Path
+
+    import lancedb
+    from lancedb.embeddings import EmbeddingFunctionRegistry
+    from lancedb.pydantic import LanceModel, Vector
+
+    # Create multimodal embedding function with custom dimension
+    voyageai = (
+        EmbeddingFunctionRegistry.get_instance()
+        .get("voyageai")
+        .create(name="voyage-multimodal-3.5", output_dimension=512)
+    )
+
+    class ImageModel(LanceModel):
+        image_uri: str = voyageai.SourceField()
+        vector: Vector(voyageai.ndims()) = voyageai.VectorField()
+
+    db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "voyageai-multimodal"))
+    tbl = db.create_table("images", schema=ImageModel, mode="overwrite")
+
+    # Add images using URLs
+    tbl.add(
+        [
+            {"image_uri": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/300px-PNG_transparency_demonstration_1.png"},
+        ]
+    )
+
+    # Search with text query
+    results = tbl.search("dice").limit(1).to_list()
+    print(results)
+    # --8<-- [end:embedding_voyageai_multimodal]
 
 
 # Reranking integrations
@@ -848,6 +933,43 @@ def test_reranking_rrf_usage() -> None:
         tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
     )
     # --8<-- [end:reranking_rrf_usage]
+
+
+def test_reranking_mrr_usage() -> None:
+    require_flag("RUN_RERANKER_SNIPPETS")
+
+    # --8<-- [start:reranking_mrr_usage]
+    import lancedb
+    from lancedb.embeddings import get_registry
+    from lancedb.pydantic import LanceModel, Vector
+    from lancedb.rerankers import MRRReranker
+
+    embedder = get_registry().get("sentence-transformers").create()
+    db = lancedb.connect("~/.lancedb")
+
+    class Schema(LanceModel):
+        text: str = embedder.SourceField()
+        vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+    data = [
+        {"text": "hello world"},
+        {"text": "goodbye world"},
+    ]
+    tbl = db.create_table("test", schema=Schema, mode="overwrite")
+    tbl.add(data)
+    reranker = MRRReranker(weight_vector=0.7, weight_fts=0.3)
+
+    # Run hybrid search with a reranker
+    tbl.create_fts_index("text", replace=True)
+    result = (
+        tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+    )
+
+    # Run multivector search across multiple vector columns
+    rs1 = tbl.search("hello").limit(10).with_row_id(True).to_arrow()
+    rs2 = tbl.search("greeting").limit(10).with_row_id(True).to_arrow()
+    combined = MRRReranker().rerank_multivector([rs1, rs2])
+    # --8<-- [end:reranking_mrr_usage]
 
 
 def test_reranking_voyageai_usage() -> None:

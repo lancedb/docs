@@ -1,0 +1,52 @@
+---
+title: Geneva Console
+sidebarTitle: Console
+description: 
+icon: computer
+---
+
+The Geneva Console provides a web-based interface for monitoring and managing Geneva jobs, clusters, and manifests.
+
+![geneva-console](/static/assets/images/geneva/console_screenshot.png)
+
+## Why a Geneva Console?
+
+- Collaboration: The console helps multiple people work together. Individual jobs can be run in a notebook or workflow, but to collaborate on jobs, it helps to be able to see everything that's running on a given database.
+- History: See what has run in the past and diagnose any problems with your jobs.
+- Shared resources: The console stores definitions of clusters and manifests, so you can easily tell what resources you want to use to run your job.
+
+## Getting Started
+
+The Geneva console is installed with the Geneva Helm chart; [contact LanceDB](https://lancedb.com/contact/) for access to the Helm chart).
+
+
+1. Install or upgrade the Geneva Helm chart (see [Helm Deployment](/geneva/deployment/helm/)).
+2. Find the pod that's running the console:
+```bash
+kubectl get pods -l app.kubernetes.io/name=geneva-console -n $NAMESPACE
+
+NAME                          READY   STATUS    RESTARTS   AGE
+geneva-console-abc123-abcde   2/2     Running   0          4m58s
+```
+3. Forward port 3000 to access the console:
+```bash
+kubectl port-forward -n $NAMESPACE geneva-console-abc123-abcde 3000:3000
+```
+4. Open `http://localhost:3000` in your browser. When prompted, enter your bucket and database, like:
+```
+s3://my-bucket/my-db
+```
+
+## What's in the Console?
+
+### Jobs Overview
+The heart of the console is an overview of all jobs that are running on a given database. See each job's status, progress, timing, and initiator.
+
+### Job Details
+Click on a job's ID to get more details, especially events that have happened in a job's life cycle, and metrics such as number of workers, rows, and fragments written.
+
+### Clusters
+See the Geneva clusters that you have defined to run jobs. Because clusters can be reused by name, this view can help you run a new job with the same resource constraints as a previous job.
+
+### Manifests
+See the Manifests you've defined and what packages/dependencies they contain. As with clusters, manifests are reusable, so it's easy to start a new job with the same dependencies as an old one by just specifying the manifest name.

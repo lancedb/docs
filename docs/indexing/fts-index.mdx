@@ -15,6 +15,10 @@ The `create_fts_index` API returns immediately, but index building happens async
 
 ## Creating FTS Indexes
 
+### Synchronous API
+
+Use `create_fts_index` with synchronous LanceDB connections:
+
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {FtsIndexCreate}
@@ -29,10 +33,9 @@ Check FTS index status using the API:
     </CodeBlock>
 </CodeGroup>
 
-<Note>
-In LanceDB OSS, `create_fts_index` is not supported with `AsyncTable`. When working with async connections, use `create_index` with the `FTS` configuration instead.
+### Asynchronous API
 
-<Expandable title="Code Example">
+When using async connections (`connect_async`), use `create_index` with the `FTS` configuration:
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -40,7 +43,8 @@ In LanceDB OSS, `create_fts_index` is not supported with `AsyncTable`. When work
     </CodeBlock>
 </CodeGroup>
 
-</Expandable>
+<Note>
+The `create_fts_index` method is not available on `AsyncTable`. Use `create_index` with `FTS` config instead.
 </Note>
 
 ## Configuration Options
