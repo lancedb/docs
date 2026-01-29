@@ -1,0 +1,377 @@
+---
+title: Dependency Verification
+sidebarTitle: Dependency Verification
+description: Diagnose and resolve package version mismatches between local and Ray worker environments.
+icon: magnifying-glass-chart
+---
+
+When running Geneva UDFs on Ray, your code is serialized locally and executed on remote workers. If the worker environment differs from your local environment, you may encounter subtle and difficult-to-debug errors.
+
+## Why Dependency Mismatches Matter
+
+| Symptom | Likely Cause |
+|---------|--------------|
+| `TypeError: Enum.__new__() missing 1 required positional argument` | `attrs` version mismatch |
+| `TypeError: Can't instantiate abstract class` | Package structure differences |
+| `ArrowInvalid: cannot cast` / serialization errors | NumPy 1.x vs 2.x mismatch |
+| `ModuleNotFoundError` on workers | Package only installed locally |
+| Model loading failures | PyTorch version mismatch |
+| Unexpected behavior, wrong results | Silent version incompatibilities |
+
+These issues are notoriously difficult to debug because the error messages often don't indicate the root cause.
+
+## Diagnostic Workflow
+
+When encountering serialization or "abstract class" errors:
+
+<Steps>
+  <Step>
+  **Run the diagnostic tool**:
+  ```bash
+  python -m geneva.runners.ray.compare_env
+  ```
+  </Step>
+  <Step>
+  **Check PACKAGES: version mismatches** section first.
+  </Step>
+  <Step>
+  **Identify critical packages**: numpy, torch, pyarrow, attrs, pydantic.
+  </Step>
+  <Step>
+  **Fix with manifest** for quick testing:
+  ```python
+  from geneva.manifest.builder import GenevaManifestBuilder
+  manifest = GenevaManifestBuilder.create("fix").pip(["numpy==1.26.4"]).build()
+  ```
+  </Step>
+  <Step>
+  **Build custom image** for production (if using KubeRay).
+  </Step>
+</Steps>
+
+## The `compare_ray_environments` Tool
+
+Geneva provides a diagnostic tool to compare your local environment against Ray workers.
+
+### Programmatic Usage
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.runners.ray.compare_env import compare_ray_environments
+
+# Compare and print (requires Ray to be initialized, e.g., in Geneva context)
+result = compare_ray_environments()
+
+# Data-only mode (no printing)
+from geneva.runners.ray.compare_env import compare_environments
+result = compare_environments()
+
+# Auto-init and connect to existing cluster
+result = compare_ray_environments(auto_init=True)
+
+# Auto-init a new local cluster for testing
+result = compare_ray_environments(auto_init=True, ray_address=None)
+
+# Filter environment variables by prefix
+result = compare_ray_environments(env_prefix="PY")
+```
+</CodeGroup>
+
+### CLI Usage
+
+<CodeGroup>
+```bash CLI icon="terminal"
+# Connect to existing Ray cluster
+python -m geneva.runners.ray.compare_env
+
+# Start new local Ray cluster
+python -m geneva.runners.ray.compare_env --address local
+
+# Filter env vars by prefix
+python -m geneva.runners.ray.compare_env --env-prefix RAY
+
+# Show full JSON snapshots
+python -m geneva.runners.ray.compare_env --show-all
+
+# Skip sys.path comparison
+python -m geneva.runners.ray.compare_env --no-sys-path
+```
+</CodeGroup>
+
+## Understanding the Output
+
+The tool outputs several sections to help you identify mismatches.
+
+### PYTHON / PLATFORM
+
+Shows Python version and OS information for both environments:
+
+```
+=== PYTHON / PLATFORM ===
+Local:
+  Python: 3.11.9 (main, Apr 19 2024, 16:48:06) [GCC 11.2.0]
+  Impl  : CPython
+  Exec  : /home/user/.venv/bin/python
+  OS    : Linux 5.15.0-generic (x86_64)
+
+Remote:
+  Python: 3.11.9 (main, Apr 19 2024, 16:48:06) [GCC 11.2.0]
+  Impl  : CPython
+  Exec  : /home/ray/anaconda3/bin/python
+  OS    : Linux 5.4.0-aws (x86_64)
+```
+
+<Warning>
+Watch for different Python versions or different OS types (macOS local vs Linux remote).
+</Warning>
+
+### ENV VARS: keys only in LOCAL/REMOTE
+
+Environment variables present in only one environment:
+
+```
+=== ENV VARS: keys only in LOCAL ===
+  + CONDA_PREFIX
+  + VIRTUAL_ENV
+
+=== ENV VARS: keys only in REMOTE ===
+  + RAY_ADDRESS
+  + KUBERNETES_SERVICE_HOST
+```
+
+<Warning>
+Missing `AWS_*` or `GOOGLE_APPLICATION_CREDENTIALS` can cause storage authentication failures.
+</Warning>
+
+### PACKAGES: version mismatches
+
+Packages with different versions between environments:
+
+```
+=== PACKAGES: version mismatches ===
+  * numpy: local=1.26.4  remote=2.2.6
+  * torch: local=2.0.1  remote=2.8.0+cpu
+  * attrs: local=23.2.0  remote=24.2.0
+  * pyarrow: local=14.0.1  remote=17.0.0
+```
+
+<Warning>
+Watch for major version differences (NumPy 1.x vs 2.x) and PyTorch version mismatches.
+</Warning>
+
+### PACKAGES: only in LOCAL/REMOTE
+
+Packages installed in only one environment:
+
+```
+=== PACKAGES: only in LOCAL ===
+  + my-custom-package
+  + dev-tools
+
+=== PACKAGES: only in REMOTE ===
+  + kuberay-client
+```
+
+## Common Issues and Solutions
+
+### NumPy 1.x vs 2.x Mismatch
+
+NumPy 2.0 introduced breaking changes in array serialization.
+
+**Symptoms**: `ArrowInvalid`, `ValueError: cannot convert`, serialization failures.
+
+**Solution**: Pin NumPy version using a manifest:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+
+manifest = (
+    GenevaManifestBuilder.create("my-manifest")
+    .pip(["numpy==1.26.4"])
+    .build()
+)
+```
+</CodeGroup>
+
+### PyTorch Version Mismatch
+
+**Symptoms**: Model loading failures, CUDA errors, unexpected inference results.
+
+**Solution**: Use matching versions via a manifest:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+
+manifest = (
+    GenevaManifestBuilder.create("my-manifest")
+    .pip(["torch==2.0.1"])
+    .build()
+)
+```
+</CodeGroup>
+
+### attrs Version Mismatch
+
+**Symptoms**: `TypeError: Enum.__new__() missing 1 required positional argument`.
+
+**Solution**: Sync attrs version via a manifest:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+
+manifest = (
+    GenevaManifestBuilder.create("my-manifest")
+    .pip(["attrs==23.2.0"])
+    .build()
+)
+```
+</CodeGroup>
+
+### Missing Package on Workers
+
+**Symptoms**: `ModuleNotFoundError: No module named 'my_udf_dependency'`.
+
+**Solution**: Add to a manifest:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+
+manifest = (
+    GenevaManifestBuilder.create("my-manifest")
+    .pip(["my-udf-dependency==1.0.0"])
+    .build()
+)
+```
+</CodeGroup>
+
+### Architecture Mismatch (macOS to Linux)
+
+**Symptoms**: `ModuleNotFoundError` for compiled extensions, segfaults.
+
+**Solution**: Run Geneva from the same OS/architecture as your cluster (Linux x86_64).
+
+## Fixing Mismatches
+
+### Option 1: Manifest pip Dependencies
+
+Specify packages in a Geneva manifest for a quick fix:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+
+manifest = (
+    GenevaManifestBuilder.create("my-manifest")
+    .pip([
+        "numpy==1.26.4",
+        "torch==2.0.1",
+        "attrs==23.2.0",
+    ])
+    .build()
+)
+
+# Then use with db.context()
+conn = geneva.connect("s3://my-bucket/my-db")
+conn.define_manifest("my-manifest", manifest)
+with conn.context(cluster="my-cluster", manifest="my-manifest"):
+    conn.open_table("my-table").backfill("my-column")
+```
+</CodeGroup>
+
+**Pros**: Quick, reusable across sessions, stored with your database.
+
+**Cons**: Slower startup (downloads packages), may not work for complex dependencies.
+
+### Option 2: Custom Ray Worker Image
+
+For KubeRay deployments, build a custom worker image:
+
+<CodeGroup>
+```dockerfile Dockerfile icon="docker"
+# Dockerfile.ray-worker
+FROM rayproject/ray:2.30.0-py311
+
+# Install exact versions
+RUN pip install \
+    numpy==1.26.4 \
+    torch==2.0.1 \
+    attrs==23.2.0 \
+    geneva==0.8.0
+
+# Copy any custom packages
+COPY ./my_udfs /app/my_udfs
+```
+</CodeGroup>
+
+Then reference in RayCluster spec:
+
+<CodeGroup>
+```yaml Kubernetes icon="kubernetes"
+spec:
+  workerGroupSpecs:
+    - template:
+        spec:
+          containers:
+            - image: your-registry/ray-worker:latest
+```
+</CodeGroup>
+
+**Pros**: Fastest startup, reproducible.
+
+**Cons**: Requires image build/push workflow.
+
+### Option 3: Conda Environment
+
+Use a conda environment on workers via the cluster builder:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.cluster.builder import GenevaClusterBuilder
+
+cluster = (
+    GenevaClusterBuilder.create("my-cluster")
+    .ray_init_kwargs({
+        "runtime_env": {"conda": "environment.yml"}
+    })
+    .build()
+)
+```
+</CodeGroup>
+
+Or specify conda channels and dependencies inline:
+
+<CodeGroup>
+```python Python icon="python"
+cluster = (
+    GenevaClusterBuilder.create("my-cluster")
+    .ray_init_kwargs({
+        "runtime_env": {
+            "conda": {
+                "channels": ["conda-forge"],
+                "dependencies": [
+                    "python=3.10",
+                    "ffmpeg<8",
+                    "torchvision=0.22.1"
+                ]
+            },
+            "config": {"eager_install": True}
+        }
+    })
+    .build()
+)
+```
+</CodeGroup>
+
+## API Reference
+
+For detailed API documentation on the environment comparison functions, see the [Geneva Diagnostics API Reference](https://docs.lancedb.com/geneva/api/diagnostics).
+
+## Related Documentation
+
+- [Troubleshooting](/geneva/deployment/troubleshooting) - General troubleshooting for Geneva deployments
+- [Performance](/geneva/jobs/performance) - Resource tuning
+- [Execution Contexts](/geneva/jobs/contexts) - Managing execution environments
