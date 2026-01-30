@@ -120,25 +120,17 @@ db.define_cluster(cluster_name, cluster)
 ```
 </CodeGroup>
 
-## Dependencies
+## Dependencies and Manifests
 
-Most UDFs require some dependencies: helper libraries like `pillow` for image processing, pre-trained models like `open-clip` to calculate embeddings, or even small config files. We have two ways to get them to workers:
+Most UDFs require some dependencies: helper libraries like `pillow` for image processing, pre-trained models like `open-clip` to calculate embeddings, or even small config files. We have three ways to get them to workers:
 
-1. Use defaults
-2. Define a manifest
+1. Define dependencies explicitly in a manifest
+2. Bake dependencies into an image
+3. Auto-upload local dependencies
 
-### Use Defaults
-By default, LanceDB packages your local environment and sends it to Ray workers. This includes your local Python `site-packages` (defined by `site.getsitepackages()`) and either the current workspace root (if you're in a python repo) or the current working directory (if you're not). If you don't explicitly define a manifest, this is what will happen.
+### Define dependencies explicitly in a manifest
 
-### Define a Manifest
-
-Sometimes you need more control over what the workers get access to. For example:
-- you might need to include files from another directory, or another python package
-- you might not want to send all your local dependencies (if your repo has lots of dependencies but your UDF will only need a few)
-- you might need packages to be built separately for the worker's architecture (for example, you can't build `pyarrow` on a Mac and run it on a Linux Ray worker).
-- you might want to reuse dependencies between two backfill jobs, so you know they are running with the same environment.
-
-For these use cases, you can define a Manifest. Calling `define_manifest()` packages files in the local environment and stores the Manifest metadata and files in persistent storage. The Manifest can then be referenced by name, shared, and reused.
+We recommend defining dependencies explicitly: it's the easiest way to understand exactly what's running, and the least error-prone. To do so, define a Manifest, like so:
 
 <CodeGroup>
 ```python Python icon="python"
@@ -150,22 +142,89 @@ manifest_name="dev-manifest"
 manifest = (
     GenevaManifestBuilder()
         .name(manifest_name)
-        .skip_site_packages(False)
         .pip(["lancedb", "numpy"])
-        .py_modules(["my_module"])
     ).build()
 
 db.define_manifest(manifest_name, manifest)
 ```
 </CodeGroup>
 
-What's in a manifest and how can you define it? (methods are all on `GenevaManifestBuilder`)
+After workers start up, this will run `pip install lancedb numpy` on them. Geneva also supports defining `conda` dependencies, or sending a path to a `requirements.txt` or `environment.yml` file, via the following methods on `GenevaManifestBuilder`:
+
+```
+.pip(deps) # list of pip dependencies, like "numpy" or "numpy==2.3.5"
+.conda(deps) # list of conda dependencies, like "numpy" or "numpy=2.3.5"
+.requirements_path(path) # path to local requirements.txt file, like "./requirements.txt"
+.conda_environment_path(path) # path to local conda environment.yml file, like "./environment.yml"
+# Note that file paths are relative to the execution directory.
+```
+Note that you can only use one of these methods; trying to define more than one will raise an exception.
+
+### Bake dependencies into an image
+
+Because the `pip` or `conda` methods involve installing packages, they will incur some startup costs. When your jobs are stable in production, therefore, it will be faster to build all your dependencies into the workers' images, then specify them like so:
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+
+db = geneva.connect(my_db_uri)
+
+manifest_name = "prod-manifest"
+manifest = (
+    GenevaManifestBuilder()
+        .name(manifest_name)
+        .worker_image("myregistry.example.com/my-custom-worker-image:latest")
+    ).build()
+
+db.define_manifest(manifest_name, manifest)
+```
+</CodeGroup>
+
+<Tip>
+You can also define images in a GenevaCluster, e.g.:
+```python Python icon="python"
+cluster = (
+    GenevaClusterBuilder()
+        .name(cluster_name)
+        .add_cpu_worker_group(
+            WorkerGroupBuilder()
+            .image("myregistry.example.com/my-custom-worker-image:latest")
+        )
+    .build()
+)
+```
+However, if an image is defined in both a Cluster and a Manifest, the definition in the Manifest will take priority.
+</Tip>
+
+### Auto-upload local dependencies
+
+Geneva packages your local environment and sends it to Ray workers. This includes the current workspace root (if you're in a python repo) or the current working directory (if you're not). However, if you set `.skip_site_packages(False)`, your Python site-packages (defined by `site.getsitepackages()`) will be uploaded to workers as well. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
+
+To upload site packages:
+
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+db = geneva.connect(my_db_uri)
+manifest_name = "dev-manifest"
+manifest = (
+    GenevaManifestBuilder()
+        .name(manifest_name)
+        .skip_site_packages(False)
+    ).build()
+
+db.define_manifest(manifest_name, manifest)
+```
+
+### What's in a manifest?
+Here's a summary of what's in a manifest and how you can define it. (methods are all on `GenevaManifestBuilder`)
 
 |Contents|How you can define it|
 |---|---|
-|Local python packages|Will be uploaded automatically, unless you set `.skip_site_packages(True)`.|
 |Local working directory (or workspace root, if in a python repo)|Will be uploaded automatically.|
-|Python packages to be installed with `pip`|Use `.pip(packages: list[str])` or `.add_pip(package: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
+|Local python packages|Will be uploaded automatically if you set `.skip_site_packages(False)`.|
+|Python packages to be installed|Use `.pip(packages: list[str])` or `.conda(packages: list[str])`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
+|Python dependency lists|Use `.requirements_path(path: str)` or `conda_environment_path(path: str)`|
 |Local python packages outside of `site_packages`|Use `.py_modules(modules: list[str])` or `.add_py_module(module: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
 |Container image for head node|Use `.head_image(head_image: str)` or `default_head_image()` to use the default. Note that, if the image is also defined in the GenevaCluster, the image set here in the Manifest will take priority.|
 |Container image for worker nodes|Use `.worker_image(worker_image: str)` or `default_worker_image()` to use the default for the current platform. As with the head image, this takes priority over any images set in the Cluster.|
