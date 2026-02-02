@@ -7,7 +7,7 @@ icon: magnifying-glass-chart
 
 When running Geneva UDFs on Ray, your code is serialized locally and executed on remote workers. If the worker environment differs from your local environment, you may encounter subtle and difficult-to-debug errors.
 
-## Why Dependency Mismatches Matter
+## Example environment mismatch errors
 
 | Symptom | Likely Cause |
 |---------|--------------|
@@ -16,26 +16,27 @@ When running Geneva UDFs on Ray, your code is serialized locally and executed on
 | `ArrowInvalid: cannot cast` / serialization errors | NumPy 1.x vs 2.x mismatch |
 | `ModuleNotFoundError` on workers | Package only installed locally |
 | Model loading failures | PyTorch version mismatch |
-| Unexpected behavior, wrong results | Silent version incompatibilities |
+| Permission denied errors | Missing API keys in envrionment variables |
 
 These issues are notoriously difficult to debug because the error messages often don't indicate the root cause.
 
-## Diagnostic Workflow
 
-When encountering serialization or "abstract class" errors:
+## The `compare_ray_environments` Tool
+
+Geneva provides a diagnostic tool to compare your local environment against Ray workers.
+
+If you are encountering a hang or exception you can use the following diagnosis worklflow to resolve the problem.
 
 <Steps>
   <Step>
-  **Run the diagnostic tool**:
-  ```bash
-  python -m geneva.runners.ray.compare_env
-  ```
+  **Run the diagnostic tool** programatically or via the CLI.
   </Step>
   <Step>
-  **Check PACKAGES: version mismatches** section first.
+  **Check PACKAGES and ENV VARS output sections for mismatches**.
   </Step>
   <Step>
   **Identify critical packages**: numpy, torch, pyarrow, attrs, pydantic.
+  **Identify inconsistent environment variables**: `AWS_*`,  `GOOGLE_APPLICATION_CREDENTIALS`
   </Step>
   <Step>
   **Fix with manifest** for quick testing:
@@ -45,13 +46,9 @@ When encountering serialization or "abstract class" errors:
   ```
   </Step>
   <Step>
-  **Build custom image** for production (if using KubeRay).
+  **OPTIONAL: Build custom image** for production (if using KubeRay).
   </Step>
 </Steps>
-
-## The `compare_ray_environments` Tool
-
-Geneva provides a diagnostic tool to compare your local environment against Ray workers.
 
 ### Programmatic Usage
 
@@ -59,20 +56,10 @@ Geneva provides a diagnostic tool to compare your local environment against Ray 
 ```python Python icon="python"
 from geneva.runners.ray.compare_env import compare_ray_environments
 
-# Compare and print (requires Ray to be initialized, e.g., in Geneva context)
+# Compare and print (requires Geneva context to be initialize via `with db.context(..)`)
 result = compare_ray_environments()
 
-# Data-only mode (no printing)
-from geneva.runners.ray.compare_env import compare_environments
-result = compare_environments()
-
-# Auto-init and connect to existing cluster
-result = compare_ray_environments(auto_init=True)
-
-# Auto-init a new local cluster for testing
-result = compare_ray_environments(auto_init=True, ray_address=None)
-
-# Filter environment variables by prefix
+# Compare environments, filtering environment variables with specified prefix
 result = compare_ray_environments(env_prefix="PY")
 ```
 </CodeGroup>
@@ -368,10 +355,4 @@ cluster = (
 
 ## API Reference
 
-For detailed API documentation on the environment comparison functions, see the [Geneva Diagnostics API Reference](https://docs.lancedb.com/geneva/api/diagnostics).
-
-## Related Documentation
-
-- [Troubleshooting](/geneva/deployment/troubleshooting) - General troubleshooting for Geneva deployments
-- [Performance](/geneva/jobs/performance) - Resource tuning
-- [Execution Contexts](/geneva/jobs/contexts) - Managing execution environments
+For detailed API documentation on the environment comparison functions, see the [Geneva Diagnostics API Reference](https://lancedb.github.io/geneva/api/diagnostics).
