@@ -112,7 +112,13 @@ Remote:
 Watch for different Python versions or different OS types (macOS local vs Linux remote).
 </Warning>
 
-### ENV VARS: keys only in LOCAL/REMOTE
+#### Architecture Mismatch (macOS to Linux)
+
+If you see different OS types (e.g., `Darwin` locally vs `Linux` remotely), compiled extensions may fail with `ModuleNotFoundError` or segfaults.
+
+**Solution**: Run Geneva from the same OS/architecture as your cluster (typically Linux x86_64). Use a Linux VM, container, or remote development environment.
+
+### Environment Variables
 
 Environment variables present in only one environment:
 
@@ -130,9 +136,58 @@ Environment variables present in only one environment:
 Missing `AWS_*` or `GOOGLE_APPLICATION_CREDENTIALS` can cause storage authentication failures.
 </Warning>
 
-### PACKAGES: version mismatches
+#### Passing Environment Variables to Workers
 
-Packages with different versions between environments:
+If critical environment variables are missing on workers, you can pass them via the manifest or cluster configuration.
+
+**Option 1: Via Manifest**
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.manifest.builder import GenevaManifestBuilder
+import os
+
+manifest = (
+    GenevaManifestBuilder.create("my-manifest")
+    .env({
+        "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"],
+        "AWS_SECRET_ACCESS_KEY": os.environ["AWS_SECRET_ACCESS_KEY"],
+        "MY_API_KEY": os.environ["MY_API_KEY"],
+    })
+    .build()
+)
+```
+</CodeGroup>
+
+**Option 2: Via Cluster Configuration**
+
+<CodeGroup>
+```python Python icon="python"
+from geneva.cluster.builder import GenevaClusterBuilder
+import os
+
+cluster = (
+    GenevaClusterBuilder.create("my-cluster")
+    .ray_init_kwargs({
+        "runtime_env": {
+            "env_vars": {
+                "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"],
+                "AWS_SECRET_ACCESS_KEY": os.environ["AWS_SECRET_ACCESS_KEY"],
+            }
+        }
+    })
+    .build()
+)
+```
+</CodeGroup>
+
+<Warning>
+Avoid hardcoding secrets. Use `os.environ` to pass values from your local environment, or use a secrets manager in production.
+</Warning>
+
+### Packages
+
+The tool shows version mismatches and packages only present in one environment:
 
 ```
 === PACKAGES: version mismatches ===
@@ -140,17 +195,7 @@ Packages with different versions between environments:
   * torch: local=2.0.1  remote=2.8.0+cpu
   * attrs: local=23.2.0  remote=24.2.0
   * pyarrow: local=14.0.1  remote=17.0.0
-```
 
-<Warning>
-Watch for major version differences (NumPy 1.x vs 2.x) and PyTorch version mismatches.
-</Warning>
-
-### PACKAGES: only in LOCAL/REMOTE
-
-Packages installed in only one environment:
-
-```
 === PACKAGES: only in LOCAL ===
   + my-custom-package
   + dev-tools
@@ -159,91 +204,22 @@ Packages installed in only one environment:
   + kuberay-client
 ```
 
-## Common Issues and Solutions
+<Warning>
+Watch for major version differences (NumPy 1.x vs 2.x) and PyTorch version mismatches.
+</Warning>
 
-### NumPy 1.x vs 2.x Mismatch
+#### Common Package Issues
 
-NumPy 2.0 introduced breaking changes in array serialization.
+| Issue | Symptoms | Fix |
+|-------|----------|-----|
+| **NumPy 1.x vs 2.x** | `ArrowInvalid`, `ValueError: cannot convert`, serialization failures | Pin `numpy==1.26.4` |
+| **PyTorch mismatch** | Model loading failures, CUDA errors, unexpected inference results | Pin to matching `torch` version |
+| **attrs mismatch** | `TypeError: Enum.__new__() missing 1 required positional argument` | Pin `attrs` to local version |
+| **Missing package** | `ModuleNotFoundError: No module named 'xyz'` | Add package to manifest |
 
-**Symptoms**: `ArrowInvalid`, `ValueError: cannot convert`, serialization failures.
+#### Fixing Package Mismatches
 
-**Solution**: Pin NumPy version using a manifest:
-
-<CodeGroup>
-```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
-
-manifest = (
-    GenevaManifestBuilder.create("my-manifest")
-    .pip(["numpy==1.26.4"])
-    .build()
-)
-```
-</CodeGroup>
-
-### PyTorch Version Mismatch
-
-**Symptoms**: Model loading failures, CUDA errors, unexpected inference results.
-
-**Solution**: Use matching versions via a manifest:
-
-<CodeGroup>
-```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
-
-manifest = (
-    GenevaManifestBuilder.create("my-manifest")
-    .pip(["torch==2.0.1"])
-    .build()
-)
-```
-</CodeGroup>
-
-### attrs Version Mismatch
-
-**Symptoms**: `TypeError: Enum.__new__() missing 1 required positional argument`.
-
-**Solution**: Sync attrs version via a manifest:
-
-<CodeGroup>
-```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
-
-manifest = (
-    GenevaManifestBuilder.create("my-manifest")
-    .pip(["attrs==23.2.0"])
-    .build()
-)
-```
-</CodeGroup>
-
-### Missing Package on Workers
-
-**Symptoms**: `ModuleNotFoundError: No module named 'my_udf_dependency'`.
-
-**Solution**: Add to a manifest:
-
-<CodeGroup>
-```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
-
-manifest = (
-    GenevaManifestBuilder.create("my-manifest")
-    .pip(["my-udf-dependency==1.0.0"])
-    .build()
-)
-```
-</CodeGroup>
-
-### Architecture Mismatch (macOS to Linux)
-
-**Symptoms**: `ModuleNotFoundError` for compiled extensions, segfaults.
-
-**Solution**: Run Geneva from the same OS/architecture as your cluster (Linux x86_64).
-
-## Fixing Mismatches
-
-### Option 1: Manifest pip Dependencies
+**Option 1: Manifest pip Dependencies**
 
 Specify packages in a Geneva manifest for a quick fix:
 
@@ -269,11 +245,11 @@ with conn.context(cluster="my-cluster", manifest="my-manifest"):
 ```
 </CodeGroup>
 
-**Pros**: Quick, reusable across sessions, stored with your database.
+*Pros*: Quick, reusable across sessions, stored with your database.
 
-**Cons**: Slower startup (downloads packages), may not work for complex dependencies.
+*Cons*: Slower startup (downloads packages), may not work for complex dependencies.
 
-### Option 2: Custom Ray Worker Image
+**Option 2: Custom Ray Worker Image**
 
 For KubeRay deployments, build a custom worker image:
 
@@ -307,11 +283,11 @@ spec:
 ```
 </CodeGroup>
 
-**Pros**: Fastest startup, reproducible.
+*Pros*: Fastest startup, reproducible.
 
-**Cons**: Requires image build/push workflow.
+*Cons*: Requires image build/push workflow.
 
-### Option 3: Conda Environment
+**Option 3: Conda Environment**
 
 Use a conda environment on workers via the cluster builder:
 
@@ -352,6 +328,10 @@ cluster = (
 )
 ```
 </CodeGroup>
+
+*Pros*: Best for complex dependencies with native libraries (ffmpeg, CUDA).
+
+*Cons*: Slower environment creation, requires conda on workers.
 
 ## API Reference
 
