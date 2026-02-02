@@ -5,9 +5,11 @@ description: Learn how to manage table schemas in LanceDB, including adding, alt
 icon: "boxes-stacked"
 ---
 import {
+    PySchemaAddSetup as SchemaAddSetup,
     PyAddColumnsCalculated as AddColumnsCalculated,
     PyAddColumnsDefaultValues as AddColumnsDefaultValues,
     PyAddColumnsNullable as AddColumnsNullable,
+    PySchemaAlterSetup as SchemaAlterSetup,
     PyAlterColumnsRename as AlterColumnsRename,
     PyAlterColumnsDataType as AlterColumnsDataType,
     PyAlterColumnsNullable as AlterColumnsNullable,
@@ -48,44 +50,11 @@ New columns are populated based on SQL expressions you provide.
 
 First, let's create a sample table with product data to demonstrate schema evolution:
 
-```python
-table_name = "schema_evolution_add_example"
-
-data = [
-    {
-        "id": 1,
-        "name": "Laptop",
-        "price": 1200.00,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 2,
-        "name": "Smartphone",
-        "price": 800.00,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 3,
-        "name": "Headphones",
-        "price": 150.00,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 4,
-        "name": "Monitor",
-        "price": 350.00,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 5,
-        "name": "Keyboard",
-        "price": 80.00,
-        "vector": np.random.random(128).tolist(),
-    },
-]
-
-table = db.create_table(table_name, data, mode="overwrite")
-```
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {SchemaAddSetup}
+    </CodeBlock>
+</CodeGroup>
 
 ### Adding Calculated Columns
 
@@ -135,58 +104,11 @@ method in Python or [`alterColumns`](https://lancedb.github.io/lancedb/js/classe
 
 Create a table with a custom schema to demonstrate column alterations:
 
-```python
-table_name = "schema_evolution_alter_example"
-
-data = [
-    {
-        "id": 1,
-        "name": "Laptop",
-        "price": 1200,
-        "discount_price": 1080.0,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 2,
-        "name": "Smartphone",
-        "price": 800,
-        "discount_price": 720.0,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 3,
-        "name": "Headphones",
-        "price": 150,
-        "discount_price": 135.0,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 4,
-        "name": "Monitor",
-        "price": 350,
-        "discount_price": 315.0,
-        "vector": np.random.random(128).tolist(),
-    },
-    {
-        "id": 5,
-        "name": "Keyboard",
-        "price": 80,
-        "discount_price": 72.0,
-        "vector": np.random.random(128).tolist(),
-    },
-]
-schema = pa.schema(
-    {
-        "id": pa.int64(),
-        "name": pa.string(),
-        "price": pa.int32(),
-        "discount_price": pa.float64(),
-        "vector": pa.list_(pa.float32(), 128),
-    }
-)
-
-table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-```
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {SchemaAlterSetup}
+    </CodeBlock>
+</CodeGroup>
 
 ### Renaming Columns
 

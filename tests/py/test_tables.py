@@ -261,7 +261,6 @@ def test_open_existing_table(tmp_db):
 
 def test_create_empty_table(tmp_db):
     # --8<-- [start:create_empty_table]
-    import lancedb
     import pyarrow as pa
 
     schema = pa.schema(
@@ -278,7 +277,6 @@ def test_create_empty_table(tmp_db):
 
 def test_create_empty_table_pydantic(tmp_db):
     # --8<-- [start:create_empty_table_pydantic]
-    import lancedb
     from lancedb.pydantic import LanceModel, Vector
 
     class Item(LanceModel):
@@ -311,8 +309,9 @@ def test_drop_table(tmp_db):
 
 
 def test_add_data_to_table(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:add_data_to_table]
-    import lancedb
     import pyarrow as pa
 
     # create an empty table with schema
@@ -332,14 +331,16 @@ def test_add_data_to_table(tmp_db):
     )
 
     table_name = "basic_ingestion_example"
-    db = tmp_db
     table = db.create_table(table_name, schema=schema, mode="overwrite")
     # Add data
     table.add(data)
     # --8<-- [end:add_data_to_table]
+    assert table.count_rows() == len(data)
 
 
 def test_add_data_pydantic_model(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:add_data_pydantic_model]
     from lancedb.pydantic import LanceModel, Vector
 
@@ -357,12 +358,14 @@ def test_add_data_pydantic_model(tmp_db):
 
     # Create table with Pydantic model schema
     table_name = "pydantic_example"
-    db = tmp_db
     table = db.create_table(table_name, schema=Content, mode="overwrite")
     # --8<-- [end:add_data_pydantic_model]
+    assert table.count_rows() == 0
 
 
 def test_add_data_nested_model(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:add_data_nested_model]
     from lancedb.pydantic import LanceModel, Vector
     from pydantic import BaseModel
@@ -378,12 +381,14 @@ def test_add_data_nested_model(tmp_db):
 
     # Create table with nested schema
     table_name = "nested_model_example"
-    db = tmp_db
     table = db.create_table(table_name, schema=NestedSchema, mode="overwrite")
     # --8<-- [end:add_data_nested_model]
+    assert table.count_rows() == 0
 
 
 def test_batch_data_insertion(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:batch_data_insertion]
     import pyarrow as pa
 
@@ -407,19 +412,19 @@ def test_batch_data_insertion(tmp_db):
     )
     # Create table with batches
     table_name = "batch_ingestion_example"
-    db = tmp_db
     table = db.create_table(table_name, make_batches(), schema=schema, mode="overwrite")
     # --8<-- [end:batch_data_insertion]
+    assert table.count_rows() == 10
 
 
 def test_update_operation(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:update_operation]
-    import lancedb
     import pandas as pd
 
     # Create a table from a pandas DataFrame
     data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-    db = tmp_db
     tbl = db.create_table("test_table", data, mode="overwrite")
     # Update the table where x = 2
     tbl.update(where="x = 2", values={"vector": [10, 10]})
@@ -427,45 +432,51 @@ def test_update_operation(tmp_db):
     df = tbl.to_pandas()
     print(df)
     # --8<-- [end:update_operation]
+    assert df.loc[df["x"] == 2, "vector"].iloc[0] == [10, 10]
 
 
 def test_update_using_sql(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:update_using_sql]
-    import lancedb
     import pandas as pd
 
     # Create a table from a pandas DataFrame
     data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-    db = tmp_db
     tbl = db.create_table("test_table", data, mode="overwrite")
-    # Update the table where x = 2
+    # Update all rows: increment x by 1
     tbl.update(values_sql={"x": "x + 1"})
     print(tbl.to_pandas())
     # --8<-- [end:update_using_sql]
+    assert sorted(tbl.to_pandas()["x"].tolist()) == [2, 3, 4]
 
 
 def test_delete_operation(tmp_db):
-    # --8<-- [start:delete_operation]
     db = tmp_db
-    # Create table first
-    data = [
-        {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
-        {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
-        {"vector": [10.2, 100.8], "item": "baz", "price": 30.0},
-    ]
-    table = db.create_table("update_table_example", data, mode="overwrite")
+    table = db.create_table(
+        "update_table_example",
+        [
+            {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
+            {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
+            {"vector": [10.2, 100.8], "item": "baz", "price": 30.0},
+        ],
+        mode="overwrite",
+    )
 
+    # --8<-- [start:delete_operation]
     # delete data
     predicate = "price = 30.0"
     table.delete(predicate)
     # --8<-- [end:delete_operation]
+    assert table.count_rows() == 2
 
 
 def test_upsert_operation(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:upsert_operation]
     # Create example table
     users_table_name = "users_example"
-    db = tmp_db
     table = db.create_table(
         users_table_name,
         [
@@ -493,12 +504,14 @@ def test_upsert_operation(tmp_db):
     # Verify results - should be 3 records total
     print(f"Total users: {table.count_rows()}")  # 3
     # --8<-- [end:upsert_operation]
+    assert table.count_rows() == 3
 
 
 def test_insert_if_not_exists(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:insert_if_not_exists]
     # Create example table
-    db = tmp_db
     table = db.create_table(
         "domains",
         [
@@ -520,12 +533,14 @@ def test_insert_if_not_exists(tmp_db):
     # Verify count - should be 3 (original 2 plus 1 new)
     print(f"Total domains: {table.count_rows()}")  # 3
     # --8<-- [end:insert_if_not_exists]
+    assert table.count_rows() == 3
 
 
 def test_replace_range_operation(tmp_db):
+    db = tmp_db
+
     # --8<-- [start:replace_range_operation]
     # Create example table with document chunks
-    db = tmp_db
     table = db.create_table(
         "chunks",
         [
@@ -555,6 +570,7 @@ def test_replace_range_operation(tmp_db):
     # Verify count for doc_id = 1 - should be 1
     print(f"Chunks for doc_id = 1: {table.count_rows('doc_id = 1')}")  # 1
     # --8<-- [end:replace_range_operation]
+    assert table.count_rows("doc_id = 1") == 1
 
 
 # ============================================================================
@@ -562,217 +578,201 @@ def test_replace_range_operation(tmp_db):
 # ============================================================================
 
 
-def test_add_columns_calculated(tmp_db):
-    # --8<-- [start:add_columns_calculated]
+def _setup_schema_add_table(tmp_db, data=None):
+    # --8<-- [start:schema_add_setup]
     table_name = "schema_evolution_add_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 3,
-            "name": "Headphones",
-            "price": 150.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 4,
-            "name": "Monitor",
-            "price": 350.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 5,
-            "name": "Keyboard",
-            "price": 80.00,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800.00,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 3,
+                "name": "Headphones",
+                "price": 150.00,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    table = tmp_db.create_table(table_name, data, mode="overwrite")
+    # --8<-- [end:schema_add_setup]
+    return table
 
-    table = db.create_table(table_name, data, mode="overwrite")
 
+def _setup_schema_alter_table(tmp_db, data=None):
+    # --8<-- [start:schema_alter_setup]
+    table_name = "schema_evolution_alter_example"
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800,
+                "discount_price": 720.0,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    schema = pa.schema(
+        {
+            "id": pa.int64(),
+            "name": pa.string(),
+            "price": pa.int32(),
+            "discount_price": pa.float64(),
+            "vector": pa.list_(pa.float32(), 128),
+        }
+    )
+    table = tmp_db.create_table(table_name, data, schema=schema, mode="overwrite")
+    # --8<-- [end:schema_alter_setup]
+    return table
+
+
+def _setup_schema_drop_table(tmp_db, data=None):
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "temp_col1": "X",
+                "temp_col2": 100,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800.00,
+                "temp_col1": "Y",
+                "temp_col2": 200,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    return tmp_db.create_table("schema_evolution_drop_example", data, mode="overwrite")
+
+
+def test_add_columns_calculated(tmp_db):
+    table = _setup_schema_add_table(tmp_db)
+
+    # --8<-- [start:add_columns_calculated]
     # Add a discounted price column (10% discount)
     table.add_columns({"discounted_price": "cast((price * 0.9) as float)"})
     # --8<-- [end:add_columns_calculated]
+    assert "discounted_price" in table.schema.names
 
 
 def test_add_columns_default_values(tmp_db):
-    # --8<-- [start:add_columns_default_values]
-    table_name = "schema_evolution_add_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800.00,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    table = db.create_table(table_name, data, mode="overwrite")
+    table = _setup_schema_add_table(tmp_db)
 
+    # --8<-- [start:add_columns_default_values]
     # Add a stock status column with default value
     table.add_columns({"in_stock": "cast(true as boolean)"})
     # --8<-- [end:add_columns_default_values]
+    assert "in_stock" in table.schema.names
 
 
 def test_add_columns_nullable(tmp_db):
-    # --8<-- [start:add_columns_nullable]
-    table_name = "schema_evolution_add_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    table = db.create_table(table_name, data, mode="overwrite")
+    table = _setup_schema_add_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
+    )
 
+    # --8<-- [start:add_columns_nullable]
     # Add a nullable timestamp column
     table.add_columns({"last_ordered": "cast(NULL as timestamp)"})
     # --8<-- [end:add_columns_nullable]
+    assert "last_ordered" in table.schema.names
 
 
 def test_alter_columns_rename(tmp_db):
+    table = _setup_schema_alter_table(tmp_db)
+
     # --8<-- [start:alter_columns_rename]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800,
-            "discount_price": 720.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
-    )
-
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     # Rename discount_price to sale_price
     table.alter_columns({"path": "discount_price", "rename": "sale_price"})
     # --8<-- [end:alter_columns_rename]
+    assert "sale_price" in table.schema.names
+    assert "discount_price" not in table.schema.names
 
 
 def test_alter_columns_data_type(tmp_db):
-    # --8<-- [start:alter_columns_data_type]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
+    table = _setup_schema_alter_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
     )
 
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
+    # --8<-- [start:alter_columns_data_type]
     # Change price from int32 to int64 for larger numbers
     table.alter_columns({"path": "price", "data_type": pa.int64()})
     # --8<-- [end:alter_columns_data_type]
+    assert table.schema.field("price").type == pa.int64()
 
 
 def test_alter_columns_nullable(tmp_db):
-    # --8<-- [start:alter_columns_nullable]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
+    table = _setup_schema_alter_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
     )
 
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
+    # --8<-- [start:alter_columns_nullable]
     # Make the name column nullable
     table.alter_columns({"path": "name", "nullable": True})
     # --8<-- [end:alter_columns_nullable]
+    assert table.schema.field("name").nullable is True
 
 
 def test_alter_columns_multiple(tmp_db):
-    # --8<-- [start:alter_columns_multiple]
-    table_name = "schema_evolution_alter_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200,
-            "discount_price": 1080.0,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-    schema = pa.schema(
-        {
-            "id": pa.int64(),
-            "name": pa.string(),
-            "price": pa.int32(),
-            "discount_price": pa.float64(),
-            "vector": pa.list_(pa.float32(), 128),
-        }
+    table = _setup_schema_alter_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            }
+        ],
     )
-
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
     table.alter_columns({"path": "discount_price", "rename": "sale_price"})
 
+    # --8<-- [start:alter_columns_multiple]
     # Rename, change type, and make nullable in one operation
     table.alter_columns(
         {
@@ -783,66 +783,40 @@ def test_alter_columns_multiple(tmp_db):
         }
     )
     # --8<-- [end:alter_columns_multiple]
+    assert "final_price" in table.schema.names
+    assert table.schema.field("final_price").nullable is True
 
 
 def test_drop_columns_single(tmp_db):
+    table = _setup_schema_drop_table(tmp_db)
+
     # --8<-- [start:drop_columns_single]
-    table_name = "schema_evolution_drop_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "temp_col1": "X",
-            "temp_col2": 100,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 2,
-            "name": "Smartphone",
-            "price": 800.00,
-            "temp_col1": "Y",
-            "temp_col2": 200,
-            "vector": np.random.random(128).tolist(),
-        },
-        {
-            "id": 3,
-            "name": "Headphones",
-            "price": 150.00,
-            "temp_col1": "Z",
-            "temp_col2": 300,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-
-    table = db.create_table(table_name, data, mode="overwrite")
-
     # Remove the first temporary column
     table.drop_columns(["temp_col1"])
     # --8<-- [end:drop_columns_single]
+    assert "temp_col1" not in table.schema.names
 
 
 def test_drop_columns_multiple(tmp_db):
+    table = _setup_schema_drop_table(
+        tmp_db,
+        data=[
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "temp_col1": "X",
+                "temp_col2": 100,
+                "vector": np.random.random(128).tolist(),
+            },
+        ],
+    )
+
     # --8<-- [start:drop_columns_multiple]
-    table_name = "schema_evolution_drop_example"
-    db = tmp_db
-    data = [
-        {
-            "id": 1,
-            "name": "Laptop",
-            "price": 1200.00,
-            "temp_col1": "X",
-            "temp_col2": 100,
-            "vector": np.random.random(128).tolist(),
-        },
-    ]
-
-    table = db.create_table(table_name, data, mode="overwrite")
-
     # Remove the second temporary column
     table.drop_columns(["temp_col2"])
     # --8<-- [end:drop_columns_multiple]
+    assert "temp_col2" not in table.schema.names
 
 
 def test_alter_vector_column(tmp_db):
@@ -867,6 +841,21 @@ def test_alter_vector_column(tmp_db):
 # ============================================================================
 # Versioning Examples
 # ============================================================================
+
+
+def _setup_versioning_table(tmp_db, data=None, table_name="quotes_versioning_example"):
+    import pyarrow as pa
+
+    if data is None:
+        data = [{"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"}]
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            pa.field("author", pa.string()),
+            pa.field("quote", pa.string()),
+        ]
+    )
+    return tmp_db.create_table(table_name, data, schema=schema, mode="overwrite")
 
 
 def test_versioning_basic_setup(tmp_db):
@@ -905,68 +894,31 @@ def test_versioning_basic_setup(tmp_db):
 
 
 def test_versioning_check_initial_version(tmp_db):
+    table = _setup_versioning_table(tmp_db)
+
     # --8<-- [start:versioning_check_initial_version]
     # View the initial version
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     versions = table.list_versions()
     print(f"Number of versions after creation: {len(versions)}")
     print(f"Current version: {table.version}")
     # --8<-- [end:versioning_check_initial_version]
+    assert len(versions) == 1
+    assert table.version == versions[-1]["version"]
 
 
-def test_versioning_update_data(tmp_db):
+def test_versioning_flow(tmp_db):
+    table = _setup_versioning_table(tmp_db)
+
     # --8<-- [start:versioning_update_data]
     # Update author names to be more specific
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     table.update(where="author='Richard'", values={"author": "Richard Daniel Sanchez"})
     rows_after_update = table.count_rows()
     print(f"Number of rows after update: {rows_after_update}")
     # --8<-- [end:versioning_update_data]
+    assert rows_after_update == 1
 
-
-def test_versioning_add_data(tmp_db):
     # --8<-- [start:versioning_add_data]
     # Add more data
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     more_data = [
         {
             "id": 4,
@@ -977,77 +929,31 @@ def test_versioning_add_data(tmp_db):
     ]
     table.add(more_data)
     # --8<-- [end:versioning_add_data]
+    assert table.count_rows() == 3
 
-
-def test_versioning_check_versions_after_mod(tmp_db):
     # --8<-- [start:versioning_check_versions_after_mod]
     # Check versions after modifications
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-    table.add([{"id": 2, "author": "Morty", "quote": "Aww geez, Rick!"}])
-
     versions = table.list_versions()
     version_count_after_mod = len(versions)
     version_after_mod = table.version
     print(f"Number of versions after modifications: {version_count_after_mod}")
     print(f"Current version: {version_after_mod}")
     # --8<-- [end:versioning_check_versions_after_mod]
+    assert version_count_after_mod == len(versions)
+    assert version_count_after_mod >= 2
+    assert version_after_mod == versions[-1]["version"]
 
-
-def test_versioning_list_all_versions(tmp_db):
     # --8<-- [start:versioning_list_all_versions]
     # Let's see all versions
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     versions = table.list_versions()
     for v in versions:
         print(f"Version {v['version']}, created at {v['timestamp']}")
     # --8<-- [end:versioning_list_all_versions]
+    assert len(versions) >= 1
 
-
-def test_versioning_rollback(tmp_db):
     # --8<-- [start:versioning_rollback]
     # Let's roll back to before we added the vector column
     # We'll use the version after modifications but before adding embeddings
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-    version_after_mod = table.version
-    table.add([{"id": 2, "author": "Morty", "quote": "Aww geez, Rick!"}])
-
     table.restore(version_after_mod)
 
     # Notice we have one more version now, not less!
@@ -1055,51 +961,23 @@ def test_versioning_rollback(tmp_db):
     version_count_after_rollback = len(versions)
     print(f"Total number of versions after rollback: {version_count_after_rollback}")
     # --8<-- [end:versioning_rollback]
+    assert version_count_after_rollback == len(versions)
+    assert version_count_after_rollback == version_count_after_mod + 1
+    assert table.version == versions[-1]["version"]
 
-
-def test_versioning_checkout_latest(tmp_db):
     # --8<-- [start:versioning_checkout_latest]
     # Go back to the latest version
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     table.checkout_latest()
     # --8<-- [end:versioning_checkout_latest]
+    assert table.version == table.list_versions()[-1]["version"]
 
-
-def test_versioning_delete_data(tmp_db):
     # --8<-- [start:versioning_delete_data]
     # Let's delete data from the table
-    db = tmp_db
-    table_name = "quotes_versioning_example"
-    data = [
-        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
-        {"id": 2, "author": "Morty", "quote": "Aww geez, Rick!"},
-    ]
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("author", pa.string()),
-            pa.field("quote", pa.string()),
-        ]
-    )
-    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
-
     table.delete("author != 'Richard Daniel Sanchez'")
     rows_after_deletion = table.count_rows()
     print(f"Number of rows after deletion: {rows_after_deletion}")
     # --8<-- [end:versioning_delete_data]
+    assert rows_after_deletion == 2
 
 
 # ============================================================================
