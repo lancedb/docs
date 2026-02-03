@@ -13,6 +13,40 @@ Geneva jobs can split and schedule computational work into smalller batches that
 
 Usually computation capacity is the bottleneck for job execution.  To complete all of a job's tasks more quickly, you just need to increase the amount of CPU/GPU resources available.
 
+### Estimating CPU and memory requirements
+
+#### CPU
+
+Geneva can run up to `concurrency` tasks in parallel. Within each task, it can run up to `intra_applier_concurrency` UDF applications concurrently. If your UDF requests `udf.num_cpus` CPUs, the peak CPU required is approximately:
+
+`total_cpus ≈ concurrency * intra_applier_concurrency * udf.num_cpus`
+
+In most cases you do not need to change `udf.num_cpus`, unless the UDF itself uses multiple threads. If your UDF is single-threaded but you want to speed it up with more parallelism, prefer increasing `concurrency` first. If you stop seeing meaningful improvements, then try increasing `intra_applier_concurrency`.
+
+#### Memory
+
+Geneva defaults to checkpoint batches of up to 100 rows (`checkpoint_size=100`). Peak memory usage scales with both the input rows held for processing and the output rows buffered before they are written. A rough upper bound is:
+
+```text
+memory_bytes ≈
+  input_row_size  * min(checkpoint_size * worker_num_cpus, task_size) +
+  output_row_size * min(checkpoint_size * intra_applier_concurrency, task_size)
+```
+
+- `worker_num_cpus` is the number of CPUs on the Ray worker.
+- `task_size` is a tunable parameter (rows per task). If `task_size` is larger than the number of rows in a fragment, it behaves the same as `task_size = fragment_num_rows`. By default, it is:
+
+  `task_size = num_rows / (concurrency * intra_applier_concurrency * 2)` (where `num_rows` is the number of rows in the table, or the number of rows selected by your filter)
+- `input_row_size` / `output_row_size` are the average bytes per row after materialization in memory.
+
+For primitive numeric columns (ints/floats), these sizes are usually small. For images, videos, embeddings, etc. you may need to explicitly provision more memory (e.g. via `@udf(..., memory=...)`) and/or reduce `checkpoint_size` / `task_size`.
+
+Typical per-row sizes:
+
+- Images: ~200KB–2MB (depends on dataset and encoding)
+- Videos: ~10MB–200MB
+- Embeddings: `dimension * data_type_size` bytes (e.g. float32 embeddings use 4 bytes per value, so a 1536-dim embedding is `1536 * 4 = 6144` bytes)
+
 ### GKE node pools
 
 GKE + kuberay can autoscale the amount of VM nodes on demand.  Limitations on the amount of resources provisioned is configured via [nodepools](https://cloud.google.com/kubernetes-engine/docs/how-to/node-pools#scale-node-pool).  Node pools can be managed to scale vertically (type of machine) or horizontally (# of nodes)
