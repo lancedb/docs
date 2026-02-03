@@ -163,6 +163,7 @@
               {
                 "group": "Job execution",
                 "pages": [
+                  "geneva/jobs/lifecycle",
                   "geneva/jobs/backfilling",
                   "geneva/jobs/conflicts",
                   "geneva/jobs/startup",
