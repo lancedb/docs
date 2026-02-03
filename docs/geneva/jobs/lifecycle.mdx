@@ -41,6 +41,10 @@ stateDiagram-v2
 
 ## Monitoring Jobs
 
+The [Geneva Console](/geneva/jobs/console) provides a web-based interface for monitoring job status, progress, and history across your database. This is the recommended way to track jobs in collaborative environments.
+
+For programmatic access, you can query job status directly via the API:
+
 ### Querying Job Status
 
 ```python
@@ -76,9 +80,12 @@ Common metrics include:
 
 | Metric | Description |
 |--------|-------------|
-| `tasks_completed` | Number of parallel tasks finished |
-| `rows_processed` | Total rows processed by UDFs |
-| `fragments_committed` | Fragments written to storage |
+| `fragments` | [Fragments](https://lance.org/format/table/?h=fragment#fragments) scheduled for processing |
+| `writer_fragments` | Fragments written to storage |
+| `udf_values_computed` | Rows processed by UDFs |
+| `rows_checkpointed` | Rows saved to checkpoint store |
+| `rows_committed` | Rows committed to the table |
+| `workers` | Workers started for parallel execution |
 
 ### Job Events
 
@@ -110,29 +117,3 @@ Jobs save intermediate results to a checkpoint store. If a job fails:
 ### Resuming Failed Jobs
 
 To resume a failed job, simply re-run the same backfill or refresh command. The job will automatically detect existing checkpoints, skip already-processed fragments, and continue from where it left off.
-
-## Troubleshooting
-
-### Job Stuck in PENDING
-
-- Check Ray cluster connectivity
-- Verify sufficient cluster resources
-- Look for errors in Ray dashboard
-
-### Job Failed
-
-```python
-# Get errors for a specific job
-errors = table.get_errors(job_id="abc123")
-for error in errors:
-    print(f"{error.error_type}: {error.error_message}")
-
-# Get errors for a specific column
-errors = table.get_errors(column_name="embedding")
-```
-
-Common failure causes:
-- UDF exceptions on specific data
-- Resource exhaustion (memory, disk)
-- Network timeouts to external services
-- Schema mismatches
