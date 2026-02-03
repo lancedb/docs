@@ -168,6 +168,7 @@
                   "geneva/jobs/startup",
                   "geneva/jobs/materialized-views",
                   "geneva/jobs/contexts",
+                  "geneva/deployment/dependency-verification",
                   "geneva/jobs/console",
                   "geneva/jobs/performance"
                 ]
