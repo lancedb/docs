@@ -21,18 +21,11 @@ The Geneva console is installed with the Geneva Helm chart; [contact LanceDB](ht
 
 
 1. Install or upgrade the Geneva Helm chart (see [Helm Deployment](/geneva/deployment/helm/)).
-2. Find the pod that's running the console:
+2. Forward port 3000 from the geneva-console-ui service:
 ```bash
-kubectl get pods -l app.kubernetes.io/name=geneva-console -n $NAMESPACE
-
-NAME                          READY   STATUS    RESTARTS   AGE
-geneva-console-abc123-abcde   2/2     Running   0          4m58s
+kubectl port-forward svc/geneva-console-ui 3000:3000
 ```
-3. Forward port 3000 to access the console:
-```bash
-kubectl port-forward -n $NAMESPACE geneva-console-abc123-abcde 3000:3000
-```
-4. Open `http://localhost:3000` in your browser. When prompted, enter your bucket and database, like:
+3. Open `http://localhost:3000` in your browser. When prompted, enter your bucket and database, like:
 ```
 s3://my-bucket/my-db
 ```
