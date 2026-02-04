@@ -12,6 +12,8 @@ export const PyStorageConnectTimeout = "db = lancedb.connect(\n    \"s3://bucket
 
 export const PyStorageGcsServiceAccount = "db = lancedb.connect(\n    \"gs://my-bucket/my-database\",\n    storage_options={\n        \"service_account\": \"path/to/service-account.json\",\n    },\n)\n";
 
+export const PyStorageOptionsProvider = "from __future__ import annotations\n\nfrom typing import Dict\n\nimport lancedb\nfrom lancedb.io import StorageOptionsProvider\n\nclass MyProvider(StorageOptionsProvider):\n    def fetch_storage_options(self) -> Dict[str, str]:\n        # Return the same keys you would normally pass via `storage_options`.\n        # Example: fetch credentials from your secret manager / STS / metadata service.\n        return {\n            \"aws_access_key_id\": \"...\",\n            \"aws_secret_access_key\": \"...\",\n            \"aws_session_token\": \"...\",\n            \"region\": \"us-east-1\",\n        }\n\ndb = lancedb.connect(\"s3://bucket/path\")\n\n# Table creation\n_ = db.create_table(\n    \"my_table\",\n    [{\"id\": 1, \"vector\": [0.0, 1.0]}],\n    storage_options_provider=MyProvider(),\n)\n\n# Table open\n_ = db.open_table(\n    \"my_table\",\n    storage_options_provider=MyProvider(),\n)\n";
+
 export const PyStorageS3Ddb = "db = lancedb.connect(\n    \"s3+ddb://bucket/path?ddbTableName=my-dynamodb-table\",\n)\n";
 
 export const PyStorageS3Express = "db = lancedb.connect(\n    \"s3://my-bucket--use1-az4--x-s3/path\",\n    storage_options={\n        \"region\": \"us-east-1\",\n        \"s3_express\": \"true\",\n    },\n)\n";

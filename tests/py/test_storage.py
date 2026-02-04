@@ -120,6 +120,44 @@ def test_storage_snippets(fake_connect):
     # --8<-- [end:storage_tigris_connect]
 
     assert len(fake_connect) == 10
+
+
+def test_storage_options_provider_snippet():
+    """Snippet for StorageOptionsProvider documentation."""
+    # --8<-- [start:storage_options_provider]
+    from __future__ import annotations
+
+    from typing import Dict
+
+    import lancedb
+    from lancedb.io import StorageOptionsProvider
+
+    class MyProvider(StorageOptionsProvider):
+        def fetch_storage_options(self) -> Dict[str, str]:
+            # Return the same keys you would normally pass via `storage_options`.
+            # Example: fetch credentials from your secret manager / STS / metadata service.
+            return {
+                "aws_access_key_id": "...",
+                "aws_secret_access_key": "...",
+                "aws_session_token": "...",
+                "region": "us-east-1",
+            }
+
+    db = lancedb.connect("s3://bucket/path")
+
+    # Table creation
+    _ = db.create_table(
+        "my_table",
+        [{"id": 1, "vector": [0.0, 1.0]}],
+        storage_options_provider=MyProvider(),
+    )
+
+    # Table open
+    _ = db.open_table(
+        "my_table",
+        storage_options_provider=MyProvider(),
+    )
+    # --8<-- [end:storage_options_provider]
     assert all(
         conn.uri.startswith(("s3://", "gs://", "az://", "s3+ddb://"))
         for conn in fake_connect

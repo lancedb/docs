@@ -11,6 +11,7 @@ import {
     PyStorageConnectS3,
     PyStorageConnectTimeout,
     PyStorageGcsServiceAccount,
+    PyStorageOptionsProvider,
     PyStorageS3Ddb,
     PyStorageS3Express,
     PyStorageS3Minio,
@@ -102,6 +103,26 @@ If you need the option to apply only to a specific table:
 | `proxy_url` | Proxy URL to route requests through. |
 | `proxy_ca_certificate` | PEM-formatted CA certificate for proxy connections. |
 | `proxy_excludes` | Comma-separated hosts that bypass the proxy (domains or CIDR). |
+
+### Dynamic / expiring credentials (StorageOptionsProvider)
+
+In production, cloud credentials are often **temporary** (for example, AWS STS session tokens, Kubernetes IRSA, or workload identity). In these cases, setting static environment variables or passing a fixed `storage_options` dictionary may stop working once the credentials expire.
+
+LanceDB supports dynamic credential refresh via a **storage options provider**:
+
+- Implement a `StorageOptionsProvider` with a `fetch_storage_options()` method.
+- Pass it to `create_table(..., storage_options_provider=...)` or `open_table(..., storage_options_provider=...)`.
+- LanceDB will call your provider to obtain up-to-date `storage_options` when it needs to access the underlying object store.
+
+<Note>
+This pattern is intended for **refreshing credentials**. Use `storage_options` for static configuration (region, endpoint, timeouts, etc.) and a provider for values that may change (access keys, session tokens, etc.).
+</Note>
+
+<CodeGroup>
+  <CodeBlock language="Python" title="StorageOptionsProvider example" icon="python">
+    {PyStorageOptionsProvider}
+  </CodeBlock>
+</CodeGroup>
 
 ## AWS S3
 
