@@ -204,7 +204,7 @@ However, if an image is defined in both a Cluster and a Manifest, the definition
 
 ### Auto-upload local dependencies
 
-Geneva can package your local environment and send it to Ray workers. This includes the current workspace root (if you're in a python repo) or the current working directory (if you're not). However, if you set `.upload_site_packages(True)`, your Python site-packages (defined by `site.getsitepackages()`) will be uploaded to workers as well. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
+Geneva can package your local environment and send it to Ray workers. This includes the current workspace root (if you're in a python repo) or the current working directory (if you're not). However, if you set `.upload_site_packages()`, your Python site-packages (defined by `site.getsitepackages()`) will be uploaded to workers as well. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
 
 To upload site packages:
 
@@ -215,7 +215,7 @@ manifest_name = "dev-manifest"
 manifest = (
     GenevaManifestBuilder()
         .name(manifest_name)
-        .upload_site_packages(True)
+        .upload_site_packages()
     ).build()
 
 db.define_manifest(manifest_name, manifest)
@@ -227,7 +227,7 @@ Here's a summary of what's in a manifest and how you can define it. (methods are
 |Contents|How you can define it|
 |---|---|
 |Local working directory (or workspace root, if in a python repo)|Will be uploaded automatically.|
-|Local python packages|Will be uploaded if you set `.upload_site_packages(True)`.|
+|Local python packages|Will be uploaded if you set `.upload_site_packages()`.|
 |Python packages to be installed|Use `.pip(packages: list[str])` or `.conda(packages: dict[str, Any])`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
 |Python dependency lists|Use `.requirements_path(path: str)` or `.conda_environment_path(path: str)`|
 |Local python packages outside of `site_packages`|Use `.py_modules(modules: list[str])` or `.add_py_module(module: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
