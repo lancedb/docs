@@ -148,9 +148,10 @@
           },
           {
             "group": "Feature Engineering (Geneva)",
-            "pages": [
+              "pages": [
               "geneva/index",
               "geneva/overview/index",
+              "geneva/why-geneva",
               {
                 "group": "UDFs",
                 "pages": [
