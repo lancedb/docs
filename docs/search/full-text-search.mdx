@@ -520,6 +520,10 @@ Phrase matching enables you to search for exact sequences of words. Unlike regul
 which matches individual terms independently, phrase matching requires words to appear in the 
 specified order with no intervening terms. 
 
+<Note>
+Phrase queries are supported but only for a single column; providing multiple columns with a quoted phrase raises an error.
+</Note>
+
 Phrase matching is particularly useful for:
 
 - Searching for specific multi-word expressions
