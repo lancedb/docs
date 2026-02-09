@@ -43,24 +43,18 @@ If you have a Kubernetes cluster with kuberay-operator, you can use Geneva to au
 
 <CodeGroup>
 ```python Python icon="python"
-import sys
-import ray
 import geneva
-from geneva.cluster.builder import GenevaClusterBuilder
-from geneva.cluster import K8sConfigMethod
-from geneva.runners.ray.raycluster import get_ray_image
+from geneva.cluster import GenevaCluster, K8sConfigMethod
+from geneva.cluster.builder import CpuWorkerBuilder, GpuWorkerBuilder
 
 db = geneva.connect("s3://my-bucket/my-db")
 
-ray_version = ray.__version__
-python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
 cluster_name = "my-geneva-cluster" # lowercase, numbers, hyphens only
 service_account = "my_k8s_service_account" # k8s service account that Geneva runs as
 k8s_namespace = "geneva"  # k8s namespace
 
 cluster = (
-    GenevaClusterBuilder()
-        .name(cluster_name)
+    GenevaCluster.create_kuberay(cluster_name)
         .namespace(k8s_namespace)
         .portforwarding(True) # required for kuberay to expose ray ports
         .aws_config(region="us-east-1") # only required if using AWS
@@ -72,19 +66,17 @@ cluster = (
             cpus=2,
             node_selector={"geneva.lancedb.com/ray-head":""}, # k8s label required for head in your cluster
         )
-        .add_cpu_worker_group(
-            cpus=4,
-            memory="8Gi",
-            service_account=service_account,
-            node_selector={"geneva.lancedb.com/ray-worker-cpu":""}, # k8s label for cpu worker in your cluster
+        .add_cpu_worker(
+            CpuWorkerBuilder()
+            .cpus(4)
+            .memory("8Gi")
+            .service_account(service_account)
         )
-        .add_gpu_worker_group(
-            cpus=2,
-            memory="8Gi",
-            gpus=1,
-            service_account=service_account,
-            image=get_ray_image(ray_version, python_version, gpu=True), # Note the GPU image here
-            node_selector={"geneva.lancedb.com/ray-worker-gpu":""}, # k8s label for gpu worker in your cluster
+        .add_gpu_worker(
+            GpuWorkerBuilder() # defaults to 1 GPU
+            .cpus(2)
+            .memory("8Gi")
+            .service_account(service_account)
         )
         .build()
 )
@@ -96,7 +88,7 @@ table = db.get_table("my_table")
 with db.context(cluster=cluster_name):
     table.backfill("my_udf")
 ```
-See [the API docs](https://lancedb.github.io/geneva/api/cluster/) for all the parameters GenevaClusterBuilder can use.
+See [the API docs](https://lancedb.github.io/geneva/api/cluster/) for all the parameters `GenevaCluster.create_kuberay()`, `CpuWorkerBuilder`, and `GpuWorkerBuilder` can use.
 
 </CodeGroup>
 
@@ -106,18 +98,13 @@ If you already have a Ray cluster, Geneva can execute jobs against it too. You d
 <CodeGroup>
 ```python Python icon="python"
 import geneva
-from geneva.cluster.builder import GenevaClusterBuilder
-from geneva.cluster import GenevaClusterType
+from geneva.cluster import GenevaCluster
 
 db = geneva.connect(my_db_uri)
 cluster_name = "my-geneva-external-cluster"
 
 cluster = (
-    GenevaClusterBuilder()
-    .name(cluster_name)
-    .cluster_type(GenevaClusterType.EXTERNAL_RAY)
-    .ray_address("ray://my_ip:my_port")
-    .portforwarding(False) # This must be False when using an external Ray cluster
+    GenevaCluster.create_external(cluster_name, "ray://my_ip:my_port")
     .build()
 )
 db.define_cluster(cluster_name, cluster)
@@ -139,14 +126,13 @@ We recommend defining dependencies explicitly: it's the easiest way to understan
 
 <CodeGroup>
 ```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
+from geneva.manifest import GenevaManifest
 
 db = geneva.connect(my_db_uri)
 
 manifest_name="dev-manifest"
 manifest = (
-    GenevaManifestBuilder()
-        .name(manifest_name)
+    GenevaManifest.create_pip(manifest_name)
         .pip(["lancedb", "numpy"])
     ).build()
 
@@ -154,16 +140,20 @@ db.define_manifest(manifest_name, manifest)
 ```
 </CodeGroup>
 
-After workers start up, this will run `pip install lancedb numpy` on them. Geneva also supports defining `conda` dependencies, or sending a path to a `requirements.txt` or `environment.yml` file, via the following methods on `GenevaManifestBuilder`:
+After workers start up, this will run `pip install lancedb numpy` on them. You can also use `.requirements_path(path)` to point to a local `requirements.txt` file instead of listing packages inline. Note that attempting to use both `.pip()` and `.requirements_path()` will raise an exception.
 
+For conda-based dependencies, use `GenevaManifest.create_conda()` instead:
+
+```python Python icon="python"
+from geneva.manifest import GenevaManifest
+
+manifest = (
+    GenevaManifest.create_conda("my-conda-manifest")
+        .conda({"dependencies": ["python=3.10", "numpy"]})
+    ).build()
 ```
-.pip(deps) # list of pip dependencies, like "numpy" or "numpy==2.3.5"
-.conda(deps) # list of conda dependencies, like "numpy" or "numpy=2.3.5"
-.requirements_path(path) # path to local requirements.txt file, like "./requirements.txt"
-.conda_environment_path(path) # path to local conda environment.yml file, like "./environment.yml"
-# Note that file paths are relative to the execution directory.
-```
-Note that attempting to use both `pip` and `requirements_path` will raise an exception. Similarly, you can't use both `conda` and `conda_environment_path`.
+
+You can also use `.conda_environment_path(path)` to point to a local `environment.yml` file. Note that attempting to use both `.conda()` and `.conda_environment_path()` will raise an exception.
 
 ### Bake dependencies into an image
 
@@ -171,14 +161,13 @@ Because the `pip` or `conda` methods involve installing packages, they will incu
 
 <CodeGroup>
 ```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
+from geneva.manifest import GenevaManifest
 
 db = geneva.connect(my_db_uri)
 
 manifest_name = "prod-manifest"
 manifest = (
-    GenevaManifestBuilder()
-        .name(manifest_name)
+    GenevaManifest.create_pip(manifest_name)
         .worker_image("myregistry.example.com/my-custom-worker-image:latest")
     ).build()
 
@@ -187,14 +176,12 @@ db.define_manifest(manifest_name, manifest)
 </CodeGroup>
 
 <Tip>
-You can also define images in a GenevaCluster, e.g.:
+You can also define images in a cluster via the `head_group` method, e.g.:
 ```python Python icon="python"
 cluster = (
-    GenevaClusterBuilder()
-        .name(cluster_name)
-        .add_cpu_worker_group(
-            WorkerGroupBuilder()
-            .image("myregistry.example.com/my-custom-worker-image:latest")
+    GenevaCluster.create_kuberay(cluster_name)
+        .head_group(
+            image="myregistry.example.com/my-custom-head-image:latest",
         )
     .build()
 )
@@ -204,35 +191,31 @@ However, if an image is defined in both a Cluster and a Manifest, the definition
 
 ### Auto-upload local dependencies
 
-Geneva can package your local environment and send it to Ray workers. This includes the current workspace root (if you're in a python repo) or the current working directory (if you're not). However, if you set `.upload_site_packages()`, your Python site-packages (defined by `site.getsitepackages()`) will be uploaded to workers as well. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
+Geneva can package your local environment and send it to Ray workers. This includes the current workspace root (if you're in a python repo) or the current working directory (if you're not). `GenevaManifest.create_site()` additionally uploads your Python site-packages (defined by `site.getsitepackages()`) to workers. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
 
 To upload site packages:
 
 ```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
+from geneva.manifest import GenevaManifest
 db = geneva.connect(my_db_uri)
 manifest_name = "dev-manifest"
-manifest = (
-    GenevaManifestBuilder()
-        .name(manifest_name)
-        .upload_site_packages()
-    ).build()
+manifest = GenevaManifest.create_site(manifest_name).build()
 
 db.define_manifest(manifest_name, manifest)
 ```
 
 ### What's in a manifest?
-Here's a summary of what's in a manifest and how you can define it. (methods are all on `GenevaManifestBuilder`)
+Here's a summary of what's in a manifest and how you can define it across the three manifest builder types.
 
-|Contents|How you can define it|
-|---|---|
-|Local working directory (or workspace root, if in a python repo)|Will be uploaded automatically.|
-|Local python packages|Will be uploaded if you set `.upload_site_packages()`.|
-|Python packages to be installed|Use `.pip(packages: list[str])` or `.conda(packages: dict[str, Any])`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
-|Python dependency lists|Use `.requirements_path(path: str)` or `.conda_environment_path(path: str)`|
-|Local python packages outside of `site_packages`|Use `.py_modules(modules: list[str])` or `.add_py_module(module: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|
-|Container image for head node|Use `.head_image(head_image: str)` or `default_head_image()` to use the default. Note that, if the image is also defined in the GenevaCluster, the image set here in the Manifest will take priority.|
-|Container image for worker nodes|Use `.worker_image(worker_image: str)` or `default_worker_image()` to use the default for the current platform. As with the head image, this takes priority over any images set in the Cluster.|
+|Contents|How you can define it|Factory method|
+|---|---|---|
+|Local working directory (or workspace root, if in a python repo)|Will be uploaded automatically.|All|
+|Local python packages (site-packages)|Uploaded automatically.|`create_site()`|
+|Pip packages to be installed|Use `.pip(packages: list[str])` or `.requirements_path(path: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|`create_pip()`|
+|Conda packages to be installed|Use `.conda(deps: dict[str, Any])` or `.conda_environment_path(path: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|`create_conda()`|
+|Local python packages outside of `site_packages`|Use `.py_modules(modules: list[str])` or `.add_py_module(module: str)`. See [Ray's RuntimeEnv docs](https://docs.ray.io/en/latest/ray-core/api/doc/ray.runtime_env.RuntimeEnv.html) for details.|All|
+|Container image for head node|Use `.head_image(head_image: str)` or `default_head_image()` to use the default. Note that, if the image is also defined in the GenevaCluster, the image set here in the Manifest will take priority.|All|
+|Container image for worker nodes|Use `.worker_image(worker_image: str)` or `default_worker_image()` to use the default for the current platform. As with the head image, this takes priority over any images set in the Cluster.|All|
 
 If you want to see exactly what is being uploaded to the cluster, set `.delete_local_zips(False)` and `.local_zip_output_dir(path)` then examine the zip files in `path`.
 
