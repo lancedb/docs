@@ -63,10 +63,11 @@ Use ANN search for large-scale applications where speed matters more than perfec
 ### Tuning `nprobes`
 
 - `nprobes` controls how many partitions are searched at query time.
-- Higher `nprobes` typically improves recall but reduces performance.
-- A common starting point is to choose `nprobes` in the range 10-20, for balanced recall and latency.
-- After a certain threshold, increasing `nprobes` yields only marginal accuracy gains.
-- LanceDB automatically chooses a sensible `nprobes` by default to maximize performance without noticeably affecting accuracy.
+- By default, LanceDB automatically tunes `nprobes` to achieve the best performance without noticeably sacrificing accuracy.
+- In most cases, leave `nprobes` unset and use the auto-tuned value.
+- Only tune `nprobes` manually when recall is below your target, or when you need even higher performance for your workload.
+- If recall is too low, increase `nprobes` gradually, but after a certain threshold, increasing `nprobes` yields only marginal accuracy gains.
+- If you need higher performance and have recall headroom, decrease `nprobes` gradually.
 
 ### Vector Search with Prefiltering
 
