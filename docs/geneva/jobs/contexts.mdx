@@ -49,7 +49,7 @@ If you have a Kubernetes cluster with kuberay-operator, you can use Geneva to au
 ```python Python icon="python"
 import geneva
 from geneva.cluster import GenevaCluster, K8sConfigMethod
-from geneva.cluster.builder import CpuWorkerBuilder, GpuWorkerBuilder
+from geneva.cluster.builder import KubeRayClusterBuilder
 
 db = geneva.connect("s3://my-bucket/my-db")
 
@@ -70,14 +70,14 @@ cluster = (
             node_selector={"geneva.lancedb.com/ray-head":""}, # k8s label required for head in your cluster
         )
         .add_worker_group(
-            CpuWorkerBuilder()
+            KubeRayClusterBuilder.cpu_worker()
             .cpus(4)
             .memory("8Gi")
             .service_account(service_account)
             .build()
         )
         .add_worker_group(
-            GpuWorkerBuilder() # defaults to 1 GPU
+            KubeRayClusterBuilder.gpu_worker() # defaults to 1 GPU
             .cpus(2)
             .memory("8Gi")
             .service_account(service_account)
@@ -93,7 +93,7 @@ table = db.get_table("my_table")
 with db.context(cluster=cluster_name):
     table.backfill("my_udf")
 ```
-See the API docs for all the parameters [`GenevaCluster.create_kuberay()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.mgr.GenevaCluster.create_kuberay), [`add_worker_group()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.add_worker_group), [`CpuWorkerBuilder`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.CpuWorkerBuilder), and [`GpuWorkerBuilder`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.GpuWorkerBuilder) can use.
+See the API docs for all the parameters [`GenevaCluster.create_kuberay()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.mgr.GenevaCluster.create_kuberay), [`add_worker_group()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.add_worker_group), [`cpu_worker()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.cpu_worker), and [`gpu_worker()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.gpu_worker) can use.
 
 </CodeGroup>
 
