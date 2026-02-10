@@ -60,7 +60,6 @@ k8s_namespace = "geneva"  # k8s namespace
 cluster = (
     GenevaCluster.create_kuberay(cluster_name)
         .namespace(k8s_namespace)
-        .portforwarding(True) # required for kuberay to expose ray ports
         .aws_config(region="us-east-1") # only required if using AWS
         .config_method(K8sConfigMethod.LOCAL) # Load k8s config from `~/.kube.config`
         # (other options include EKS_AUTH to load from AWS EKS, or IN_CLUSTER to load the
