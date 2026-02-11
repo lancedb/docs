@@ -165,6 +165,15 @@ We start by connecting to a LanceDB database path.
 If you're using LanceDB Cloud or Enterprise, replace the local connection string
 with the appropriate remote URI and authentication details.
 
+<Info>
+When you connect to a remote URI (Cloud/Enterprise), `open_table(...)` returns a *remote* table.
+Remote tables support core operations (ingest, search, update, delete), but some convenience
+methods for bulk data export are not available.
+
+In the Python SDK, `table.to_arrow()` and `table.to_pandas()` are not implemented for remote tables.
+To retrieve data, use search queries instead: `table.search(query).limit(n).to_arrow()`.
+</Info>
+
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="Python">
     {PyConnectCloud}
@@ -449,6 +458,12 @@ Clearly, the strongest characters are all Knights of the Round Table!
 You can leverage a full SQL engine like DuckDB to run more complex queries that involve
 sorting, aggregations, joins, etc. To do this, you convert the LanceDB tables to an Arrow table,
 which can be natively queried by DuckDB.
+
+<Note>
+This workflow applies to local (embedded) tables only. In the Python SDK, remote tables (Cloud/Enterprise)
+do not support `to_arrow()` or `to_pandas()`. To retrieve data from remote tables, use search queries
+with `.to_arrow()` on the results.
+</Note>
 
 <CodeGroup>
 ```python Python icon="python"
