@@ -47,9 +47,9 @@ const data = [
     { vector: [5.9, 26.5], text: "There are several kittens playing" },
 ];
 const tbl = await db.createTable("my_table", data, { mode: "overwrite" });
-{{< /code >}}
+```
 
-{{< code language="rust" >}}
+```rust Rust icon="rust"
 let uri = "data/sample-lancedb";
 let db = connect(uri).execute().await?;
 let initial_data: Box<dyn RecordBatchReader + Send> = create_some_records()?;
@@ -73,9 +73,9 @@ table.create_fts_index("text")
 await tbl.createIndex("text", {
     config: lancedb.Index.fts(),
 });
-{{< /code >}}
+```
 
-{{< code language="rust" >}}
+```rust Rust icon="rust"
 tbl
     .create_index(&["text"], Index::FTS(FtsIndexBuilder::default()))
     .execute()
