@@ -70,10 +70,10 @@ Start with these values, then tune for your workload:
   - Lower `num_partitions` can reduce search latency, but index build may become slower because partitions are larger.
   - `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
 - `IVF_RQ`
-  - `num_partitions`: start at `num_rows / 4096` (rounded to an integer). This is a strong default for most datasets.
+  - `num_partitions`: start at `num_rows // 4096` (rounded to an integer). This is a strong default for most datasets.
 - `IVF_PQ`
-  - `num_partitions`: start at `num_rows / 4096` (rounded to an integer).
-  - `num_sub_vectors`: start at `dimension / 8`. Increase for better recall, decrease for faster search and smaller indexes.
+  - `num_partitions`: start at `num_rows // 4096` (rounded to an integer).
+  - `num_sub_vectors`: start at `dimension // 8`. Increase for better recall, decrease for faster search and smaller indexes.
   - For small dimensions (`dimension <= 256`), `IVF_PQ` is often preferred over `IVF_RQ` for better accuracy at similar query performance.
 
 ## Example: Construct an IVF Index
@@ -93,9 +93,9 @@ Sometimes you need to configure the index beyond default parameters:
 - `metrics`: default is `l2`, other available are `cosine` or `dot`
     - When using `cosine` similarity, distances range from 0 (identical vectors) to 2 (maximally dissimilar)
 - `num_partitions`: use index-specific starting points from the section above:
-    - `IVF_HNSW_SQ`: `num_rows / 1,048,576`
-    - `IVF_RQ` and `IVF_PQ`: `num_rows / 4096`
-- `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension / 8`. Larger values often improve recall but can slow search.
+    - `IVF_HNSW_SQ`: `num_rows // 1,048,576`
+    - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
+- `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension // 8`. Larger values often improve recall but can slow search.
 
 Let's take a look at a sample request for an IVF index:
 
