@@ -201,12 +201,18 @@ db.define_manifest(manifest_name, manifest)
 </CodeGroup>
 
 <Tip>
-You can also define images in a cluster via the [`head_group`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.head_group) method, e.g.:
+You can also define images in a cluster via the [`head_group`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.head_group) method and [`cpu_worker`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.CpuWorkerBuilder)/[`gpu_worker`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.GpuWorkerBuilder) methods, e.g.:
 ```python Python icon="python"
 cluster = (
     GenevaCluster.create_kuberay(cluster_name)
         .head_group(
             image="myregistry.example.com/my-custom-head-image:latest",
+        )
+        .add_worker_group(KubeRayClusterBuilder.cpu_worker()
+            .image("myregistry.example.com/my-custom-cpu-worker-image:latest")
+        )
+        .add_worker_group(KubeRayClusterBuilder.gpu_worker()
+            .image("myregistry.example.com/my-custom-gpu-worker-image:latest")
         )
     .build()
 )
