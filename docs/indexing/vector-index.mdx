@@ -56,17 +56,15 @@ Use this table as a quick starting point:
 If your vector search frequently includes metadata filters (`where(...)`), prefer `IVF_RQ` or `IVF_PQ`. In filtered workloads, `IVF_HNSW_SQ` latency can fluctuate significantly.
 </Warning>
 
-<Tip>
 Compression ratios are practical rules of thumb and can vary with vector distribution, metric, and configuration.
 For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher compression than `IVF_RQ`.
-</Tip>
 
 ### Indexing Tuning by Index Type
 
 Start with these values, then tune for your workload:
 
 - `IVF_HNSW_SQ`
-  - `num_partitions`: start at `num_rows / 1,048,576` (rounded to an integer)
+  - `num_partitions`: start at `num_rows // 1,048,576` (rounded to an integer)
   - Lower `num_partitions` can reduce search latency, but index build may become slower because partitions are larger.
   - `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
 - `IVF_RQ`
