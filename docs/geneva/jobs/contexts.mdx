@@ -117,6 +117,26 @@ db.define_cluster(cluster_name, cluster)
 ```
 </CodeGroup>
 
+<Tip>
+If you need to send environment variables to your workers, in either a KubeRay or External Ray cluster, you can use [`ray_init_kwargs`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.ray_init_kwargs), like so:
+
+```python Python icon="python"
+cluster = (
+    GenevaCluster.create_kuberay(cluster_name) # or create_external(cluster_name)
+        .ray_init_kwargs({
+            "runtime_env": {
+                "env_vars": {
+                    "MY_VAR": "value",
+                    "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"]
+                },
+            },
+        })
+        ...
+    .build()
+)
+```
+</Tip>
+
 ## Dependencies and Manifests
 
 Most UDFs require some dependencies: helper libraries like `pillow` for image processing, pre-trained models like `open-clip` to calculate embeddings, or even small config files. We have three ways to get them to workers:
