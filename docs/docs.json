@@ -152,7 +152,7 @@
               "geneva/index",
               "geneva/overview/index",
               {
-                "group": "UDFs",
+                "group": "User Defined Functions (UDFs)",
                 "pages": [
                   "geneva/udfs/index",
                   "geneva/udfs/blobs",
@@ -161,21 +161,26 @@
                 ]
               },
               {
-                "group": "Job execution",
+                "group": "Jobs",
                 "pages": [
                   "geneva/jobs/lifecycle",
                   "geneva/jobs/backfilling",
                   "geneva/jobs/conflicts",
-                  "geneva/jobs/startup",
                   "geneva/jobs/materialized-views",
-                  "geneva/jobs/contexts",
-                  "geneva/deployment/dependency-verification",
-                  "geneva/jobs/console",
                   "geneva/jobs/performance"
                 ]
               },
               {
-                "group": "Deployment & scaling",
+                "group": "Operations",
+                "pages": [
+                  "geneva/jobs/contexts",
+                  "geneva/deployment/dependency-verification",
+                  "geneva/jobs/startup",
+                  "geneva/jobs/console"
+                ]
+              },
+              {
+                "group": "Deployment",
                 "pages": [
                   "geneva/deployment/index",
                   "geneva/deployment/helm",
