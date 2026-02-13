@@ -263,6 +263,7 @@
               {
                 "group": "AI Platforms & Frameworks",
                 "pages": [
+                  "integrations/ai/huggingface",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
                   "integrations/ai/genkit",
