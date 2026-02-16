@@ -117,6 +117,26 @@ db.define_cluster(cluster_name, cluster)
 ```
 </CodeGroup>
 
+<Tip>
+If you need to send environment variables to your workers, in either a KubeRay or External Ray cluster, you can use [`ray_init_kwargs`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.ray_init_kwargs), like so:
+
+```python Python icon="python"
+cluster = (
+    GenevaCluster.create_kuberay(cluster_name) # or create_external(cluster_name)
+        .ray_init_kwargs({
+            "runtime_env": {
+                "env_vars": {
+                    "MY_VAR": "value",
+                    "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"]
+                },
+            },
+        })
+        ...
+    .build()
+)
+```
+</Tip>
+
 ## Dependencies and Manifests
 
 Most UDFs require some dependencies: helper libraries like `pillow` for image processing, pre-trained models like `open-clip` to calculate embeddings, or even small config files. We have three ways to get them to workers:
@@ -181,12 +201,18 @@ db.define_manifest(manifest_name, manifest)
 </CodeGroup>
 
 <Tip>
-You can also define images in a cluster via the [`head_group`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.head_group) method, e.g.:
+You can also define images in a cluster via the [`head_group`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.KubeRayClusterBuilder.head_group) method and [`cpu_worker`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.CpuWorkerBuilder)/[`gpu_worker`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.builder.GpuWorkerBuilder) methods, e.g.:
 ```python Python icon="python"
 cluster = (
     GenevaCluster.create_kuberay(cluster_name)
         .head_group(
             image="myregistry.example.com/my-custom-head-image:latest",
+        )
+        .add_worker_group(KubeRayClusterBuilder.cpu_worker()
+            .image("myregistry.example.com/my-custom-cpu-worker-image:latest")
+        )
+        .add_worker_group(KubeRayClusterBuilder.gpu_worker()
+            .image("myregistry.example.com/my-custom-gpu-worker-image:latest")
         )
     .build()
 )
