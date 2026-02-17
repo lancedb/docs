@@ -21,3 +21,15 @@ uri = "db://your-database-uri"
 api_key = "your-api-key"
 region = "us-east-1"
 # --8<-- [end:connect_cloud]
+
+
+def connect_object_storage_config():
+    # --8<-- [start:connect_object_storage]
+    import lancedb
+
+    uri = "s3://your-bucket/path"
+    # You can also use "gs://your-bucket/path" or "az://your-container/path".
+    db = lancedb.connect(uri)
+    # --8<-- [end:connect_object_storage]
+
+    return db

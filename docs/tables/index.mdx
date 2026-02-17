@@ -6,7 +6,7 @@ icon: "table"
 keywords: ["create table", "polars", "pandas", "pyarrow", "dataframe", "nested data"]
 ---
 
-import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud, RsConnect, RsConnectCloud } from '/snippets/connection.mdx';
+import { PyConnect, TsConnect, RsConnect } from '/snippets/connection.mdx';
 import {
     PyBasicImports,
     PyDataLoad,
@@ -162,31 +162,20 @@ We start by connecting to a LanceDB database path.
     </CodeBlock>
 </CodeGroup>
 
-If you're using LanceDB Cloud or Enterprise, replace the local connection string
+If you're using LanceDB Enterprise, replace the local connection string
 with the appropriate remote URI and authentication details.
 
-<Info>
+<Warning>
+**Working with remote tables**
+
 When you connect to a remote URI (Cloud/Enterprise), `open_table(...)` returns a *remote* table.
 Remote tables support core operations (ingest, search, update, delete), but some convenience
 methods for bulk data export are not available.
 
 In the Python SDK, `table.to_arrow()` and `table.to_pandas()` are not implemented for remote tables.
 To retrieve data, use search queries instead: `table.search(query).limit(n).to_arrow()`.
-</Info>
+</Warning>
 
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="Python">
-    {PyConnectCloud}
-    </CodeBlock>
-
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsConnectCloud}
-    </CodeBlock>
-
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsConnectCloud}
-    </CodeBlock>
-</CodeGroup>
 
 ## Create a table and ingest data
 
