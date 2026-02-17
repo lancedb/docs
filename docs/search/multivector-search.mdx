@@ -15,8 +15,6 @@ In this tutorial, you'll create a table with multiple vector embeddings per docu
 
 Each item in your dataset can have a column containing multiple vectors, which LanceDB can efficiently index and search. When performing a search, you can query using either a single vector embedding or multiple vector embeddings. 
 
-LanceDB also integrates with [ConteXtualized Token Retriever (XTR)](https://arxiv.org/abs/2304.01982), an advanced retrieval model that prioritizes the most semantically important document tokens during search. This integration enhances the quality of search results by focusing on the most relevant token matches.
-
 <Tip>
 - Currently, only the `cosine` metric is supported for multivector search.
 - The vector value type can be `float16`, `float32`, or `float64`.
@@ -153,9 +151,74 @@ results_multi = tbl.search(query_multi).limit(5).to_pandas()
 ```
 </CodeGroup>
 
-## What's Next?
+## Example 1: Using XTR Embeddings
 
-If you still need more guidance, you can try the complete [Multivector Search Notebook](https://colab.research.google.com/github/lancedb/vectordb-recipes/blob/main/examples/saas_examples/python_notebook/Multivector_on_LanceDB_Cloud.ipynb).
+[ConteXtualized Token Retriever (XTR)](https://arxiv.org/abs/2304.01982) is a late-interaction retrieval model that represents text as token-level vectors instead of a single embedding.
+This lets search score token-to-token matches (MaxSim), which can improve fine-grained relevance.
+In LanceDB, you use XTR by generating token vectors with a Hugging Face model and storing them in a multivector column.
 
+1. Generate token-level embeddings (multivectors) with a Hugging Face model.
+2. Store them in a `List[List[float]]` vector column.
+3. Query with token-level embeddings from the same model.
 
+<CodeGroup>
+```python Python icon="python"
+import lancedb
+import pyarrow as pa
+import torch
+import torch.nn.functional as F
+from transformers import AutoModel, AutoTokenizer
 
+# You can also use: "google/xtr-base-multilingual"
+model_id = "google/xtr-base-en"
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+model = AutoModel.from_pretrained(model_id).eval()
+
+def encode_multivector(text: str) -> list[list[float]]:
+    """Convert a text string into token-level normalized embeddings."""
+    with torch.no_grad():
+        inputs = tokenizer(
+            text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512,
+        )
+        outputs = model(**inputs).last_hidden_state[0]  # [tokens, dim]
+        token_mask = inputs["attention_mask"][0].bool()
+        token_vectors = outputs[token_mask]
+        token_vectors = F.normalize(token_vectors, p=2, dim=1)
+        return token_vectors.cpu().tolist()
+
+docs = [
+    {"id": 1, "text": "A guide to hiking in the Alps"},
+    {"id": 2, "text": "How to optimize IVF_PQ recall in vector search"},
+    {"id": 3, "text": "Beginner's recipe for sourdough bread"},
+]
+
+for row in docs:
+    row["vector"] = encode_multivector(row["text"])
+
+dim = len(docs[0]["vector"][0])
+schema = pa.schema(
+    [
+        pa.field("id", pa.int64()),
+        pa.field("text", pa.string()),
+        pa.field("vector", pa.list_(pa.list_(pa.float32(), dim))),
+    ]
+)
+
+db = lancedb.connect("data/xtr_demo")
+table = db.create_table("xtr_docs", data=docs, schema=schema, mode="overwrite")
+table.create_index(metric="cosine", vector_column_name="vector")
+
+query = "tips to improve vector search recall"
+query_multivector = encode_multivector(query)
+results = table.search(query_multivector).limit(3).to_pandas()
+print(results[["id", "text", "_distance"]])
+```
+</CodeGroup>
+
+For a complete end-to-end example, see
+[Multivector search with XTR (Colab)](https://colab.research.google.com/github/lancedb/vectordb-recipes/blob/main/examples/multivector_xtr/main.ipynb)
+or [the full notebook source](https://github.com/lancedb/vectordb-recipes/tree/main/examples/multivector_xtr).
+You can also review [Hugging Face embedding integration](/integrations/embedding/huggingface/).
