@@ -75,7 +75,7 @@ indexed and unindexed rows.
 It is strongly recommended to create scalar indices on the filter columns. Scalar indices
 will reduce the amount of data that needs to be scanned and thus speed up the filter.
 LanceDB supports `BITMAP`, `BTREE`, and `LABEL_LIST` as our scalar index types. You 
-can see more details [here](/indexing#scalar-index).
+can see more details [here](/indexing/scalar-index).
 
 ### Does LanceDB always recreate the full index or incrementally update existing centroids?
 LanceDB implements an optimization algorithm to decide whether a delta index will be 
@@ -102,7 +102,7 @@ following:
   It is recommended to run queries from an EC2 instance that is in the same region. 
 - Create scalar indices: If you are filtering on metadata, it is recommended to 
   create scalar indices on those columns. This will speed up searches with metadata filtering. 
-  See [here](/indexing#scalar-index) for more details on creating a scalar index.
+  See [here](/indexing/scalar-index) for more details on creating a scalar index.
 
 ### Will I always query the latest data?
 - For LanceDB Cloud users, yes, strong consistency is guaranteed. 

@@ -60,9 +60,77 @@ The trade-off is that the results are not guaranteed to be the true nearest neig
 
 Use ANN search for large-scale applications where speed matters more than perfect recall. LanceDB uses approximate nearest neighbor algorithms to deliver fast results without examining every vector in your dataset.
 
+<Warning>
+When a vector index is used, `_distance` is not always the true distance between full vectors. In ANN mode without refinement, LanceDB computes `_distance` using compressed vectors for speed.
+</Warning>
+
+### Exact vs Approximate Distances
+
+When doing vector search, the meaning of "distance" depends on whether you are using an index and whether `refine_factor` is specified as part of your query.
+`nprobes` controls how many partitions are searched to find candidates, while `refine_factor` controls how many candidates are rescored on full vectors for better distance fidelity and reranking quality.
+
+The table below summarizes the behavior of `_distance` in search results based on your query configuration:
+
+| Query mode | Neighbor quality | `_distance` in results |
+| :--- | :--- | :--- |
+| No index or `.bypass_vector_index()` | Exact kNN (100% recall) | True distance on full vectors |
+| Indexed ANN, no `refine_factor` | Approximate neighbors | Approximate distance on compressed/quantized vectors |
+| Indexed ANN + `refine_factor(1)` | Approximate neighbors (same candidate set) | Distances recomputed on full vectors for reranked candidates |
+| Indexed ANN + `refine_factor(>1)` | Better recall than no refine (usually) | Distances recomputed on full vectors for reranked candidates |
+
+<CodeGroup>
+```python Python icon="python"
+# Indexed ANN search without refinement (fast, approximate `_distance`)
+fast_results = (
+    table.search(embedding)
+    .limit(10)
+    .to_pandas()
+)
+
+# Recompute distances on full vectors for reranked candidates
+exact_distance_results = (
+    table.search(embedding)
+    .limit(10)
+    .refine_factor(1)
+    .to_pandas()
+)
+
+# Rerank a larger candidate set for better recall (higher latency)
+higher_recall_results = (
+    table.search(embedding)
+    .limit(10)
+    .refine_factor(20)
+    .to_pandas()
+)
+```
+
+```typescript TypeScript icon="square-js"
+// Indexed ANN search without refinement (fast, approximate `_distance`)
+const fastResults = await (table.search(embedding) as lancedb.VectorQuery)
+  .limit(10)
+  .toArray();
+
+// Recompute distances on full vectors for reranked candidates
+const exactDistanceResults = await (table.search(embedding) as lancedb.VectorQuery)
+  .limit(10)
+  .refineFactor(1)
+  .toArray();
+
+// Rerank a larger candidate set for better recall (higher latency)
+const higherRecallResults = await (table.search(embedding) as lancedb.VectorQuery)
+  .limit(10)
+  .refineFactor(20)
+  .toArray();
+```
+</CodeGroup>
+
+For deeper tuning guidance on indexing and performance estimation, see the [vector indexes](/indexing/vector-index/#search-configuration) page,
+For tuning `nprobes`, see below.
+
 ### Tuning `nprobes`
 
 - `nprobes` controls how many partitions are searched at query time.
+- `nprobes` improves candidate recall, but does not by itself make `_distance` exact.
 - By default, LanceDB automatically tunes `nprobes` to achieve the best performance without noticeably sacrificing accuracy.
 - In most cases, leave `nprobes` unset and use the auto-tuned value.
 - Only tune `nprobes` manually when recall is below your target, or when you need even higher performance for your workload.
