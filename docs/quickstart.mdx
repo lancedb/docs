@@ -4,7 +4,17 @@ sidebarTitle: "Quickstart"
 description: "Get started with LanceDB in minutes."
 icon: rocket
 ---
-import { PyConnect, PyConnectCloud, RsConnect, RsConnectCloud, TsConnect, TsConnectCloud } from '/snippets/connection.mdx';
+import {
+    PyConnect,
+    PyConnectCloud,
+    PyConnectObjectStorage,
+    RsConnect,
+    RsConnectCloud,
+    RsConnectObjectStorage,
+    TsConnect,
+    TsConnectCloud,
+    TsConnectObjectStorage,
+} from '/snippets/connection.mdx';
 import {
     PyQuickstartCreateTable,
     PyQuickstartVectorSearch1,
@@ -39,8 +49,16 @@ cargo add lancedb
 
 ## 2. Connect to a LanceDB database
 
-Using LanceDB's open source version is as simple as importing LanceDB as a library
-and pointing to a local path -- no servers needed!
+LanceDB supports several URI patterns to connect to a database.
+
+- A local filesystem path (when using it as an embedded library)
+- A `db://...` URI (when using LanceDB Cloud or Enterprise)
+- An object storage URI: `s3://...`, `gs://...`, or `az://...` (OSS mode)
+
+### Connect via local path with LanceDB
+
+The simplest way to begin is to use LanceDB OSS. Simply import LanceDB as an embedded library in your
+client SDK of choice and point to a local path.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -52,17 +70,38 @@ and pointing to a local path -- no servers needed!
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    { "// Rust imports go here\n" }
+    { "use lancedb::connect;\n" }
+    { "\n" }
     {RsConnect}
     </CodeBlock>
 </CodeGroup >
 
 
-### Optional: LanceDB Cloud or Enterprise versions
+### Connect via object storage URIs
 
-If you're looking for a fully-managed solution,
-you can use LanceDB Cloud, which provides managed infrastructure,
-security, and automatic backups. Simply replace the local path with a remote `uri`
+You can also connect LanceDB OSS directly to object storage:
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyConnectObjectStorage}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnectObjectStorage}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsConnectObjectStorage}
+    </CodeBlock>
+</CodeGroup >
+
+For credentials, endpoints, and provider-specific options, see
+[Configuring storage](/storage/configuration).
+
+### Connect to LanceDB Enterprise
+
+If you're using a managed LanceDB service on either LanceDB Cloud or Enterprise, you can connect using a `db://` URI,
+along with any encessary credentials. Simply replace the local path with a remote `uri`
 that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
@@ -79,8 +118,7 @@ that points to where your data is stored, and you're ready to go.
     </CodeBlock>
 </CodeGroup >
 
-For enormous scale and more advanced use cases beyond just search -- like
-feature engineering, model training and more, check out [LanceDB Enterprise](/enterprise).
+To learn more about LanceDB Enterprise, see the [Enterprise documentation](/enterprise).
 
 ## 3. Obtain data and ingest into LanceDB
 
