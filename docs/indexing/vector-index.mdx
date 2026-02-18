@@ -1,7 +1,7 @@
 ---
 title: "Vector Indexes"
 sidebarTitle: "Vector Index"
-description: "Build and optimize LanceDB vector indexes, including IVF_HNSW_SQ, IVF_RQ, IVF_PQ, and binary indexes."
+description: "Build and optimize LanceDB vector indexes, including IVF, HNSW and binary quantized indexes."
 icon: "arrow-up-right-dots"
 ---
 import {
@@ -18,33 +18,39 @@ import {
     PyVectorIndexCheckStatus as VectorIndexCheckStatus,
 } from '/snippets/indexing.mdx';
 
-LanceDB offers two main vector indexing algorithms: **Inverted File (IVF)** and **Hierarchically Navigable Small Worlds (HNSW)**. You can create multiple vector indexes within a Lance table. This guide walks through common configurations and build patterns.
+You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two kinds of vector indexing algorithms: **Inverted File (IVF)** and **Hierarchically Navigable Small Worlds (HNSW)**.
 
-### Option 1: Self-Hosted Indexing
+<Info>
+**IVF + HNSW**
 
-**Manual, Sync or Async:** If using LanceDB Open Source, you will have to build indexes manually, as well as reindex and tune indexing parameters. The Python SDK lets you do this *synchronously and asynchronously*.
+In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph (with quantization via `IVF_HNSW_PQ` / `IVF_HNSW_SQ`). This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
+</Info>
 
-### Option 2: Automated Indexing
+### Manual Indexing
 
-**Automatic and Async:** Indexing is automatic in LanceDB Cloud/Enterprise. As soon as data is updated, our system automates index optimization. *This is done asynchronously*.
+If using LanceDB OSS, you will have to create the vector index manually, by calling `table.create_index()`, and updating the index as new data arrives and tuning its parameters is also a manual process.
 
-Here is what happens in the background - when a table contains a single vector column named `vector`, LanceDB automatically:
+### Automatic Indexing
 
-- Infers the vector column from the schema
-- Creates an optimized `IVF_PQ` index without manual configuration
-- The default distance is `l2` or euclidean
+ <Badge color="red">Enterprise-only</Badge> 
+Vector indexing is managed **automatically** in LanceDB Cloud/Enterprise. As soon as data is updated, the system updates the index and optimizates it. *This is done asynchronously as a background process*.
 
-Finally, LanceDB Cloud/Enterprise will analyze your data distribution to **automatically configure indexing parameters**.
+When you create a table in LanceDB Enterprise, LanceDB automatically:
 
-<Note title="Manual Index Creation">
-You can create a new index with different parameters using `create_index` - this replaces any existing index
+- Infers the vector columns from the schema
+- Create an optimized `IVF_PQ` index without manual configuration
+- Automatically configure indexing parameters
 
+The default distance is `l2` (Euclidean).
+
+<Note>
+You can call `create_index()` with different parameters to create a new index -- this replaces any existing index.
 Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
 </Note>
 
 ## Choose the Right Index
 
-Use this table as a quick starting point:
+Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
 
 | If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
 | :--- | :--- | :--- | :--- |
@@ -59,7 +65,7 @@ If your vector search frequently includes metadata filters (`where(...)`), prefe
 Compression ratios are practical rules of thumb and can vary with vector distribution, metric, and configuration.
 For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher compression than `IVF_RQ`.
 
-### Indexing Tuning by Index Type
+### Index Tuning
 
 Start with these values, then tune for your workload:
 

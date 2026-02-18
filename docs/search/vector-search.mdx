@@ -42,7 +42,7 @@ For indexed search, supported distance metrics vary by index type:
 ### Configure Distance Metric
 
 By default, `l2` will be used as metric type. You can specify the metric type as
-`cosine` or `dot` if required.
+`cosine` or `dot` if required (`hamming` is supported for `IVF_FLAT` index only).
 
 **Note:** You can configure the distance metric during search only if there's no vector index. If a vector index exists, the distance metric will always be the one you specified when creating the index.
 
