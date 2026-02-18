@@ -21,19 +21,30 @@ Ensure you always use the same distance metric that your embedding model was tra
 
 The right metric improves both search accuracy and query performance. Currently, LanceDB supports the following metrics:
 
-| Metric    | Description                                                                                                                                                                                                                                                          | Default |
-| :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------ |
-| `l2`      | [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance) - measures the straight-line distance between two points in vector space. Calculated as the square root of the sum of squared differences between corresponding vector components.            | ✓       |
-| `cosine`  | [Cosine similarity](https://en.wikipedia.org/wiki/Cosine_similarity) - measures the cosine of the angle between two vectors, ranging from -1 to 1. Computed as the dot product divided by the product of vector magnitudes. Use for unnormalized vectors.            | x       |
-| `dot`     | [Dot product](https://en.wikipedia.org/wiki/Dot_product) - calculates the sum of products of corresponding vector components. Provides raw similarity scores without normalization, sensitive to vector magnitudes. Use for normalized vectors for best performance. | x       |
-| `hamming` | [Hamming distance](https://en.wikipedia.org/wiki/Hamming_distance) - counts the number of positions where corresponding bits differ between binary vectors. Only applicable to binary vectors stored as packed uint8 arrays.                                         | x       |
+| Distance metric | Mathematical form | Notes |
+|---|---|---|
+| `l2` | $\|x-y\|_2=\sqrt{\sum_i (x_i-y_i)^2}$ | Measures the straight-line distance between two points in vector space. Calculated as the square root of the sum of squared differences between corresponding vector components. |
+| `cosine` | $1-\frac{x\cdot y}{\|x\|_2\|y\|_2}$ | Measures directional difference between vectors. Computed as 1 minus cosine similarity (the dot product normalized by both vector magnitudes), so vector length does not affect the score. Use for unnormalized vectors. |
+| `dot` | $x\cdot y=\sum_i x_i y_i$ | Calculates the sum of products of corresponding vector components. Provides raw similarity scores without normalization, sensitive to vector magnitudes. Use for normalized vectors for best performance. |
+| `hamming` | $\sum_i \mathbf{1}[x_i\neq y_i]$ | Counts the number of positions where corresponding bits differ between binary vectors. Only applicable to binary vectors stored as packed uint8 arrays. |
+
+For indexed search, supported distance metrics vary by index type:
+
+| Index type | Supported distance metrics |
+|---|---|
+| `IVF_FLAT` | `["l2", "cosine", "dot", "hamming"]` |
+| `IVF_PQ` | `["l2", "cosine", "dot"]` |
+| `IVF_SQ` | `["l2", "cosine", "dot"]` |
+| `IVF_RQ` | `["l2", "cosine", "dot"]` |
+| `IVF_HNSW_PQ` | `["l2", "cosine", "dot"]` |
+| `IVF_HNSW_SQ` | `["l2", "cosine", "dot"]` |
 
 ### Configure Distance Metric
 
 By default, `l2` will be used as metric type. You can specify the metric type as
-`cosine` or `dot` if required.
+`cosine` or `dot` if required (`hamming` is supported for `IVF_FLAT` index only).
 
-**Note:** You can configure the distance metric during search only if there’s no vector index. If a vector index exists, the distance metric will always be the one you specified when creating the index.
+**Note:** You can configure the distance metric during search only if there's no vector index. If a vector index exists, the distance metric will always be the one you specified when creating the index.
 
 <CodeGroup>
 ```python Python icon="python"
