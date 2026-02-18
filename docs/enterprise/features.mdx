@@ -23,7 +23,7 @@ LanceDB Enterprise is a distributed cluster that spans many machines (unlike Lan
 | **Cache** | None | Distributed NVMe cache | Enterprise keeps hot data near compute and avoids repeated S3 calls. |
 | **Indexing & compaction** | Manual | Automatic | Enterprise runs background jobs that rebuild and compact data without downtime. |
 | **Data format** | Supports multiple available standards | Supports multiple available standards | No vendor lock-in; data moves freely between editions. |
-| **Deployment** | Embedded in your code | Bring-Your-Own-Cloud or Managed Service | Enterprise meets uptime, compliance, and support goals that OSS cannot. |
+| **Deployment** | Embedded in your code | Self-managed or Managed Service | Enterprise meets uptime, compliance, and support goals that OSS cannot. |
 
 ### Architecture and scale
 
@@ -64,7 +64,7 @@ Read More: [Indexing in LanceDB](/indexing/)
 
 When you work with LanceDB OSS, it is included as part of your binary, Docker, or serverless function. The footprint is small, and no extra services run beside it. 
 
-LanceDB Enterprise comes in two flavors. The Bring-Your-Own-Cloud (BYOC) template installs the control plane, routers, and nodes inside your VPC, so data never leaves your account. The managed SaaS option hands day-to-day operations to the vendor, including patching, scaling, and 24×7 monitoring. Both enterprise modes support private networking, role-based access control, audit logs, and single sign-on.
+LanceDB Enterprise comes in two flavors. The self-managed template installs the deployment inside your VPC, so data never leaves your account. The managed SaaS option hands day-to-day operations to the vendor, including patching, scaling, and 24×7 monitoring. Both enterprise modes support private networking, role-based access control, audit logs, and single sign-on.
 
 Read More: [LanceDB Enterprise Performance](/enterprise/deployment/)
 
