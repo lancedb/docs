@@ -73,13 +73,15 @@ throughput (i.e., keep latencies down to a minimum). Compaction is the process o
 together to reduce the amount of metadata that needs to be managed, and to reduce the number of files
 that need to be opened while scanning the dataset.
 
-### Performance Optimization Through Compaction
+Running compaction on a Lance dataset will do the following:
 
-Compaction performs the following tasks in the background:
+- Remove deleted rows from fragments
+- Remove dropped columns from fragments
+- Merge small fragments into larger ones
 
-- Removes deleted rows from fragments
-- Removes dropped columns from fragments
-- Merges small fragments into larger ones
+Compaction focuses on read performance, not immediate disk reclamation. During compaction, Lance writes
+new compacted files while older files are still referenced by previous table versions. This means disk
+usage can increase temporarily until old versions are cleaned up.
 
 ### Data deletion and recovery
 
