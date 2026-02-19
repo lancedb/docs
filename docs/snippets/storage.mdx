@@ -12,6 +12,8 @@ export const PyStorageConnectTimeout = "db = lancedb.connect(\n    \"s3://bucket
 
 export const PyStorageGcsServiceAccount = "db = lancedb.connect(\n    \"gs://my-bucket/my-database\",\n    storage_options={\n        \"service_account\": \"path/to/service-account.json\",\n    },\n)\n";
 
+export const PyStorageProviderRefresh = "class StsStorageOptionsProvider:\n    # LanceDB calls this method whenever credentials need refresh.\n    def fetch_storage_options(self) -> dict[str, str]:\n        # Replace this with your credential manager or STS call.\n        return {\n            \"region\": \"us-east-1\",\n            \"aws_access_key_id\": \"<temp-access-key-id>\",\n            \"aws_secret_access_key\": \"<temp-secret-access-key>\",\n            \"aws_session_token\": \"<temp-session-token>\",\n            \"expires_at_millis\": \"1735707600000\",\n            \"refresh_offset_millis\": \"120000\",\n        }\n\nprovider = StsStorageOptionsProvider()\ndb = lancedb.connect(\"s3://bucket/path\")\ntable = db.create_table(\n    \"table_with_temp_creds\",\n    [{\"id\": 1}],\n    storage_options_provider=provider,\n)\n";
+
 export const PyStorageS3Ddb = "db = lancedb.connect(\n    \"s3+ddb://bucket/path?ddbTableName=my-dynamodb-table\",\n)\n";
 
 export const PyStorageS3Express = "db = lancedb.connect(\n    \"s3://my-bucket--use1-az4--x-s3/path\",\n    storage_options={\n        \"region\": \"us-east-1\",\n        \"s3_express\": \"true\",\n    },\n)\n";
