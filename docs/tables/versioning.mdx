@@ -282,6 +282,10 @@ Each version represents a distinct state of your data, allowing you to:
 - Revert to previous states
 - Maintain data lineage for ML reproducibility
 
-<Note title="System Operations">
-System operations like index updates and table compaction automatically increment the table version number. These background processes are tracked in the version history, though their version numbers are omitted from this example for clarity.
+<Note>
+**System Operations**
+
+System operations like `optimize()`, index updates, and table compaction also increment table version numbers.
+In LanceDB OSS and Cloud, `optimize()` can prune older versions based on its retention setting (`cleanup_older_than`, 7 days by default),
+which is when old-version files are removed and disk space is reclaimed.
 </Note>
