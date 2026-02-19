@@ -6,7 +6,7 @@ icon: "table"
 keywords: ["create table", "polars", "pandas", "pyarrow", "dataframe", "nested data"]
 ---
 
-import { PyConnect, TsConnect, RsConnect } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud, RsConnect, RsConnectCloud } from '/snippets/connection.mdx';
 import {
     PyBasicImports,
     PyDataLoad,
@@ -139,14 +139,16 @@ with several integer fields, indicating each character's attributes.
 ]
 ```
 
-<Warning>
+<Note>
 The `vector` arrays here are synthetic and for demonstration purposes only. In your real-world
 applications, you'd generate these vectors from the raw text fields using a suitable embedding model.
-</Warning>
+</Note>
 
 ## Connect to a database
 
-We start by connecting to a LanceDB database path.
+### Option 1: Local database
+
+We start by connecting to a LanceDB database path. The example below uses a local path in LanceDB OSS.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -162,20 +164,38 @@ We start by connecting to a LanceDB database path.
     </CodeBlock>
 </CodeGroup>
 
-If you're using LanceDB Enterprise, replace the local connection string
-with the appropriate remote URI and authentication details.
+### Option 2: Remote database
 
-<Warning>
-**Working with remote tables**
+You can also connect LanceDB OSS directly to object storage. For credentials, endpoints, and provider-specific options, see
+[Configuring storage](/storage/configuration).
 
-When you connect to a remote URI (Cloud/Enterprise), `open_table(...)` returns a *remote* table.
+If you're using a managed LanceDB service on either LanceDB Cloud or Enterprise, you can connect using a `db://` URI,
+along with any encessary credentials. Simply replace the local path with a remote `uri`
+that points to where your data is stored, and you're ready to go.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyConnectCloud}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnectCloud}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsConnectCloud}
+    </CodeBlock>
+</CodeGroup >
+
+To learn more about LanceDB Enterprise, see the [Enterprise documentation](/enterprise).
+
+<Note>
+- When you connect to a remote URI (Cloud/Enterprise), `open_table(...)` returns a *remote* table.
 Remote tables support core operations (ingest, search, update, delete), but some convenience
 methods for bulk data export are not available.
-
-In the Python SDK, `table.to_arrow()` and `table.to_pandas()` are not implemented for remote tables.
+- In the Python SDK, `table.to_arrow()` and `table.to_pandas()` are not implemented for remote tables.
 To retrieve data, use search queries instead: `table.search(query).limit(n).to_arrow()`.
-</Warning>
-
+</Note>
 
 ## Create a table and ingest data
 
@@ -232,9 +252,9 @@ initial testing).
     </CodeBlock>
 </CodeGroup >
 
-<Warning>
+<Info>
 If you want to avoid overwriting an existing table, omit the overwrite mode.
-</Warning>
+</Info>
 
 ### From Pandas DataFrames
 <Badge color="green">Python Only</Badge>
