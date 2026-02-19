@@ -192,7 +192,9 @@ When rows are updated, they are moved out of the index. The row will still show 
 
 ### Delete Operations
 
-Remove rows that match a condition.
+Delete operations **soft delete** rows that match a given condition.
+The underlying data is not immediately removed, but is marked
+for deletion (in the [deletion files](https://lance.org/format/table/#deletion-files) at the Lance format level) and excluded from query results.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -200,13 +202,28 @@ Remove rows that match a condition.
     </CodeBlock>
 </CodeGroup>
 
-<Warning title="Soft Deletion">
-Delete operations soft delete rows. Rows are hard deleted later by compaction and cleanup operations that happen in the background on LanceDB Cloud and Enterprise. The default retention on Cloud is 30 days. During this time, these rows are still accessible to query or restore by accessing old table versions (see [Versioning & Reproducibility in LanceDB](/tables/versioning/)).
+
+<Warning>
+**Deleting rows removes them from the index**
+
+When rows are deleted, those rows are also excluded from the index segments, so indexed queries will not return them either. If ALL the rows are deleted (i.e., the table is emptied), ensure that you recreate the index after ingesting new data.
 </Warning>
 
-<Warning title="Index Deletion">
-If a table is emptied, its existing indexes are removed. Recreate indexes after ingesting new data.
-</Warning>
+To permanently remove deleted rows, you can optimize the table, which will run compaction and cleans up the soft-deleted rows, which frees up storage space.
+
+- In LanceDB OSS, compaction and cleanup are manual. Run `table.optimize()` regularly to free up disk space.
+- In LanceDB Cloud, compaction and cleanup runs automatically in the background.
+- In LanceDB Enterprise, files aren't cleaned up by default. You can configure the compaction and cleanup behavior at cluster setup time to suit your organization's retention policy.
+
+By default, table cleanup removes data up to 7 days ago. If you need to reclaim space from deleted rows more aggressively, manually call `table.optimize()` use a shorter retention window as follows:
+
+<CodeGroup>
+    ```python Python icon=Python
+    from datetime import timedelta
+
+    table.optimize(cleanup_older_than=timedelta(days=1))
+    ```
+</CodeGroup>
 
 ## Merge Operations
 
@@ -275,4 +292,3 @@ for the document that are not in the new data, with `when_not_matched_by_source_
 <Tip title="Batch Size Recommendation">
 We suggest the best batch size to be 500k for optimal performance.
 </Tip>
-
