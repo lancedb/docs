@@ -1,10 +1,12 @@
 ---
-title: "Hugging Face-Lance Integration"
+title: "Hugging Face Hub"
 sidebarTitle: "Hugging Face"
-description: "Use LanceDB directly on Hugging Face-hosted Lance datasets for multimodal search and retrieval."
+description: "Use LanceDB directly on Lance datasets hosted on the Hugging Face Hub for multimodal search and retrieval."
 ---
 
-LanceDB can open Lance datasets hosted on the [Hugging Face Hub](https://huggingface.co/datasets?format=format:lance) with `hf://` URIs.
+[Hugging Face Hub](https://huggingface.co/datasets?format=format:lance&sort=trending) is a popular platform for sharing machine learning datasets, models, and other resources.
+
+LanceDB can directly scan Lance datasets hosted on the [Hugging Face Hub](https://huggingface.co/datasets?format=format:lance) with `hf://` URIs.
 This is enabled under the hood by the [lance-huggingface](https://lance.org/integrations/huggingface/)
 integration that allows users to stream Lance datasets directly from Hugging Face without needing to
 download them first.
