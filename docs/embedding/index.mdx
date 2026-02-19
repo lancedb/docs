@@ -5,6 +5,18 @@ description: "Use the embedding API in LanceDB -- registry, functions, schemas, 
 icon: "bars"
 ---
 
+import {
+    PyOpenaiEmbeddings,
+    PyManualQuerySearch,
+    PyEmbeddingFunction,
+    TsOpenaiEmbeddings,
+    TsManualQuerySearch,
+    TsEmbeddingFunction,
+    RsOpenaiEmbeddings,
+    RsManualQuerySearch,
+    RsEmbeddingFunction,
+} from '/snippets/embedding.mdx';
+
 Modern machine learning models can be trained to convert raw data into embeddings, which are vectors
 of floating point numbers. The position of an embedding in vector space captures the semantics of
 the data, so vectors that are close to each other are considered similar.
@@ -12,8 +24,8 @@ the data, so vectors that are close to each other are considered similar.
 LanceDB provides an embedding function registry in OSS as well as its Cloud and Enterprise versions
 ([see below](#embeddings-in-lancedb-cloud-and-enterprise))
 that automatically generates vector embeddings during data ingestion. Automatic query-time embedding
-generation is currently only supported in LanceDB OSS. The API abstracts embedding generation, allowing
-you to focus on your application logic.
+generation is available in LanceDB OSS, with SDK-specific query ergonomics. The API abstracts
+embedding generation, allowing you to focus on your application logic.
 
 ## Embedding Registry
 
@@ -21,47 +33,28 @@ you to focus on your application logic.
 
 In LanceDB OSS, you can get a supported embedding function from the registry, and then use it in your table schema. 
 Once configured, the embedding function will automatically generate embeddings when you insert data
-into the table. And when you query the table, you can provide a query string or other input, and the
-embedding function will generate an embedding for it.
+into the table. Query-time behavior depends on SDK: Python/TypeScript can query with text directly,
+while Rust examples typically compute query embeddings explicitly before vector search.
 
 <CodeGroup>
-```python Python icon="python"
-from lancedb.embeddings import get_registry
-from lancedb.pydantic import LanceModel, Vector
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyOpenaiEmbeddings}
+    </CodeBlock>
 
-# Get a sentence-transformer function
-func = get_registry().get("sentence-transformers").create()
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsOpenaiEmbeddings}
+    </CodeBlock>
 
-class MySchema(LanceModel):
-    # Embed the 'text' field automatically
-    text: str = func.SourceField()
-    # Store the embeddings in the 'vector' field
-    vector: Vector(func.ndims()) = func.VectorField()
-
-# Create a LanceDB table with the schema
-import lancedb
-db = lancedb.connect("./mydb")
-table = db.create_table("mytable", schema=MySchema)
-# Insert data - embeddings are generated automatically
-table.add([
-    {"text": "This is a test."},
-    {"text": "Another example."}
-])
-
-# Query the table - embeddings are generated for the query
-results = table.search("test example").limit(5).to_pandas()
-print(results)
-
-## Example Output
-#                                   text                            vector  _distance
-# 0                     This is a test.  [0.0123, -0.0456, ..., 0.0789]  0.123456
-# 1                     Another example.  [0.0234, -0.0567, ..., 0.0890]  0.234567
-```
+    <CodeBlock filename="Rust" language="rust" icon="rust">
+    {RsOpenaiEmbeddings}
+    </CodeBlock>
 </CodeGroup>
 
 ### Using an embedding function
 
-The `.create()` method accepts several arguments to configure the embedding function's behavior. `max_retries` is a special argument that applies to all providers.
+<Badge color="green">Python SDK</Badge>
+
+In the Python SDK, the `.create()` method accepts several arguments to configure embedding function behavior. `max_retries` is a special argument that applies to all providers.
 
 | Argument | Type | Description |
 |---|---|---|
@@ -108,59 +101,43 @@ Currently, the embedding registry on LanceDB <Badge color="purple">Cloud</Badge>
 generated on the client side (and stored on the remote table). We don't yet support automatic query-time
 embedding generation when sending queries, though this is planned for a future release.
 
-For now, you can manually generate the embeddings at query time using the same embedding function that
+<Note>
+The same manual query-embedding flow shown above in OSS applies to Cloud and Enterprise connections.
+</Note>
+
+For search, you can manually generate the embeddings at query time using the same embedding function that
 was used during ingestion, and pass the embeddings to the search function.
 
 <CodeGroup>
-```python Python icon="python"
-import lancedb
-from lancedb.embeddings import get_registry
-from lancedb.pydantic import LanceModel, Vector
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyManualQuerySearch}
+    </CodeBlock>
 
-db = lancedb.connect(...)
-func = get_registry().get("sentence-transformers").create()
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsManualQuerySearch}
+    </CodeBlock>
 
-class MySchema(LanceModel):
-    text: str = func.SourceField()
-    vector: Vector(func.ndims()) = func.VectorField()
-
-table = db.create_table("mytable", schema=MySchema)
-table.add([
-    {"text": "This is a test."},
-    {"text": "Another example."}
-])
-
-# Manually generate embeddings for the query
-query_vector = func.generate_embeddings(["test example"])[0]
-results = table.search(query_vector).limit(5).to_pandas()
-```
+    <CodeBlock filename="Rust" language="rust" icon="rust">
+    {RsManualQuerySearch}
+    </CodeBlock>
 </CodeGroup>
 
 ## Custom Embedding Functions
 
-You can always implement your own embedding function by inheriting from `TextEmbeddingFunction`
-(for text) or `EmbeddingFunction` (for multimodal data).
+You can always implement your own embedding function:
+- Python/TypeScript: subclass `TextEmbeddingFunction` (text) or `EmbeddingFunction` (multimodal).
+- Rust: implement the `EmbeddingFunction` trait.
 
 <CodeGroup>
-```python Python icon="python"
-from lancedb.embeddings import register, TextEmbeddingFunction
-from functools import cached_property
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyEmbeddingFunction}
+    </CodeBlock>
 
-@register("my-embedder")
-class MyTextEmbedder(TextEmbeddingFunction):
-    model_name: str = "my-model"
-    
-    def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
-        # Your embedding logic here
-        return self._model.encode(texts).tolist()
-    
-    def ndims(self) -> int:
-        # Return the dimensionality of the embeddings
-        return len(self.generate_embeddings(["test"])[0])
-    
-    @cached_property
-    def _model(self):
-        # Initialize your model once
-        return MyEmbeddingModel(self.model_name)
-```
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsEmbeddingFunction}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="rust" icon="rust">
+    {RsEmbeddingFunction}
+    </CodeBlock>
 </CodeGroup>
