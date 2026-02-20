@@ -29,9 +29,7 @@ embedding generation, allowing you to focus on your application logic.
 
 ## Embedding Registry
 
-<Badge color="green">OSS</Badge>
-
-In LanceDB OSS, you can get a supported embedding function from the registry, and then use it in your table schema. 
+You can get a supported embedding function from the registry, and then use it in your table schema. 
 Once configured, the embedding function will automatically generate embeddings when you insert data
 into the table. Query-time behavior depends on SDK: Python/TypeScript can query with text directly,
 while Rust examples typically compute query embeddings explicitly before vector search.

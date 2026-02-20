@@ -44,6 +44,60 @@ def test_tables_basic_connect_snippet(monkeypatch):
     assert isinstance(db, DummyDB)
 
 
+def test_update_connect_cloud_snippet(monkeypatch):
+    calls = {}
+
+    class DummyDB:
+        pass
+
+    def fake_connect(**kwargs):
+        calls.update(kwargs)
+        return DummyDB()
+
+    import lancedb as _lancedb
+
+    monkeypatch.setattr(_lancedb, "connect", fake_connect)
+
+    # --8<-- [start:update_connect_cloud]
+    import lancedb
+
+    db = lancedb.connect(
+        uri="db://your-project-slug",
+        api_key="your-api-key",
+        region="us-east-1",
+    )
+    # --8<-- [end:update_connect_cloud]
+
+    assert calls["uri"] == "db://your-project-slug"
+    assert calls["api_key"] == "your-api-key"
+    assert calls["region"] == "us-east-1"
+    assert isinstance(db, DummyDB)
+
+
+def test_update_connect_local_snippet(monkeypatch):
+    calls = {}
+
+    class DummyDB:
+        pass
+
+    def fake_connect(uri):
+        calls["uri"] = uri
+        return DummyDB()
+
+    import lancedb as _lancedb
+
+    monkeypatch.setattr(_lancedb, "connect", fake_connect)
+
+    # --8<-- [start:update_connect_local]
+    import lancedb
+
+    db = lancedb.connect("./data")
+    # --8<-- [end:update_connect_local]
+
+    assert calls["uri"] == "./data"
+    assert isinstance(db, DummyDB)
+
+
 def test_table_creation_from_dicts(tmp_db):
     # --8<-- [start:create_table_from_dicts]
     data = [
@@ -417,160 +471,314 @@ def test_batch_data_insertion(tmp_db):
     assert table.count_rows() == 10
 
 
+def _create_users_example_table(db, table_name="users_example"):
+    return db.create_table(
+        table_name,
+        data=pa.table(
+            {
+                "id": [1, 2, 3],
+                "name": ["Alice", "Bob", "Charlie"],
+                "login_count": [10, 20, 5],
+            }
+        ),
+        mode="overwrite",
+    )
+
+
+def test_update_example_table_setup(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:update_example_table_setup]
+    import pyarrow as pa
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+    # --8<-- [end:update_example_table_setup]
+    assert table.count_rows() == 2
+
+
 def test_update_operation(tmp_db):
     db = tmp_db
 
     # --8<-- [start:update_operation]
-    import pandas as pd
+    import pyarrow as pa
 
-    # Create a table from a pandas DataFrame
-    data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-    tbl = db.create_table("test_table", data, mode="overwrite")
-    # Update the table where x = 2
-    tbl.update(where="x = 2", values={"vector": [10, 10]})
-    # Get the updated table as a pandas DataFrame
-    df = tbl.to_pandas()
-    print(df)
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+    table.update(where="id = 2", values={"name": "Bobby"})
     # --8<-- [end:update_operation]
-    assert df.loc[df["x"] == 2, "vector"].iloc[0] == [10, 10]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "Bobby", "login_count": 20},
+    ]
 
 
 def test_update_using_sql(tmp_db):
     db = tmp_db
 
     # --8<-- [start:update_using_sql]
-    import pandas as pd
+    import pyarrow as pa
 
-    # Create a table from a pandas DataFrame
-    data = pd.DataFrame({"x": [1, 2, 3], "vector": [[1, 2], [3, 4], [5, 6]]})
-    tbl = db.create_table("test_table", data, mode="overwrite")
-    # Update all rows: increment x by 1
-    tbl.update(values_sql={"x": "x + 1"})
-    print(tbl.to_pandas())
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+    table.update(where="id = 2", values_sql={"login_count": "login_count + 1"})
     # --8<-- [end:update_using_sql]
-    assert sorted(tbl.to_pandas()["x"].tolist()) == [2, 3, 4]
-
-
-def test_delete_operation(tmp_db):
-    db = tmp_db
-    table = db.create_table(
-        "update_table_example",
-        [
-            {"vector": [3.1, 4.1], "item": "foo", "price": 10.0},
-            {"vector": [5.9, 26.5], "item": "bar", "price": 20.0},
-            {"vector": [10.2, 100.8], "item": "baz", "price": 30.0},
-        ],
-        mode="overwrite",
-    )
-
-    # --8<-- [start:delete_operation]
-    # delete data
-    predicate = "price = 30.0"
-    table.delete(predicate)
-    # --8<-- [end:delete_operation]
-    assert table.count_rows() == 2
-
-
-def test_upsert_operation(tmp_db):
-    db = tmp_db
-
-    # --8<-- [start:upsert_operation]
-    # Create example table
-    users_table_name = "users_example"
-    table = db.create_table(
-        users_table_name,
-        [
-            {"id": 0, "name": "Alice"},
-            {"id": 1, "name": "Bob"},
-        ],
-        mode="overwrite",
-    )
-    print(f"Created users table with {table.count_rows()} rows")
-
-    # Prepare data for upsert
-    new_users = [
-        {"id": 1, "name": "Bobby"},  # Will update existing record
-        {"id": 2, "name": "Charlie"},  # Will insert new record
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "Bob", "login_count": 21},
     ]
 
-    # Upsert by id
+
+def test_merge_matched_update_only(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:merge_matched_update_only]
+    import pyarrow as pa
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+
+    incoming_users = pa.table(
+        {
+            "id": [2, 3],
+            "name": ["Bobby", "Charlie"],
+            "login_count": [21, 5],
+        }
+    )
+
     (
         table.merge_insert("id")
         .when_matched_update_all()
-        .when_not_matched_insert_all()
-        .execute(new_users)
+        .execute(incoming_users)
     )
-
-    # Verify results - should be 3 records total
-    print(f"Total users: {table.count_rows()}")  # 3
-    # --8<-- [end:upsert_operation]
-    assert table.count_rows() == 3
+    # --8<-- [end:merge_matched_update_only]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "Bobby", "login_count": 21},
+    ]
 
 
 def test_insert_if_not_exists(tmp_db):
     db = tmp_db
 
     # --8<-- [start:insert_if_not_exists]
-    # Create example table
+    import pyarrow as pa
+
     table = db.create_table(
-        "domains",
-        [
-            {"domain": "google.com", "name": "Google"},
-            {"domain": "github.com", "name": "GitHub"},
-        ],
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
         mode="overwrite",
     )
 
-    # Prepare new data - one existing and one new record
-    new_domains = [
-        {"domain": "google.com", "name": "Google"},
-        {"domain": "facebook.com", "name": "Facebook"},
+    incoming_users = pa.table(
+        {
+            "id": [2, 3],
+            "name": ["Bobby", "Charlie"],
+            "login_count": [21, 5],
+        }
+    )
+
+    (
+        table.merge_insert("id")
+        .when_not_matched_insert_all()
+        .execute(incoming_users)
+    )
+    # --8<-- [end:insert_if_not_exists]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "Bob", "login_count": 20},
+        {"id": 3, "name": "Charlie", "login_count": 5},
     ]
 
-    # Insert only if domain doesn't exist
-    table.merge_insert("domain").when_not_matched_insert_all().execute(new_domains)
 
-    # Verify count - should be 3 (original 2 plus 1 new)
-    print(f"Total domains: {table.count_rows()}")  # 3
-    # --8<-- [end:insert_if_not_exists]
-    assert table.count_rows() == 3
-
-
-def test_replace_range_operation(tmp_db):
+def test_merge_update_insert(tmp_db):
     db = tmp_db
 
-    # --8<-- [start:replace_range_operation]
-    # Create example table with document chunks
+    # --8<-- [start:merge_update_insert]
+    import pyarrow as pa
+
     table = db.create_table(
-        "chunks",
-        [
-            {"doc_id": 0, "chunk_id": 0, "text": "Hello"},
-            {"doc_id": 0, "chunk_id": 1, "text": "World"},
-            {"doc_id": 1, "chunk_id": 0, "text": "Foo"},
-            {"doc_id": 1, "chunk_id": 1, "text": "Bar"},
-            {"doc_id": 2, "chunk_id": 0, "text": "Baz"},
-        ],
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
         mode="overwrite",
     )
 
-    # New data - replacing all chunks for doc_id 1 with just one chunk
-    new_chunks = [
-        {"doc_id": 1, "chunk_id": 0, "text": "Zoo"},
-    ]
-
-    # Replace all chunks for doc_id 1
-    (
-        table.merge_insert(["doc_id"])
-        .when_matched_update_all()
-        .when_not_matched_insert_all()
-        .when_not_matched_by_source_delete("doc_id = 1")
-        .execute(new_chunks)
+    incoming_users = pa.table(
+        {
+            "id": [2, 3],
+            "name": ["Bobby", "Charlie"],
+            "login_count": [21, 5],
+        }
     )
 
-    # Verify count for doc_id = 1 - should be 1
-    print(f"Chunks for doc_id = 1: {table.count_rows('doc_id = 1')}")  # 1
-    # --8<-- [end:replace_range_operation]
-    assert table.count_rows("doc_id = 1") == 1
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(incoming_users)
+    )
+    # --8<-- [end:merge_update_insert]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "Bobby", "login_count": 21},
+        {"id": 3, "name": "Charlie", "login_count": 5},
+    ]
+
+
+def test_merge_delete_missing_by_source(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:merge_delete_missing_by_source]
+    import pyarrow as pa
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2, 3],
+                "name": ["Alice", "Bob", "Charlie"],
+                "login_count": [10, 20, 5],
+            }
+        ),
+        mode="overwrite",
+    )
+
+    incoming_users = pa.table(
+        {
+            "id": [2, 3],
+            "name": ["Bobby", "Charlie"],
+            "login_count": [21, 5],
+        }
+    )
+
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .when_not_matched_by_source_delete()
+        .execute(incoming_users)
+    )
+    # --8<-- [end:merge_delete_missing_by_source]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 2, "name": "Bobby", "login_count": 21},
+        {"id": 3, "name": "Charlie", "login_count": 5},
+    ]
+
+
+def test_merge_partial_columns(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:merge_partial_columns]
+    import pyarrow as pa
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+
+    incoming_users = pa.table(
+        {
+            "id": [2, 3],
+            "name": ["Bobby", "Charlie"],
+        }
+    )
+
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(incoming_users)
+    )
+    # --8<-- [end:merge_partial_columns]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "Bobby", "login_count": 20},
+        {"id": 3, "name": "Charlie", "login_count": None},
+    ]
+
+
+def test_delete_operation(tmp_db):
+    db = tmp_db
+    table = _create_users_example_table(db)
+
+    # --8<-- [start:delete_operation]
+    # delete data
+    predicate = "id = 3"
+    table.delete(predicate)
+    # --8<-- [end:delete_operation]
+    assert table.count_rows() == 2
+
+
+def test_update_optimize_cleanup_snippet(tmp_db):
+    table = _create_users_example_table(tmp_db, table_name="users_cleanup_example")
+
+    # --8<-- [start:update_optimize_cleanup]
+    from datetime import timedelta
+
+    table.optimize(cleanup_older_than=timedelta(days=1))
+    # --8<-- [end:update_optimize_cleanup]
 
 
 # ============================================================================
