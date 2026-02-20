@@ -17,11 +17,29 @@ def test_connection():
     assert not Path(uri).exists()
 
 
+async def connect_async_example():
+    # --8<-- [start:connect_async]
+    import lancedb
+
+    uri = "ex_lancedb"
+    async_db = await lancedb.connect_async(uri)
+    # --8<-- [end:connect_async]
+
+    return async_db
+
+
 # --8<-- [start:connect_cloud]
 uri = "db://your-database-uri"
 api_key = "your-api-key"
 region = "us-east-1"
 # --8<-- [end:connect_cloud]
+
+
+# --8<-- [start:connect_cloud_async]
+uri = "db://your-database-uri"
+api_key = "your-api-key"
+region = "us-east-1"
+# --8<-- [end:connect_cloud_async]
 
 
 def connect_object_storage_config():
@@ -75,3 +93,14 @@ def namespace_admin_ops_example():
     db.drop_namespace(["prod"], mode="skip")
     # --8<-- [end:namespace_admin_ops]
     return child_namespaces, metadata
+
+async def connect_object_storage_config_async():
+    # --8<-- [start:connect_object_storage_async]
+    import lancedb
+
+    uri = "s3://your-bucket/path"
+    # You can also use "gs://your-bucket/path" or "az://your-container/path".
+    async_db = await lancedb.connect_async(uri)
+    # --8<-- [end:connect_object_storage_async]
+
+    return async_db

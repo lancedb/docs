@@ -6,8 +6,11 @@ icon: rocket
 ---
 import {
     PyConnect,
+    PyConnectAsync,
     PyConnectCloud,
+    PyConnectCloudAsync,
     PyConnectObjectStorage,
+    PyConnectObjectStorageAsync,
     RsConnect,
     RsConnectCloud,
     RsConnectObjectStorage,
@@ -17,7 +20,9 @@ import {
 } from '/snippets/connection.mdx';
 import {
     PyQuickstartCreateTable,
+    PyQuickstartCreateTableAsync,
     PyQuickstartVectorSearch1,
+    PyQuickstartVectorSearch1Async,
     PyQuickstartOutputPandas,
     RsQuickstartCreateTable,
     RsQuickstartDefineStruct,
@@ -61,8 +66,12 @@ The simplest way to begin is to use LanceDB OSS. Simply import LanceDB as an emb
 client SDK of choice and point to a local path.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="python">
+    <CodeBlock filename="Python (sync)" language="Python" icon="python">
     {PyConnect}
+    </CodeBlock>
+
+    <CodeBlock filename="Python (async)" language="Python" icon="python">
+    {PyConnectAsync}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
@@ -82,8 +91,12 @@ client SDK of choice and point to a local path.
 You can also connect LanceDB OSS directly to object storage:
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="python">
+    <CodeBlock filename="Python (sync)" language="Python" icon="python">
     {PyConnectObjectStorage}
+    </CodeBlock>
+
+    <CodeBlock filename="Python (async)" language="Python" icon="python">
+    {PyConnectObjectStorageAsync}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
@@ -105,8 +118,12 @@ along with any encessary credentials. Simply replace the local path with a remot
 that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="python">
+    <CodeBlock filename="Python (sync)" language="Python" icon="python">
     {PyConnectCloud}
+    </CodeBlock>
+
+    <CodeBlock filename="Python (async)" language="Python" icon="python">
+    {PyConnectCloudAsync}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
@@ -131,8 +148,12 @@ Note that LanceDB tables require a schema. If you don't provide one, LanceDB
 will infer it from the data.
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="python">
+    <CodeBlock filename="Python (sync)" language="Python" icon="python">
     {PyQuickstartCreateTable}
+    </CodeBlock>
+
+    <CodeBlock filename="Python (async)" language="Python" icon="python">
+    {PyQuickstartCreateTableAsync}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
@@ -161,8 +182,12 @@ Our query is a vector that represents a "warrior". Let's find the result that's 
 to it!
 
 <CodeGroup >
-    <CodeBlock filename="Python" language="Python" icon="python">
+    <CodeBlock filename="Python (sync)" language="Python" icon="python">
     {PyQuickstartVectorSearch1}
+    </CodeBlock>
+
+    <CodeBlock filename="Python (async)" language="Python" icon="python">
+    {PyQuickstartVectorSearch1Async}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
