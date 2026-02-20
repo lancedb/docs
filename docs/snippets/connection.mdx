@@ -2,9 +2,15 @@
 
 export const PyConnect = "import lancedb\n\nuri = \"ex_lancedb\"\ndb = lancedb.connect(uri)\n";
 
+export const PyConnectAsync = "import lancedb\n\nuri = \"ex_lancedb\"\nasync_db = await lancedb.connect_async(uri)\n";
+
 export const PyConnectCloud = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
 
+export const PyConnectCloudAsync = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
+
 export const PyConnectObjectStorage = "import lancedb\n\nuri = \"s3://your-bucket/path\"\n# You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\ndb = lancedb.connect(uri)\n";
+
+export const PyConnectObjectStorageAsync = "import lancedb\n\nuri = \"s3://your-bucket/path\"\n# You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\nasync_db = await lancedb.connect_async(uri)\n";
 
 export const TsConnect = "import * as lancedb from \"@lancedb/lancedb\";\n\nasync function connectExample(uri: string) {\n  const db = await lancedb.connect(uri);\n  return db;\n}\n";
 
