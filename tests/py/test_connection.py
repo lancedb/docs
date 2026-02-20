@@ -58,12 +58,15 @@ def namespace_table_ops_example():
     # --8<-- [start:namespace_table_ops]
     import lancedb
 
-    db = lancedb.connect("./data/sample-lancedb")
+    db = lancedb.connect_namespace("dir", {"root": "./data/sample-lancedb"})
     namespace = ["prod", "search"]
+
+    for i in range(1, len(namespace) + 1):
+        db.create_namespace(namespace[:i], mode="exist_ok")
 
     db.create_table(
         "users",
-        data=[{"id": 1, "name": "alice"}],
+        data=[{"id": 1, "vector": [0.1, 0.2], "name": "alice"}],
         mode="overwrite",
         namespace=namespace,
     )
@@ -82,9 +85,11 @@ def namespace_admin_ops_example():
     # --8<-- [start:namespace_admin_ops]
     import lancedb
 
-    db = lancedb.connect("./data/sample-lancedb")
-    db.create_namespace(["prod"])
-    db.create_namespace(["prod", "search"])
+    db = lancedb.connect_namespace("dir", {"root": "./data/sample-lancedb"})
+    namespace = ["prod", "search"]
+
+    for i in range(1, len(namespace) + 1):
+        db.create_namespace(namespace[:i], mode="exist_ok")
 
     child_namespaces = db.list_namespaces(namespace=["prod"]).namespaces
     metadata = db.describe_namespace(["prod", "search"])

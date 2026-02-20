@@ -55,6 +55,8 @@ the `data/` directory.
 
 You can open/create/drop tables inside a namespace path (like `["prod", "search"]`).
 The Python and Rust SDKs expose namespace lifecycle operations directly.
+In Python, use `lancedb.connect_namespace(...)` when calling namespace lifecycle methods such as
+`create_namespace`, `list_namespaces`, `describe_namespace`, and `drop_namespace`.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
