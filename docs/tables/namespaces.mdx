@@ -13,9 +13,9 @@ import {
     RsNamespaceTableOps,
 } from '/snippets/connection.mdx';
 
-As described in the [Namespaces and Catalog Model](/namespaces) section, "namespaces" are LanceDB's means to generalize catalog specs, providing developers a clean way to manage hierarchical organization of tables in the catalog. The SDKs treat `namespace` as a path and can use it for table resolution when you use LanceDB outside the root namespace.
+As described in the [Namespaces and Catalog Model](/namespaces) section, namespaces are LanceDB's way of generalizing catalog specs, providing developers a clean way to manage hierarchical organization of tables in the catalog. The SDKs treat `namespace` as a path and can use it for table resolution when you use LanceDB outside the root namespace.
 
-As your table organization needs grow with time and your projects become more complex, you can use namespaces to organize your tables in a way that reflects your business domains, teams, or environments.
+As your table organization needs grow over time and your projects become more complex, you can use namespaces to organize your tables in a way that reflects your business domains, teams, or environments.
 
 ## Table operations with namespace paths
 
@@ -27,9 +27,9 @@ Let's imagine a scenario where your table management needs have evolved, and you
         └── users   (table)
 ```
 
-Below, we show how you would express table operations on that namespace. Each item in the namespace
+Below, we show how you would express table operations within that namespace. Each item in the namespace
 list (`["prod", "search"]`) represents a level in the namespace hierarchy, and the table name is
-specified when you create, open or drop it.
+specified when you create, open, or drop it.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">

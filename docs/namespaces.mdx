@@ -35,13 +35,13 @@ directory:
 ```
 
 As a user of LanceDB, you might never notice namespaces at first, because LanceDB exposes the single-level
-hierarchy shown above, with hte data being stored in the `data/` directory`, wher the root namespace
-is implicit. In alternative setups, you could have multiple namespaces that we won't covere here,
-but you can more about them in the [namespace documentation](https://lance.org/format/namespace/) for the Lance format.
+hierarchy shown above, with the data stored in the `data/` directory, where the root namespace
+is implicit. In alternative setups, you could have multiple namespaces that we won't cover here,
+but you can learn more about them in the [namespace documentation](https://lance.org/format/namespace/) for the Lance format.
 
 ## Best-practice guidance
 
-- Use the default, single-level root namespace in LanceDB for locally stored, single applications or early-stage projects.
+- Use the default, single-level root namespace in LanceDB for locally stored, single-application, or early-stage projects.
 - For remote storage locations, introduce explicit namespaces when multiple teams, environments, or domains share the same catalog.
 - Treat namespace paths as stable identifiers (for example `"prod/search"`, `"staging/recs"`).
 - Avoid hard-coding object-store table paths in application code -- instead, prefer catalog identifiers + namespaces.
