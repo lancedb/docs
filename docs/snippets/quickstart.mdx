@@ -18,8 +18,6 @@ export const PyQuickstartVectorSearch1Async = "# Let's search for vectors simila
 
 export const PyQuickstartVectorSearch2 = "# Let's search for vectors similar to \"wizard\"\nquery_vector = [0.7, 0.3, 0.5]\n\nresults = table.search(query_vector).limit(2).to_polars()\nprint(results)\n";
 
-export const TsQuickstartOutputPandas = "result = await table.search(queryVector).limit(2).toArray();\n";
-
 export const TsQuickstartAddData = "const moreData = [\n  { id: \"7\", text: \"mage\", vector: [0.6, 0.3, 0.4] },\n  { id: \"8\", text: \"bard\", vector: [0.3, 0.8, 0.4] },\n];\n\n// Add data to table\nawait table.add(moreData);\n";
 
 export const TsQuickstartCreateTable = "const data = [\n  { id: \"1\", text: \"knight\", vector: [0.9, 0.4, 0.8] },\n  { id: \"2\", text: \"ranger\", vector: [0.8, 0.4, 0.7] },\n  { id: \"9\", text: \"priest\", vector: [0.6, 0.2, 0.6] },\n  { id: \"4\", text: \"rogue\", vector: [0.7, 0.4, 0.7] },\n];\nlet table = await db.createTable(\"adventurers\", data, { mode: \"overwrite\" });\n";
@@ -29,6 +27,8 @@ export const TsQuickstartCreateTableNoOverwrite = "table = await db.createTable(
 export const TsQuickstartOpenTable = "table = await db.openTable(\"adventurers\");\n";
 
 export const TsQuickstartOutputArray = "result = await table.search(queryVector).limit(2).toArray();\nconsole.table(result);\n";
+
+export const TsQuickstartOutputPandas = "result = await table.search(queryVector).limit(2).toArray();\n";
 
 export const TsQuickstartVectorSearch1 = "// Let's search for vectors similar to \"warrior\"\nlet queryVector = [0.8, 0.3, 0.8];\n\nlet result = await table.search(queryVector).limit(2).toArray();\nconsole.table(result);\n";
 
@@ -49,3 +49,4 @@ export const RsQuickstartOutputArray = "let result: DataFrame = table\n    .quer
 export const RsQuickstartVectorSearch1 = "// Let's search for vectors similar to \"warrior\"\nlet query_vector = [0.8, 0.3, 0.8];\n\nlet result: DataFrame = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(2)\n    .select(Select::Columns(vec![\"text\".to_string()]))\n    .execute()\n    .await\n    .unwrap()\n    .into_polars()\n    .await\n    .unwrap();\nprintln!(\"{result:?}\");\n";
 
 export const RsQuickstartVectorSearch2 = "// Let's search for vectors similar to \"wizard\"\nlet query_vector = [0.7, 0.3, 0.5];\n\nlet result: DataFrame = table\n    .query()\n    .nearest_to(&query_vector)\n    .unwrap()\n    .limit(2)\n    .select(Select::Columns(vec![\"text\".to_string()]))\n    .execute()\n    .await\n    .unwrap()\n    .into_polars()\n    .await\n    .unwrap();\nprintln!(\"{result:?}\");\nlet text_col = result.column(\"text\").unwrap().str().unwrap();\nlet top_two = vec![\n    text_col.get(0).unwrap().to_string(),\n    text_col.get(1).unwrap().to_string(),\n];\n";
+
