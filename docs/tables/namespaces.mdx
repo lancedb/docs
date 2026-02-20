@@ -1,0 +1,74 @@
+---
+title: "Using Namespaces in SDKs"
+sidebarTitle: "Namespaces"
+description: "Use LanceDB's namespace-aware table and catalog APIs in Python, TypeScript, and Rust."
+icon: "folder-tree"
+keywords: ["namespace", "create_table", "open_table", "list_tables", "catalog"]
+---
+
+import {
+    PyNamespaceTableOps,
+    PyNamespaceAdminOps,
+    TsNamespaceTableOps,
+    RsNamespaceTableOps,
+} from '/snippets/connection.mdx';
+
+As described in the [Namespaces and Catalog Model](/namespaces-catalog-model) section, "namespaces" are LanceDB's means to generalize catalog specs, providing developers a clean way to manage hierarchical organization of tables in the catalog. The SDKs treat `namespace` as a path and can use it for table resolution when you use LanceDB outside the root namespace.
+
+As your table organization needs grow with time and your projects become more complex, you can use namespaces to organize your tables in a way that reflects your business domains, teams, or environments.
+
+## Table operations with namespace paths
+
+Let's imagine a scenario where your table management needs have evolved, and you now have the following multi-level structure to organize your tables outside the root namespace.
+```
+(root)
+└── prod
+    └── search
+        └── users   (table)
+```
+
+Below, we show how you would express table operations on that namespace. Each item in the namespace
+list (`["prod", "search"]`) represents a level in the namespace hierarchy, and the table name is
+specified when you create, open or drop it.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyNamespaceTableOps}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsNamespaceTableOps}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsNamespaceTableOps}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+Namespaces are optional parameters in LanceDB, and most basic use cases do not require you to specify them.
+An empty namespace (`[]`), which is the default, means "root namespace", and the data will be stored in
+the `data/` directory.
+</Note>
+
+## Namespace management APIs
+
+You can open/create/drop tables inside a namespace path (like `["prod", "search"]`).
+The Python and Rust SDKs expose namespace lifecycle operations directly.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyNamespaceAdminOps}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+In TypeScript, namespace lifecycle management is not on `Connection`, so namespaces usually need to be
+created through another admin surface (for example REST/admin tooling) before use.
+</Note>
+
+## Related references
+
+- [Client SDK API references](/api-reference)
+- [REST API Reference](/api-reference/rest)
+- [Namespaces and the Catalog Model](/namespaces)

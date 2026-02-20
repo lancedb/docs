@@ -4,6 +4,7 @@
 from pathlib import Path
 import shutil
 
+
 def test_connection():
     # --8<-- [start:connect]
     import lancedb
@@ -33,3 +34,44 @@ def connect_object_storage_config():
     # --8<-- [end:connect_object_storage]
 
     return db
+
+
+def namespace_table_ops_example():
+    # --8<-- [start:namespace_table_ops]
+    import lancedb
+
+    db = lancedb.connect("./data/sample-lancedb")
+    namespace = ["prod", "search"]
+
+    db.create_table(
+        "users",
+        data=[{"id": 1, "name": "alice"}],
+        mode="overwrite",
+        namespace=namespace,
+    )
+
+    table = db.open_table("users", namespace=namespace)
+    tables = db.list_tables(namespace=namespace).tables
+
+    db.drop_table("users", namespace=namespace)
+    # drop_all_tables is namespace-aware as well:
+    # db.drop_all_tables(namespace=namespace)
+    # --8<-- [end:namespace_table_ops]
+    return table, tables
+
+
+def namespace_admin_ops_example():
+    # --8<-- [start:namespace_admin_ops]
+    import lancedb
+
+    db = lancedb.connect("./data/sample-lancedb")
+    db.create_namespace(["prod"])
+    db.create_namespace(["prod", "search"])
+
+    child_namespaces = db.list_namespaces(namespace=["prod"]).namespaces
+    metadata = db.describe_namespace(["prod", "search"])
+
+    db.drop_namespace(["prod", "search"], mode="skip")
+    db.drop_namespace(["prod"], mode="skip")
+    # --8<-- [end:namespace_admin_ops]
+    return child_namespaces, metadata

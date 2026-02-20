@@ -6,15 +6,23 @@ export const PyConnectCloud = "uri = \"db://your-database-uri\"\napi_key = \"you
 
 export const PyConnectObjectStorage = "import lancedb\n\nuri = \"s3://your-bucket/path\"\n# You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\ndb = lancedb.connect(uri)\n";
 
+export const PyNamespaceAdminOps = "import lancedb\n\ndb = lancedb.connect(\"./data/sample-lancedb\")\ndb.create_namespace([\"prod\"])\ndb.create_namespace([\"prod\", \"search\"])\n\nchild_namespaces = db.list_namespaces(namespace=[\"prod\"]).namespaces\nmetadata = db.describe_namespace([\"prod\", \"search\"])\n\ndb.drop_namespace([\"prod\", \"search\"], mode=\"skip\")\ndb.drop_namespace([\"prod\"], mode=\"skip\")\n";
+
+export const PyNamespaceTableOps = "import lancedb\n\ndb = lancedb.connect(\"./data/sample-lancedb\")\nnamespace = [\"prod\", \"search\"]\n\ndb.create_table(\n    \"users\",\n    data=[{\"id\": 1, \"name\": \"alice\"}],\n    mode=\"overwrite\",\n    namespace=namespace,\n)\n\ntable = db.open_table(\"users\", namespace=namespace)\ntables = db.list_tables(namespace=namespace).tables\n\ndb.drop_table(\"users\", namespace=namespace)\n# drop_all_tables is namespace-aware as well:\n# db.drop_all_tables(namespace=namespace)\n";
+
 export const TsConnect = "import * as lancedb from \"@lancedb/lancedb\";\n\nasync function connectExample(uri: string) {\n  const db = await lancedb.connect(uri);\n  return db;\n}\n";
 
 export const TsConnectCloud = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\n";
 
 export const TsConnectObjectStorage = "async function connectObjectStorageExample() {\n  const uri = \"s3://your-bucket/path\";\n  // You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\n  const db = await lancedb.connect(uri);\n  return db;\n}\n";
 
+export const TsNamespaceTableOps = "const db = await lancedb.connect(uri);\nconst namespace = [\"prod\", \"search\"];\n\nawait db.createTable(\n  \"users\",\n  [{ id: 1, name: \"alice\" }],\n  namespace,\n  { mode: \"overwrite\" },\n);\n\nconst table = await db.openTable(\"users\", namespace);\nconst tableNames = await db.tableNames(namespace);\n\nawait db.dropTable(\"users\", namespace);\n// dropAllTables is namespace-aware as well:\n// await db.dropAllTables(namespace);\n";
+
 export const RsConnect = "async fn connect_example(uri: &str) {\n    let db = connect(uri).execute().await.unwrap();\n    let _ = db;\n}\n";
 
 export const RsConnectCloud = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\n";
 
 export const RsConnectObjectStorage = "let uri = \"s3://your-bucket/path\";\n// You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\n";
+
+export const RsNamespaceTableOps = "let conn = connect(uri).execute().await?;\nlet namespace = vec![\"prod\".to_string(), \"search\".to_string()];\n\nlet schema = std::sync::Arc::new(arrow_schema::Schema::new(vec![\n    arrow_schema::Field::new(\"id\", arrow_schema::DataType::Int64, false),\n]));\n\nconn.create_empty_table(\"users\", schema)\n    .namespace(namespace.clone())\n    .execute()\n    .await?;\n\nlet _table = conn\n    .open_table(\"users\")\n    .namespace(namespace.clone())\n    .execute()\n    .await?;\nlet _table_names = conn\n    .table_names()\n    .namespace(namespace.clone())\n    .execute()\n    .await?;\n\nconn.drop_table(\"users\", &namespace).await?;\n// drop_all_tables is namespace-aware as well:\n// conn.drop_all_tables(&namespace).await?;\n";
 

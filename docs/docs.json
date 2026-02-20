@@ -40,7 +40,7 @@
                 "pages": [
                   "index",
                   "lance",
-                  "features"
+                  "namespaces"
                 ]
               },
               {
@@ -80,6 +80,7 @@
                   "tables/multimodal",
                   "tables/schema",
                   "tables/update",
+                  "tables/namespaces",
                   "tables/versioning",
                   "tables/consistency"
                 ]

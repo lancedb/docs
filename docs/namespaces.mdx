@@ -1,0 +1,74 @@
+---
+title: "Namespaces and the Catalog Model"
+sidebarTitle: "Namespaces"
+description: "Understand LanceDB as a catalog-level abstraction over Lance's table format, and learn how namespaces help organize Lance tables."
+icon: "sitemap"
+keywords: ["namespace", "catalog", "lance format", "table format", "lancedb"]
+---
+
+Despite its name, LanceDB is not a "database" in the traditional sense -- it is a **Multimodal Lakehouse** that builds on the table abstraction,
+similar to many other lakehouse projects. LanceDB exposes a catalog-level abstraction over the Lance table format, via a *namespace spec*.
+
+Lance provides the **file** and **table** formats to store and manage your data and indexes.
+LanceDB operates at the catalog layer (used to organize, discover, and operate on many Lance tables)
+and provides a compute engine on top of the Lance format.
+
+This is why many SDK methods in LanceDB, like `create_table`, `open_table`, `drop_table`, and
+`rename_table`, accept a `namespace` parameter as input.
+
+## Namespace hierarchy
+
+Namespaces are generalizations of catalog specs that give platform developers a clean way to present Lance tables in the structures users expect. The diagram below shows how the hierarchy can go beyond a single level.
+A namespace can contain a collection of tables, and it can also contain namespaces recursively.
+
+![](/static/assets/images/namespaces/lance-namespace.png)
+
+## Root namespace and the familiar `data/` layout
+
+The simplest namespace model in LanceDB is a single root namespace, often represented by one
+directory:
+
+```bash
+/data/            # root namespace
+├─ users.lance   # table ["users"] in root
+└─ orders.lance  # table ["orders"] in root
+```
+
+As a user of LanceDB, you might never notice namespaces at first, because LanceDB exposes the single-level
+hierarchy shown above, with hte data being stored in the `data/` directory`, wher the root namespace
+is implicit. In alternative setups, you could have multiple namespaces that we won't covere here,
+but you can more about them in the [namespace documentation](https://lance.org/format/namespace/) for the Lance format.
+
+## Best-practice guidance
+
+- Use the default, single-level root namespace in LanceDB for locally stored, single applications or early-stage projects.
+- For remote storage locations, introduce explicit namespaces when multiple teams, environments, or domains share the same catalog.
+- Treat namespace paths as stable identifiers (for example `"prod/search"`, `"staging/recs"`).
+- Avoid hard-coding object-store table paths in application code -- instead, prefer catalog identifiers + namespaces.
+
+See the Python example below for how to use namespaces in practice.
+
+```python Python icon="python"
+import lancedb
+
+# App config: only the catalog endpoint/root is configured once.
+db = lancedb.connect("s3://my-lakehouse/catalog")
+
+# Business identifier + namespace path (stable app-level IDs)
+namespace = ["prod", "recommendations"]
+table_name = "user_profiles"
+
+# Good: resolve table through catalog + namespace
+table = db.open_table(table_name, namespace=namespace)
+
+# Bad: Avoid hard-coded physical object-store table paths
+# (it's bad for maintainability reasons)
+# table = lancedb.connect(
+#   "s3://my-lakehouse/catalog/prod/recommendations/user_profiles.lance"
+# )
+```
+
+## SDK usage
+
+1. For language-specific examples of `namespace` usage across Python, TypeScript, and Rust, see "[Using namespaces in SDKs](/tables/namespaces)".
+2. For REST-level operations, see the [REST API Reference](/api-reference/rest).

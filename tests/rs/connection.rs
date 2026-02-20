@@ -42,6 +42,38 @@ fn connect_object_storage_config() -> &'static str {
     uri
 }
 
+async fn namespace_table_ops_example(uri: &str) -> lancedb::Result<()> {
+    // --8<-- [start:namespace_table_ops]
+    let conn = connect(uri).execute().await?;
+    let namespace = vec!["prod".to_string(), "search".to_string()];
+
+    let schema = std::sync::Arc::new(arrow_schema::Schema::new(vec![
+        arrow_schema::Field::new("id", arrow_schema::DataType::Int64, false),
+    ]));
+
+    conn.create_empty_table("users", schema)
+        .namespace(namespace.clone())
+        .execute()
+        .await?;
+
+    let _table = conn
+        .open_table("users")
+        .namespace(namespace.clone())
+        .execute()
+        .await?;
+    let _table_names = conn
+        .table_names()
+        .namespace(namespace.clone())
+        .execute()
+        .await?;
+
+    conn.drop_table("users", &namespace).await?;
+    // drop_all_tables is namespace-aware as well:
+    // conn.drop_all_tables(&namespace).await?;
+    // --8<-- [end:namespace_table_ops]
+    Ok(())
+}
+
 #[allow(dead_code)]
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
