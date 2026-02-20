@@ -64,6 +64,12 @@ let tbl = db
 
 Create a full-text search index on your text column:
 
+<Note>
+In Python, this page shows the synchronous `create_fts_index(...)` form. For the
+asynchronous equivalent (`await table.create_index("text", config=FTS(...))`), see
+[FTS index](/indexing/fts-index).
+</Note>
+
 <CodeGroup>
 ```python Python icon="python"
 table.create_fts_index("text")
@@ -1097,4 +1103,3 @@ const phraseResults = await table.query()
 console.log(phraseResults);
 ```
 </CodeGroup>
-

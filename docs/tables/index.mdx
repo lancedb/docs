@@ -15,6 +15,7 @@ import {
     PyBasicCreateEmptyTable,
     PyBasicCreateTablePandas,
     PyBasicCreateTablePolars,
+    PyBasicAsyncApi,
     PyBasicVectorSearch,
     PyBasicVectorSearchQ1,
     PyBasicVectorSearchQ2,
@@ -63,6 +64,17 @@ explore some more table operations you'll typically need when working with Lance
 - **Vector similarity search** with filtering and projections
 - **Filtered queries** that can operate on nested structs
 - **Interoperate with DuckDB** and run traditional SQL queries on an Arrow table (Python)
+
+<Note title="Python async users">
+This page uses synchronous Python snippets for readability. If your app uses `asyncio`,
+the same flow works with `connect_async(...)` and `await`-based table/query calls.
+Use the example below as a template, and see [Quickstart](/quickstart#python-sync-and-async-apis)
+for the general mapping.
+
+<CodeBlock filename="Python (async)" language="Python" icon="python">
+{PyBasicAsyncApi}
+</CodeBlock>
+</Note>
 
 ## Dataset
 
