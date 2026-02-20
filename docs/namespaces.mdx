@@ -51,15 +51,24 @@ See the Python example below for how to use namespaces in practice.
 ```python Python icon="python"
 import lancedb
 
-# App config: only the catalog endpoint/root is configured once.
-db = lancedb.connect("s3://my-lakehouse/catalog")
+# Local namespace-backed catalog root (DirectoryNamespace)
+db = lancedb.connect_namespace("dir", {"root": "./namespace_test"})
 
 # Business identifier + namespace path (stable app-level IDs)
 namespace = ["prod", "recommendations"]
 table_name = "user_profiles"
 
+# Create namespace hierarchy sequentially
+for i in range(1, len(namespace) + 1):
+    db.create_namespace(namespace[:i], mode="exist_ok")
+
 # Good: resolve table through catalog + namespace
-table = db.open_table(table_name, namespace=namespace)
+table = db.create_table(
+    table_name,
+    data=[{"id": 1, "vector": [0.1, 0.2], "name": "alice"}],
+    namespace=namespace,
+    mode="overwrite",
+)
 
 # Bad: Avoid hard-coded physical object-store table paths
 # (it's bad for maintainability reasons)
