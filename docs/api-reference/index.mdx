@@ -1,7 +1,7 @@
 ---
-title: Client SDKs
+title: SDKs and REST API Reference
 sidebarTitle: "SDKs"
-description: "SDK & REST API reference for LanceDB"
+description: "SDK and REST API reference for LanceDB Enterprise and OSS."
 
 ---
 
@@ -15,20 +15,35 @@ If you're looking for conceptual and practical namespace guidance before diving 
 
 ## Supported SDKs
 
-Python, Typescript and Rust SDKs are officially supported by LanceDB.
+Python, Typescript and Rust SDKs are officially supported by LanceDB. You can use these SDKs to interact with both LanceDB OSS and Enterprise deployments.
 
-| SDK Reference | Description |
+| Reference | Description |
 |:--------------|-------------------|
-| [Python SDK](https://lancedb.github.io/lancedb/python/python/) | Full-featured Python client with pandas & numpy integration |
-| [Typescript SDK](https://lancedb.github.io/lancedb/js/) | A TypeScript wrapper around the Rust library, built with `napi-rs`
-| [Rust SDK](https://docs.rs/lancedb/latest/lancedb/index.html) | Native Rust library with persistent-storage and high performance |
+| <Icon icon="python" /> [Python](https://lancedb.github.io/lancedb/python/python/) | Full-featured Python client with pandas & numpy integration |
+| <Icon icon="square-js" /> [Typescript](https://lancedb.github.io/lancedb/js/) | A TypeScript wrapper around the Rust library, built with `napi-rs`
+| <Icon icon="rust" /> [Rust](https://docs.rs/lancedb/latest/lancedb/index.html) | Native Rust library with persistent-storage and high performance |
 
-## Examples in other languages
+## REST API SDKs
 
-Other language SDKs are available through examples or third-party contributions.
+<Badge color="red">Enterprise</Badge>
 
-| SDK Examples | Description |
+REST API-based SDKs provide a convenient way to interact with LanceDB Cloud and Enterprise deployments using the Lance REST Namespace API.
+
+| Reference | Description |
 |:--------------|-------------------|
-| [Java API Quickstart]https://lancedb.github.io/lancedb/java/java/)| Streamline REST API interactions in Java|
+| <Icon icon="java" /> [Java](https://lancedb.github.io/lancedb/java/java/)| REST API Enterprise SDK in Java |
 
-{/* TODO: Add Go bindings reference page here */}
+## Community-driven SDKs
+
+In addition to the officially supported SDKs, the LanceDB community may contribute SDKs in other languages.
+These SDKs may not have the same level of support or feature parity as the official ones supported by LanceDB, but they can be an option
+for users working in languages other than those listed above.
+
+| Reference | Description |
+|:--------------|-------------------|
+| <Icon icon="golang" /> [Go](https://pkg.go.dev/github.com/lancedb/lancedb-go/pkg/lancedb) | Community-contributed Go SDK for LanceDB |
+| <Icon icon="gem" /> [Ruby](https://github.com/scientist-labs/lancelot) | Community-contributed Ruby bindings for LanceDB |
+| <Icon icon="swift" /> [Swift](https://github.com/RyanLisse/LanceDbSwiftKit) | Community-contributed Swift SDK for LanceDB |
+| <Icon icon="R" /> [R](https://github.com/CathalByrneGit/lancedb) | Community-contributed R package for LanceDB |
+| <Icon icon="flutter" /> [Flutter](https://github.com/Alexcn/flutter_lancedb) | Community-contributed Flutter bindings for LanceDB |
+
