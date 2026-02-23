@@ -88,10 +88,11 @@ If admission control passes but the job stalls at a low percentage:
 - **Actors** (or **State** → **Actors**): A long list of actors stuck in **PENDING** means Ray cannot place them (e.g. not enough CPUs, GPUs, or memory on any node). That matches “admission passed but nothing runs.”
 - **Tasks / Jobs:** If your Geneva job shows as a Ray job, open it and check for tasks that stay **PENDING** or **RUNNING** for a long time without finishing. Pending tasks often mean insufficient resources or that workers aren’t joining.
 - **Cluster / Nodes:** Check that worker nodes are **ALIVE** and that **Available** resources (CPU, memory, GPU) are not zero. Dead or overloaded nodes can cause jobs to hang.
+- **Unprovisioned GPUs:** Sometimes the CSP doesn't have enough GPUs available, so even though you have correctly requested them, the job may be unable to run. In this case, run on CPU if possible, or try your job again later.
 
 **2. Memory pressure**
 
-If nodes are full or workers are being OOM-killed, the job can stall or fail. In the dashboard, check node memory usage; in Kubernetes, check pod restarts (`kubectl get pods -n NAMESPACE`) and pod logs for OOM. Reduce `concurrency` or the UDF’s memory request so more tasks fit on the cluster, or add nodes.
+If nodes are full or workers are being OOM-killed, the job can stall or fail. In the Ray dashboard, check node memory usage; in Kubernetes, check pod restarts (`kubectl get pods -n NAMESPACE`) and pod logs for OOM. Also try reducing `concurrency` or the UDF’s memory request, even slightly.
 
 **3. Writers / queues**
 
