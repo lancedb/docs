@@ -168,7 +168,8 @@
                   "geneva/jobs/backfilling",
                   "geneva/jobs/conflicts",
                   "geneva/jobs/materialized-views",
-                  "geneva/jobs/performance"
+                  "geneva/jobs/performance",
+                  "geneva/jobs/troubleshooting"
                 ]
               },
               {

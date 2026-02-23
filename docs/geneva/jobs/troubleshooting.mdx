@@ -1,0 +1,172 @@
+---
+title: Troubleshooting Geneva Jobs
+sidebarTitle: Job troubleshooting
+description: Diagnose and fix common issues when running Geneva backfills, materialized views, and other distributed jobs.
+icon: wrench
+---
+
+This page covers common problems you may hit while running Geneva jobs and how to resolve them. For deployment and cluster issues, see [Troubleshooting Geneva Deployments](/geneva/deployment/troubleshooting).
+
+## Admission control and resource errors
+
+Geneva runs **admission control** before starting a job to check that the cluster has enough resources. If the check fails, the job is rejected with `ResourcesUnavailableError` (or a warning if admission is not strict).
+
+### "Job requires GPUs but cluster has no GPU worker groups configured"
+
+Your UDF requests GPUs but the cluster has no GPU nodes.
+
+**Check your UDF:**
+
+```python
+@geneva.udf(num_gpus=1)  # This requires GPUs
+def my_udf(x): ...
+```
+
+**Fix options:**
+
+1. Remove the GPU requirement if the UDF can run on CPU: `@geneva.udf(num_gpus=0)` (or omit `num_gpus`).
+2. Make sure you have a GPU worker group; e.g. in your ClusterBuilder:
+    ```
+    KubeRayClusterBuilder.create()
+        ...
+        .add_worker_group(
+            KubeRayClusterBuilder.gpu_worker(1)
+                .image(get_ray_image(ray.__version__, _py, gpu=True))
+                .service_account("geneva-service-account")
+                .node_selector({"geneva.lancedb.com/ray-worker-gpu": "true"})
+                .build()
+        )
+    ```
+3. Add GPU worker nodes to your cluster and ensure the cluster definition includes a GPU worker group with the correct node selector (e.g. `"geneva.lancedb.com/ray-worker-gpu": "true"`).
+
+### "UDF requires X CPUs + Y GPUs but no worker group can satisfy all requirements."
+
+Of course, if your cluster doesn't have enough GPUs, add them! But if you're surprised how many CPUs/GPUs your UDF is requesting, it may be because of concurrency. Your tasks's actual CPU/GPU requirement is `concurrency × CPUs/GPUs per task`. 
+
+**Fix:** Lower `concurrency` so that the total CPUs/GPUs needed (concurrency × CPUs/GPUs per task) does not exceed the cluster's CPU/GPU count.
+
+```python
+# Before: backfill with `num_gpus(1)` needs 8 GPUs
+table.backfill("col", concurrency=8)
+
+# After: cap at 4 GPUs
+table.backfill("col", concurrency=4)
+```
+
+### "No single node can satisfy all requirements"
+
+The UDF asks for a combination of CPU, memory, and GPU that no single node in the cluster has. This often happens on heterogeneous clusters.
+
+**Example:** Node A has 8 CPUs and 4 GB memory; Node B has 4 CPUs and 8 GB memory. A UDF that needs 8 CPUs and 8 GB cannot be placed on either node.
+
+**Fix options:**
+
+1. **Reduce UDF resource requests** so they fit on your smallest target node (e.g. lower `num_cpus` or memory).
+2. **Add larger nodes** that can satisfy CPU, memory, and GPU together.
+3. **Use a homogeneous cluster** where nodes have the same shape.
+
+### Job passes admission but hangs at low progress
+
+If admission control passes but the job stalls at a low percentage:
+
+**1. Ray dashboard – see what’s actually running**
+
+- **Local Ray:** After starting a local cluster, Ray usually prints the dashboard URL (e.g. `http://127.0.0.1:8265`). Open that in a browser. If you didn’t capture it, the dashboard is typically on port **8265** on the host where Ray was started.
+- **KubeRay (Kubernetes):** Port-forward the dashboard from the Ray head pod, then open it locally:
+  ```bash
+  # Find the Ray head pod (replace NAMESPACE and cluster name as needed)
+  kubectl get pods -n NAMESPACE -l ray.io/node-type=head
+
+  # Forward the dashboard port (Ray uses 8265 for the dashboard)
+  kubectl port-forward -n NAMESPACE POD_NAME 8265:8265
+  ```
+  Then open **http://localhost:8265** in your browser.
+- **External Ray cluster:** Use the dashboard URL your cluster operator provides (often the head node’s port 8265).
+
+**What to look for in the dashboard:**
+
+- **Actors** (or **State** → **Actors**): A long list of actors stuck in **PENDING** means Ray cannot place them (e.g. not enough CPUs, GPUs, or memory on any node). That matches “admission passed but nothing runs.”
+- **Tasks / Jobs:** If your Geneva job shows as a Ray job, open it and check for tasks that stay **PENDING** or **RUNNING** for a long time without finishing. Pending tasks often mean insufficient resources or that workers aren’t joining.
+- **Cluster / Nodes:** Check that worker nodes are **ALIVE** and that **Available** resources (CPU, memory, GPU) are not zero. Dead or overloaded nodes can cause jobs to hang.
+- **Unprovisioned GPUs:** Sometimes the CSP doesn't have enough GPUs available, so even though you have correctly requested them, the job may be unable to run. In this case, run on CPU if possible, or try your job again later.
+
+**2. Memory pressure**
+
+If nodes are full or workers are being OOM-killed, the job can stall or fail. In the Ray dashboard, check node memory usage; in Kubernetes, check pod restarts (`kubectl get pods -n NAMESPACE`) and pod logs for OOM. Also try reducing `concurrency` or the UDF’s memory request, even slightly.
+
+**3. Writers / queues**
+
+Geneva uses Ray actors for writers and queues. If the job is stuck at a fixed percentage, writers may be blocked (e.g. on storage or version conflicts). Check Ray dashboard **Actors** for writer-like actors that stay **RUNNING** but make no progress, and check cluster or pod logs for errors from Geneva (e.g. commit or connection errors).
+
+You can relax or skip admission to narrow down whether the failure is admission vs. scheduling: set `GENEVA_ADMISSION__CHECK=false` or use `_admission_check=False` on the backfill (for testing only). See [Advanced configuration](/geneva/udfs/advanced-configuration/) for more details.
+
+---
+
+## Ray connection and startup
+
+### "Geneva was unable to connect to the Ray head"
+
+The client could not connect to the Ray cluster (e.g. after starting a KubeRay or external cluster).
+
+**Common causes:**
+
+- **Head not ready** – The Ray head pod may still be starting. Wait a bit and retry, or increase `GENEVA_RAY_INIT_MAX_RETRIES` (default 5).
+- **Image/architecture mismatch** – The Ray head image may not match the node architecture (e.g. arm64 vs x64). Use an image built for the same architecture as your nodes. (the function [`get_ray_image`](https://lancedb.github.io/geneva/api/utils/) can help find the right image name.)
+- **Network / firewall** – If using an external Ray cluster, ensure the `ray://` address is reachable and that no firewall is blocking the Ray client port.
+
+**Quick check:** From the same network as the client, try connecting with `ray.init("ray://<host>:<port>")` in a small script to see the exact error.
+
+### Ray client "already connected" or init fails on retry
+
+If you see errors about the client already being connected (e.g. when re-running a notebook or script), ensure you're not holding an old Ray client connection. Restart the kernel or process so Ray is re-initialized cleanly. Geneva disconnects the client when the context exits; leaving a context open or reusing a stale connection can cause this.
+
+---
+## Serialization library or `attrs` version mismatch
+
+Ray and Geneva use cloudpickle and can be sensitive to library versions. If you see `TypeError: Enum.__new__() missing 1 required positional argument: 'value'` or similar pickling errors with no obvious non-serializable object, ensure **client and cluster use the same Python minor version and compatible library versions** (e.g. same `attrs`). Run the job from a machine with the same OS/architecture as the workers when possible so that shipped environments match.
+
+---
+
+## Permissions and storage
+
+### GCS / S3 permission denied in job logs
+
+Workers run under a Kubernetes service account (and possibly a cloud IAM role). If you see `PermissionError`, `storage.objects.get` denied, or 403 from object storage:
+
+1. **Service account** – Confirm the Geneva Ray head and worker specs use the intended `service_account`. That account must have read/write to the bucket (e.g. GCS `roles/storage.objectUser` or equivalent S3 permissions).
+2. **Workload identity** – On GKE, bind the K8s service account to a Google service account with bucket access. On EKS, use IRSA or node IAM so the pod role can access the bucket.
+
+See [Troubleshooting Geneva Deployments](/geneva/deployment/troubleshooting) for permission examples and service account configuration.
+
+---
+
+## Version conflicts and commit retries
+
+### Version conflicts during commit
+
+Concurrent backfills or other writers can cause version conflicts when committing. Geneva retries with merging; if conflicts persist, you may see repeated retries or failures.
+
+**Options:**
+
+- Reduce concurrency or avoid overlapping backfills to the same table/fragments.
+- Tune retries (e.g. `GENEVA_VERSION_CONFLICT_MAX_RETRIES`, default 10) if you expect transient contention. See [Advanced configuration](/geneva/udfs/advanced-configuration/).
+
+### Writer stalls or commit timeouts
+
+If writers are slow (e.g. under resource contention), they may be considered stalled and restarted. You can increase the idle tolerance with `GENEVA_WRITER_STALL_IDLE_ROUNDS` (default 6 rounds of 5s). For commit timeouts or transient storage errors, `GENEVA_COMMIT_MAX_RETRIES` (default 12) controls how many times Geneva retries the commit.
+
+---
+
+## Materialized views
+
+### Matview refresh fails with resource errors
+
+Refreshing a materialized view runs admission control for each UDF in the view. If any UDF’s resource requirements cannot be satisfied, the refresh fails. Ensure the cluster has enough resources for **all** UDFs used in the view (same as for a single backfill), and that no single UDF asks for more than any one node can provide.
+
+---
+
+## Quick checks before running a job
+
+- **Versions** – Same Ray version on client and cluster; same Python minor (e.g. 3.10.x) on both. See [Troubleshooting Geneva Deployments](/geneva/deployment/troubleshooting#confirming-dependency-versions).
+- **Remote execution** – Use `ray.available_resources()` and a simple `@ray.remote` task to confirm the cluster is reachable and has the expected CPUs/GPUs/memory.
+- **Permissions** – Run a minimal remote task that `import geneva` and touches the same bucket/path as your job to surface permission issues early.
