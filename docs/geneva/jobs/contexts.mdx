@@ -240,7 +240,32 @@ with db.context(cluster=cluster_name, manifest=manifest_name):
 ```
 </CodeGroup>
 
-In a notebook environment, you can manually enter and exit the context manager in multiple steps like so: 
+### Exit Modes
+
+By default, the cluster is deleted when the context manager exits. You can customize this behavior with the `on_exit` parameter:
+
+```python Python icon="python"
+from geneva.runners.ray.raycluster import ExitMode
+
+with db.context(cluster=cluster_name, manifest=manifest_name, on_exit=ExitMode.DELETE_AFTER_JOBS):
+    fut1 = tbl.backfill_async("embedding_a")
+    fut2 = tbl.backfill_async("embedding_b")
+    # No need to call .result() — the context waits for both jobs
+# Both jobs completed; cluster deleted
+```
+
+| Exit Mode | Behavior |
+|-----------|----------|
+| `ExitMode.DELETE` (default) | Always delete the cluster on exit. |
+| `ExitMode.DELETE_ON_SUCCESS` | Delete on success; retain if an exception occurred. Useful for debugging. |
+| `ExitMode.DELETE_AFTER_JOBS` | Wait for all async jobs to complete, then delete. Recommended for batch scripts using `backfill_async()`. |
+| `ExitMode.RETAIN` | Never delete the cluster. Useful for notebooks and interactive sessions. |
+
+<Tip>
+Use `DELETE_AFTER_JOBS` when running batch scripts that launch fire-and-forget async jobs. The cluster stays alive until all running jobs on the cluster have finished, then cleans itself up automatically. This works across multiple processes sharing the same cluster.
+</Tip>
+
+In a notebook environment, you can manually enter and exit the context manager in multiple steps like so:
 
 <CodeGroup>
 ```python Python icon="python"
