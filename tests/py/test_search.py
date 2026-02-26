@@ -66,7 +66,7 @@ def test_vector_search():
         {"vector": row, "item": f"item {i}"}
         for i, row in enumerate(np.random.random((10_000, 1536)).astype("float32"))
     ]
-    tbl = db.create_table("vector_search", data=data)
+    tbl = db.create_table("vector_search", data=data, mode="overwrite")
     tbl.search(np.random.random((1536))).limit(10).to_list()
     # --8<-- [end:exhaustive_search]
     # --8<-- [start:exhaustive_search_cosine]
@@ -87,7 +87,7 @@ def test_vector_search():
     ]
 
     # Synchronous client
-    tbl = db.create_table("documents", data=data)
+    tbl = db.create_table("documents", data=data, mode="overwrite")
     # --8<-- [end:create_table_with_nested_schema]
     # --8<-- [start:search_result_as_pyarrow]
     tbl.search(np.random.randn(1536)).to_arrow()
@@ -118,7 +118,9 @@ async def test_vector_search_async():
         {"vector": row, "item": f"item {i}"}
         for i, row in enumerate(np.random.random((10_000, 1536)).astype("float32"))
     ]
-    async_tbl = await async_db.create_table("vector_search_async", data=data)
+    async_tbl = await async_db.create_table(
+        "vector_search_async", data=data, mode="overwrite"
+    )
     (await (await async_tbl.search(np.random.random((1536)))).limit(10).to_list())
     # --8<-- [end:exhaustive_search_async]
     # --8<-- [start:exhaustive_search_async_cosine]
@@ -143,7 +145,9 @@ async def test_vector_search_async():
         for i in range(100)
     ]
 
-    async_tbl = await async_db.create_table("documents_async", data=data)
+    async_tbl = await async_db.create_table(
+        "documents_async", data=data, mode="overwrite"
+    )
     # --8<-- [end:create_table_async_with_nested_schema]
     # --8<-- [start:search_result_async_as_pyarrow]
     await (await async_tbl.search(np.random.randn(1536))).to_arrow()
@@ -245,6 +249,7 @@ def test_fts_native():
             {"vector": [3.1, 4.1], "text": "Frodo was a happy puppy"},
             {"vector": [5.9, 26.5], "text": "There are several kittens playing"},
         ],
+        mode="overwrite",
     )
 
     # passing `use_tantivy=False` to use lance FTS index
@@ -294,6 +299,7 @@ async def test_fts_native_async():
             {"vector": [3.1, 4.1], "text": "Frodo was a happy puppy"},
             {"vector": [5.9, 26.5], "text": "There are several kittens playing"},
         ],
+        mode="overwrite",
     )
 
     # async API uses our native FTS algorithm

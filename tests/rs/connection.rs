@@ -45,32 +45,77 @@ fn connect_object_storage_config() -> &'static str {
 async fn namespace_table_ops_example(uri: &str) -> lancedb::Result<()> {
     // --8<-- [start:namespace_table_ops]
     let conn = connect(uri).execute().await?;
-    let namespace = vec!["prod".to_string(), "search".to_string()];
+    let search_namespace = vec!["prod".to_string(), "search".to_string()];
+    let recommendations_namespace = vec!["prod".to_string(), "recommendations".to_string()];
 
     let schema = std::sync::Arc::new(arrow_schema::Schema::new(vec![
         arrow_schema::Field::new("id", arrow_schema::DataType::Int64, false),
     ]));
 
-    conn.create_empty_table("users", schema)
-        .namespace(namespace.clone())
+    conn.create_empty_table("user", schema.clone())
+        .namespace(search_namespace.clone())
         .execute()
         .await?;
 
-    let _table = conn
-        .open_table("users")
-        .namespace(namespace.clone())
+    conn.create_empty_table("user", schema)
+        .namespace(recommendations_namespace.clone())
         .execute()
         .await?;
-    let _table_names = conn
+
+    let search_table_names = conn
         .table_names()
-        .namespace(namespace.clone())
+        .namespace(search_namespace)
+        .execute()
+        .await?;
+    let recommendation_table_names = conn
+        .table_names()
+        .namespace(recommendations_namespace)
         .execute()
         .await?;
 
-    conn.drop_table("users", &namespace).await?;
-    // drop_all_tables is namespace-aware as well:
-    // conn.drop_all_tables(&namespace).await?;
+    println!("{search_table_names:?}"); // ["user"]
+    println!("{recommendation_table_names:?}"); // ["user"]
     // --8<-- [end:namespace_table_ops]
+    Ok(())
+}
+
+async fn namespace_admin_ops_example() -> lancedb::Result<()> {
+    // --8<-- [start:namespace_admin_ops]
+    let mut properties = std::collections::HashMap::new();
+    properties.insert("root".to_string(), "./local_lancedb".to_string());
+    let db = lancedb::connect_namespace("dir", properties).execute().await?;
+    let namespace = vec!["prod".to_string(), "search".to_string()];
+
+    db.create_namespace(lancedb::database::CreateNamespaceRequest {
+        namespace: vec!["prod".to_string()],
+    })
+    .await?;
+    db.create_namespace(lancedb::database::CreateNamespaceRequest {
+        namespace: namespace.clone(),
+    })
+    .await?;
+
+    let child_namespaces = db
+        .list_namespaces(lancedb::database::ListNamespacesRequest {
+            namespace: vec!["prod".to_string()],
+            ..Default::default()
+        })
+        .await?;
+    println!(
+        "Child namespaces under {:?}: {:?}",
+        namespace, child_namespaces
+    );
+    // Child namespaces under ["prod", "search"]: ["search"]
+
+    db.drop_namespace(lancedb::database::DropNamespaceRequest {
+        namespace: namespace.clone(),
+    })
+    .await?;
+    db.drop_namespace(lancedb::database::DropNamespaceRequest {
+        namespace: vec!["prod".to_string()],
+    })
+    .await?;
+    // --8<-- [end:namespace_admin_ops]
     Ok(())
 }
 

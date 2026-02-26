@@ -58,41 +58,52 @@ def namespace_table_ops_example():
     # --8<-- [start:namespace_table_ops]
     import lancedb
 
-    db = lancedb.connect_namespace("dir", {"root": "./data/sample-lancedb"})
-    namespace = ["prod", "search"]
+    db = lancedb.connect_namespace("dir", {"root": "./local_lancedb"})
 
-    for i in range(1, len(namespace) + 1):
-        db.create_namespace(namespace[:i], mode="exist_ok")
+    # Create namespace tree: prod/search
+    db.create_namespace(["prod"], mode="exist_ok")
+    db.create_namespace(["prod", "search"], mode="exist_ok")
+    db.create_namespace(["prod", "recommendations"], mode="exist_ok")
 
     db.create_table(
-        "users",
+        "user",
         data=[{"id": 1, "vector": [0.1, 0.2], "name": "alice"}],
-        mode="overwrite",
-        namespace=namespace,
+        namespace=["prod", "search"],
+        mode="create",  # use "overwrite" only if you want to replace existing table
     )
 
-    table = db.open_table("users", namespace=namespace)
-    tables = db.list_tables(namespace=namespace).tables
+    db.create_table(
+        "user",
+        data=[{"id": 2, "vector": [0.3, 0.4], "name": "bob"}],
+        namespace=["prod", "recommendations"],
+        mode="create",  # use "overwrite" only if you want to replace existing table
+    )
 
-    db.drop_table("users", namespace=namespace)
-    # drop_all_tables is namespace-aware as well:
-    # db.drop_all_tables(namespace=namespace)
+    # Verify
+    print(db.list_namespaces())  # ['prod']
+    print(db.list_namespaces(namespace=["prod"]))  # ['recommendations', 'search']
+    print(db.list_tables(namespace=["prod", "search"]))  # ['user']
+    print(db.list_tables(namespace=["prod", "recommendations"]))  # ['user']
     # --8<-- [end:namespace_table_ops]
-    return table, tables
 
 
 def namespace_admin_ops_example():
     # --8<-- [start:namespace_admin_ops]
     import lancedb
 
-    db = lancedb.connect_namespace("dir", {"root": "./data/sample-lancedb"})
+    db = lancedb.connect_namespace("dir", {"root": "./local_lancedb"})
     namespace = ["prod", "search"]
 
-    for i in range(1, len(namespace) + 1):
-        db.create_namespace(namespace[:i], mode="exist_ok")
+    db.create_namespace(["prod"])
+    db.create_namespace(["prod", "search"])
 
     child_namespaces = db.list_namespaces(namespace=["prod"]).namespaces
+    print(f"Child namespaces under {namespace}: {child_namespaces}")
+    # Child namespaces under ['prod', 'search']: ['search']
+
     metadata = db.describe_namespace(["prod", "search"])
+    print(f"Metadata for namespace {namespace}: {metadata}")
+    # Metadata for namespace ['prod', 'search']: properties=None
 
     db.drop_namespace(["prod", "search"], mode="skip")
     db.drop_namespace(["prod"], mode="skip")

@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "lancedb>=0.29.2",
+    "lance-namespace>=0.5.2",
     "pandas>=2.3.3",
     "polars>=1.35.2",
     "pydantic>=2.12.4",

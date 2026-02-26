@@ -23,61 +23,90 @@ A namespace can contain a collection of tables, and it can also contain namespac
 
 ![](/static/assets/images/namespaces/lance-namespace.png)
 
-## Root namespace and the familiar `data/` layout
+Before diving into examples, it helps to keep two terms in mind: the **namespace client** is the abstraction that presents a consistent namespace API, while the **namespace implementation** is the concrete backend that resolves namespaces and table locations (for example, a local directory or an external catalog).
+If you want to go deeper, see the Lance format [namespace documentation](https://lance.org/format/namespace/).
+
+## Directory namespaces
 
 The simplest namespace model in LanceDB is a single root namespace, often represented by one
 directory:
 
 ```bash
-/data/            # root namespace
-├─ users.lance   # table ["users"] in root
-└─ orders.lance  # table ["orders"] in root
+./local_lancedb (root)
+└── prod
+    └── search
+        └── user   (table)
+            └── data   (table)
 ```
 
-As a user of LanceDB, you might never notice namespaces at first, because LanceDB exposes the single-level
-hierarchy shown above, with the data stored in the `data/` directory, where the root namespace
-is implicit. In alternative setups, you could have multiple namespaces that we won't cover here,
-but you can learn more about them in the [namespace documentation](https://lance.org/format/namespace/) for the Lance format.
+As a user of LanceDB OSS, you might never notice namespaces at first, because LanceDB exposes the single-level hierarchy shown above, with the data stored in the `data/` directory, where the root namespace is implicit. Connecting to this namespace is as simple as connecting to the catalog root:
 
-## Best-practice guidance
+```python Python icon="python"
+import lancedb
 
-- Use the default, single-level root namespace in LanceDB for locally stored, single-application, or early-stage projects.
-- For remote storage locations, introduce explicit namespaces when multiple teams, environments, or domains share the same catalog.
-- Treat namespace paths as stable identifiers (for example `"prod/search"`, `"staging/recs"`).
-- Avoid hard-coding object-store table paths in application code -- instead, prefer catalog identifiers + namespaces.
+# Connect to the directory namespace root
+db = lancedb.connect("./local_lancedb")
+```
 
-See the Python example below for how to use namespaces in practice.
+This will create the default namespace directory (`data/`) under the specified root path:
+
+You can also explicitly connect to a namespace using `lancedb.connect_namespace(...)` with the directory namespace implementation:
 
 ```python Python icon="python"
 import lancedb
 
 # Local namespace-backed catalog root (DirectoryNamespace)
-db = lancedb.connect_namespace("dir", {"root": "./namespace_test"})
+# See https://lance.org/format/namespace/dir/catalog-spec/
+db = lancedb.connect_namespace("dir", {"root": "./local_lancedb"})
 
-# Business identifier + namespace path (stable app-level IDs)
-namespace = ["prod", "recommendations"]
-table_name = "user_profiles"
+table_name = "user"
+data = [{"id": 1, "vector": [0.1, 0.2], "name": "alice"}]
 
-# Create namespace hierarchy sequentially
-for i in range(1, len(namespace) + 1):
-    db.create_namespace(namespace[:i], mode="exist_ok")
-
-# Good: resolve table through catalog + namespace
-table = db.create_table(
-    table_name,
-    data=[{"id": 1, "vector": [0.1, 0.2], "name": "alice"}],
-    namespace=namespace,
-    mode="overwrite",
-)
-
-# Bad: Avoid hard-coded physical object-store table paths
-# (it's bad for maintainability reasons)
-# table = lancedb.connect(
-#   "s3://my-lakehouse/catalog/prod/recommendations/user_profiles.lance"
-# )
+table = db.create_table(table_name, data=data, mode="create")
+print(f"Created table: {table.name}")
+# Created table: user
 ```
 
-## SDK usage
+<Info>
+- For simple use cases in LanceDB OSS, you don't need to go too deep into namespaces.
+- To integrate LanceDB with external catalogs and to use it as a true **multimodal lakehouse**, it's useful to understant the different namespace implementations and how to use them in your organization's setup.
+</Info>
 
-1. For language-specific examples of `namespace` usage across Python, TypeScript, and Rust, see "[Using namespaces in SDKs](/tables/namespaces)".
-2. For REST-level operations, see the [REST API Reference](/api-reference/rest).
+## Remote or external catalog namespaces
+
+The example above showed local directory-baed namespaces. LanceDB also supports namespaces backed by remote object stores and external catalogs, via the REST namespace implementation. 
+
+For remote object stores with central metadata/catalog services (either commercial or open source), use the REST namespace implementation,
+This is backed by REST routes
+(for example `POST /v1/namespace/{id}/create` and `GET /v1/namespace/{id}/list`) and server-provided table locations.
+
+For authentication, any property prefixed with `headers` is forwarded as an HTTP header
+(for example `headers.Authorization` becomes `Authorization`, and `headers.X-API-Key` becomes `X-API-Key`).
+
+```python Python icon="python"
+import os
+import lancedb
+
+# Remote namespace-backed catalog root (RestNamespace)
+# See https://lance.org/format/namespace/rest/catalog-spec/
+db = lancedb.connect_namespace(
+    "rest",
+    {
+        "uri": "https://<your_catalog>.internal.<your_org>.com",
+        "headers.x-api-key": os.environ["API_KEY"],
+        # or:
+        # "headers.Authorization": f"Bearer {os.environ['REST_AUTH_TOKEN']}",
+    },
+)
+```
+[LanceDB Enterprise](/enterprise) operates a REST namespace server on top of the Lance format, so any REST client that can speak the REST namespace API
+contract can be used to interact with it. For authentication examples in LanceDB Enterprise, visit
+the [Namespaces in SDKs](/tables/namespaces#namespaces-in-lancedb-enterprise) page. 
+
+## Best practices
+
+Below, we list some best practices for working with namespaces:
+- For simple use cases and single, stand-alone applications, the directory-based root namespace is sufficient and requires no special configuration.
+- For remote storage locations, introduce explicit namespaces when multiple teams, environments, or domains share the same catalog.
+- Treat namespace paths as stable identifiers (for example `"prod/search"`, `"staging/recs"`).
+- For maintainability reasons, avoid hard-coding object-store table paths in application code -- instead, prefer catalog identifiers + namespaces.
