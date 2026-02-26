@@ -35,26 +35,4 @@ async function connectObjectStorageExample() {
 }
 // --8<-- [end:connect_object_storage]
 
-async function namespaceTableOpsExample(uri: string) {
-  // --8<-- [start:namespace_table_ops]
-  const db = await lancedb.connect(uri);
-  const namespace = ["prod", "search"];
-
-  await db.createTable(
-    "users",
-    [{ id: 1, name: "alice" }],
-    namespace,
-    { mode: "overwrite" },
-  );
-
-  const table = await db.openTable("users", namespace);
-  const tableNames = await db.tableNames(namespace);
-
-  await db.dropTable("users", namespace);
-  // dropAllTables is namespace-aware as well:
-  // await db.dropAllTables(namespace);
-  // --8<-- [end:namespace_table_ops]
-  return { table, tableNames };
-}
-
-void [uri, apiKey, region, connectObjectStorageExample, namespaceTableOpsExample];
+void [uri, apiKey, region, connectObjectStorageExample];

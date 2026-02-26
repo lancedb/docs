@@ -32,10 +32,11 @@ The simplest namespace model in LanceDB is a single root namespace, often repres
 directory:
 
 ```bash
-./local_lancedb/      # catalog root ({"root": "./local_lancedb"})
-└─ data/              # root namespace
-   ├─ users.lance     # table ["users"] in root
-   └─ orders.lance    # table ["orders"] in root
+./local_lancedb (root)
+└── prod
+    └── search
+        └── user   (table)
+            └── data   (table)
 ```
 
 As a user of LanceDB OSS, you might never notice namespaces at first, because LanceDB exposes the single-level hierarchy shown above, with the data stored in the `data/` directory, where the root namespace is implicit. Connecting to this namespace is as simple as connecting to the catalog root:
@@ -47,28 +48,36 @@ import lancedb
 db = lancedb.connect("./local_lancedb")
 ```
 
-You can also explicitly connect to this namespace in Python using `lancedb.connect_namespace(...)` with the directory namespace implementation:
+This will create the default namespace directory (`data/`) under the specified root path:
+
+You can also explicitly connect to a namespace using `lancedb.connect_namespace(...)` with the directory namespace implementation:
 
 ```python Python icon="python"
 import lancedb
 
 # Local namespace-backed catalog root (DirectoryNamespace)
 # See https://lance.org/format/namespace/dir/catalog-spec/
-db = lancedb.connect_namespace(
-    "dir",
-    {
-        "root": "./local_lancedb"
-    },
-)
+db = lancedb.connect_namespace("dir", {"root": "./local_lancedb"})
+
+table_name = "user"
+data = [{"id": 1, "vector": [0.1, 0.2], "name": "alice"}]
+
+table = db.create_table(table_name, data=data, mode="create")
+print(f"Created table: {table.name}")
+# Created table: user
 ```
 
 <Info>
-For simple search use cases in LanceDB OSS, you don't need to go too deep into namespaces. However, to integrate LanceDB with external catalogs and to use it as a true multimodal lakehouse, understanding the different namespace implementations and how to use them in your organization's setup is beneficial.
+- For simple use cases in LanceDB OSS, you don't need to go too deep into namespaces.
+- To integrate LanceDB with external catalogs and to use it as a true **multimodal lakehouse**, it's useful to understant the different namespace implementations and how to use them in your organization's setup.
 </Info>
 
 ## Remote or external catalog namespaces
 
-For remote object stores with central metadata/catalog services (either commercial or open source), use the REST namespace implementation. In LanceDB, this is the same namespace API surface as local directory namespaces, but backed by REST routes
+The example above showed local directory-baed namespaces. LanceDB also supports namespaces backed by remote object stores and external catalogs, via the REST namespace implementation. 
+
+For remote object stores with central metadata/catalog services (either commercial or open source), use the REST namespace implementation,
+This is backed by REST routes
 (for example `POST /v1/namespace/{id}/create` and `GET /v1/namespace/{id}/list`) and server-provided table locations.
 
 For authentication, any property prefixed with `headers` is forwarded as an HTTP header
@@ -92,7 +101,7 @@ db = lancedb.connect_namespace(
 ```
 [LanceDB Enterprise](/enterprise) operates a REST namespace server on top of the Lance format, so any REST client that can speak the REST namespace API
 contract can be used to interact with it. For authentication examples in LanceDB Enterprise, visit
-the [Namespaces in SDKs](/tables/namespaces) page. 
+the [Namespaces in SDKs](/tables/namespaces#namespaces-in-lancedb-enterprise) page. 
 
 ## Best practices
 
