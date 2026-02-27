@@ -47,7 +47,7 @@ Vector indexes can use different quantization methods to compress vectors and im
 | :----------- | :------- | :---------- |
 | `PQ` (Product Quantization) | Default choice for most vector search scenarios. Use when you need to balance index size and recall. | Divides vectors into subvectors and quantizes each subvector independently. Provides a good balance between compression ratio and search accuracy. |
 | `SQ` (Scalar Quantization) | Use when you need faster indexing or when vector dimensions have consistent value ranges. | Quantizes each dimension independently. Simpler than PQ but typically provides less compression. |
-| `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. |
+| `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. For `IVF_RQ`, vector dimensions must be divisible by `8`. |
 | `None/Flat` | Use for binary vectors (with `hamming` distance) or when you need maximum recall and have sufficient storage. | No quantization—stores raw vectors. Provides the highest accuracy but requires more storage and memory. |
 
 ## Understanding the IVF-PQ Index
@@ -149,4 +149,3 @@ Then the greedy search routine operates as follows:
 * At the top layer (using an arbitrary vertex as an entry point), use the greedy local search routine on the k-ANN graph to get an approximate nearest neighbor at that layer.
 * Using the approximate nearest neighbor found in the previous layer as an entry point, find an approximate nearest neighbor in the next layer with the same method.
 * Repeat until the bottom-most layer is reached. Then use the entry point to find multiple nearest neighbors (e.g. top 10).
-
