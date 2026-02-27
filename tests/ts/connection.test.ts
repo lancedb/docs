@@ -26,4 +26,13 @@ const apiKey = "your-api-key";
 const region = "us-east-1";
 // --8<-- [end:connect_cloud]
 
-void [uri, apiKey, region];
+// --8<-- [start:connect_object_storage]
+async function connectObjectStorageExample() {
+  const uri = "s3://your-bucket/path";
+  // You can also use "gs://your-bucket/path" or "az://your-container/path".
+  const db = await lancedb.connect(uri);
+  return db;
+}
+// --8<-- [end:connect_object_storage]
+
+void [uri, apiKey, region, connectObjectStorageExample];

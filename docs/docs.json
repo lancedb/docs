@@ -40,7 +40,7 @@
                 "pages": [
                   "index",
                   "lance",
-                  "features"
+                  "namespaces"
                 ]
               },
               {
@@ -80,6 +80,7 @@
                   "tables/multimodal",
                   "tables/schema",
                   "tables/update",
+                  "tables/namespaces",
                   "tables/versioning",
                   "tables/consistency"
                 ]
@@ -167,7 +168,8 @@
                   "geneva/jobs/backfilling",
                   "geneva/jobs/conflicts",
                   "geneva/jobs/materialized-views",
-                  "geneva/jobs/performance"
+                  "geneva/jobs/performance",
+                  "geneva/jobs/troubleshooting"
                 ]
               },
               {
@@ -263,6 +265,7 @@
               {
                 "group": "AI Platforms & Frameworks",
                 "pages": [
+                  "integrations/ai/huggingface",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
                   "integrations/ai/genkit",

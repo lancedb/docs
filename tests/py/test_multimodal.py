@@ -107,7 +107,6 @@ def test_blob_api_definition(db_path_factory):
 
     # --8<-- [start:blob_api_ingest]
     import lancedb
-    import lance
 
     db = lancedb.connect(db_path_factory("blob_db"))
     

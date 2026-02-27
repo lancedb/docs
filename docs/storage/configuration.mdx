@@ -10,6 +10,7 @@ import {
     PyStorageConnectGcs,
     PyStorageConnectS3,
     PyStorageConnectTimeout,
+    PyStorageProviderRefresh,
     PyStorageGcsServiceAccount,
     PyStorageS3Ddb,
     PyStorageS3Express,
@@ -90,18 +91,34 @@ If you need the option to apply only to a specific table:
     </CodeBlock>
 </CodeGroup>
 
+### Dynamic credentials with `StorageOptionsProvider` <Badge color="green">Python-only</Badge>  
+Use a storage options provider when credentials expire (for example, short-lived STS credentials). Pass any provider object that implements `fetch_storage_options()` with `storage_options_provider` on table operations such as `create_table` and `open_table`. In SDK versions that expose `StorageOptionsProvider`, you can subclass it directly.
+
+If `fetch_storage_options()` returns `expires_at_millis`, LanceDB refreshes credentials before that timestamp. You can optionally set `refresh_offset_millis` (in milliseconds) to refresh earlier.
+
+<CodeBlock language="Python" title="Refresh cloud credentials automatically" icon="python">
+{PyStorageProviderRefresh}
+</CodeBlock>
+
 #### General object store options
 
 | Key | Description |
 | :-- | :-- |
-| `allow_http` | Allow non-TLS connections. Default: `false`. |
-| `allow_invalid_certificates` | Skip certificate validation. Default: `false`. |
-| `connect_timeout` | Timeout for the connect phase. Default: `5s`. |
-| `timeout` | Timeout for the full request. Default: `30s`. |
-| `user_agent` | User agent string to send with requests. |
+| `allow_http` | Allow non-TLS connections. |
+| `allow_invalid_certificates` | Skip certificate validation for TLS connections. |
+| `connect_timeout` | Timeout for the connect phase. |
+| `timeout` | Timeout for the full request. |
+| `user_agent` | User agent string sent with requests. |
 | `proxy_url` | Proxy URL to route requests through. |
 | `proxy_ca_certificate` | PEM-formatted CA certificate for proxy connections. |
 | `proxy_excludes` | Comma-separated hosts that bypass the proxy (domains or CIDR). |
+| `download_retry_count` | Number of retries when downloading objects. |
+| `client_max_retries` | Maximum retries for object-store client requests. |
+| `client_retry_timeout` | Total retry timeout (seconds) for object-store client requests. |
+
+<Info title="Option support varies by backend">
+These are commonly used options. Cloud-specific keys (for example `region`, `endpoint`, `service_account`, and Azure credential keys) are backend-dependent and can be provided in `storage_options` as needed.
+</Info>
 
 ## AWS S3
 
@@ -204,4 +221,3 @@ Tigris exposes an S3-compatible API. Configure the endpoint and region:
 </CodeGroup>
 
 Environment variables `AWS_ENDPOINT=https://t3.storage.dev` and `AWS_DEFAULT_REGION=auto` achieve the same configuration.
-

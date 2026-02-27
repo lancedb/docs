@@ -4,6 +4,8 @@ export const PyQuickstartAddData = "more_data = [\n    {\"id\": \"7\", \"text\":
 
 export const PyQuickstartCreateTable = "data = [\n    {\"id\": \"1\", \"text\": \"knight\", \"vector\": [0.9, 0.4, 0.8]},\n    {\"id\": \"2\", \"text\": \"ranger\", \"vector\": [0.8, 0.4, 0.7]},\n    {\"id\": \"9\", \"text\": \"priest\", \"vector\": [0.6, 0.2, 0.6]},\n    {\"id\": \"4\", \"text\": \"rogue\", \"vector\": [0.7, 0.4, 0.7]},\n]\ntable = db.create_table(\"adventurers\", data=data, mode=\"overwrite\")\n";
 
+export const PyQuickstartCreateTableAsync = "async_table = await async_db.create_table(\n    \"adventurers\",\n    data=data,\n    mode=\"overwrite\",\n)\n";
+
 export const PyQuickstartCreateTableNoOverwrite = "table = db.create_table(\"adventurers\", data=data)\n";
 
 export const PyQuickstartOpenTable = "table = db.open_table(\"adventurers\")\n";
@@ -11,6 +13,8 @@ export const PyQuickstartOpenTable = "table = db.open_table(\"adventurers\")\n";
 export const PyQuickstartOutputPandas = "# Ensure you run `pip install pandas` beforehand\nresult = table.search(query_vector).limit(2).to_pandas()\nprint(result)\n";
 
 export const PyQuickstartVectorSearch1 = "# Let's search for vectors similar to \"warrior\"\nquery_vector = [0.8, 0.3, 0.8]\n\n# Ensure you run `pip install polars` beforehand\nresult = table.search(query_vector).limit(2).to_polars()\nprint(result)\n";
+
+export const PyQuickstartVectorSearch1Async = "# Let's search for vectors similar to \"warrior\"\nquery_vector = [0.8, 0.3, 0.8]\n\n# Ensure you run `pip install polars` beforehand\nasync_result = await (await async_table.search(query_vector)).limit(2).to_polars()\nprint(async_result)\n";
 
 export const PyQuickstartVectorSearch2 = "# Let's search for vectors similar to \"wizard\"\nquery_vector = [0.7, 0.3, 0.5]\n\nresults = table.search(query_vector).limit(2).to_polars()\nprint(results)\n";
 
