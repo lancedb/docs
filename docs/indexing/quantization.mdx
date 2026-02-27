@@ -42,6 +42,7 @@ For a deeper dive into the theory and some benchmark results, see the blog post:
 ### Using RaBitQ
 
 You can create an RaBitQ-backed vector index by setting `index_type="IVF_RQ"` when calling `create_index`. 
+`IVF_RQ` requires the vector `dimension` to be divisible by `8`.
 `num_bits` controls how many bits per dimension are used:
 
 ## API Reference
@@ -62,4 +63,3 @@ The full list of parameters to the algorithm are listed below.
   Number of samples per partition during training. Higher values may improve accuracy but increase training time.
 - `target_partition_size`: Optional[int], defaults to None  
   Target number of vectors per partition. Adjust to control partition granularity and memory usage.
-

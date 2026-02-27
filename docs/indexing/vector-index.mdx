@@ -49,7 +49,7 @@ Use this table as a quick starting point:
 | If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
 | :--- | :--- | :--- | :--- |
 | Best recall/latency trade-off | `IVF_HNSW_SQ` | Combines IVF partitioning with HNSW graph search for strong quality at low latency. | Typically a little larger than `1/4` of raw size |
-| Maximum compression | `IVF_RQ` | RaBitQ-style quantization with very strong compression. | Around `1/32` of raw size |
+| Maximum compression | `IVF_RQ` | RaBitQ-style quantization with very strong compression. Requires `dimension % 8 == 0`. | Around `1/32` of raw size |
 | Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | On small-dimensional vectors, `IVF_PQ` often provides higher accuracy with similar performance compared to `IVF_RQ`. | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) |
 
 <Warning>
@@ -71,6 +71,7 @@ Start with these values, then tune for your workload:
   - `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
 - `IVF_RQ`
   - `num_partitions`: start at `num_rows / 4096` (rounded to an integer). This is a strong default for most datasets.
+  - Vector `dimension` must be divisible by `8`.
 - `IVF_PQ`
   - `num_partitions`: start at `num_rows / 4096` (rounded to an integer).
   - `num_sub_vectors`: start at `dimension / 8`. Increase for better recall, decrease for faster search and smaller indexes.
@@ -88,7 +89,7 @@ Sometimes you need to configure the index beyond default parameters:
 
 - Index Types:
     - `IVF_HNSW_SQ`: best recall/latency trade-off
-    - `IVF_RQ`: best compression for large, high-dimensional datasets
+    - `IVF_RQ`: best compression for large, high-dimensional datasets (`dimension` must be divisible by `8`)
     - `IVF_PQ`: often higher accuracy than `IVF_RQ` for small dimensions (`<= 256`) at similar query performance
 - `metrics`: default is `l2`, other available are `cosine` or `dot`
     - When using `cosine` similarity, distances range from 0 (identical vectors) to 2 (maximally dissimilar)
