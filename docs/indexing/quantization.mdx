@@ -15,7 +15,7 @@ Use quantization when:
 
 LanceDB currently exposes multiple quantized vector index types, including:
 - `IVF_PQ` -- Inverted File index with Product Quantization (default). See the [vector indexing guide](/indexing/vector-index) for `IVF_PQ` examples.
-- `IVF_RQ` -- Inverted File index with **RaBitQ** quantization (binary, 1 bit per dimension). See [below](#rabitq-quantization) for details.
+- `IVF_RQ` -- Inverted File index with **RaBitQ** quantization (binary, 1 bit per dimension). Requires vector dimensions divisible by `8`. See [below](#rabitq-quantization) for details.
 
 `IVF_PQ` is the default indexing option in LanceDB and works well in many cases. However, in cases where more drastic compression is needed, RaBitQ is also a reasonable option.
 
@@ -42,6 +42,11 @@ For a deeper dive into the theory and some benchmark results, see the blog post:
 ### Using RaBitQ
 
 You can create an RaBitQ-backed vector index by setting `index_type="IVF_RQ"` when calling `create_index`. 
+
+<Note title="Dimension requirement">
+When using `IVF_RQ`, vector dimensions must be divisible by `8`.
+</Note>
+
 `num_bits` controls how many bits per dimension are used:
 
 ## API Reference
@@ -62,4 +67,3 @@ The full list of parameters to the algorithm are listed below.
   Number of samples per partition during training. Higher values may improve accuracy but increase training time.
 - `target_partition_size`: Optional[int], defaults to None  
   Target number of vectors per partition. Adjust to control partition granularity and memory usage.
-
