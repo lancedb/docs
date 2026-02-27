@@ -375,6 +375,14 @@
     {
       "source": "/tutorials/vector-search/:slug*",
       "destination": "tutorials/search/:slug*"
+    },
+    {
+      "source": "/api-reference/rest/namespace",
+      "destination": "api-reference/rest/index"
+    },
+    {
+      "source": "/api-reference/rest/namespace/create-a-new-namespace",
+      "destination": "api-reference/rest/index"
     }
   ]
 }
