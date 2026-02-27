@@ -20,6 +20,7 @@ async fn main() {
 
     // Keep the cloud snippet in this file, but don't run it in CI.
     let _ = connect_cloud_config();
+    let _ = connect_object_storage_config();
 }
 
 fn connect_cloud_config() -> (String, String, String) {
@@ -30,6 +31,92 @@ fn connect_cloud_config() -> (String, String, String) {
     // --8<-- [end:connect_cloud]
 
     (uri.to_string(), api_key.to_string(), region.to_string())
+}
+
+fn connect_object_storage_config() -> &'static str {
+    // --8<-- [start:connect_object_storage]
+    let uri = "s3://your-bucket/path";
+    // You can also use "gs://your-bucket/path" or "az://your-container/path".
+    // --8<-- [end:connect_object_storage]
+
+    uri
+}
+
+async fn namespace_table_ops_example(uri: &str) -> lancedb::Result<()> {
+    // --8<-- [start:namespace_table_ops]
+    let conn = connect(uri).execute().await?;
+    let search_namespace = vec!["prod".to_string(), "search".to_string()];
+    let recommendations_namespace = vec!["prod".to_string(), "recommendations".to_string()];
+
+    let schema = std::sync::Arc::new(arrow_schema::Schema::new(vec![
+        arrow_schema::Field::new("id", arrow_schema::DataType::Int64, false),
+    ]));
+
+    conn.create_empty_table("user", schema.clone())
+        .namespace(search_namespace.clone())
+        .execute()
+        .await?;
+
+    conn.create_empty_table("user", schema)
+        .namespace(recommendations_namespace.clone())
+        .execute()
+        .await?;
+
+    let search_table_names = conn
+        .table_names()
+        .namespace(search_namespace)
+        .execute()
+        .await?;
+    let recommendation_table_names = conn
+        .table_names()
+        .namespace(recommendations_namespace)
+        .execute()
+        .await?;
+
+    println!("{search_table_names:?}"); // ["user"]
+    println!("{recommendation_table_names:?}"); // ["user"]
+    // --8<-- [end:namespace_table_ops]
+    Ok(())
+}
+
+async fn namespace_admin_ops_example() -> lancedb::Result<()> {
+    // --8<-- [start:namespace_admin_ops]
+    let mut properties = std::collections::HashMap::new();
+    properties.insert("root".to_string(), "./local_lancedb".to_string());
+    let db = lancedb::connect_namespace("dir", properties).execute().await?;
+    let namespace = vec!["prod".to_string(), "search".to_string()];
+
+    db.create_namespace(lancedb::database::CreateNamespaceRequest {
+        namespace: vec!["prod".to_string()],
+    })
+    .await?;
+    db.create_namespace(lancedb::database::CreateNamespaceRequest {
+        namespace: namespace.clone(),
+    })
+    .await?;
+
+    let child_namespaces = db
+        .list_namespaces(lancedb::database::ListNamespacesRequest {
+            namespace: vec!["prod".to_string()],
+            ..Default::default()
+        })
+        .await?;
+    println!(
+        "Child namespaces under {:?}: {:?}",
+        namespace, child_namespaces
+    );
+    // Child namespaces under ["prod", "search"]: ["search"]
+
+    db.drop_namespace(lancedb::database::DropNamespaceRequest {
+        namespace: namespace.clone(),
+    })
+    .await?;
+    db.drop_namespace(lancedb::database::DropNamespaceRequest {
+        namespace: vec!["prod".to_string()],
+    })
+    .await?;
+    // --8<-- [end:namespace_admin_ops]
+    Ok(())
 }
 
 #[allow(dead_code)]

@@ -169,3 +169,29 @@ def test_basic_usage(db_path_factory):
     db.drop_table("camelot")
     # --8<-- [end:basic_drop_table]
     assert "camelot" not in db.table_names()
+
+
+@pytest.mark.asyncio
+async def test_basic_usage_async_api(db_path_factory):
+    uri = db_path_factory("basic_usage_async_db")
+    with open(data_path, "r") as f:
+        data = json.load(f)
+
+    # --8<-- [start:basic_async_api]
+    import lancedb
+
+    async_db = await lancedb.connect_async(uri)
+    async_table = await async_db.create_table(
+        "camelot_async",
+        data=data,
+        mode="overwrite",
+    )
+
+    query_vector = [0.03, 0.85, 0.61, 0.90]
+    async_results = await (
+        await async_table.search(query_vector)
+    ).limit(5).select(["name", "role", "description"]).to_polars()
+    print(async_results)
+    # --8<-- [end:basic_async_api]
+
+    assert async_results.height >= 1

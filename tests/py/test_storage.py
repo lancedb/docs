@@ -17,7 +17,13 @@ class DummyConnection:
         self.options = options
         self.created_tables: list[DummyTable] = []
 
-    def create_table(self, name: str, data, storage_options: dict | None = None):
+    def create_table(
+        self,
+        name: str,
+        data,
+        storage_options: dict | None = None,
+        storage_options_provider=None,
+    ):
         table = DummyTable(name, storage_options=storage_options)
         self.created_tables.append(table)
         return table
@@ -119,7 +125,30 @@ def test_storage_snippets(fake_connect):
     )
     # --8<-- [end:storage_tigris_connect]
 
-    assert len(fake_connect) == 10
+    # --8<-- [start:storage_provider_refresh]
+    class StsStorageOptionsProvider:
+        # LanceDB calls this method whenever credentials need refresh.
+        def fetch_storage_options(self) -> dict[str, str]:
+            # Replace this with your credential manager or STS call.
+            return {
+                "region": "us-east-1",
+                "aws_access_key_id": "<temp-access-key-id>",
+                "aws_secret_access_key": "<temp-secret-access-key>",
+                "aws_session_token": "<temp-session-token>",
+                "expires_at_millis": "1735707600000",
+                "refresh_offset_millis": "120000",
+            }
+
+    provider = StsStorageOptionsProvider()
+    db = lancedb.connect("s3://bucket/path")
+    table = db.create_table(
+        "table_with_temp_creds",
+        [{"id": 1}],
+        storage_options_provider=provider,
+    )
+    # --8<-- [end:storage_provider_refresh]
+
+    assert len(fake_connect) == 11
     assert all(
         conn.uri.startswith(("s3://", "gs://", "az://", "s3+ddb://"))
         for conn in fake_connect

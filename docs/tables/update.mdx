@@ -1,156 +1,96 @@
 ---
 title: "Updating and Modifying Table Data"
 sidebarTitle: "Update/modify data"
-description: "Learn how to update and modify data in LanceDB. Includes incremental updates, batch modifications, and best practices for data maintenance."
+description: "Learn how to update, merge, and delete rows in a LanceDB table."
 icon: "clone"
 ---
 import {
-    PyAddDataToTable as AddDataToTable,
-    PyAddDataPydanticModel as AddDataPydanticModel,
-    PyAddDataNestedModel as AddDataNestedModel,
-    PyBatchDataInsertion as BatchDataInsertion,
+    PyUpdateConnectCloud as UpdateConnectCloud,
+    PyUpdateConnectLocal as UpdateConnectLocal,
+    PyUpdateExampleTableSetup as UpdateExampleTableSetup,
     PyUpdateOperation as UpdateOperation,
     PyUpdateUsingSql as UpdateUsingSql,
-    PyDeleteOperation as DeleteOperation,
-    PyUpsertOperation as UpsertOperation,
+    PyMergeMatchedUpdateOnly as MergeMatchedUpdateOnly,
     PyInsertIfNotExists as InsertIfNotExists,
-    PyReplaceRangeOperation as ReplaceRangeOperation,
+    PyMergeUpdateInsert as MergeUpdateInsert,
+    PyMergeDeleteMissingBySource as MergeDeleteMissingBySource,
+    PyMergePartialColumns as MergePartialColumns,
+    PyDeleteOperation as DeleteOperation,
+    PyUpdateOptimizeCleanup as UpdateOptimizeCleanup,
 } from '/snippets/tables.mdx';
 
-Once you have created a table, there are several ways to modify its data. You can:
+Updating or modifying data involves changing rows in an existing table.
+LanceDB provides two families of write operations that can modify data in a table:
 
-- Ingest and add new records to your table;
-- Update existing records that match specific conditions;
-- Use the powerful Merge Insert function for more complex operations like upserting or replacing ranges of data.
+- `update(...)`: mutate existing rows that match a SQL filter.
+- `merge_insert(...)`: compare incoming rows to existing rows by key, then choose what to do for each case.
 
-These operations allow you to keep your table data current and maintain it exactly as needed for your use case. Let's look at each of these operations in detail.
+The `update` method is simpler to use when you already know which rows you want to modify and you do not need to compare against an incoming dataset. The `merge_insert` method is more powerful when you have a new dataset that you want to merge into an existing table, and you want LanceDB to handle the logic of comparing against existing rows by key.
 
-<Note>
-These examples demonstrate common usage patterns. For complete API details and advanced options, refer to our SDK [documentation page](/api-reference/) and navigate to your client language of choice.
-</Note>
+Let's look at an example that demonstrates these operations in practice.
 
-## Connecting to LanceDB
+## Connect to LanceDB
 
-Before performing any operations, you'll need to connect to LanceDB. The connection method depends on whether you're using LanceDB Cloud or the open source version.
-
-```python
-import lancedb
-
-# Connect to LanceDB Cloud
-db = lancedb.connect(
-    uri="db://your-project-slug",
-    api_key="your-api-key",
-    region="us-east-1"
-)
-```
-
-You can also connect locally using LanceDB OSS:
-
-```python
-import lancedb
-
-# Connect to local LanceDB
-db = lancedb.connect("./data")  # Local directory for data storage
-```
-
-## Data Insertion
-
-### Adding data to a table
-
-Say you created a LanceDB table by passing in a `schema`.
-This is an _empty_ table, with no data in it. To add or append data to a table, you can use the `table.add(data)`,
-as shown below.
+Connect to your local LanceDB instance:
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {AddDataToTable}
+    {UpdateConnectLocal}
     </CodeBlock>
 </CodeGroup>
 
-<Note title="Vector Column Type">
-The vector column needs to be a `pyarrow.FixedSizeList` type.
-</Note>
+Expected output:
 
-### Using Pydantic Models
+| Variable | Value |
+| --- | --- |
+| `db` | A connected LanceDB database handle pointing to `./data` |
 
-Pydantic models provide a more structured way to define your table schema:
+Or, connect to your LanceDB remote cluster:
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {AddDataPydanticModel}
+    {UpdateConnectCloud}
     </CodeBlock>
 </CodeGroup>
 
-### Using Nested Models
+Expected output:
 
-You can use nested Pydantic models to represent complex data structures. 
-For example, you may want to store the document string and the document source name as a nested Document object:
+| Variable | Value |
+| --- | --- |
+| `db` | A connected LanceDB database handle for your remote project |
 
-```python
-from pydantic import BaseModel
+## Create the example table
 
-class Document(BaseModel):
-    content: str
-    source: str
-```
-
-This can be used as the type of a LanceDB table column:
-
+We'll start by creating a simple table of a table with `id`, `name`, and `login_count` columns. All examples below use the same table.
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {AddDataNestedModel}
+    {UpdateExampleTableSetup}
     </CodeBlock>
 </CodeGroup>
 
-This creates a struct column called `document` that has two subfields called `content` and `source`:
+Expected table contents:
 
-```bash
-In [28]: table.schema
-Out[28]:
-id: string not null
-vector: fixed_size_list<item: float>[128] not null
-    child 0, item: float
-document: struct<content: string not null, source: string not null> not null
-    child 0, content: string not null
-    child 1, source: string not null
-```
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bob | 20 |
 
-### Batch Data Insertion
+The example above shows a PyArrow schema. You can just as well create the table using other
+table creation patterns (Pandas, Polars, Pydantic, iterators, etc.) -- see the [ingestion](/tables/create/) guide for more details.
 
-It is recommended to use iterators to add large datasets in batches when creating 
-your table in one go. Data will be automatically compacted for the best query performance.
+## Choose a write method
 
-#### Python Batch Insertion
+| Family |  Method | Use this when... |
+| --------------- | --------------- | ---------------- |
+| `update` | `update(where=..., values=...)` | You want to edit rows that already exist, using a SQL filter. |
+| `merge_insert` | `.when_matched_update_all()` | You have incoming rows and want to update keys that already exist in the table. |
+| `merge_insert` | `.when_not_matched_insert_all()` | You have incoming rows and want to insert keys that do not exist yet. |
+| `merge_insert` | `.when_matched_update_all()` + `.when_not_matched_insert_all()` | You want both behaviors together (often called **upsert**: update existing keys **and** insert missing keys in the same operation). |
+| `merge_insert` | `.when_not_matched_by_source_delete(...)` | You want to remove target rows that are missing from the incoming source set. |
 
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {BatchDataInsertion}
-    </CodeBlock>
-</CodeGroup>
+## Update rows
 
-<Warning title="Batch size">
-LanceDB Cloud is a multi-tenant environment with a 100MB payload limit. Adjust your batch size accordingly.
-</Warning>
-
-## Data Modification
-
-### Update Operations
-
-This can be used to update zero to all rows depending on how many rows match the where clause. The update queries follow the form of a SQL UPDATE statement. The `where` parameter is a SQL filter that matches on the metadata columns. The `values` or `values_sql` parameters are used to provide the new values for the columns.
-
-<Warning title="Warning">
-Updating nested columns is not yet supported.
-</Warning>
-
-| Parameter    | Type   | Description                                                                                                                                                                       |
-| ------------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `where`      | `str`  | The SQL where clause to use when updating rows. For example, `'x = 2'` or `'x IN (1, 2, 3)'`. The filter must not be empty, or it will error.                                     |
-| `values`     | `dict` | The values to update. The keys are the column names and the values are the values to set.                                                                                         |
-| `values_sql` | `dict` | The values to update. The keys are the column names and the values are the SQL expressions to set. For example, `{'x': 'x + 1'}` will increment the value of the `x` column by 1. |
-
-<Note title="SQL syntax">
-See the [SQL queries](/search/sql/) page for more information on the supported SQL syntax.
-</Note>
+Use `update` when you already know which target rows to modify and you do not need to compare against an incoming dataset.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -158,18 +98,20 @@ See the [SQL queries](/search/sql/) page for more information on the supported S
     </CodeBlock>
 </CodeGroup>
 
-Output:
+Expected table contents:
 
-```json
-    x  vector
-0  1  [1.0, 2.0]
-1  3  [5.0, 6.0]
-2  2  [10.0, 10.0]
-```
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bobby | 20 |
 
-### Updating Using SQL 
+<Warning title="Warning">
+Updating nested columns is not yet supported.
+</Warning>
 
-The `values` parameter is used to provide the new values for the columns as literal values. You can also use the `values_sql` / `valuesSql` parameter to provide SQL expressions for the new values. For example, you can use `values_sql="x + 1"` to increment the value of the `x` column by 1.
+## Update rows with SQL expressions
+
+Use `values_sql` when you want to use SQL-like expressions to update rows. This is useful for operations like incrementing a counter, or setting a column value based on another column.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -177,76 +119,66 @@ The `values` parameter is used to provide the new values for the columns as lite
     </CodeBlock>
 </CodeGroup>
 
-Output:
+Expected table contents:
 
-```json
-    x  vector
-0  2  [1.0, 2.0]
-1  4  [5.0, 6.0]
-2  3  [10.0, 10.0]
-```
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bob | 21 |
 
-<Note title="Note">
-When rows are updated, they are moved out of the index. The row will still show up in ANN queries, but the query will not be as fast as it would be if the row was in the index. If you update a large proportion of rows, consider rebuilding the index afterwards.
+<Note title="SQL syntax">
+See the [SQL queries](/search/sql/) page for more information on the supported SQL syntax.
 </Note>
 
-### Delete Operations
+When rows are updated, they are moved out of any existing index. The row will still show up in search queries, but the query will not be as fast as it would be if the row was in the index. If you update a large proportion of rows, consider triggering an index rebuild afterwards.
 
-Remove rows that match a condition.
+## Merge incoming rows by key
 
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {DeleteOperation}
-    </CodeBlock>
-</CodeGroup>
+Merging is different from updating because it involves comparing incoming rows to existing rows by key, and then choosing what to do based on whether the key exists in the target table or not.
+The `merge_insert(""..."")` method lets you do this.
 
-<Warning title="Soft Deletion">
-Delete operations soft delete rows. Rows are hard deleted later by compaction and cleanup operations that happen in the background on LanceDB Cloud and Enterprise. The default retention on Cloud is 30 days. During this time, these rows are still accessible to query or restore by accessing old table versions (see [Versioning & Reproducibility in LanceDB](/tables/versioning/)).
-</Warning>
+In merge operations, rows are split into three groups:
 
-<Warning title="Index Deletion">
-If a table is emptied, its existing indexes are removed. Recreate indexes after ingesting new data.
-</Warning>
+- **Matched**: key exists in both source and target.
+- **Not matched**: key exists only in source.
+- **Not matched by source**: key exists only in target.
 
-## Merge Operations
+<Tip>
+**Use scalar indexes to speed up merge insert**
 
-The merge insert command is a flexible API that can be used to perform `upsert`, 
-`insert_if_not_exists`, and `replace_range_ operations`.
-
-<Tip title="Use scalar indexes to speed up merge insert">
 The merge insert command performs a join between the input data and the target table `on` the key you provide. This requires scanning that entire column, which can be expensive for large tables. To speed up this operation, create a scalar index on the join column, which will allow LanceDB to find matches without scanning the whole table.
 
 Read more about scalar indices in the [Scalar Index](/indexing/scalar-index/) guide.
 </Tip>
 
-<Tip title="HTTP 400 on Merge Insert">
-You may receive an HTTP 400 error from merge insert: `Bad request: Merge insert cannot be performed because the number of unindexed rows exceeds the maximum of 10000`. Verify that the scalar index on the join column is up to date before retrying.
-</Tip>
+<Info>
+If you see this HTTP 400 error from `merge_insert`: `Bad request: Merge insert cannot be performed because the number of unindexed rows exceeds the maximum of 10000`. Verify that the scalar index on the join column is up to date before retrying.
+</Info>
 
-<Note title="Embedding Functions">
-Like the create table and add APIs, the merge insert API will automatically compute embeddings if the table has an embedding definition in its schema. If the input data doesn't contain the source column, or the vector column is already filled, the embeddings won't be computed.
-</Note>
+Like the create table and add APIs, the merge insert API will automatically compute embeddings based on the [embedding registry](/embedding/index#embedding-registry) if the table has an embedding definition in its schema.
 
-### Upsert
+During `merge_insert`, if the input data doesn't contain the source column (i.e., the original field used to generate embeddings, such as text for a text embedding model or `image_uri` for an image model), or if a vector value is already provided, LanceDB skips embedding generation for that row. Embeddings are only auto-generated when that source field is present in the incoming data, **and** the vector field is empty.
 
-`upsert` updates rows if they exist and inserts them if they don't. To do this with merge insert, 
-enable both `when_matched_update_all()` and `when_not_matched_insert_all()`.
+### Update matched rows only
 
-#### Setting Up the Example Table and Performing Upsert
+This updates keys that already exist in the target table. Source rows with new keys are ignored.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {UpsertOperation}
+    {MergeMatchedUpdateOnly}
     </CodeBlock>
 </CodeGroup>
 
-### Insert-if-not-exists
+Expected table contents:
 
-This will only insert rows that do not have a match in the target table, thus 
-preventing duplicate rows. To do this with merge insert, enable just 
-`when_not_matched_insert_all()`.
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bobby | 21 |
 
-#### Setting Up the Example Table and Performing Insert-if-not-exists
+### Insert unmatched rows only
+
+This inserts only brand-new keys from the source. Existing keys are left unchanged.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -254,25 +186,111 @@ preventing duplicate rows. To do this with merge insert, enable just
     </CodeBlock>
 </CodeGroup>
 
-### Replace Range
+Expected table contents:
 
-You can also replace a range of rows in the target table with the input data. 
-For example, if you have a table of document chunks, where each chunk has both 
-a `doc_id` and a `chunk_id`, you can replace all chunks for a given `doc_id` with updated chunks. 
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bob | 20 |
+| 3 | Charlie | 5 |
 
-This can be tricky otherwise because if you try to use `upsert` when the new data has fewer 
-chunks you will end up with extra chunks. To avoid this, add another clause to delete any chunks 
-for the document that are not in the new data, with `when_not_matched_by_source_delete`.
+### Update matched rows and insert unmatched rows
 
-#### Setting Up the Example Table and Performing Replace Range
+Use both `when_matched_update_all()` and `when_not_matched_insert_all()` when you want to update existing keys and insert missing keys in one operation.
+
+<Info>
+This is a conventional **upsert**.
+</Info>
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {ReplaceRangeOperation}
+    {MergeUpdateInsert}
     </CodeBlock>
 </CodeGroup>
 
-<Tip title="Batch Size Recommendation">
-We suggest the best batch size to be 500k for optimal performance.
-</Tip>
+Expected table contents:
 
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bobby | 21 |
+| 3 | Charlie | 5 |
+
+### Delete target rows that are missing from source
+
+Use `when_not_matched_by_source_delete()` when you want to remove any target row that does not appear in the incoming source data.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {MergeDeleteMissingBySource}
+    </CodeBlock>
+</CodeGroup>
+
+Expected table contents:
+
+| id | name | login_count |
+| --- | --- | --- |
+| 2 | Bobby | 21 |
+| 3 | Charlie | 5 |
+
+In the example above, LanceDB matches rows by `id`. Rows with `id=2` and `id=3` exist in both the table and incoming data, so they are updated. Row `id=1` exists only in the target, so it is deleted.
+
+### Use partial columns in merge updates
+
+Merge updates do not require you to provide values for all columns. You can provide only a subset of columns in source rows. For matched rows, only the provided columns are updated.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {MergePartialColumns}
+    </CodeBlock>
+</CodeGroup>
+
+Expected table contents:
+
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bobby | 20 |
+| 3 | Charlie | null |
+
+Note that in the example above, when `merge_insert` creates a new row, any missing columns are written as `null`. If a missing column is non-nullable in your schema, the insert will fail.
+
+## Delete rows
+
+Delete operations **soft delete** rows that match a given condition.
+The underlying data is not immediately removed, but is marked
+for deletion (in the [deletion files](https://lance.org/format/table/#deletion-files) at the Lance format level) and excluded from query results.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {DeleteOperation}
+    </CodeBlock>
+</CodeGroup>
+
+Expected table contents:
+
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | Bob | 20 |
+
+
+<Warning>
+**Deleting rows removes them from the index**
+
+When rows are deleted, those rows are also excluded from the index segments, so indexed queries will not return them either. If ALL the rows are deleted (i.e., the table is emptied), ensure that you recreate the index after ingesting new data.
+</Warning>
+
+To permanently remove deleted rows, you can optimize the table, which will run compaction and cleans up the soft-deleted rows, which frees up storage space.
+
+- In LanceDB OSS, compaction and cleanup are manual. Run `table.optimize()` regularly to free up disk space.
+- In LanceDB Cloud, compaction and cleanup runs automatically in the background.
+- In LanceDB Enterprise, files aren't cleaned up by default. You can configure the compaction and cleanup behavior at cluster setup time to suit your organization's retention policy.
+
+By default, table cleanup removes data up to 7 days ago. If you need to reclaim space from deleted rows more aggressively, manually call `table.optimize()` use a shorter retention window as follows:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {UpdateOptimizeCleanup}
+    </CodeBlock>
+</CodeGroup>

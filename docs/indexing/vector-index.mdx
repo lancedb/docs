@@ -1,7 +1,7 @@
 ---
 title: "Vector Indexes"
 sidebarTitle: "Vector Index"
-description: "Build and optimize vector indexes in LanceDB using IVF-PQ, HNSW, and binary indexes."
+description: "Build and optimize LanceDB vector indexes, including IVF, HNSW and binary quantized indexes."
 icon: "arrow-up-right-dots"
 ---
 import {
@@ -18,29 +18,67 @@ import {
     PyVectorIndexCheckStatus as VectorIndexCheckStatus,
 } from '/snippets/indexing.mdx';
 
-LanceDB offers two main vector indexing algorithms: **Inverted File (IVF)** and **Hierarchically Navigable Small Worlds (HNSW)**. You can create multiple vector indexes within a Lance table. This guide walks through common configurations and build patterns.
+You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two kinds of vector indexing algorithms: **Inverted File (IVF)** and **Hierarchically Navigable Small Worlds (HNSW)**.
 
-### Option 1: Self-Hosted Indexing
+<Info>
+**IVF + HNSW**
 
-**Manual, Sync or Async:** If using LanceDB Open Source, you will have to build indexes manually, as well as reindex and tune indexing parameters. The Python SDK lets you do this *synchronously and asynchronously*.
+In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph (with quantization via `IVF_HNSW_PQ` / `IVF_HNSW_SQ`). This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
+</Info>
 
-### Option 2: Automated Indexing
+### Manual Indexing
 
-**Automatic and Async:** Indexing is automatic in LanceDB Cloud/Enterprise. As soon as data is updated, our system automates index optimization. *This is done asynchronously*.
+If using LanceDB OSS, you will have to create the vector index manually, by calling `table.create_index()`, and updating the index as new data arrives and tuning its parameters is also a manual process.
 
-Here is what happens in the background - when a table contains a single vector column named `vector`, LanceDB automatically:
+### Automatic Indexing
 
-- Infers the vector column from the schema
-- Creates an optimized `IVF_PQ` index without manual configuration
-- The default distance is `l2` or euclidean
+ <Badge color="red">Enterprise-only</Badge> 
+Vector indexing is managed **automatically** in LanceDB Cloud/Enterprise. As soon as data is updated, the system updates the index and optimizates it. *This is done asynchronously as a background process*.
 
-Finally, LanceDB Cloud/Enterprise will analyze your data distribution to **automatically configure indexing parameters**.
+When you create a table in LanceDB Enterprise, LanceDB automatically:
 
-<Note title="Manual Index Creation">
-You can create a new index with different parameters using `create_index` - this replaces any existing index
+- Infers the vector columns from the schema
+- Create an optimized `IVF_PQ` index without manual configuration
+- Automatically configure indexing parameters
 
+The default distance is `l2` (Euclidean).
+
+<Note>
+You can call `create_index()` with different parameters to create a new index -- this replaces any existing index.
 Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
 </Note>
+
+## Choose the Right Index
+
+Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
+
+| If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
+| :--- | :--- | :--- | :--- |
+| Best recall/latency trade-off | `IVF_HNSW_SQ` | Combines IVF partitioning with HNSW graph search for strong quality at low latency. | Typically a little larger than `1/4` of raw size |
+| Maximum compression | `IVF_RQ` | RaBitQ-style quantization with very strong compression. | Around `1/32` of raw size |
+| Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | On small-dimensional vectors, `IVF_PQ` often provides higher accuracy with similar performance compared to `IVF_RQ`. | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) |
+
+<Warning>
+If your vector search frequently includes metadata filters (`where(...)`), prefer `IVF_RQ` or `IVF_PQ`. In filtered workloads, `IVF_HNSW_SQ` latency can fluctuate significantly.
+</Warning>
+
+Compression ratios are practical rules of thumb and can vary with vector distribution, metric, and configuration.
+For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher compression than `IVF_RQ`.
+
+### Index Tuning
+
+Start with these values, then tune for your workload:
+
+- `IVF_HNSW_SQ`
+  - `num_partitions`: start at `num_rows // 1,048,576` (rounded to an integer)
+  - Lower `num_partitions` can reduce search latency, but index build may become slower because partitions are larger.
+  - `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
+- `IVF_RQ`
+  - `num_partitions`: start at `num_rows // 4096` (rounded to an integer). This is a strong default for most datasets.
+- `IVF_PQ`
+  - `num_partitions`: start at `num_rows // 4096` (rounded to an integer).
+  - `num_sub_vectors`: start at `dimension // 8`. Increase for better recall, decrease for faster search and smaller indexes.
+  - For small dimensions (`dimension <= 256`), `IVF_PQ` is often preferred over `IVF_RQ` for better accuracy at similar query performance.
 
 ## Example: Construct an IVF Index
 
@@ -53,12 +91,15 @@ Make sure you have enough data in your table (at least a few thousand rows) for 
 Sometimes you need to configure the index beyond default parameters:
 
 - Index Types:
-    - `IVF_PQ`: Default index type, optimized for high-dimensional vectors
-    - `IVF_HNSW_SQ`: Combines IVF clustering with HNSW graph for improved search quality
+    - `IVF_HNSW_SQ`: best recall/latency trade-off
+    - `IVF_RQ`: best compression for large, high-dimensional datasets
+    - `IVF_PQ`: often higher accuracy than `IVF_RQ` for small dimensions (`<= 256`) at similar query performance
 - `metrics`: default is `l2`, other available are `cosine` or `dot`
     - When using `cosine` similarity, distances range from 0 (identical vectors) to 2 (maximally dissimilar)
-- `num_partitions`: The number of partitions in the IVF portion of the index. This number is usually chosen to target a particular number of vectors per partition. A common heuristic is `num_rows / 8192`. Larger values generally make index building take longer but use less memory, and they often improve accuracy at the cost of slower search because queries typically need a higher `nprobes`. LanceDB automatically selects a sensible default `num_partitions` based on the heuristic mentioned above.
-- `num_sub_vectors`: The number of sub-vectors that will be created during Product Quantization (PQ). This number is typically chosen based on the desired recall and the dimensionality of the vector. Larger `num_sub_vectors` increases accuracy but can significantly slow queries; a good starting point is `dimension / 8`. 
+- `num_partitions`: use index-specific starting points from the section above:
+    - `IVF_HNSW_SQ`: `num_rows // 1,048,576`
+    - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
+- `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension // 8`. Larger values often improve recall but can slow search.
 
 Let's take a look at a sample request for an IVF index:
 
@@ -81,7 +122,7 @@ Connect to LanceDB and open the table you want to index.
 
 ### 2. Construct an IVF Index
 
-Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. By default LanceDB uses Product Quantization; switch to `IVF_SQ` for scalar quantization.
+Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. You can switch `index_type` to `IVF_RQ` or `IVF_HNSW_SQ` depending on your recall/latency/compression target.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -104,7 +145,12 @@ Search using a random 1,536-dimensional embedding.
 The previous query uses:
 
 - `limit`: number of results to return
-- `nprobes`: number of IVF partitions to scan; covering roughly 5–10% of partitions often balances recall and latency
+- `nprobes`: number of IVF partitions to scan. LanceDB auto-tunes this by default.
+- `ef`: primarily relevant for `IVF_HNSW_SQ`; start around `1.5 * k` (where `k=limit`) and increase up to `10 * k` for higher recall.
+- `nprobes` by index type:
+    - `IVF_HNSW_SQ`: usually keep auto-tuned `nprobes`, then tune `ef` first. For filtered search (`where(...)`), expect higher latency variance.
+    - `IVF_RQ`: keep auto-tuned `nprobes`; increase only when recall is insufficient.
+    - `IVF_PQ`: keep auto-tuned `nprobes`; increase when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`.
 - `refine_factor`: reads additional candidates and reranks in memory
 - `.to_pandas()`: converts the results to a pandas DataFrame
 
@@ -195,4 +241,3 @@ To wait until all data is fully indexed, you can specify the `wait_timeout` para
     {VectorIndexCheckStatus}
     </CodeBlock>
 </CodeGroup>
-

@@ -15,14 +15,11 @@ In this tutorial, you'll create a table with multiple vector embeddings per docu
 
 Each item in your dataset can have a column containing multiple vectors, which LanceDB can efficiently index and search. When performing a search, you can query using either a single vector embedding or multiple vector embeddings. 
 
-LanceDB also integrates with [ConteXtualized Token Retriever (XTR)](https://arxiv.org/abs/2304.01982), an advanced retrieval model that prioritizes the most semantically important document tokens during search. This integration enhances the quality of search results by focusing on the most relevant token matches.
+<Warning>
+Currently, only the `cosine` metric is supported for multivector search. The vector value type can be `float16`, `float32`, or `float64`.
+</Warning>
 
-<Tip>
-- Currently, only the `cosine` metric is supported for multivector search.
-- The vector value type can be `float16`, `float32`, or `float64`.
-</Tip>
-
-### Computing Similarity
+## Computing Similarity
 
 MaxSim (Maximum Similarity) is a key concept in late interaction models that:
 
@@ -49,7 +46,7 @@ For now, you should use only the `cosine` metric for multivector search.
 The vector value type can be `float16`, `float32` or `float64`.
 </Warning>
 
-## Example: Multivector Search
+## Using Multivector Search
 
 ### 1. Setup
 
@@ -153,9 +150,89 @@ results_multi = tbl.search(query_multi).limit(5).to_pandas()
 ```
 </CodeGroup>
 
-## What's Next?
 
-If you still need more guidance, you can try the complete [Multivector Search Notebook](https://colab.research.google.com/github/lancedb/vectordb-recipes/blob/main/examples/saas_examples/python_notebook/Multivector_on_LanceDB_Cloud.ipynb).
+Visit the [Hugging Face embedding integration](/integrations/embedding/huggingface/) page for info on embedding models.
 
+## Simple Example: ColBERT Embeddings
 
+[ColBERT](https://arxiv.org/abs/2004.12832) is the most well-known late-interaction retrieval model that
+represents each document and query as multiple token embeddings and scores matches by taking the best
+token-to-token similarities (MaxSim) across them.
 
+Install the dependencies before running this example:
+
+```bash
+pip install pylate lancedb pandas
+```
+
+<CodeGroup>
+```python Python icon="python"
+import numpy as np
+import pyarrow as pa
+import lancedb
+from pylate import models
+
+# 1) Load a late-interaction model via PyLate
+# PyLate docs show ColBERT() + encode(..., is_query=...) :contentReference[oaicite:2]{index=2}
+model = models.ColBERT(model_name_or_path="lightonai/GTE-ModernColBERT-v1")
+
+# You can discover dim from one embedding (avoid guessing)
+dim = model.encode(["hello"], is_query=True)[0].shape[1]
+
+# 2) Create a LanceDB table with a multivector column
+db = lancedb.connect("./pylate_lancedb")
+schema = pa.schema([
+    pa.field("doc_id", pa.string()),
+    pa.field("text", pa.string()),
+    # multivector: list<list<float32, dim>> :contentReference[oaicite:3]{index=3}
+    pa.field("mv", pa.list_(pa.list_(pa.float32(), dim))),
+])
+
+docs = [
+    {"doc_id": "1", "text": "The train to Tokyo leaves at 5pm."},
+    {"doc_id": "2", "text": "That Pho restaurant in Hanoi is highly rated."},
+    {"doc_id": "3", "text": "This is a noodle bar in Osaka, Japan."},
+]
+
+# 3) Encode documents with PyLate (token vectors per doc)
+doc_texts = [d["text"] for d in docs]
+doc_embs = model.encode(doc_texts, is_query=False)  # list/array of (T, dim) per doc :contentReference[oaicite:4]{index=4}
+
+rows = []
+for d, emb in zip(docs, doc_embs):
+    emb = np.asarray(emb, dtype=np.float32)
+    rows.append({**d, "mv": emb.tolist()})
+
+tbl = db.create_table("docs", data=rows, schema=schema, mode="overwrite")
+
+# 4) If your dataset is large, build an index + query using a query matrix
+# For small datasets < 100k records, you can skip indexing
+# tbl.create_index(vector_column_name="mv", metric="cosine")
+
+query = "Tell me about ramen in Japan"
+q_emb = np.asarray(model.encode([query], is_query=True)[0], dtype=np.float32)  # (Tq, dim) :contentReference[oaicite:5]{index=5}
+
+out = tbl.search(q_emb).limit(5).to_pandas()  # multivector search accepts a matrix :contentReference[oaicite:6]{index=6}
+print(out[["doc_id", "text"]])
+```
+</CodeGroup>
+
+Late interaction models implementations evolve rapidly, so it's recommended to check the latest popular models
+when trying out multivector search.
+
+## Advanced Example: XTR Embeddings
+
+[ConteXtualized Token Retriever (XTR)](https://arxiv.org/abs/2304.01982) is a late-interaction retrieval model that represents text as token-level vectors instead of a single embedding.
+This lets search score token-to-token matches (MaxSim), which can improve fine-grained relevance.
+
+The notebook linked below shows how to integrate XTR (ConteXtualized Token Retriever), which prioritizes critical document
+tokens during the initial retrieval stage and removes the gathering stage to significantly improve performance.
+By focusing on the most semantically salient tokens early in the process, XTR reduces computational complexity
+with improved recall, ensuring rapid identification of candidate documents.
+
+<Card
+    icon="book"
+    title="Multivector search with ColPali + XTR embeddings and LanceDB"
+    href="https://colab.research.google.com/github/lancedb/vectordb-recipes/blob/main/examples/multivector_xtr/main.ipynb"
+>
+</Card>

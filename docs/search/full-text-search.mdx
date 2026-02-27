@@ -47,9 +47,9 @@ const data = [
     { vector: [5.9, 26.5], text: "There are several kittens playing" },
 ];
 const tbl = await db.createTable("my_table", data, { mode: "overwrite" });
-{{< /code >}}
+```
 
-{{< code language="rust" >}}
+```rust Rust icon="rust"
 let uri = "data/sample-lancedb";
 let db = connect(uri).execute().await?;
 let initial_data: Box<dyn RecordBatchReader + Send> = create_some_records()?;
@@ -64,6 +64,12 @@ let tbl = db
 
 Create a full-text search index on your text column:
 
+<Note>
+In Python, this page shows the synchronous `create_fts_index(...)` form. For the
+asynchronous equivalent (`await table.create_index("text", config=FTS(...))`), see
+[FTS index](/indexing/fts-index).
+</Note>
+
 <CodeGroup>
 ```python Python icon="python"
 table.create_fts_index("text")
@@ -73,9 +79,9 @@ table.create_fts_index("text")
 await tbl.createIndex("text", {
     config: lancedb.Index.fts(),
 });
-{{< /code >}}
+```
 
-{{< code language="rust" >}}
+```rust Rust icon="rust"
 tbl
     .create_index(&["text"], Index::FTS(FtsIndexBuilder::default()))
     .execute()
@@ -519,6 +525,10 @@ const fuzzyResults = await table.query()
 Phrase matching enables you to search for exact sequences of words. Unlike regular text search 
 which matches individual terms independently, phrase matching requires words to appear in the 
 specified order with no intervening terms. 
+
+<Note>
+Phrase queries are supported but only for a single column; providing multiple columns with a quoted phrase raises an error.
+</Note>
 
 Phrase matching is particularly useful for:
 
@@ -1093,4 +1103,3 @@ const phraseResults = await table.query()
 console.log(phraseResults);
 ```
 </CodeGroup>
-
