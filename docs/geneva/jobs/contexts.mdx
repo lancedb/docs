@@ -97,6 +97,37 @@ See the API docs for all the parameters [`GenevaCluster.create_kuberay()`](https
 
 </CodeGroup>
 
+#### Exit Modes
+
+By default, the KubeRay cluster waits for all running jobs to complete before deleting. You can customize this behavior with the `on_exit` parameter:
+
+```python Python icon="python"
+from geneva.runners.ray.raycluster import ExitMode
+
+with db.context(cluster=cluster_name, manifest=manifest_name, on_exit=ExitMode.DELETE_AFTER_JOBS):
+    fut1 = tbl.backfill_async("embedding_a")
+    fut2 = tbl.backfill_async("embedding_b")
+    # No need to call .result() — the context waits for both jobs
+# Both jobs completed; cluster deleted
+```
+
+| Exit Mode | Behavior |
+|-----------|----------|
+| `ExitMode.DELETE_AFTER_JOBS` (default) | Wait for all async jobs to complete, then delete. Ideal for batch scripts using `backfill_async()`. |
+| `ExitMode.DELETE` | Always delete the cluster immediately on exit, without waiting for running jobs. |
+| `ExitMode.DELETE_ON_SUCCESS` | Delete on success; retain if an exception occurred. Useful for debugging. |
+| `ExitMode.RETAIN` | Never delete the cluster. Useful for notebooks and interactive sessions. |
+
+<Tip>
+`DELETE_AFTER_JOBS` is the default — the cluster stays alive until all running jobs have finished, then cleans itself up automatically. You can set a `wait_timeout` (in seconds) to cap how long the cluster waits before deleting:
+
+```python Python icon="python"
+with db.context(cluster=cluster_name, on_exit=ExitMode.DELETE_AFTER_JOBS, wait_timeout=300):
+    fut = tbl.backfill_async("embedding")
+# Waits up to 5 minutes for jobs, then deletes regardless
+```
+</Tip>
+
 ### External Ray cluster
 If you already have a Ray cluster, Geneva can execute jobs against it too. You do so by defining a Geneva cluster with [`GenevaCluster.create_external()`](https://lancedb.github.io/geneva/api/cluster/#geneva.cluster.mgr.GenevaCluster.create_external) which has the address of the cluster. Here's an example:
 
@@ -265,31 +296,6 @@ with db.context(cluster=cluster_name, manifest=manifest_name):
     tbl.backfill("embedding")
 ```
 </CodeGroup>
-
-### Exit Modes
-
-By default, the cluster is deleted when the context manager exits. You can customize this behavior with the `on_exit` parameter:
-
-```python Python icon="python"
-from geneva.runners.ray.raycluster import ExitMode
-
-with db.context(cluster=cluster_name, manifest=manifest_name, on_exit=ExitMode.DELETE_AFTER_JOBS):
-    fut1 = tbl.backfill_async("embedding_a")
-    fut2 = tbl.backfill_async("embedding_b")
-    # No need to call .result() — the context waits for both jobs
-# Both jobs completed; cluster deleted
-```
-
-| Exit Mode | Behavior |
-|-----------|----------|
-| `ExitMode.DELETE` (default) | Always delete the cluster on exit. |
-| `ExitMode.DELETE_ON_SUCCESS` | Delete on success; retain if an exception occurred. Useful for debugging. |
-| `ExitMode.DELETE_AFTER_JOBS` | Wait for all async jobs to complete, then delete. Recommended for batch scripts using `backfill_async()`. |
-| `ExitMode.RETAIN` | Never delete the cluster. Useful for notebooks and interactive sessions. |
-
-<Tip>
-Use `DELETE_AFTER_JOBS` when running batch scripts that launch fire-and-forget async jobs. The cluster stays alive until all running jobs on the cluster have finished, then cleans itself up automatically. This works across multiple processes sharing the same cluster.
-</Tip>
 
 In a notebook environment, you can manually enter and exit the context manager in multiple steps like so:
 
