@@ -1,0 +1,79 @@
+---
+title: OpenAI
+sidebarTitle: OpenAI
+icon: brain
+---
+
+Embed text and generate completions using OpenAI models.
+See the [API reference](https://lancedb.github.io/geneva/api/openai/) for all parameters.
+
+```python
+pip install 'geneva[udf-text-openai]'
+```
+
+<Warning>
+OpenAI UDFs make API calls that incur **per-token costs**. Each row processed results in one
+or more API requests billed to your account. Review
+[OpenAI pricing](https://openai.com/api/pricing/) before running on large tables.
+</Warning>
+
+<Note>
+Set the `OPENAI_API_KEY` environment variable before calling any factory function below.
+The key is read **at UDF creation time** and serialized with the UDF — no cluster-level
+`env_vars` configuration is needed.
+</Note>
+
+## Embeddings
+
+**Compare models by adding multiple embedding columns at once:**
+
+```python
+from geneva.udfs import openai_embedding_udf
+
+table.add_columns({
+    # Default model — fast, 1536 dimensions
+    "embedding_small": openai_embedding_udf(
+        column="body",
+        model="text-embedding-3-small",
+    ),
+    # Higher-quality model — 3072 dimensions
+    "embedding_large": openai_embedding_udf(
+        column="body",
+        model="text-embedding-3-large",
+    ),
+    # Same large model, truncated to 256 dimensions for storage efficiency
+    "embedding_large_256": openai_embedding_udf(
+        column="body",
+        model="text-embedding-3-large",
+        output_dimensionality=256,
+    ),
+})
+```
+
+## Generation
+
+Generate text from OpenAI chat completion models. Supports both text and binary (image)
+input columns.
+See the [API reference](https://lancedb.github.io/geneva/api/openai/#geneva.udfs.openai.openai_udf) for all parameters.
+
+**Add a summary and an image caption in one call, using different models:**
+
+```python
+from geneva.udfs import openai_udf
+
+table.add_columns({
+    # Fast model for bulk text summarization
+    "summary": openai_udf(
+        column="body",
+        prompt="Summarize this document in 3 bullet points",
+        model="gpt-5-mini",
+    ),
+    # More capable model for nuanced image captions
+    "caption": openai_udf(
+        column="image",
+        prompt="Provide a 1 sentence description of the scene",
+        model="gpt-5",
+        mime_type="image/jpeg",
+    ),
+})
+```
