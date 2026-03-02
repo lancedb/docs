@@ -50,6 +50,16 @@ This works for any combination — different models from the same provider, diff
 different prompts with the same model, or different dimensionality settings. All columns are
 computed in parallel during the same backfill job.
 
+To recompute columns later (e.g., after altering a UDF or adding new rows), use `backfill`:
+
+```python
+# Backfill a single column
+table.backfill("emb_small")
+
+# Backfill only rows missing a value
+table.backfill("summary_openai", where="summary_openai is null")
+```
+
 ## What's included
 
 All built-in UDFs share these capabilities:
