@@ -1,0 +1,60 @@
+---
+title: Sentence Transformers
+sidebarTitle: Sentence Transformers
+icon: microchip
+---
+
+Embed text using any HuggingFace Sentence Transformer model locally — no API key needed.
+See the [API reference](https://lancedb.github.io/geneva/api/embeddings/#geneva.udfs.text.embeddings.sentence_transformer_udf) for all parameters.
+
+```python
+pip install 'geneva[udf-text-sentence-transformers]'
+```
+
+<Tip>
+Sentence Transformer models run **locally** on your workers — there are no API calls and no
+per-token costs. This makes them a good fit for large-scale embedding jobs where cost is a
+concern.
+</Tip>
+
+## Embeddings
+
+**Compare a lightweight and a high-quality model side by side:**
+
+```python
+from geneva.udfs import sentence_transformer_udf
+
+table.add_columns({
+    # Lightweight default model — fast, CPU-friendly
+    "embedding_mini": sentence_transformer_udf(
+        column="body",
+        model="sentence-transformers/all-MiniLM-L6-v2",
+    ),
+    # Larger model with GPU acceleration
+    "embedding_bge": sentence_transformer_udf(
+        column="body",
+        model="BAAI/bge-large-en-v1.5",
+        num_gpus=1.0,
+    ),
+})
+```
+
+## GPU acceleration
+
+Sentence Transformer models can run on CPU or GPU. Smaller models like `all-MiniLM-L6-v2`
+work well on CPU, but larger models like `bge-large-en-v1.5` benefit significantly from GPU
+acceleration. Use the `num_gpus` parameter to request GPU resources for a worker:
+
+```python
+# CPU-only (default) — suitable for lightweight models
+sentence_transformer_udf(column="body", model="sentence-transformers/all-MiniLM-L6-v2")
+
+# GPU-accelerated — recommended for larger models
+sentence_transformer_udf(column="body", model="BAAI/bge-large-en-v1.5", num_gpus=1.0)
+```
+
+Setting `num_gpus` to a fractional value (e.g., `0.5`) tells the
+[Ray scheduler](https://docs.ray.io/en/latest/ray-core/scheduling/accelerators.html)
+to co-locate multiple workers on the same physical GPU. For example, two UDFs with
+`num_gpus=0.5` will be scheduled on a single GPU. Note that Ray does not enforce GPU memory
+limits — it is your responsibility to ensure the combined models fit in GPU memory.

@@ -1,0 +1,86 @@
+---
+title: Gemini
+sidebarTitle: Gemini
+icon: google
+---
+
+Embed text and generate completions using Google's Gemini models.
+See the API reference for [Gemini UDFs](https://lancedb.github.io/geneva/api/gemini/) and
+[Embedding UDFs](https://lancedb.github.io/geneva/api/embeddings/) for all parameters.
+
+```python
+pip install 'geneva[udf-text-gemini]'
+```
+
+<Warning>
+Gemini UDFs make API calls that incur **per-token costs**. Each row processed results in one
+or more API requests billed to your account. Review
+[Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing) before running on large tables.
+</Warning>
+
+<Note>
+Set the `GEMINI_API_KEY` environment variable before calling any factory function below.
+The key is read **at UDF creation time** and serialized with the UDF — no cluster-level
+`env_vars` configuration is needed.
+</Note>
+
+## Embeddings
+
+Embed text with optional task-type hints for retrieval, classification, and clustering scenarios.
+See the [API reference](https://lancedb.github.io/geneva/api/embeddings/#geneva.udfs.text.embeddings.gemini_embedding_udf) for all parameters.
+
+**Multiple embeddings tuned for different retrieval tasks:**
+
+```python
+from geneva.udfs import gemini_embedding_udf
+
+table.add_columns({
+    # Full-dimension embedding for document retrieval
+    "embedding_doc": gemini_embedding_udf(
+        column="body",
+        model="gemini-embedding-001",
+        task_type="RETRIEVAL_DOCUMENT",
+    ),
+    # Compact embedding for semantic similarity
+    "embedding_sim_256": gemini_embedding_udf(
+        column="body",
+        model="gemini-embedding-001",
+        task_type="SEMANTIC_SIMILARITY",
+        output_dimensionality=256,
+    ),
+})
+```
+
+## Generation
+
+Generate text from Gemini models. Supports text, image, audio, video, and document inputs.
+See the [API reference](https://lancedb.github.io/geneva/api/gemini/#geneva.udfs.text.gemini.gemini_udf) for all parameters.
+
+**Enrich a table with sentiment, captions, and transcriptions at once:**
+
+```python
+from geneva.udfs import gemini_udf
+
+table.add_columns({
+    # Classify review sentiment with a fast model
+    "sentiment": gemini_udf(
+        column="review",
+        prompt="Classify the sentiment as positive, negative, or neutral. Return only the label.",
+        model="gemini-2.5-flash",
+    ),
+    # Caption product images with a more capable model
+    "caption": gemini_udf(
+        column="image",
+        prompt="Describe the main subject of this image in one sentence",
+        model="gemini-2.5-pro",
+        mime_type="image/jpeg",
+    ),
+    # Transcribe audio clips
+    "transcript": gemini_udf(
+        column="audio",
+        prompt="Transcribe this audio clip",
+        model="gemini-2.5-flash",
+        mime_type="audio/mp3",
+    ),
+})
+```

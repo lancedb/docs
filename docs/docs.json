@@ -156,6 +156,15 @@
                 "group": "User Defined Functions (UDFs)",
                 "pages": [
                   "geneva/udfs/index",
+                  {
+                    "group": "Built-in Providers",
+                    "pages": [
+                      "geneva/udfs/providers/index",
+                      "geneva/udfs/providers/openai",
+                      "geneva/udfs/providers/gemini",
+                      "geneva/udfs/providers/sentence-transformers"
+                    ]
+                  },
                   "geneva/udfs/blobs",
                   "geneva/udfs/error_handling",
                   "geneva/udfs/advanced-configuration"
@@ -383,6 +392,10 @@
     {
       "source": "/tutorials/vector-search/:slug*",
       "destination": "tutorials/search/:slug*"
+    },
+    {
+      "source": "/geneva/udfs/built-in",
+      "destination": "/geneva/udfs/providers"
     }
   ]
 }

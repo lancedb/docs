@@ -105,6 +105,10 @@ class OpenAIEmbedding(Callable):
         return pa.array(resp.data[0].embeddings)
 ```
 
+<Tip>
+For common providers like OpenAI and Gemini, Geneva ships [built-in UDFs](/geneva/udfs/providers) that handle API keys, retries, and batching for you — no custom class needed.
+</Tip>
+
 > **Note**:  The state is will be independently managed on each distributed Worker.
 
 ## UDF options

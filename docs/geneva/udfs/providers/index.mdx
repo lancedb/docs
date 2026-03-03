@@ -1,0 +1,76 @@
+---
+title: Built-in LLM and Embedding UDFs
+sidebarTitle: Overview
+icon: sparkles
+---
+
+Geneva ships pre-built UDFs for common LLM providers so you don't have to write custom classes
+for everyday embedding and generation tasks.
+
+| Provider | Embeddings | Generation | Runs locally | Install extra |
+|----------|:----------:|:----------:|:------------:|---------------|
+| [OpenAI](/geneva/udfs/providers/openai) | ✓ | ✓ | — | `geneva[udf-text-openai]` |
+| [Gemini](/geneva/udfs/providers/gemini) | ✓ | ✓ | — | `geneva[udf-text-gemini]` |
+| [Sentence Transformers](/geneva/udfs/providers/sentence-transformers) | ✓ | — | ✓ | `geneva[udf-text-sentence-transformers]` |
+
+OpenAI and Gemini UDFs make remote API calls that incur per-token costs.
+Sentence Transformers run locally on your workers with no API costs — see
+[GPU acceleration](/geneva/udfs/providers/sentence-transformers#gpu-acceleration)
+for performance tips.
+
+## Comparing models and prompts
+
+Because `add_columns` accepts a dictionary, you can evaluate multiple models, parameter
+settings, or prompts in a single pass over your data. Each entry produces its own column,
+so results sit side by side in the same table for easy comparison.
+
+```python
+from geneva.udfs import openai_udf, gemini_udf, openai_embedding_udf
+
+table.add_columns({
+    # Compare two embedding models
+    "emb_small": openai_embedding_udf(column="body", model="text-embedding-3-small"),
+    "emb_large": openai_embedding_udf(column="body", model="text-embedding-3-large"),
+
+    # Compare the same task across providers
+    "summary_openai": openai_udf(
+        column="body",
+        prompt="Summarize in one sentence",
+        model="gpt-5-mini",
+    ),
+    "summary_gemini": gemini_udf(
+        column="body",
+        prompt="Summarize in one sentence",
+        model="gemini-2.5-flash",
+    ),
+})
+```
+
+This works for any combination — different models from the same provider, different providers,
+different prompts with the same model, or different dimensionality settings. All columns are
+computed in parallel during the same backfill job.
+
+To recompute columns later (e.g., after altering a UDF or adding new rows), use `backfill`:
+
+```python
+# Backfill a single column
+table.backfill("emb_small")
+
+# Backfill only rows missing a value
+table.backfill("summary_openai", where="summary_openai is null")
+```
+
+## What's included
+
+All built-in UDFs share these capabilities:
+
+- **API key handling** — Keys are captured from your local environment at UDF creation time and serialized with the UDF. No cluster-level environment configuration required.
+- **Retry with backoff** — Transient API errors (rate limits, timeouts, server errors) are automatically retried with exponential backoff.
+- **Batch processing** — Embedding UDFs batch multiple rows per API call for better throughput.
+- **L2 normalization** — Embedding UDFs support optional L2 normalization via the `normalize` parameter (disabled by default since both providers return pre-normalized vectors).
+
+## See also
+
+- [Working with UDFs](/geneva/udfs/index) — Write custom scalar, batched, and stateful UDFs
+- [Error handling](/geneva/udfs/error_handling) — Fine-grained retry and skip policies
+- [Working with blobs](/geneva/udfs/blobs) — Process binary data (images, audio, video)
