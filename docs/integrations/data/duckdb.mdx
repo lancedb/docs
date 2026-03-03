@@ -4,7 +4,7 @@ sidebarTitle: "DuckDB"
 description: "Learn how to use the DuckDB-Lance extension to query Lance tables with SQL."
 ---
 
-LanceDB integrates with [DuckDB](https://duckdb.org/) through the DuckDB Lance extension. In this page, we'll show how LanceDB manages table lifecycle, and DuckDB provides SQL analytics (including joins) and search over those tables.
+LanceDB integrates with [DuckDB](https://duckdb.org/) through the [Lance extension](https://github.com/lance-format/lance-duckdb) for DuckDB. In this page, we'll show how LanceDB manages table lifecycle, and DuckDB provides SQL analytics (including joins) and search over those tables.
 
 Note that earlier versions of LanceDB used to recommend converting Lance tables to Arrow tables via `table.to_arrow()`. Although this method is still available (because DuckDB [natively scans Arrow tables](https://duckdb.org/2021/12/03/duck-arrow)), it is no longer the recommended workflow for working with Lance tables in DuckDB. This page shows how to use the Lance extension with namespace-attached LanceDB tables, allowing you to pushdown SQL queries directly to the Lance layer.
 
@@ -46,6 +46,11 @@ FROM (
 ```
 
 This table is the source of truth for all DuckDB queries below.
+
+<Info>
+The examples below show SQL entered in the DuckDB CLI. You can run the same SQL from
+Python as well, using LanceDB and DuckDB's Python clients in your application code.
+</Info>
 
 ## Query the table with SQL
 
@@ -106,3 +111,9 @@ SELECT animal, noise, vector, _hybrid_score, _distance, _score
 A directory namespace maps a LanceDB catalog root to namespace-qualified table identifiers in DuckDB. This keeps table discovery and table naming stable as your project grows.
 
 To learn more about the catalog and namespace model, see [Namespaces and the Catalog Model](/namespaces).
+
+
+## Advanced usage
+
+See the [docs](https://github.com/lance-format/lance-duckdb) directory in the Lance-DuckDB extension repo
+for more advanced usage on SQL, Cloud and REST API clients.

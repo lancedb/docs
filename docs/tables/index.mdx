@@ -63,7 +63,7 @@ explore some more table operations you'll typically need when working with Lance
 - **Create empty tables** by defining explicit Arrow schemas
 - **Vector similarity search** with filtering and projections
 - **Filtered queries** that can operate on nested structs
-- **Interoperate with DuckDB** and run traditional SQL queries on an Arrow table (Python)
+- **Query Lance tables in DuckDB** via the Lance extension for SQL analytics (including joins)
 
 <Note title="Python async users">
 This page uses **synchronous** Python snippets. If your Python app uses `asyncio`,
@@ -469,44 +469,11 @@ use `query()` instead), and use the `where` method to filter on the `strength` f
 
 Clearly, the strongest characters are all Knights of the Round Table!
 
-## SQL queries using DuckDB
-<Badge color="green">Python Only</Badge>
-
-You can leverage a full SQL engine like DuckDB to run more complex queries that involve
-sorting, aggregations, joins, etc. To do this, you convert the LanceDB tables to an Arrow table,
-which can be natively queried by DuckDB.
-
 <Note>
-This workflow applies to local (embedded) tables only. In the Python SDK, remote tables (Cloud/Enterprise)
-do not support `to_arrow()` or `to_pandas()`. To retrieve data from remote tables, use search queries
-with `.to_arrow()` on the results.
+Need SQL analytics like filters, aggregations, or joins on Lance tables? Use the DuckDB
+Lance extension to query Lance tables directly with SQL. See the
+[DuckDB integration guide](/integrations/data/duckdb).
 </Note>
-
-<CodeGroup>
-```python Python icon="python"
-# Convert table to an Arrow table
-arrow_table = table.to_arrow()
-
-import duckdb
-
-# Query the Arrow table using SQL
-duckdb_tbl = duckdb.sql("SELECT name, role, description FROM arrow_table WHERE stats.strength > 3 ORDER BY power DESC LIMIT 5")
-print(duckdb_tbl)
-```
-</CodeGroup>
-
-| name | role | description |
-| --- | --- | --- |
-| Sir Galahad | Knight of the Round Table | The purest and most virtuous knight, chosen to… |
-| Sir Lancelot | Knight of the Round Table | Arthur's most skilled knight, famed for unmatc… |
-| Sir Gawain | Knight of the Round Table | A noble and honorable knight known for his cou… |
-| Sir Percival | Knight of the Round Table | A loyal and innocent knight whose bravery and … |
-| Mordred | Traitor Knight | Arthur's treacherous son or nephew who ultimat… |
-
-<Info>
-Under the hood, Lance tables are Arrow-based, leveraging Arrow's type system. This is why
-it's trivial to query a Lance table using DuckDB, which also natively supports Arrow tables.
-</Info>
 
 ## Add column
 
