@@ -39,7 +39,8 @@
                 "group": "What is LanceDB?",
                 "pages": [
                   "index",
-                  "lance"
+                  "lance",
+                  "tables-and-namespaces"
                 ]
               },
               {
