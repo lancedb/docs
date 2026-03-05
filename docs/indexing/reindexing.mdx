@@ -34,7 +34,7 @@ Table optimization performs three maintenance operations:
 <Badge color="purple">Cloud</Badge>
 <Badge color="red">Enterprise</Badge>
 
-LanceDB Cloud/Enterprise support incremental reindexing through an automated background process. When new data is added to a table, the system automatically triggers a new index build. As the dataset grows, indexes are asynchronously updated in the background.
+LanceDB Enterprise support incremental reindexing through an automated background process. When new data is added to a table, the system automatically triggers a new index build. As the dataset grows, indexes are asynchronously updated in the background.
 
 - While indexes are being rebuilt, queries use brute force methods on unindexed rows, which may temporarily increase latency. To avoid this, set `fast_search=True` to search only indexed data.
 - Use `index_stats()` to view the number of unindexed rows. This will be zero when indexes are fully up-to-date.

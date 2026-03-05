@@ -198,7 +198,7 @@ that points to where your data is stored, and you're ready to go.
 To learn more about LanceDB Enterprise, see the [Enterprise documentation](/enterprise).
 
 <Note>
-- When you connect to a remote URI (Cloud/Enterprise), `open_table(...)` returns a *remote* table.
+- When you connect to a remote URI (Enterprise), `open_table(...)` returns a *remote* table.
 Remote tables support core operations (ingest, search, update, delete), but some convenience
 methods for bulk data export are not available.
 - In the Python SDK, `table.to_arrow()` and `table.to_pandas()` are not implemented for remote tables.
