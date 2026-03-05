@@ -44,10 +44,10 @@ The following concepts are core to the Lance format:
 
 <Steps>
   <Step>
-   Data storage is **columnar** and is **interoperable** with other columnar formats (such as Parquet) via Arrow
+   **Arrow-native, columnar storage** and **interoperability** with the open lakehouse ecosystem (including other file formats and compute engines).
   </Step>
   <Step>
-   Data is divided into **fragments** that represent a subset of the data. Fragments are chunks of data in a Lance dataset. Each fragment includes multiple files that contain several columns in the chunk of data that it represents.
+   **Zero-copy** data evolution, meaning you can easily add derived columns (like features or embeddings) at a later time, **without full table rewrites**. Only new data is written; expensive existing data (like images/videos) remain untouched.
   </Step>
   <Step>
    Data is **versioned**, with each insert operation creating a new version of the dataset and an update to the manifest that tracks versions via metadata

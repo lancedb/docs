@@ -39,8 +39,7 @@
                 "group": "What is LanceDB?",
                 "pages": [
                   "index",
-                  "lance",
-                  "namespaces"
+                  "lance"
                 ]
               },
               {
@@ -70,19 +69,32 @@
             ]
           },
           {
-            "group": "User Guide",
+            "group": "Guides",
             "pages": [
               {
-                "group": "Working with tables",
+                "group": "Table operations",
                 "pages": [
                   "tables/index",
                   "tables/create",
                   "tables/multimodal",
                   "tables/schema",
                   "tables/update",
-                  "tables/namespaces",
                   "tables/versioning",
                   "tables/consistency"
+                ]
+              },
+              {
+                "group": "Namespaces",
+                "pages": [
+                  "namespaces/index",
+                  "namespaces/usage"
+                ]
+              },
+              {
+                "group": "Embeddings",
+                "pages": [
+                  "embedding/index",
+                  "embedding/quickstart"
                 ]
               },
               {
@@ -122,13 +134,6 @@
                   "reranking/index",
                   "reranking/custom-reranker",
                   "reranking/eval"
-                ]
-              },
-              {
-                "group": "Embeddings",
-                "pages": [
-                  "embedding/index",
-                  "embedding/quickstart"
                 ]
               },
               {
