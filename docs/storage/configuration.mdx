@@ -120,6 +120,58 @@ If `fetch_storage_options()` returns `expires_at_millis`, LanceDB refreshes cred
 These are commonly used options. Cloud-specific keys (for example `region`, `endpoint`, `service_account`, and Azure credential keys) are backend-dependent and can be provided in `storage_options` as needed.
 </Info>
 
+#### New table configuration
+
+These options control the Lance file format and features used when creating new tables. Pass them via `storage_options` at connection or table level.
+
+| Key | Values | Default | Description |
+| :-- | :-- | :-- | :-- |
+| `new_table_data_storage_version` | `legacy`, `stable` | `stable` | Lance file format version for new tables. Use `legacy` for backward compatibility with older clients, or `stable` for the current format with better performance. |
+| `new_table_enable_v2_manifest_paths` | `true`, `false` | `false` | Use v2 manifest path naming. Requires LanceDB >= 0.10.0 to read. |
+| `new_table_enable_stable_row_ids` | `true`, `false` | `false` | Keep row IDs stable across compaction, delete, and merge operations. |
+
+```mermaid
+flowchart TD
+    A[Creating a new table] --> B{Need backward compatibility\nwith older LanceDB clients?}
+    B -->|Yes| C[new_table_data_storage_version: legacy]
+    B -->|No| D[new_table_data_storage_version: stable\nDefault — recommended]
+    D --> E{Need stable row IDs\nacross compaction and deletes?}
+    E -->|Yes| F[new_table_enable_stable_row_ids: true]
+    E -->|No| G[Default: false]
+    D --> H{All clients on LanceDB >= 0.10.0?}
+    H -->|Yes| I[new_table_enable_v2_manifest_paths: true]
+    H -->|No| J[Default: false]
+```
+
+<CodeGroup>
+```python Python icon="python"
+import lancedb
+
+# Set the Lance file format version at connection level
+db = lancedb.connect(
+    "s3://bucket/path",
+    storage_options={
+        "new_table_data_storage_version": "stable",
+    },
+)
+```
+
+```typescript TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+
+// Set the Lance file format version at connection level
+const db = await lancedb.connect("s3://bucket/path", {
+  storageOptions: {
+    newTableDataStorageVersion: "stable",
+  },
+});
+```
+</CodeGroup>
+
+<Warning title="Deprecated parameter">
+The `data_storage_version` parameter on `create_table()` is deprecated. Use `new_table_data_storage_version` in `storage_options` instead.
+</Warning>
+
 ## AWS S3
 
 ![](/static/assets/images/storage/aws.jpg)
