@@ -306,7 +306,7 @@ def test_open_existing_table(tmp_db):
     db.create_table("test_table", data, mode="overwrite")
 
     # List table names
-    print(db.table_names())
+    print(db.list_tables().tables)
 
     # Open existing table
     tbl = db.open_table("test_table")

@@ -5,13 +5,59 @@ use std::sync::Arc;
 
 use arrow_array::types::Float32Type;
 use arrow_array::{
-    FixedSizeListArray, Float32Array, Float64Array, Int32Array, Int64Array, RecordBatch,
-    RecordBatchIterator, StringArray,
+    Array, FixedSizeListArray, Float32Array, Float64Array, Int32Array, Int64Array, RecordBatch,
+    RecordBatchIterator, RecordBatchReader, StringArray,
 };
 use arrow_schema::{DataType, Field, Schema};
 use lancedb::connect;
 use lancedb::database::CreateTableMode;
-use lancedb::table::{ColumnAlteration, NewColumnTransform};
+use lancedb::table::{ColumnAlteration, Duration, NewColumnTransform, OptimizeAction};
+
+// --8<-- [start:update_make_users_reader]
+fn make_users_reader(
+    ids: Vec<i64>,
+    names: Vec<&str>,
+    login_counts: Option<Vec<i64>>,
+) -> Box<dyn RecordBatchReader + Send> {
+    let mut fields = vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+    ];
+    let mut columns: Vec<Arc<dyn Array>> =
+        vec![Arc::new(Int64Array::from(ids)), Arc::new(StringArray::from(names))];
+
+    if let Some(login_counts) = login_counts {
+        fields.push(Field::new("login_count", DataType::Int64, true));
+        columns.push(Arc::new(Int64Array::from(login_counts)));
+    }
+
+    let schema = Arc::new(Schema::new(fields));
+    let batch = RecordBatch::try_new(schema.clone(), columns).unwrap();
+    let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);
+    Box::new(reader)
+}
+// --8<-- [end:update_make_users_reader]
+
+#[allow(dead_code)]
+async fn update_connect_cloud_example() {
+    // --8<-- [start:update_connect_cloud]
+    let db = connect("db://your-project-slug")
+        .api_key("your-api-key")
+        .region("us-east-1")
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:update_connect_cloud]
+    let _ = db;
+}
+
+#[allow(dead_code)]
+async fn update_connect_local_example() {
+    // --8<-- [start:update_connect_local]
+    let db = connect("./data").execute().await.unwrap();
+    // --8<-- [end:update_connect_local]
+    let _ = db;
+}
 
 #[tokio::main]
 async fn main() {
@@ -623,4 +669,222 @@ async fn main() {
         .unwrap();
     // --8<-- [end:alter_vector_column]
     assert_eq!(vector_table.count_rows(None).await.unwrap(), 1);
+
+    // --8<-- [start:update_example_table_setup]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:update_example_table_setup]
+    let _ = table;
+
+    // --8<-- [start:update_operation]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    table
+        .update()
+        .only_if("id = 2")
+        .column("name", "'Bobby'")
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:update_operation]
+
+    // --8<-- [start:update_using_sql]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    table
+        .update()
+        .only_if("id = 2")
+        .column("login_count", "login_count + 1")
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:update_using_sql]
+
+    // --8<-- [start:merge_matched_update_only]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    let mut merge_insert = table.merge_insert(&["id"]);
+    merge_insert.when_matched_update_all(None);
+    merge_insert
+        .execute(make_users_reader(
+            vec![2, 3],
+            vec!["Bobby", "Charlie"],
+            Some(vec![21, 5]),
+        ))
+        .await
+        .unwrap();
+    // --8<-- [end:merge_matched_update_only]
+
+    // --8<-- [start:insert_if_not_exists]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    let mut merge_insert = table.merge_insert(&["id"]);
+    merge_insert.when_not_matched_insert_all();
+    merge_insert
+        .execute(make_users_reader(
+            vec![2, 3],
+            vec!["Bobby", "Charlie"],
+            Some(vec![21, 5]),
+        ))
+        .await
+        .unwrap();
+    // --8<-- [end:insert_if_not_exists]
+
+    // --8<-- [start:merge_update_insert]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    let mut merge_insert = table.merge_insert(&["id"]);
+    merge_insert
+        .when_matched_update_all(None)
+        .when_not_matched_insert_all();
+    merge_insert
+        .execute(make_users_reader(
+            vec![2, 3],
+            vec!["Bobby", "Charlie"],
+            Some(vec![21, 5]),
+        ))
+        .await
+        .unwrap();
+    // --8<-- [end:merge_update_insert]
+
+    // --8<-- [start:merge_delete_missing_by_source]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(
+                vec![1, 2, 3],
+                vec!["Alice", "Bob", "Charlie"],
+                Some(vec![10, 20, 5]),
+            ),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    let mut merge_insert = table.merge_insert(&["id"]);
+    merge_insert
+        .when_matched_update_all(None)
+        .when_not_matched_insert_all()
+        .when_not_matched_by_source_delete(None);
+    merge_insert
+        .execute(make_users_reader(
+            vec![2, 3],
+            vec!["Bobby", "Charlie"],
+            Some(vec![21, 5]),
+        ))
+        .await
+        .unwrap();
+    // --8<-- [end:merge_delete_missing_by_source]
+
+    // --8<-- [start:merge_partial_columns]
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    let mut merge_insert = table.merge_insert(&["id"]);
+    merge_insert
+        .when_matched_update_all(None)
+        .when_not_matched_insert_all();
+    merge_insert
+        .execute(make_users_reader(vec![2, 3], vec!["Bobby", "Charlie"], None))
+        .await
+        .unwrap();
+    // --8<-- [end:merge_partial_columns]
+
+    let table = db
+        .create_table(
+            "users_example",
+            make_users_reader(
+                vec![1, 2, 3],
+                vec!["Alice", "Bob", "Charlie"],
+                Some(vec![10, 20, 5]),
+            ),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    // --8<-- [start:delete_operation]
+    // delete data
+    let predicate = "id = 3";
+    table.delete(predicate).await.unwrap();
+    // --8<-- [end:delete_operation]
+
+    let table = db
+        .create_table(
+            "users_cleanup_example",
+            make_users_reader(
+                vec![1, 2, 3],
+                vec!["Alice", "Bob", "Charlie"],
+                Some(vec![10, 20, 5]),
+            ),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    // --8<-- [start:update_optimize_cleanup]
+    table
+        .optimize(OptimizeAction::Prune {
+            older_than: Some(Duration::days(1)),
+            delete_unverified: None,
+            error_if_tagged_old_versions: None,
+        })
+        .await
+        .unwrap();
+    // --8<-- [end:update_optimize_cleanup]
 }

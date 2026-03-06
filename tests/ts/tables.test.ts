@@ -5,6 +5,23 @@ import * as arrow from "apache-arrow";
 import * as lancedb from "@lancedb/lancedb";
 import { withTempDirectory } from "./util.ts";
 
+async function updateConnectCloudExample() {
+  // --8<-- [start:update_connect_cloud]
+  const db = await lancedb.connect("db://your-project-slug", {
+    apiKey: "your-api-key",
+    region: "us-east-1",
+  });
+  // --8<-- [end:update_connect_cloud]
+  return db;
+}
+
+async function updateConnectLocalExample() {
+  // --8<-- [start:update_connect_local]
+  const db = await lancedb.connect("./data");
+  // --8<-- [end:update_connect_local]
+  return db;
+}
+
 test("table creation snippets (async)", async () => {
   await withTempDirectory(async (databaseDir) => {
     const db = await lancedb.connect(databaseDir);
@@ -395,5 +412,224 @@ test("schema evolution snippets (async)", async () => {
     await vectorTable.alterColumns([{ path: "embedding_v2", rename: "embedding" }]);
     // --8<-- [end:alter_vector_column]
     expect(await vectorTable.countRows()).toBe(1);
+  });
+});
+
+test("update snippets (async)", async () => {
+  // Keep connection snippets in this file, but do not run cloud/local examples in CI.
+  void updateConnectCloudExample;
+  void updateConnectLocalExample;
+
+  await withTempDirectory(async (databaseDir) => {
+    const db = await lancedb.connect(databaseDir);
+
+    {
+      // --8<-- [start:update_example_table_setup]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+      // --8<-- [end:update_example_table_setup]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:update_operation]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+      await table.update({ where: "id = 2", values: { name: "Bobby" } });
+      // --8<-- [end:update_operation]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:update_using_sql]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+      await table.update({
+        where: "id = 2",
+        valuesSql: { login_count: "login_count + 1" },
+      });
+      // --8<-- [end:update_using_sql]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_matched_update_only]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_matched_update_only]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:insert_if_not_exists]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenNotMatchedInsertAll()
+        .execute(incomingUsers);
+      // --8<-- [end:insert_if_not_exists]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_update_insert]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_update_insert]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_delete_missing_by_source]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+          { id: 3, name: "Charlie", login_count: 5 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .whenNotMatchedBySourceDelete()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_delete_missing_by_source]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_partial_columns]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby" },
+        { id: 3, name: "Charlie" },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_partial_columns]
+      await table.countRows();
+    }
+
+    {
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+          { id: 3, name: "Charlie", login_count: 5 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      // --8<-- [start:delete_operation]
+      // delete data
+      const predicate = "id = 3";
+      await table.delete(predicate);
+      // --8<-- [end:delete_operation]
+      await table.countRows();
+    }
+
+    {
+      const table = await db.createTable(
+        "users_cleanup_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+          { id: 3, name: "Charlie", login_count: 5 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      // --8<-- [start:update_optimize_cleanup]
+      const olderThan = new Date();
+      olderThan.setDate(olderThan.getDate() - 1);
+      await table.optimize({ cleanupOlderThan: olderThan });
+      // --8<-- [end:update_optimize_cleanup]
+    }
   });
 });
