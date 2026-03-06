@@ -1,6 +1,6 @@
 ---
 title: "Hugging Face Hub"
-sidebarTitle: "Hugging Face"
+sidebarTitle: "Hugging Face Hub"
 description: "Use LanceDB directly on Lance datasets hosted on the Hugging Face Hub for multimodal search and retrieval."
 ---
 
@@ -241,7 +241,7 @@ fts_results = (
 | Dog Running in Water | https://static.wixstatic.com/m… | 14.756516 |
 | Dogs on the run by heidiannemo… | http://ih2.redbubble.net/image… | 14.756516 |
 
-## Downloading the full dataset
+## Download the full dataset
 
 <Warning>
 You may hit Hugging Face rate limits when streaming large samples from `hf://`, despite using a Hugging Face token.
@@ -254,6 +254,76 @@ Here's how to download the entire dataset via the [Hugging Face CLI](https://hug
 ```bash
 huggingface-cli download lance-format/laion-1m --repo-type dataset --local-dir ./laion-1m
 ```
+
+## Upload your own datasets to Hugging Face in Lance format
+
+This section shows how you can upload your own Lance datasets to the Hugging Face Hub to share with the community.
+
+First, install the [Hugging Face CLI](https://huggingface.co/docs/huggingface_hub/en/guides/cli) and export both `OPENAI_API_KEY` and `HF_TOKEN`.
+Then, create a Lance dataset using LanceDB on a local machine, and then proceed to upload it to the Hub via a CLI command.
+
+```bash
+export OPENAI_API_KEY=...
+export HF_TOKEN=hf_...
+hf auth login --token "$HF_TOKEN"
+```
+
+A typical sequence of steps is given below.
+
+### 1. Upload your local directory to the Hub
+
+Upload the full local directory to a specified repository on the Hugging Face Hub. The command below uploads the contents of your local LanceDB directory at `/path/to/your_local_dir` to a new repository named `your_hf_org/repo_name` under your Hugging Face account.
+
+```bash bash icon="code"
+hf upload-large-folder /path/to/your_local_dir your_hf_org/repo_name \
+  --repo-type dataset \
+  --revision main
+```
+
+<Info>
+The `upload-large-folder` command is designed for [uploading large datasets](https://huggingface.co/docs/huggingface_hub/en/guides/upload) (potentially terabytes in size) and will handle multipart uploads, retries, and resuming interrupted uploads.
+</Info>
+
+### 2. Inspect dataset versions
+
+Because you can query your remote dataset directly from Hugging Face with `hf://` URIs in LanceDB, you can easily inspect the dataset versions and updates on the Hub without needing to download the data locally. This is very useful to keep track of changes to the dataset and iterate on your data collection and curation process.
+
+```python Python icon="python"
+import lancedb
+
+db = lancedb.connect("hf://datasets/your_hf_org/repo_name")
+table = db.open_table("table_name")
+
+versions = table.list_versions()
+print(versions)
+```
+This will print out the list of versions available for the dataset on the Hub, along with their metadata such as creation date and description.
+
+### 3. Add a dataset card
+
+The Hub dataset card allows you to communicate the schema and usage of the dataset to other developers. It sits at the repo's root in a file named `README.md` on the Hub.
+This project keeps the source card text in `HF_DATASET_CARD.md`, so you can publish updates
+to the dataset there and upload it as `README.md` using the following command on the HF CLI:
+this requires a regular `hf upload` because it is a single-file upload to a specific target path (a custom commit message can be added if you wish).
+
+```bash
+hf upload lancedb/magical_kingdom HF_DATASET_CARD.md README.md \
+  --repo-type dataset \
+  --commit-message "Update dataset card"
+```
+
+### 4. Update the dataset
+
+Over time, you may want to add new rows (append) or columns (backfill) to your dataset as your needs evolve. You can make the necessary updates to your local dataset using LanceDB, and then upload the updated version back to the Hub with the same `hf upload-large-folder` command.
+
+```bash bash icon="code"
+hf upload-large-folder /path/to/your_local_dir your_hf_org/repo_name \
+  --repo-type dataset \
+  --revision main
+```
+The CLI will only upload the new data that has changed since the last upload, avoiding wasted I/O while making it easy to keep your dataset up-to-date on the Hub.
+
+That's it! Your dataset is now updated on the Hub with the new data and schema changes, and other users can query the latest version of the dataset directly from Hugging Face with `hf://` URIs in LanceDB.
 
 ## Explore more Lance datasets on Hugging Face
 
