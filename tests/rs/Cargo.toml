@@ -28,3 +28,7 @@ path = "connection.rs"
 [[example]]
 name = "quickstart"
 path = "quickstart.rs"
+
+[[example]]
+name = "tables"
+path = "tables.rs"
