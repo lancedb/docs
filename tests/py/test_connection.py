@@ -42,6 +42,46 @@ region = "us-east-1"
 # --8<-- [end:connect_cloud_async]
 
 
+def connect_enterprise_quickstart_config():
+    import lancedb
+
+    # --8<-- [start:connect_enterprise_quickstart]
+    uri = "db://your-database-uri"
+    api_key = "your-api-key"
+    region = "us-east-1"
+    host_override = "https://your-enterprise-endpoint.com"
+
+    db = lancedb.connect(
+        uri=uri,
+        api_key=api_key,
+        region=region,
+        host_override=host_override,
+    )
+    # --8<-- [end:connect_enterprise_quickstart]
+    return db
+
+
+def test_connect_enterprise_quickstart(monkeypatch):
+    import lancedb
+
+    captured = {}
+
+    def fake_connect(**kwargs):
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(lancedb, "connect", fake_connect)
+
+    db = connect_enterprise_quickstart_config()
+    assert db is not None
+    assert captured == {
+        "uri": "db://your-database-uri",
+        "api_key": "your-api-key",
+        "region": "us-east-1",
+        "host_override": "https://your-enterprise-endpoint.com",
+    }
+
+
 def connect_object_storage_config():
     # --8<-- [start:connect_object_storage]
     import lancedb

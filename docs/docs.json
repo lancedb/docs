@@ -47,10 +47,10 @@
                 "group": "LanceDB Enterprise",
                 "pages": [
                   "enterprise/index",
-                  "enterprise/features",
+                  "enterprise/quickstart",
                   "enterprise/architecture",
-                  "enterprise/benchmarks",
                   "enterprise/security",
+                  "enterprise/benchmarks",
                   {
                     "group": "Deployment",
                     "pages": [

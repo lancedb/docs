@@ -8,6 +8,8 @@ export const PyConnectCloud = "uri = \"db://your-database-uri\"\napi_key = \"you
 
 export const PyConnectCloudAsync = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
 
+export const PyConnectEnterpriseQuickstart = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\nhost_override = \"https://your-enterprise-endpoint.com\"\n\ndb = lancedb.connect(\n    uri=uri,\n    api_key=api_key,\n    region=region,\n    host_override=host_override,\n)\n";
+
 export const PyConnectObjectStorage = "import lancedb\n\nuri = \"s3://your-bucket/path\"\n# You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\ndb = lancedb.connect(uri)\n";
 
 export const PyConnectObjectStorageAsync = "import lancedb\n\nuri = \"s3://your-bucket/path\"\n# You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\nasync_db = await lancedb.connect_async(uri)\n";
@@ -20,11 +22,15 @@ export const TsConnect = "import * as lancedb from \"@lancedb/lancedb\";\n\nasyn
 
 export const TsConnectCloud = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\n";
 
+export const TsConnectEnterpriseQuickstart = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\nconst hostOverride = \"https://your-enterprise-endpoint.com\";\n\nconst db = await lancedb.connect(uri, {\n  apiKey,\n  region,\n  hostOverride,\n});\n";
+
 export const TsConnectObjectStorage = "async function connectObjectStorageExample() {\n  const uri = \"s3://your-bucket/path\";\n  // You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\n  const db = await lancedb.connect(uri);\n  return db;\n}\n";
 
 export const RsConnect = "async fn connect_example(uri: &str) {\n    let db = connect(uri).execute().await.unwrap();\n    let _ = db;\n}\n";
 
 export const RsConnectCloud = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\n";
+
+export const RsConnectEnterpriseQuickstart = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\nlet host_override = \"https://your-enterprise-endpoint.com\";\n";
 
 export const RsConnectObjectStorage = "let uri = \"s3://your-bucket/path\";\n// You can also use \"gs://your-bucket/path\" or \"az://your-container/path\".\n";
 

@@ -1,0 +1,224 @@
+---
+title: "Enterprise Quickstart"
+sidebarTitle: "Quickstart"
+description: "Run the LanceDB quickstart workflow on a RemoteTable in LanceDB Enterprise."
+icon: "server"
+---
+
+import {
+    PyConnectEnterpriseQuickstart,
+    TsConnectEnterpriseQuickstart,
+    RsConnectEnterpriseQuickstart,
+} from '/snippets/connection.mdx';
+import {
+    PyQuickstartCreateTable,
+    PyQuickstartVectorSearch1,
+    PyQuickstartOpenTable,
+    PyQuickstartAddData,
+    PyQuickstartVectorSearch2,
+    TsQuickstartCreateTable,
+    TsQuickstartVectorSearch1,
+    TsQuickstartOpenTable,
+    TsQuickstartAddData,
+    TsQuickstartVectorSearch2,
+    RsQuickstartDefineStruct,
+    RsQuickstartCreateTable,
+    RsQuickstartVectorSearch1,
+    RsQuickstartOpenTable,
+    RsQuickstartAddData,
+    RsQuickstartVectorSearch2,
+} from '/snippets/quickstart.mdx';
+
+This quickstart follows a similar workflow as the [OSS quickstart](/quickstart), but uses a **`RemoteTable`** through a `db://...` connection.
+
+<Callout icon="circle-info" color="#FF8A5C" iconType="regular">
+To get a LanceDB Enterprise cluster setup and to obtain credentials and endpoint details, [contact our team](mailto:contact@lancedb.com) to get started.
+This guide assumes your Enterprise cluster is already running.
+</Callout>
+
+## 1. Install LanceDB
+
+<CodeGroup>
+```bash Python icon=Python
+pip install lancedb
+```
+
+```bash TypeScript icon=js
+npm install @lancedb/lancedb
+```
+
+```bash Rust icon=Rust
+cargo add lancedb
+```
+</CodeGroup>
+
+## 2. Connect to Enterprise (`db://...`)
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    { "import lancedb\n\n" }
+    {PyConnectEnterpriseQuickstart}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    { "import * as lancedb from \"@lancedb/lancedb\";\n\n" }
+    {TsConnectEnterpriseQuickstart}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    { "use lancedb::connect;\n\n" }
+    {RsConnectEnterpriseQuickstart}
+    </CodeBlock>
+</CodeGroup>
+
+## 3. Create a table (same sample data as the OSS quickstart)
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartCreateTable}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartCreateTable}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartDefineStruct}
+    {RsQuickstartCreateTable}
+    </CodeBlock>
+</CodeGroup>
+
+## 4. Run vector search
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartVectorSearch1}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartVectorSearch1}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartVectorSearch1}
+    </CodeBlock>
+</CodeGroup>
+
+## 5. Open table, add data, and query again
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartOpenTable}
+    {PyQuickstartAddData}
+    {PyQuickstartVectorSearch2}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartOpenTable}
+    {TsQuickstartAddData}
+    {TsQuickstartVectorSearch2}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    { "use lancedb::table::Table;\n\n" }
+    {RsQuickstartOpenTable}
+    {RsQuickstartAddData}
+    {RsQuickstartVectorSearch2}
+    </CodeBlock>
+</CodeGroup>
+
+## Differences between Enterprise and OSS usage
+
+As can be seen, the flow for working with a `RemoteTable` in Enterprise looks more or less
+similar to the [OSS quickstart](/quickstart). However, there are some semantic differences:
+
+### 1. Connection model
+
+In LanceDB Enterprise, your app connects via a `db://...` URI and sends requests to the cluster API. The cluster executes table operations on your behalf.
+Your code is coupled to a **managed service endpoint** (whereas in OSS, your code is directly coupled to storage paths).
+
+### 2. Returned table type
+
+Connecting to an Enterprise table via `open_table(...)` returns a `RemoteTable`, unlike in OSS, which returns a `LanceTable`.
+
+### 3. Materialization APIs
+
+For Python users working with LanceDB Enterprise, `RemoteTable` does not support table-level
+materialization methods like `table.to_arrow()` or `table.to_pandas()`. This is to protect
+users from accidentally materializing tables that are too large to fit in memory.
+
+Instead, you materialize results through query/search builders, for example `table.search(...).limit(...).to_pandas()` or `table.query(...).to_arrow()`. For quick previews, you can use `table.head()`.
+
+### 4. Maintenance lifecycle
+
+In Enterprise, maintenance operations like `optimize`, `compact_files` are handled by the cluster as background work. You can trigger them manually, but they are not required for performance or correctness in the same way they are in OSS. 
+
+That means maintenance is managed by platform behavior and cluster configuration, not by explicit per-table maintenance calls in your application code.
+
+### 5. Guardrails and limits
+
+Enterprise can enforce platform-level guardrails, such as index/table limits and safety checks around operations like `merge_insert` when too many rows are unindexed. OSS mostly exposes storage/format-level behavior, and you tune many lifecycle tasks yourself.
+
+This means an operation in LanceDB Enterprise can fail due to service-level policy, not just because of local table shape or schema mismatch.
+
+### 6. Cluster-managed background work
+
+In Enterprise, async writes and reindexing workflows are handled by cluster background systems. In OSS, if you want ongoing upkeep, you usually schedule and run it yourself in your application or jobs.
+
+In practice, your app issues table operations, and the platform handles distributed orchestration for maintenance and indexing in the background.
+
+<Info>
+As a rule of thumb, all you need to remember with regard to LanceDB Enterprise is this: treat `db://...` as a remote service boundary, use query builders to fetch results, and otherwise interact with your tables as you would in OSS.**
+</Info>
+
+## Advanced usage via namespace-backed connections
+
+LanceDB Enterprise also supports namespace-backed catalog connections. This allows you to resolve tables by namespace, rather than by direct URI, and is accessed via the REST connection mode of `connect_namespace(...)`. This is useful when table location resolution and credential vending are handled by an external catalog/namespace service.
+
+```py Python icon=Python
+import os
+import lancedb
+
+ns_db = lancedb.connect_namespace(
+    "rest",
+    {
+        "uri": "https://<your-catalog-endpoint>",
+        "headers.Authorization": f"Bearer {os.environ['CATALOG_TOKEN']}",
+    },
+)
+
+# Namespace-scoped table resolution
+table = ns_db.open_table("adventurers", namespace=["prod", "search"])
+```
+
+This mode is useful when table location resolution and credential vending are handled by an external catalog/namespace service.
+
+If you want to stick to a common table flow, start with the `db://` RemoteTable flow shown above.
+
+## Further reading
+
+You can learn more about table operations, namespaces, and the architecture of LanceDB Enterprise in the following guides.
+
+<Columns cols={2}>
+<Card
+  title="Table operations"
+  icon="table"
+  href="/tables"
+>
+  Build on this quickstart with table creation, updates, and schema tips.
+</Card>
+<Card
+  title="Using namespaces"
+  icon="sitemap"
+  href="/namespaces/usage"
+>
+    Learn how to use namespaces in LanceDB, and connect to an Enterprise namespace via REST.
+</Card>
+  <Card
+    title="LanceDB Enterprise architecture"
+    icon="cubes"
+    href="/enterprise/architecture"
+  >
+    Learn about the architecture of LanceDB Enterprise and how it achieves high performance at scale.
+  </Card>
+</Columns>

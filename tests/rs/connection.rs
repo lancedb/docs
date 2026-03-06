@@ -20,6 +20,7 @@ async fn main() {
 
     // Keep the cloud snippet in this file, but don't run it in CI.
     let _ = connect_cloud_config();
+    let _ = connect_enterprise_quickstart_config();
     let _ = connect_object_storage_config();
 }
 
@@ -31,6 +32,21 @@ fn connect_cloud_config() -> (String, String, String) {
     // --8<-- [end:connect_cloud]
 
     (uri.to_string(), api_key.to_string(), region.to_string())
+}
+
+fn connect_enterprise_quickstart_config() -> (String, String, String, String) {
+    // --8<-- [start:connect_enterprise_quickstart]
+    let uri = "db://your-database-uri";
+    let api_key = "your-api-key";
+    let region = "us-east-1";
+    let host_override = "https://your-enterprise-endpoint.com";
+    // --8<-- [end:connect_enterprise_quickstart]
+    (
+        uri.to_string(),
+        api_key.to_string(),
+        region.to_string(),
+        host_override.to_string(),
+    )
 }
 
 fn connect_object_storage_config() -> &'static str {
