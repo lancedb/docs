@@ -1,4 +1,4 @@
-# LanceDB Mintlify Documentation
+# LanceDB Documentation
 
 Home of the [LanceDB](https://lancedb.com/) documentation. Built using [Mintlify](https://www.mintlify.com/).
 

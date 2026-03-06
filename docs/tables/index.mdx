@@ -154,7 +154,7 @@ applications, you'd generate these vectors from the raw text fields using a suit
 
 ## Connect to a database
 
-### Option 1: Local database
+### Option 1: Direct table access
 
 We start by connecting to a LanceDB database path. The example below uses a local path in LanceDB OSS.
 
@@ -172,12 +172,12 @@ We start by connecting to a LanceDB database path. The example below uses a loca
     </CodeBlock>
 </CodeGroup>
 
-### Option 2: Remote database
-
 You can also connect LanceDB OSS directly to object storage. For credentials, endpoints, and provider-specific options, see
 [Configuring storage](/storage/configuration).
 
-If you're using a managed LanceDB service on either LanceDB Cloud or Enterprise, you can connect using a `db://` URI,
+### Option 2: Remote tables
+
+If you're using a managed LanceDB service on LanceDB [Enterprise](/enterprise) or LanceDB Cloud, you can connect using a `db://` URI,
 along with any encessary credentials. Simply replace the local path with a remote `uri`
 that points to where your data is stored, and you're ready to go.
 
@@ -195,10 +195,8 @@ that points to where your data is stored, and you're ready to go.
     </CodeBlock>
 </CodeGroup >
 
-To learn more about LanceDB Enterprise, see the [Enterprise documentation](/enterprise).
-
 <Note>
-- When you connect to a remote URI (Cloud/Enterprise), `open_table(...)` returns a *remote* table.
+- When you connect to a remote URI (Enterprise), `open_table(...)` returns a *remote* table.
 Remote tables support core operations (ingest, search, update, delete), but some convenience
 methods for bulk data export are not available.
 - In the Python SDK, `table.to_arrow()` and `table.to_pandas()` are not implemented for remote tables.

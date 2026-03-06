@@ -6,27 +6,22 @@ icon: "/static/assets/logo/lance-logo-gray.svg"
 ---
 
 [Lance](https://lance.org/) is an open-source lakehouse format, which provides the
-foundation for LanceDB's capabilities. Lance combines the performance of Apache Arrow with advanced
-features designed specifically for AI workloads.
+foundation for LanceDB's capabilities. It provides a file format,
+table format, and catalog spec with multimodal data at the center of its design, allowing developers
+to build a complete open lakehouse on top of object storage.
+
+Building on top of open foundations and optimizing the format for AI workloads brings
+high-performance vector search, full-text search, random access, and feature engineering capabilities
+to a single unified system ([LanceDB](/enterprise)), eliminating the need for bespoke ETL and data pipelines that move data
+to multiple other specialized data systems.
 
 <Card
   title="Lance format documentation"
   icon="/static/assets/logo/lance-logo-gray.svg"
-  href="https://lance.org/quickstart"
+  href="https://lance.org/format"
 >
-  Learn more about the Lance format by reading the docs.
+  Visit the Lance format documentation to learn more about its design, features, and how it enables the multimodal lakehouse.
 </Card>
-
-## How Lance Enables the Multimodal Lakehouse
-
-Lance is a file format, table format, and catalog spec for multimodal AI, allowing developers to build a
-complete open lakehouse on top of object storage to power AI workflows. The format brings
-high-performance vector search, full-text search, random access, and feature engineering capabilities
-to a single unified system, eliminating the need for multiple specialized databases.
-
-Unlike traditional vector databases that only store embeddings alongside the metadata, LanceDB's
-multimodal lakehouse stores both the original data (including image, video or audio bytes)
-and its vector representations alongside traditional tabular data in the same efficient format.
 
 ## Advantages of the Lance format
 
@@ -44,10 +39,10 @@ The following concepts are core to the Lance format:
 
 <Steps>
   <Step>
-   Data storage is **columnar** and is **interoperable** with other columnar formats (such as Parquet) via Arrow
+   **Arrow-native, columnar storage** and **interoperability** with the open lakehouse ecosystem (including other file formats and compute engines).
   </Step>
   <Step>
-   Data is divided into **fragments** that represent a subset of the data. Fragments are chunks of data in a Lance dataset. Each fragment includes multiple files that contain several columns in the chunk of data that it represents.
+   **Zero-copy** data evolution, meaning you can easily add derived columns (like features or embeddings) at a later time, **without full table rewrites**. Only new data is written; expensive existing data (like images/videos) remain untouched.
   </Step>
   <Step>
    Data is **versioned**, with each insert operation creating a new version of the dataset and an update to the manifest that tracks versions via metadata

@@ -39,7 +39,7 @@ import numpy as np
 import pyarrow as pa
 import os
 
-# Connect to LanceDB Cloud/Enterprise
+# Connect to LanceDB Enterprise
 uri = "db://your-database-uri"
 api_key = "your-api-key"
 region = "us-east-1"
@@ -59,7 +59,7 @@ db = lancedb.connect(
 import { connect, Index, Table } from '@lancedb/lancedb';
 import { FixedSizeList, Field, Float32, Schema, Utf8 } from 'apache-arrow';
 
-// Connect to LanceDB Cloud/Enterprise
+// Connect to LanceDB Enterprise
 const dbUri = process.env.LANCEDB_URI || 'db://your-database-uri';
 const apiKey = process.env.LANCEDB_API_KEY;
 const region = process.env.LANCEDB_REGION;
@@ -273,7 +273,7 @@ console.log('Successfully created table');
 After creating a table with vector data, you'll want to create an index to enable fast similarity searches. The index creation process optimizes the data structure for efficient vector similarity lookups, significantly improving query performance for large datasets.
 
 <Check>
-Unlike in LanceDB OSS, the `create_index`/`createIndex` operation executes **asynchronously** in LanceDB Cloud/Enterprise. To ensure the index is fully built, you can use the `wait_timeout` parameter or call `wait_for_index` on the table.
+Unlike in LanceDB OSS, the `create_index`/`createIndex` operation executes **asynchronously** in LanceDB Enterprise. To ensure the index is fully built, you can use the `wait_timeout` parameter or call `wait_for_index` on the table.
 </Check>
 
 <CodeGroup>
@@ -373,6 +373,6 @@ console.log(filteredResults);
 
 ## What's Next?
 
-It's time to use LanceDB Cloud/Enterprise in your own projects!
+It's time to use LanceDB Enterprise in your own projects!
 We've prepared more [tutorials](/tutorials/) for you to continue learning. If you
 have any questions, reach out via [Discord](https://discord.gg/AUEWnJ7Txb).

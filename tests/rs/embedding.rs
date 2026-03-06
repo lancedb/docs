@@ -84,7 +84,7 @@ async fn main() -> Result<()> {
         .execute()
         .await?;
 
-    // Manually generate embeddings for the query (Cloud/Enterprise path)
+    // Manually generate embeddings for the query (Enterprise path)
     let query = Arc::new(StringArray::from_iter_values(once("test example")));
     let query_vector = embedding.compute_query_embeddings(query)?;
     // --8<-- [start:manual_query_search]

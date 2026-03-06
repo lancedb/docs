@@ -40,17 +40,17 @@
                 "pages": [
                   "index",
                   "lance",
-                  "namespaces"
+                  "tables-and-namespaces"
                 ]
               },
               {
                 "group": "LanceDB Enterprise",
                 "pages": [
                   "enterprise/index",
-                  "enterprise/features",
+                  "enterprise/quickstart",
                   "enterprise/architecture",
-                  "enterprise/benchmarks",
                   "enterprise/security",
+                  "enterprise/benchmarks",
                   {
                     "group": "Deployment",
                     "pages": [
@@ -70,19 +70,32 @@
             ]
           },
           {
-            "group": "User Guide",
+            "group": "Guides",
             "pages": [
               {
-                "group": "Working with tables",
+                "group": "Table operations",
                 "pages": [
                   "tables/index",
                   "tables/create",
                   "tables/multimodal",
                   "tables/schema",
                   "tables/update",
-                  "tables/namespaces",
                   "tables/versioning",
                   "tables/consistency"
+                ]
+              },
+              {
+                "group": "Namespaces",
+                "pages": [
+                  "namespaces/index",
+                  "namespaces/usage"
+                ]
+              },
+              {
+                "group": "Embeddings",
+                "pages": [
+                  "embedding/index",
+                  "embedding/quickstart"
                 ]
               },
               {
@@ -122,13 +135,6 @@
                   "reranking/index",
                   "reranking/custom-reranker",
                   "reranking/eval"
-                ]
-              },
-              {
-                "group": "Embeddings",
-                "pages": [
-                  "embedding/index",
-                  "embedding/quickstart"
                 ]
               },
               {
