@@ -98,23 +98,23 @@ export const PyUpdateOptimizeCleanup = "from datetime import timedelta\n\ntable.
 
 export const PyUpdateUsingSql = "import pyarrow as pa\n\ntable = db.create_table(\n    \"users_example\",\n    data=pa.table(\n        {\n            \"id\": [1, 2],\n            \"name\": [\"Alice\", \"Bob\"],\n            \"login_count\": [10, 20],\n        }\n    ),\n    mode=\"overwrite\",\n)\ntable.update(where=\"id = 2\", values_sql={\"login_count\": \"login_count + 1\"})\n";
 
-export const PyVersioningAddData = "# Add more data\nmore_data = [\n    {\n        \"id\": 4,\n        \"author\": \"Richard Daniel Sanchez\",\n        \"quote\": \"That's the way the news goes!\",\n    },\n    {\"id\": 5, \"author\": \"Morty\", \"quote\": \"Aww geez, Rick!\"},\n]\ntable.add(more_data)\n";
+export const PyVersioningAddData = "more_data = [\n    {\n        \"id\": 4,\n        \"author\": \"Richard Daniel Sanchez\",\n        \"quote\": \"That's the way the news goes!\",\n    },\n    {\"id\": 5, \"author\": \"Morty\", \"quote\": \"Aww geez, Rick!\"},\n]\ntable.add(more_data)\n";
 
-export const PyVersioningBasicSetup = "import lancedb\nimport numpy as np\nimport pandas as pd\nimport pyarrow as pa\n\n# Connect to LanceDB\ndb = tmp_db\n\n# Create a table with initial data\ntable_name = \"quotes_versioning_example\"\ndata = [\n    {\"id\": 1, \"author\": \"Richard\", \"quote\": \"Wubba Lubba Dub Dub!\"},\n    {\"id\": 2, \"author\": \"Morty\", \"quote\": \"Rick, what's going on?\"},\n    {\n        \"id\": 3,\n        \"author\": \"Richard\",\n        \"quote\": \"I turned myself into a pickle, Morty!\",\n    },\n]\n\n# Define schema\nschema = pa.schema(\n    [\n        pa.field(\"id\", pa.int64()),\n        pa.field(\"author\", pa.string()),\n        pa.field(\"quote\", pa.string()),\n    ]\n)\n\ntable = db.create_table(table_name, data, schema=schema, mode=\"overwrite\")\n";
+export const PyVersioningBasicSetup = "import pyarrow as pa\n\ndb = tmp_db\n\ntable_name = \"quotes_versioning_example\"\ndata = [\n    {\"id\": 1, \"author\": \"Richard\", \"quote\": \"Wubba Lubba Dub Dub!\"},\n    {\"id\": 2, \"author\": \"Morty\", \"quote\": \"Rick, what's going on?\"},\n    {\n        \"id\": 3,\n        \"author\": \"Richard\",\n        \"quote\": \"I turned myself into a pickle, Morty!\",\n    },\n]\n\n# Define schema\nschema = pa.schema(\n    [\n        pa.field(\"id\", pa.int64()),\n        pa.field(\"author\", pa.string()),\n        pa.field(\"quote\", pa.string()),\n    ]\n)\n\ntable = db.create_table(table_name, data, schema=schema, mode=\"overwrite\")\n";
 
-export const PyVersioningCheckInitialVersion = "# View the initial version\nversions = table.list_versions()\nprint(f\"Number of versions after creation: {len(versions)}\")\nprint(f\"Current version: {table.version}\")\n";
+export const PyVersioningCheckInitialVersion = "versions = table.list_versions()\ncurrent_version = table.version\nprint(f\"Number of versions after creation: {len(versions)}\")\nprint(f\"Current version: {current_version}\")\n";
 
-export const PyVersioningCheckVersionsAfterMod = "# Check versions after modifications\nversions = table.list_versions()\nversion_count_after_mod = len(versions)\nversion_after_mod = table.version\nprint(f\"Number of versions after modifications: {version_count_after_mod}\")\nprint(f\"Current version: {version_after_mod}\")\n";
+export const PyVersioningCheckVersionsAfterMod = "versions = table.list_versions()\nversion_count_after_mod = len(versions)\nversion_after_mod = table.version\nprint(f\"Number of versions after modifications: {version_count_after_mod}\")\nprint(f\"Current version: {version_after_mod}\")\n";
 
-export const PyVersioningCheckoutLatest = "# Go back to the latest version\ntable.checkout_latest()\n";
+export const PyVersioningCheckoutLatest = "table.checkout_latest()\n";
 
-export const PyVersioningDeleteData = "# Let's delete data from the table\ntable.delete(\"author != 'Richard Daniel Sanchez'\")\nrows_after_deletion = table.count_rows()\nprint(f\"Number of rows after deletion: {rows_after_deletion}\")\n";
+export const PyVersioningDeleteData = "table.delete(\"author = 'Morty'\")\nrows_after_deletion = table.count_rows()\nprint(f\"Number of rows after deletion: {rows_after_deletion}\")\n";
 
-export const PyVersioningListAllVersions = "# Let's see all versions\nversions = table.list_versions()\nfor v in versions:\n    print(f\"Version {v['version']}, created at {v['timestamp']}\")\n";
+export const PyVersioningListAllVersions = "versions = table.list_versions()\nfor v in versions:\n    print(f\"Version {v['version']}, created at {v['timestamp']}\")\n";
 
-export const PyVersioningRollback = "# Let's roll back to before we added the vector column\n# We'll use the version after modifications but before adding embeddings\ntable.restore(version_after_mod)\n\n# Notice we have one more version now, not less!\nversions = table.list_versions()\nversion_count_after_rollback = len(versions)\nprint(f\"Total number of versions after rollback: {version_count_after_rollback}\")\n";
+export const PyVersioningRollback = "table.restore(version_after_mod)\nversions = table.list_versions()\nversion_count_after_rollback = len(versions)\nprint(f\"Total number of versions after rollback: {version_count_after_rollback}\")\n";
 
-export const PyVersioningUpdateData = "# Update author names to be more specific\ntable.update(where=\"author='Richard'\", values={\"author\": \"Richard Daniel Sanchez\"})\nrows_after_update = table.count_rows()\nprint(f\"Number of rows after update: {rows_after_update}\")\n";
+export const PyVersioningUpdateData = "table.update(where=\"author='Richard'\", values={\"author\": \"Richard Daniel Sanchez\"})\nrows_after_update = table.count_rows(\"author = 'Richard Daniel Sanchez'\")\nprint(f\"Rows updated to Richard Daniel Sanchez: {rows_after_update}\")\n";
 
 export const TsAddColumnsCalculated = "// Add a discounted price column (10% discount)\nawait schemaAddTable.addColumns([\n  {\n    name: \"discounted_price\",\n    valueSql: \"cast((price * 0.9) as float)\",\n  },\n]);\n";
 
@@ -182,6 +182,24 @@ export const TsUpdateOptimizeCleanup = "const olderThan = new Date();\nolderThan
 
 export const TsUpdateUsingSql = "const table = await db.createTable(\n  \"users_example\",\n  [\n    { id: 1, name: \"Alice\", login_count: 10 },\n    { id: 2, name: \"Bob\", login_count: 20 },\n  ],\n  { mode: \"overwrite\" },\n);\nawait table.update({\n  where: \"id = 2\",\n  valuesSql: { login_count: \"login_count + 1\" },\n});\n";
 
+export const TsVersioningAddData = "const moreData = [\n  {\n    id: 4,\n    author: \"Richard Daniel Sanchez\",\n    quote: \"That's the way the news goes!\",\n  },\n  { id: 5, author: \"Morty\", quote: \"Aww geez, Rick!\" },\n];\nawait table.add(moreData);\n";
+
+export const TsVersioningBasicSetup = "const tableName = \"quotes_versioning_example\";\nconst data = [\n  { id: 1, author: \"Richard\", quote: \"Wubba Lubba Dub Dub!\" },\n  { id: 2, author: \"Morty\", quote: \"Rick, what's going on?\" },\n  {\n    id: 3,\n    author: \"Richard\",\n    quote: \"I turned myself into a pickle, Morty!\",\n  },\n];\nconst table = await db.createTable(tableName, data, { mode: \"overwrite\" });\n";
+
+export const TsVersioningCheckInitialVersion = "const versions = await table.listVersions();\nconst currentVersion = await table.version();\nconsole.log(`Number of versions after creation: ${versions.length}`);\nconsole.log(`Current version: ${currentVersion}`);\n";
+
+export const TsVersioningCheckVersionsAfterMod = "const versionsAfterMod = await table.listVersions();\nconst versionCountAfterMod = versionsAfterMod.length;\nconst versionAfterMod = await table.version();\nconsole.log(\n  `Number of versions after modifications: ${versionCountAfterMod}`,\n);\nconsole.log(`Current version: ${versionAfterMod}`);\n";
+
+export const TsVersioningCheckoutLatest = "await table.checkoutLatest();\n";
+
+export const TsVersioningDeleteData = "await table.delete(\"author = 'Morty'\");\nconst rowsAfterDeletion = await table.countRows();\nconsole.log(`Number of rows after deletion: ${rowsAfterDeletion}`);\n";
+
+export const TsVersioningListAllVersions = "const allVersions = await table.listVersions();\nfor (const v of allVersions) {\n  console.log(`Version ${v.version}, created at ${v.timestamp}`);\n}\n";
+
+export const TsVersioningRollback = "await table.checkout(versionAfterMod);\nawait table.restore();\nconst versionsAfterRollback = await table.listVersions();\nconst versionCountAfterRollback = versionsAfterRollback.length;\nconsole.log(\n  `Total number of versions after rollback: ${versionCountAfterRollback}`,\n);\n";
+
+export const TsVersioningUpdateData = "await table.update({\n  where: \"author = 'Richard'\",\n  values: { author: \"Richard Daniel Sanchez\" },\n});\nconst rowsAfterUpdate = await table.countRows(\n  \"author = 'Richard Daniel Sanchez'\",\n);\nconsole.log(`Rows updated to Richard Daniel Sanchez: ${rowsAfterUpdate}`);\n";
+
 export const RsAddColumnsCalculated = "// Add a discounted price column (10% discount)\nschema_add_table\n    .add_columns(\n        NewColumnTransform::SqlExpressions(vec![(\n            \"discounted_price\".to_string(),\n            \"cast((price * 0.9) as float)\".to_string(),\n        )]),\n        None,\n    )\n    .await\n    .unwrap();\n";
 
 export const RsAddColumnsDefaultValues = "// Add a stock status column with default value\nschema_add_table\n    .add_columns(\n        NewColumnTransform::SqlExpressions(vec![(\n            \"in_stock\".to_string(),\n            \"cast(true as boolean)\".to_string(),\n        )]),\n        None,\n    )\n    .await\n    .unwrap();\n";
@@ -236,7 +254,7 @@ export const RsSchemaAlterSetup = "let schema_alter_schema = Arc::new(Schema::ne
 
 export const RsSchemaDropSetup = "let schema_drop_schema = Arc::new(Schema::new(vec![\n    Field::new(\"id\", DataType::Int64, false),\n    Field::new(\"name\", DataType::Utf8, false),\n    Field::new(\"price\", DataType::Float64, false),\n    Field::new(\"temp_col1\", DataType::Utf8, false),\n    Field::new(\"temp_col2\", DataType::Int32, false),\n    Field::new(\n        \"vector\",\n        DataType::FixedSizeList(Arc::new(Field::new(\"item\", DataType::Float32, true)), 128),\n        false,\n    ),\n]));\nlet schema_drop_batch = RecordBatch::try_new(\n    schema_drop_schema.clone(),\n    vec![\n        Arc::new(Int64Array::from(vec![1, 2, 3])),\n        Arc::new(StringArray::from(vec![\"Laptop\", \"Smartphone\", \"Headphones\"])),\n        Arc::new(Float64Array::from(vec![1200.0, 800.0, 150.0])),\n        Arc::new(StringArray::from(vec![\"X\", \"Y\", \"Z\"])),\n        Arc::new(Int32Array::from(vec![100, 200, 300])),\n        Arc::new(\n            FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(\n                vec![\n                    Some(vec![Some(0.1_f32); 128]),\n                    Some(vec![Some(0.2_f32); 128]),\n                    Some(vec![Some(0.3_f32); 128]),\n                ],\n                128,\n            ),\n        ),\n    ],\n)\n.unwrap();\nlet schema_drop_reader = RecordBatchIterator::new(\n    vec![Ok(schema_drop_batch)].into_iter(),\n    schema_drop_schema.clone(),\n);\nlet schema_drop_table = db\n    .create_table(\"schema_evolution_drop_example\", schema_drop_reader)\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await\n    .unwrap();\n";
 
-export const RsUpdateConnectCloud = "let db = connect(\"db://your-project-slug\")\n    .api_key(\"your-api-key\")\n    .region(\"us-east-1\")\n    .execute()\n    .await\n    .unwrap();\n";
+export const RsUpdateConnectCloud = "let uri = \"db://your-project-slug\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\n";
 
 export const RsUpdateConnectLocal = "let db = connect(\"./data\").execute().await.unwrap();\n";
 
@@ -249,4 +267,24 @@ export const RsUpdateOperation = "let table = db\n    .create_table(\n        \"
 export const RsUpdateOptimizeCleanup = "table\n    .optimize(OptimizeAction::Prune {\n        older_than: Some(Duration::days(1)),\n        delete_unverified: None,\n        error_if_tagged_old_versions: None,\n    })\n    .await\n    .unwrap();\n";
 
 export const RsUpdateUsingSql = "let table = db\n    .create_table(\n        \"users_example\",\n        make_users_reader(vec![1, 2], vec![\"Alice\", \"Bob\"], Some(vec![10, 20])),\n    )\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await\n    .unwrap();\ntable\n    .update()\n    .only_if(\"id = 2\")\n    .column(\"login_count\", \"login_count + 1\")\n    .execute()\n    .await\n    .unwrap();\n";
+
+export const RsVersioningAddData = "let more_data = vec![\n    (4, \"Richard Daniel Sanchez\", \"That's the way the news goes!\"),\n    (5, \"Morty\", \"Aww geez, Rick!\"),\n];\ntable\n    .add(make_quotes_reader(more_data))\n    .execute()\n    .await\n    .unwrap();\n";
+
+export const RsVersioningBasicSetup = "let table_name = \"quotes_versioning_example\";\nlet data = vec![\n    (1, \"Richard\", \"Wubba Lubba Dub Dub!\"),\n    (2, \"Morty\", \"Rick, what's going on?\"),\n    (3, \"Richard\", \"I turned myself into a pickle, Morty!\"),\n];\n\nlet table = db\n    .create_table(table_name, make_quotes_reader(data))\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await\n    .unwrap();\n";
+
+export const RsVersioningCheckInitialVersion = "let versions = table.list_versions().await.unwrap();\nlet current_version = table.version().await.unwrap();\nprintln!(\"Number of versions after creation: {}\", versions.len());\nprintln!(\"Current version: {}\", current_version);\n";
+
+export const RsVersioningCheckVersionsAfterMod = "let versions_after_mod = table.list_versions().await.unwrap();\nlet version_count_after_mod = versions_after_mod.len();\nlet version_after_mod = table.version().await.unwrap();\nprintln!(\n    \"Number of versions after modifications: {}\",\n    version_count_after_mod\n);\nprintln!(\"Current version: {}\", version_after_mod);\n";
+
+export const RsVersioningCheckoutLatest = "table.checkout_latest().await.unwrap();\n";
+
+export const RsVersioningDeleteData = "table.delete(\"author = 'Morty'\").await.unwrap();\nlet rows_after_deletion = table.count_rows(None).await.unwrap();\nprintln!(\"Number of rows after deletion: {}\", rows_after_deletion);\n";
+
+export const RsVersioningListAllVersions = "let all_versions = table.list_versions().await.unwrap();\nfor v in &all_versions {\n    println!(\"Version {}, created at {}\", v.version, v.timestamp);\n}\n";
+
+export const RsVersioningMakeQuotesReader = "fn make_quotes_reader(rows: Vec<(i64, &str, &str)>) -> Box<dyn RecordBatchReader + Send> {\n    let ids: Vec<i64> = rows.iter().map(|(id, _, _)| *id).collect();\n    let authors: Vec<&str> = rows.iter().map(|(_, author, _)| *author).collect();\n    let quotes: Vec<&str> = rows.iter().map(|(_, _, quote)| *quote).collect();\n\n    let schema = Arc::new(Schema::new(vec![\n        Field::new(\"id\", DataType::Int64, false),\n        Field::new(\"author\", DataType::Utf8, false),\n        Field::new(\"quote\", DataType::Utf8, false),\n    ]));\n\n    let batch = RecordBatch::try_new(\n        schema.clone(),\n        vec![\n            Arc::new(Int64Array::from(ids)),\n            Arc::new(StringArray::from(authors)),\n            Arc::new(StringArray::from(quotes)),\n        ],\n    )\n    .unwrap();\n    let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);\n    Box::new(reader)\n}\n";
+
+export const RsVersioningRollback = "table.checkout(version_after_mod).await.unwrap();\ntable.restore().await.unwrap();\nlet versions_after_rollback = table.list_versions().await.unwrap();\nlet version_count_after_rollback = versions_after_rollback.len();\nprintln!(\n    \"Total number of versions after rollback: {}\",\n    version_count_after_rollback\n);\n";
+
+export const RsVersioningUpdateData = "table\n    .update()\n    .only_if(\"author = 'Richard'\")\n    .column(\"author\", \"'Richard Daniel Sanchez'\")\n    .execute()\n    .await\n    .unwrap();\nlet rows_after_update = table\n    .count_rows(Some(\"author = 'Richard Daniel Sanchez'\".to_string()))\n    .await\n    .unwrap();\nprintln!(\n    \"Rows updated to Richard Daniel Sanchez: {}\",\n    rows_after_update\n);\n";
 

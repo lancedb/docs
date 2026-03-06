@@ -1084,7 +1084,15 @@ def _setup_versioning_table(tmp_db, data=None, table_name="quotes_versioning_exa
     import pyarrow as pa
 
     if data is None:
-        data = [{"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"}]
+        data = [
+            {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
+            {"id": 2, "author": "Morty", "quote": "Rick, what's going on?"},
+            {
+                "id": 3,
+                "author": "Richard",
+                "quote": "I turned myself into a pickle, Morty!",
+            },
+        ]
     schema = pa.schema(
         [
             pa.field("id", pa.int64()),
@@ -1097,15 +1105,10 @@ def _setup_versioning_table(tmp_db, data=None, table_name="quotes_versioning_exa
 
 def test_versioning_basic_setup(tmp_db):
     # --8<-- [start:versioning_basic_setup]
-    import lancedb
-    import numpy as np
-    import pandas as pd
     import pyarrow as pa
 
-    # Connect to LanceDB
     db = tmp_db
 
-    # Create a table with initial data
     table_name = "quotes_versioning_example"
     data = [
         {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
@@ -1128,34 +1131,33 @@ def test_versioning_basic_setup(tmp_db):
 
     table = db.create_table(table_name, data, schema=schema, mode="overwrite")
     # --8<-- [end:versioning_basic_setup]
+    assert table.count_rows() == 3
 
 
 def test_versioning_check_initial_version(tmp_db):
     table = _setup_versioning_table(tmp_db)
 
     # --8<-- [start:versioning_check_initial_version]
-    # View the initial version
     versions = table.list_versions()
+    current_version = table.version
     print(f"Number of versions after creation: {len(versions)}")
-    print(f"Current version: {table.version}")
+    print(f"Current version: {current_version}")
     # --8<-- [end:versioning_check_initial_version]
     assert len(versions) == 1
-    assert table.version == versions[-1]["version"]
+    assert current_version == versions[-1]["version"]
 
 
 def test_versioning_flow(tmp_db):
     table = _setup_versioning_table(tmp_db)
 
     # --8<-- [start:versioning_update_data]
-    # Update author names to be more specific
     table.update(where="author='Richard'", values={"author": "Richard Daniel Sanchez"})
-    rows_after_update = table.count_rows()
-    print(f"Number of rows after update: {rows_after_update}")
+    rows_after_update = table.count_rows("author = 'Richard Daniel Sanchez'")
+    print(f"Rows updated to Richard Daniel Sanchez: {rows_after_update}")
     # --8<-- [end:versioning_update_data]
-    assert rows_after_update == 1
+    assert rows_after_update == 2
 
     # --8<-- [start:versioning_add_data]
-    # Add more data
     more_data = [
         {
             "id": 4,
@@ -1166,22 +1168,19 @@ def test_versioning_flow(tmp_db):
     ]
     table.add(more_data)
     # --8<-- [end:versioning_add_data]
-    assert table.count_rows() == 3
+    assert table.count_rows() == 5
 
     # --8<-- [start:versioning_check_versions_after_mod]
-    # Check versions after modifications
     versions = table.list_versions()
     version_count_after_mod = len(versions)
     version_after_mod = table.version
     print(f"Number of versions after modifications: {version_count_after_mod}")
     print(f"Current version: {version_after_mod}")
     # --8<-- [end:versioning_check_versions_after_mod]
-    assert version_count_after_mod == len(versions)
     assert version_count_after_mod >= 2
     assert version_after_mod == versions[-1]["version"]
 
     # --8<-- [start:versioning_list_all_versions]
-    # Let's see all versions
     versions = table.list_versions()
     for v in versions:
         print(f"Version {v['version']}, created at {v['timestamp']}")
@@ -1189,32 +1188,26 @@ def test_versioning_flow(tmp_db):
     assert len(versions) >= 1
 
     # --8<-- [start:versioning_rollback]
-    # Let's roll back to before we added the vector column
-    # We'll use the version after modifications but before adding embeddings
     table.restore(version_after_mod)
-
-    # Notice we have one more version now, not less!
     versions = table.list_versions()
     version_count_after_rollback = len(versions)
     print(f"Total number of versions after rollback: {version_count_after_rollback}")
     # --8<-- [end:versioning_rollback]
-    assert version_count_after_rollback == len(versions)
     assert version_count_after_rollback == version_count_after_mod + 1
     assert table.version == versions[-1]["version"]
+    assert table.count_rows() == 5
 
     # --8<-- [start:versioning_checkout_latest]
-    # Go back to the latest version
     table.checkout_latest()
     # --8<-- [end:versioning_checkout_latest]
     assert table.version == table.list_versions()[-1]["version"]
 
     # --8<-- [start:versioning_delete_data]
-    # Let's delete data from the table
-    table.delete("author != 'Richard Daniel Sanchez'")
+    table.delete("author = 'Morty'")
     rows_after_deletion = table.count_rows()
     print(f"Number of rows after deletion: {rows_after_deletion}")
     # --8<-- [end:versioning_delete_data]
-    assert rows_after_deletion == 2
+    assert rows_after_deletion == 3
 
 
 # ============================================================================

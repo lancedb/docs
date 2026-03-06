@@ -38,17 +38,40 @@ fn make_users_reader(
 }
 // --8<-- [end:update_make_users_reader]
 
+// --8<-- [start:versioning_make_quotes_reader]
+fn make_quotes_reader(rows: Vec<(i64, &str, &str)>) -> Box<dyn RecordBatchReader + Send> {
+    let ids: Vec<i64> = rows.iter().map(|(id, _, _)| *id).collect();
+    let authors: Vec<&str> = rows.iter().map(|(_, author, _)| *author).collect();
+    let quotes: Vec<&str> = rows.iter().map(|(_, _, quote)| *quote).collect();
+
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("author", DataType::Utf8, false),
+        Field::new("quote", DataType::Utf8, false),
+    ]));
+
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(ids)),
+            Arc::new(StringArray::from(authors)),
+            Arc::new(StringArray::from(quotes)),
+        ],
+    )
+    .unwrap();
+    let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);
+    Box::new(reader)
+}
+// --8<-- [end:versioning_make_quotes_reader]
+
 #[allow(dead_code)]
 async fn update_connect_cloud_example() {
     // --8<-- [start:update_connect_cloud]
-    let db = connect("db://your-project-slug")
-        .api_key("your-api-key")
-        .region("us-east-1")
-        .execute()
-        .await
-        .unwrap();
+    let uri = "db://your-project-slug";
+    let api_key = "your-api-key";
+    let region = "us-east-1";
     // --8<-- [end:update_connect_cloud]
-    let _ = db;
+    let _ = (uri, api_key, region);
 }
 
 #[allow(dead_code)]
@@ -887,4 +910,110 @@ async fn main() {
         .await
         .unwrap();
     // --8<-- [end:update_optimize_cleanup]
+
+    // --8<-- [start:versioning_basic_setup]
+    let table_name = "quotes_versioning_example";
+    let data = vec![
+        (1, "Richard", "Wubba Lubba Dub Dub!"),
+        (2, "Morty", "Rick, what's going on?"),
+        (3, "Richard", "I turned myself into a pickle, Morty!"),
+    ];
+
+    let table = db
+        .create_table(table_name, make_quotes_reader(data))
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:versioning_basic_setup]
+    assert_eq!(table.count_rows(None).await.unwrap(), 3);
+
+    // --8<-- [start:versioning_check_initial_version]
+    let versions = table.list_versions().await.unwrap();
+    let current_version = table.version().await.unwrap();
+    println!("Number of versions after creation: {}", versions.len());
+    println!("Current version: {}", current_version);
+    // --8<-- [end:versioning_check_initial_version]
+    assert_eq!(versions.len(), 1);
+    assert_eq!(current_version, versions.last().unwrap().version);
+
+    // --8<-- [start:versioning_update_data]
+    table
+        .update()
+        .only_if("author = 'Richard'")
+        .column("author", "'Richard Daniel Sanchez'")
+        .execute()
+        .await
+        .unwrap();
+    let rows_after_update = table
+        .count_rows(Some("author = 'Richard Daniel Sanchez'".to_string()))
+        .await
+        .unwrap();
+    println!(
+        "Rows updated to Richard Daniel Sanchez: {}",
+        rows_after_update
+    );
+    // --8<-- [end:versioning_update_data]
+    assert_eq!(rows_after_update, 2);
+
+    // --8<-- [start:versioning_add_data]
+    let more_data = vec![
+        (4, "Richard Daniel Sanchez", "That's the way the news goes!"),
+        (5, "Morty", "Aww geez, Rick!"),
+    ];
+    table
+        .add(make_quotes_reader(more_data))
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:versioning_add_data]
+    assert_eq!(table.count_rows(None).await.unwrap(), 5);
+
+    // --8<-- [start:versioning_check_versions_after_mod]
+    let versions_after_mod = table.list_versions().await.unwrap();
+    let version_count_after_mod = versions_after_mod.len();
+    let version_after_mod = table.version().await.unwrap();
+    println!(
+        "Number of versions after modifications: {}",
+        version_count_after_mod
+    );
+    println!("Current version: {}", version_after_mod);
+    // --8<-- [end:versioning_check_versions_after_mod]
+    assert!(version_count_after_mod >= 2);
+    assert_eq!(version_after_mod, versions_after_mod.last().unwrap().version);
+
+    // --8<-- [start:versioning_list_all_versions]
+    let all_versions = table.list_versions().await.unwrap();
+    for v in &all_versions {
+        println!("Version {}, created at {}", v.version, v.timestamp);
+    }
+    // --8<-- [end:versioning_list_all_versions]
+    assert!(!all_versions.is_empty());
+
+    // --8<-- [start:versioning_rollback]
+    table.checkout(version_after_mod).await.unwrap();
+    table.restore().await.unwrap();
+    let versions_after_rollback = table.list_versions().await.unwrap();
+    let version_count_after_rollback = versions_after_rollback.len();
+    println!(
+        "Total number of versions after rollback: {}",
+        version_count_after_rollback
+    );
+    // --8<-- [end:versioning_rollback]
+    assert_eq!(version_count_after_rollback, version_count_after_mod + 1);
+    assert_eq!(table.count_rows(None).await.unwrap(), 5);
+
+    // --8<-- [start:versioning_checkout_latest]
+    table.checkout_latest().await.unwrap();
+    // --8<-- [end:versioning_checkout_latest]
+    let latest_version = table.version().await.unwrap();
+    let versions_after_checkout = table.list_versions().await.unwrap();
+    assert_eq!(latest_version, versions_after_checkout.last().unwrap().version);
+
+    // --8<-- [start:versioning_delete_data]
+    table.delete("author = 'Morty'").await.unwrap();
+    let rows_after_deletion = table.count_rows(None).await.unwrap();
+    println!("Number of rows after deletion: {}", rows_after_deletion);
+    // --8<-- [end:versioning_delete_data]
+    assert_eq!(rows_after_deletion, 3);
 }

@@ -633,3 +633,106 @@ test("update snippets (async)", async () => {
     }
   });
 });
+
+test("versioning snippets (async)", async () => {
+  await withTempDirectory(async (databaseDir) => {
+    const db = await lancedb.connect(databaseDir);
+
+    // --8<-- [start:versioning_basic_setup]
+    const tableName = "quotes_versioning_example";
+    const data = [
+      { id: 1, author: "Richard", quote: "Wubba Lubba Dub Dub!" },
+      { id: 2, author: "Morty", quote: "Rick, what's going on?" },
+      {
+        id: 3,
+        author: "Richard",
+        quote: "I turned myself into a pickle, Morty!",
+      },
+    ];
+    const table = await db.createTable(tableName, data, { mode: "overwrite" });
+    // --8<-- [end:versioning_basic_setup]
+    expect(await table.countRows()).toBe(3);
+
+    // --8<-- [start:versioning_check_initial_version]
+    const versions = await table.listVersions();
+    const currentVersion = await table.version();
+    console.log(`Number of versions after creation: ${versions.length}`);
+    console.log(`Current version: ${currentVersion}`);
+    // --8<-- [end:versioning_check_initial_version]
+    expect(versions.length).toBe(1);
+    expect(currentVersion).toBe(versions[versions.length - 1].version);
+
+    // --8<-- [start:versioning_update_data]
+    await table.update({
+      where: "author = 'Richard'",
+      values: { author: "Richard Daniel Sanchez" },
+    });
+    const rowsAfterUpdate = await table.countRows(
+      "author = 'Richard Daniel Sanchez'",
+    );
+    console.log(`Rows updated to Richard Daniel Sanchez: ${rowsAfterUpdate}`);
+    // --8<-- [end:versioning_update_data]
+    expect(rowsAfterUpdate).toBe(2);
+
+    // --8<-- [start:versioning_add_data]
+    const moreData = [
+      {
+        id: 4,
+        author: "Richard Daniel Sanchez",
+        quote: "That's the way the news goes!",
+      },
+      { id: 5, author: "Morty", quote: "Aww geez, Rick!" },
+    ];
+    await table.add(moreData);
+    // --8<-- [end:versioning_add_data]
+    expect(await table.countRows()).toBe(5);
+
+    // --8<-- [start:versioning_check_versions_after_mod]
+    const versionsAfterMod = await table.listVersions();
+    const versionCountAfterMod = versionsAfterMod.length;
+    const versionAfterMod = await table.version();
+    console.log(
+      `Number of versions after modifications: ${versionCountAfterMod}`,
+    );
+    console.log(`Current version: ${versionAfterMod}`);
+    // --8<-- [end:versioning_check_versions_after_mod]
+    expect(versionCountAfterMod).toBeGreaterThanOrEqual(2);
+    expect(versionAfterMod).toBe(versionsAfterMod[versionsAfterMod.length - 1].version);
+
+    // --8<-- [start:versioning_list_all_versions]
+    const allVersions = await table.listVersions();
+    for (const v of allVersions) {
+      console.log(`Version ${v.version}, created at ${v.timestamp}`);
+    }
+    // --8<-- [end:versioning_list_all_versions]
+    expect(allVersions.length).toBeGreaterThanOrEqual(1);
+
+    // --8<-- [start:versioning_rollback]
+    await table.checkout(versionAfterMod);
+    await table.restore();
+    const versionsAfterRollback = await table.listVersions();
+    const versionCountAfterRollback = versionsAfterRollback.length;
+    console.log(
+      `Total number of versions after rollback: ${versionCountAfterRollback}`,
+    );
+    // --8<-- [end:versioning_rollback]
+    expect(versionCountAfterRollback).toBe(versionCountAfterMod + 1);
+    expect(await table.countRows()).toBe(5);
+
+    // --8<-- [start:versioning_checkout_latest]
+    await table.checkoutLatest();
+    // --8<-- [end:versioning_checkout_latest]
+    const latestVersion = await table.version();
+    const versionsAfterCheckout = await table.listVersions();
+    expect(latestVersion).toBe(
+      versionsAfterCheckout[versionsAfterCheckout.length - 1].version,
+    );
+
+    // --8<-- [start:versioning_delete_data]
+    await table.delete("author = 'Morty'");
+    const rowsAfterDeletion = await table.countRows();
+    console.log(`Number of rows after deletion: ${rowsAfterDeletion}`);
+    // --8<-- [end:versioning_delete_data]
+    expect(rowsAfterDeletion).toBe(3);
+  });
+});
