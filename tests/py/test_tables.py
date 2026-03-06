@@ -850,6 +850,7 @@ def _setup_schema_alter_table(tmp_db, data=None):
 
 
 def _setup_schema_drop_table(tmp_db, data=None):
+    # --8<-- [start:schema_drop_setup]
     if data is None:
         data = [
             {
@@ -868,8 +869,18 @@ def _setup_schema_drop_table(tmp_db, data=None):
                 "temp_col2": 200,
                 "vector": np.random.random(128).tolist(),
             },
+            {
+                "id": 3,
+                "name": "Headphones",
+                "price": 150.00,
+                "temp_col1": "Z",
+                "temp_col2": 300,
+                "vector": np.random.random(128).tolist(),
+            },
         ]
-    return tmp_db.create_table("schema_evolution_drop_example", data, mode="overwrite")
+    table = tmp_db.create_table("schema_evolution_drop_example", data, mode="overwrite")
+    # --8<-- [end:schema_drop_setup]
+    return table
 
 
 def test_add_columns_calculated(tmp_db):
@@ -993,6 +1004,24 @@ def test_alter_columns_multiple(tmp_db):
     # --8<-- [end:alter_columns_multiple]
     assert "final_price" in table.schema.names
     assert table.schema.field("final_price").nullable is True
+
+
+def test_alter_columns_with_expression(tmp_db):
+    # --8<-- [start:alter_columns_with_expression]
+    # For custom transforms, create a new column from a SQL expression.
+    expression_table = tmp_db.create_table(
+        "schema_evolution_expression_example",
+        [{"id": 1, "price_text": "$100"}],
+        mode="overwrite",
+    )
+
+    expression_table.add_columns(
+        {"price_numeric": "cast(replace(price_text, '$', '') as int)"}
+    )
+    expression_table.drop_columns(["price_text"])
+    expression_table.alter_columns({"path": "price_numeric", "rename": "price"})
+    # --8<-- [end:alter_columns_with_expression]
+    assert "price" in expression_table.schema.names
 
 
 def test_drop_columns_single(tmp_db):
