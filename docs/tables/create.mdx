@@ -4,31 +4,40 @@ sidebarTitle: "Ingesting data"
 description: Learn about different methods to ingest data into tables in LanceDB, including from various data sources and empty tables.
 icon: "cookie"
 ---
+import { TsConnect, RsConnect } from '/snippets/connection.mdx';
 import {
     PyCreateTableFromDicts as CreateTableFromDicts,
+    TsCreateTableFromDicts as TsCreateTableFromDicts,
+    RsCreateTableFromDicts as RsCreateTableFromDicts,
     PyCreateTableFromPandas as CreateTableFromPandas,
     PyCreateTableCustomSchema as CreateTableCustomSchema,
+    TsCreateTableCustomSchema as TsCreateTableCustomSchema,
+    RsCreateTableCustomSchema as RsCreateTableCustomSchema,
     PyCreateTableFromPolars as CreateTableFromPolars,
     PyCreateTableFromArrow as CreateTableFromArrow,
+    TsCreateTableFromArrow as TsCreateTableFromArrow,
+    RsCreateTableFromArrow as RsCreateTableFromArrow,
     PyCreateTableFromPydantic as CreateTableFromPydantic,
     PyCreateTableNestedSchema as CreateTableNestedSchema,
     PyCreateTableFromIterator as CreateTableFromIterator,
+    TsCreateTableFromIterator as TsCreateTableFromIterator,
+    RsCreateTableFromIterator as RsCreateTableFromIterator,
     PyOpenExistingTable as OpenExistingTable,
+    TsOpenExistingTable as TsOpenExistingTable,
+    RsOpenExistingTable as RsOpenExistingTable,
     PyCreateEmptyTable as CreateEmptyTable,
+    TsCreateEmptyTable as TsCreateEmptyTable,
+    RsCreateEmptyTable as RsCreateEmptyTable,
     PyCreateEmptyTablePydantic as CreateEmptyTablePydantic,
     PyDropTable as DropTable,
+    TsDropTable as TsDropTable,
+    RsDropTable as RsDropTable,
     PyTablesBasicConnect as TablesBasicConnect,
     PyTablesDocumentModel as TablesDocumentModel,
     PyTablesTzValidator as TablesTzValidator,
 } from '/snippets/tables.mdx';
 
-In LanceDB, tables store records with a defined schema that specifies column names and types. You can create LanceDB tables from these data formats:
-
-- Pandas DataFrames
-- [Polars](https://pola.rs/) DataFrames
-- Apache Arrow Tables
-
-The Python SDK additionally supports:
+In LanceDB, tables store records with a defined schema that specifies column names and types. Across the SDKs, you can create tables from row-oriented data and Apache Arrow data structures. The Python SDK additionally supports:
 
 - PyArrow schemas for explicit schema control
 - `LanceModel` for Pydantic-based validation
@@ -37,24 +46,80 @@ The Python SDK additionally supports:
 
 Initialize a LanceDB connection and create a table
 
-
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {TablesBasicConnect}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnect}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsConnect}
+    </CodeBlock>
 </CodeGroup>
 
-LanceDB allows ingesting data from various sources - `dict`, `list[dict]`, `pd.DataFrame`, `pa.Table` or a `Iterator[pa.RecordBatch]`. Let's take a look at some of the these.
+Depending on the SDK, LanceDB can ingest arrays of records, Arrow tables or record batches, and Arrow batch iterators or readers. Let's take a look at some of the common patterns.
 
-### From list of tuples or dictionaries
+### From list of objects
+
+You can provide a list of objects to create a table. The Python and TypeScript SDKs
+support lists/arrays of dictionaries, while the Rust SDK supports lists of structs.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromDicts}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateTableFromDicts}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateTableFromDicts}
+    </CodeBlock>
 </CodeGroup>
 
+### From a custom schema
+
+You can define a custom Arrow schema for the table. This is useful when you want to have more control over the column types and metadata.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {CreateTableCustomSchema}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateTableCustomSchema}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateTableCustomSchema}
+    </CodeBlock>
+</CodeGroup>
+
+### From an Arrow Table
+You can also create LanceDB tables directly from Arrow tables.
+Rust uses an Arrow `RecordBatchReader` for the same Arrow-native ingest flow.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {CreateTableFromArrow}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateTableFromArrow}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateTableFromArrow}
+    </CodeBlock>
+</CodeGroup>
+
+
 ### From a Pandas DataFrame
+<Badge color="green">Python Only</Badge>
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -70,15 +135,8 @@ Data is converted to Arrow before being written to disk. For maximum control ove
 The **`vector`** column needs to be a [Vector](/integrations/data/pydantic#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
 </Note>
 
-#### From a custom schema
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {CreateTableCustomSchema}
-    </CodeBlock>
-</CodeGroup>
-
 ### From a Polars DataFrame
+<Badge color="green">Python Only</Badge>
 
 LanceDB supports [Polars](https://pola.rs/), a modern, fast DataFrame library
 written in Rust. Just like in Pandas, the Polars integration is enabled by PyArrow
@@ -91,17 +149,8 @@ is on the way.
     </CodeBlock>
 </CodeGroup>
 
-### From an Arrow Table
-You can also create LanceDB tables directly from Arrow tables.
-LanceDB supports float16 data type!
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {CreateTableFromArrow}
-    </CodeBlock>
-</CodeGroup>
-
 ### From Pydantic Models
+<Badge color="green">Python Only</Badge>
 
 When you create an empty table without data, you must specify the table schema.
 LanceDB supports creating tables by specifying a PyArrow schema or a specialized
@@ -170,19 +219,23 @@ When you run this code it, should raise the `ValidationError`.
 
 ### Using Iterators / Writing Large Datasets
 
-It is recommended to use iterators to add large datasets in batches when creating your table in one go. This does not create multiple versions of your dataset unlike manually adding batches using `table.add()`
-
-LanceDB additionally supports PyArrow's `RecordBatch` Iterators or other generators producing supported data types.
-
-Here's an example using using `RecordBatch` iterator for creating tables.
+For large ingests, prefer batching instead of adding one row at a time. Python and Rust can create a table directly from Arrow batch iterators or readers. In TypeScript, the practical pattern today is to create an empty table and append Arrow batches in chunks.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {CreateTableFromIterator}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateTableFromIterator}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateTableFromIterator}
+    </CodeBlock>
 </CodeGroup>
 
-You can also use iterators of other types like Pandas DataFrame or Pylists directly in the above example.
+Python can also consume iterators of other supported types like Pandas DataFrames or Python lists.
 
 ## Open existing tables
 
@@ -192,6 +245,14 @@ If you forget the name of your table, you can always get a listing of all table 
     <CodeBlock filename="Python" language="Python" icon="python">
     {OpenExistingTable}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsOpenExistingTable}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsOpenExistingTable}
+    </CodeBlock>
 </CodeGroup>
 
 ## Creating empty table
@@ -199,11 +260,19 @@ You can create an empty table for scenarios where you want to add data to the ta
 An example would be when you want to collect data from a stream/external file and then add it to a table in
 batches.
 
-An empty table can be initialized via a PyArrow schema.
+An empty table can be initialized via an Arrow schema.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {CreateEmptyTable}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateEmptyTable}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateEmptyTable}
     </CodeBlock>
 </CodeGroup>
 
@@ -228,9 +297,16 @@ Use the `drop_table()` method on the database to remove a table.
     <CodeBlock filename="Python" language="Python" icon="python">
     {DropTable}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsDropTable}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsDropTable}
+    </CodeBlock>
 </CodeGroup>
 
 This permanently removes the table and is not recoverable, unlike deleting rows.
 By default, if the table does not exist an exception is raised. To suppress this,
 you can pass in `ignore_missing=True`.
-

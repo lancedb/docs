@@ -18,3 +18,7 @@ When running Python code, we have to cater to users of both pip and uv.
   - Activate the environment, so that you can run multiple code exampes in the same environment
 - Avoid using `uv run` directly, as you have issues running it in your sandbox
 - Only fall back to the system `python3` to run code if the above steps don't work
+
+## Generate snippets
+
+- Generate the required code snippets using the provided Makefile: `make snippets`
