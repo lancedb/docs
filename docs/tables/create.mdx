@@ -217,7 +217,7 @@ for a `created_at` field.
 
 When you run this code it, should raise the `ValidationError`.
 
-### Using Iterators / Writing Large Datasets
+### Use Iterators / Write Large Datasets
 
 For large ingests, prefer batching instead of adding one row at a time. Python and Rust can create a table directly from Arrow batch iterators or readers. In TypeScript, the practical pattern today is to create an empty table and append Arrow batches in chunks.
 
@@ -255,7 +255,7 @@ If you forget the name of your table, you can always get a listing of all table 
     </CodeBlock>
 </CodeGroup>
 
-## Creating empty table
+## Create empty table
 You can create an empty table for scenarios where you want to add data to the table later.
 An example would be when you want to collect data from a stream/external file and then add it to a table in
 batches.
