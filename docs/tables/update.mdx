@@ -17,6 +17,31 @@ import {
     PyMergePartialColumns as MergePartialColumns,
     PyDeleteOperation as DeleteOperation,
     PyUpdateOptimizeCleanup as UpdateOptimizeCleanup,
+    TsUpdateConnectCloud,
+    TsUpdateConnectLocal,
+    TsUpdateExampleTableSetup,
+    TsUpdateOperation,
+    TsUpdateUsingSql,
+    TsMergeMatchedUpdateOnly,
+    TsInsertIfNotExists,
+    TsMergeUpdateInsert,
+    TsMergeDeleteMissingBySource,
+    TsMergePartialColumns,
+    TsDeleteOperation,
+    TsUpdateOptimizeCleanup,
+    RsUpdateConnectCloud,
+    RsUpdateConnectLocal,
+    RsUpdateExampleTableSetup,
+    RsUpdateMakeUsersReader,
+    RsUpdateOperation,
+    RsUpdateUsingSql,
+    RsMergeMatchedUpdateOnly,
+    RsInsertIfNotExists,
+    RsMergeUpdateInsert,
+    RsMergeDeleteMissingBySource,
+    RsMergePartialColumns,
+    RsDeleteOperation,
+    RsUpdateOptimizeCleanup,
 } from '/snippets/tables.mdx';
 
 Updating or modifying data involves changing rows in an existing table.
@@ -37,13 +62,15 @@ Connect to your local LanceDB instance:
     <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateConnectLocal}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsUpdateConnectLocal}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateConnectLocal}
+    </CodeBlock>
 </CodeGroup>
-
-Expected output:
-
-| Variable | Value |
-| --- | --- |
-| `db` | A connected LanceDB database handle pointing to `./data` |
 
 Or, connect to your LanceDB remote cluster:
 
@@ -51,13 +78,24 @@ Or, connect to your LanceDB remote cluster:
     <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateConnectCloud}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsUpdateConnectCloud}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateConnectCloud}
+    </CodeBlock>
 </CodeGroup>
 
-Expected output:
+<Expandable title="In the Rust snippets, a `make_users_reader` helper is used  to build Arrow input data.">
 
-| Variable | Value |
-| --- | --- |
-| `db` | A connected LanceDB database handle for your remote project |
+<CodeGroup>
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateMakeUsersReader}
+    </CodeBlock>
+</CodeGroup>
+</Expandable>
 
 ## Create the example table
 
@@ -65,6 +103,14 @@ We'll start by creating a simple table of a table with `id`, `name`, and `login_
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateExampleTableSetup}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsUpdateExampleTableSetup}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateExampleTableSetup}
     </CodeBlock>
 </CodeGroup>
 
@@ -96,6 +142,14 @@ Use `update` when you already know which target rows to modify and you do not ne
     <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateOperation}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsUpdateOperation}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateOperation}
+    </CodeBlock>
 </CodeGroup>
 
 Expected table contents:
@@ -116,6 +170,14 @@ Use `values_sql` when you want to use SQL-like expressions to update rows. This 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateUsingSql}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsUpdateUsingSql}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateUsingSql}
     </CodeBlock>
 </CodeGroup>
 
@@ -167,6 +229,14 @@ This updates keys that already exist in the target table. Source rows with new k
     <CodeBlock filename="Python" language="Python" icon="python">
     {MergeMatchedUpdateOnly}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsMergeMatchedUpdateOnly}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsMergeMatchedUpdateOnly}
+    </CodeBlock>
 </CodeGroup>
 
 Expected table contents:
@@ -183,6 +253,14 @@ This inserts only brand-new keys from the source. Existing keys are left unchang
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {InsertIfNotExists}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsInsertIfNotExists}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsInsertIfNotExists}
     </CodeBlock>
 </CodeGroup>
 
@@ -206,6 +284,14 @@ This is a conventional **upsert**.
     <CodeBlock filename="Python" language="Python" icon="python">
     {MergeUpdateInsert}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsMergeUpdateInsert}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsMergeUpdateInsert}
+    </CodeBlock>
 </CodeGroup>
 
 Expected table contents:
@@ -223,6 +309,14 @@ Use `when_not_matched_by_source_delete()` when you want to remove any target row
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {MergeDeleteMissingBySource}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsMergeDeleteMissingBySource}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsMergeDeleteMissingBySource}
     </CodeBlock>
 </CodeGroup>
 
@@ -242,6 +336,14 @@ Merge updates do not require you to provide values for all columns. You can prov
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {MergePartialColumns}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsMergePartialColumns}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsMergePartialColumns}
     </CodeBlock>
 </CodeGroup>
 
@@ -264,6 +366,14 @@ for deletion (in the [deletion files](https://lance.org/format/table/#deletion-f
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {DeleteOperation}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsDeleteOperation}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsDeleteOperation}
     </CodeBlock>
 </CodeGroup>
 
@@ -292,5 +402,13 @@ By default, table cleanup removes data up to 7 days ago. If you need to reclaim 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {UpdateOptimizeCleanup}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsUpdateOptimizeCleanup}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsUpdateOptimizeCleanup}
     </CodeBlock>
 </CodeGroup>

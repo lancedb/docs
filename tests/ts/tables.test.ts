@@ -5,6 +5,23 @@ import * as arrow from "apache-arrow";
 import * as lancedb from "@lancedb/lancedb";
 import { withTempDirectory } from "./util.ts";
 
+async function updateConnectCloudExample() {
+  // --8<-- [start:update_connect_cloud]
+  const db = await lancedb.connect("db://your-project-slug", {
+    apiKey: "your-api-key",
+    region: "us-east-1",
+  });
+  // --8<-- [end:update_connect_cloud]
+  return db;
+}
+
+async function updateConnectLocalExample() {
+  // --8<-- [start:update_connect_local]
+  const db = await lancedb.connect("./data");
+  // --8<-- [end:update_connect_local]
+  return db;
+}
+
 test("table creation snippets (async)", async () => {
   await withTempDirectory(async (databaseDir) => {
     const db = await lancedb.connect(databaseDir);
@@ -395,5 +412,392 @@ test("schema evolution snippets (async)", async () => {
     await vectorTable.alterColumns([{ path: "embedding_v2", rename: "embedding" }]);
     // --8<-- [end:alter_vector_column]
     expect(await vectorTable.countRows()).toBe(1);
+  });
+});
+
+test("update snippets (async)", async () => {
+  // Keep connection snippets in this file, but do not run cloud/local examples in CI.
+  void updateConnectCloudExample;
+  void updateConnectLocalExample;
+
+  await withTempDirectory(async (databaseDir) => {
+    const db = await lancedb.connect(databaseDir);
+
+    {
+      // --8<-- [start:update_example_table_setup]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+      // --8<-- [end:update_example_table_setup]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:update_operation]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+      await table.update({ where: "id = 2", values: { name: "Bobby" } });
+      // --8<-- [end:update_operation]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:update_using_sql]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+      await table.update({
+        where: "id = 2",
+        valuesSql: { login_count: "login_count + 1" },
+      });
+      // --8<-- [end:update_using_sql]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_matched_update_only]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_matched_update_only]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:insert_if_not_exists]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenNotMatchedInsertAll()
+        .execute(incomingUsers);
+      // --8<-- [end:insert_if_not_exists]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_update_insert]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_update_insert]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_delete_missing_by_source]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+          { id: 3, name: "Charlie", login_count: 5 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby", login_count: 21 },
+        { id: 3, name: "Charlie", login_count: 5 },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .whenNotMatchedBySourceDelete()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_delete_missing_by_source]
+      await table.countRows();
+    }
+
+    {
+      // --8<-- [start:merge_partial_columns]
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      const incomingUsers = [
+        { id: 2, name: "Bobby" },
+        { id: 3, name: "Charlie" },
+      ];
+
+      await table
+        .mergeInsert("id")
+        .whenMatchedUpdateAll()
+        .whenNotMatchedInsertAll()
+        .execute(incomingUsers);
+      // --8<-- [end:merge_partial_columns]
+      await table.countRows();
+    }
+
+    {
+      const table = await db.createTable(
+        "users_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+          { id: 3, name: "Charlie", login_count: 5 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      // --8<-- [start:delete_operation]
+      // delete data
+      const predicate = "id = 3";
+      await table.delete(predicate);
+      // --8<-- [end:delete_operation]
+      await table.countRows();
+    }
+
+    {
+      const table = await db.createTable(
+        "users_cleanup_example",
+        [
+          { id: 1, name: "Alice", login_count: 10 },
+          { id: 2, name: "Bob", login_count: 20 },
+          { id: 3, name: "Charlie", login_count: 5 },
+        ],
+        { mode: "overwrite" },
+      );
+
+      // --8<-- [start:update_optimize_cleanup]
+      const olderThan = new Date();
+      olderThan.setDate(olderThan.getDate() - 1);
+      await table.optimize({ cleanupOlderThan: olderThan });
+      // --8<-- [end:update_optimize_cleanup]
+    }
+  });
+});
+
+test("versioning snippets (async)", async () => {
+  await withTempDirectory(async (databaseDir) => {
+    const db = await lancedb.connect(databaseDir);
+
+    // --8<-- [start:versioning_basic_setup]
+    const tableName = "quotes_versioning_example";
+    const data = [
+      { id: 1, author: "Richard", quote: "Wubba Lubba Dub Dub!" },
+      { id: 2, author: "Morty", quote: "Rick, what's going on?" },
+      {
+        id: 3,
+        author: "Richard",
+        quote: "I turned myself into a pickle, Morty!",
+      },
+    ];
+    const table = await db.createTable(tableName, data, { mode: "overwrite" });
+    // --8<-- [end:versioning_basic_setup]
+    expect(await table.countRows()).toBe(3);
+
+    // --8<-- [start:versioning_check_initial_version]
+    const versions = await table.listVersions();
+    const currentVersion = await table.version();
+    console.log(`Number of versions after creation: ${versions.length}`);
+    console.log(`Current version: ${currentVersion}`);
+    // --8<-- [end:versioning_check_initial_version]
+    expect(versions.length).toBe(1);
+    expect(currentVersion).toBe(versions[versions.length - 1].version);
+
+    // --8<-- [start:versioning_update_data]
+    await table.update({
+      where: "author = 'Richard'",
+      values: { author: "Richard Daniel Sanchez" },
+    });
+    const rowsAfterUpdate = await table.countRows(
+      "author = 'Richard Daniel Sanchez'",
+    );
+    console.log(`Rows updated to Richard Daniel Sanchez: ${rowsAfterUpdate}`);
+    // --8<-- [end:versioning_update_data]
+    expect(rowsAfterUpdate).toBe(2);
+
+    // --8<-- [start:versioning_add_data]
+    const moreData = [
+      {
+        id: 4,
+        author: "Richard Daniel Sanchez",
+        quote: "That's the way the news goes!",
+      },
+      { id: 5, author: "Morty", quote: "Aww geez, Rick!" },
+    ];
+    await table.add(moreData);
+    // --8<-- [end:versioning_add_data]
+    expect(await table.countRows()).toBe(5);
+
+    // --8<-- [start:versioning_check_versions_after_mod]
+    const versionsAfterMod = await table.listVersions();
+    const versionCountAfterMod = versionsAfterMod.length;
+    const versionAfterMod = await table.version();
+    console.log(
+      `Number of versions after modifications: ${versionCountAfterMod}`,
+    );
+    console.log(`Current version: ${versionAfterMod}`);
+    // --8<-- [end:versioning_check_versions_after_mod]
+    expect(versionCountAfterMod).toBeGreaterThanOrEqual(2);
+    expect(versionAfterMod).toBe(versionsAfterMod[versionsAfterMod.length - 1].version);
+
+    // --8<-- [start:versioning_list_all_versions]
+    const allVersions = await table.listVersions();
+    for (const v of allVersions) {
+      console.log(`Version ${v.version}, created at ${v.timestamp}`);
+    }
+    // --8<-- [end:versioning_list_all_versions]
+    expect(allVersions.length).toBeGreaterThanOrEqual(1);
+
+    // --8<-- [start:versioning_rollback]
+    await table.checkout(versionAfterMod);
+    await table.restore();
+    const versionsAfterRollback = await table.listVersions();
+    const versionCountAfterRollback = versionsAfterRollback.length;
+    console.log(
+      `Total number of versions after rollback: ${versionCountAfterRollback}`,
+    );
+    // --8<-- [end:versioning_rollback]
+    expect(versionCountAfterRollback).toBe(versionCountAfterMod + 1);
+    expect(await table.countRows()).toBe(5);
+
+    // --8<-- [start:versioning_checkout_latest]
+    await table.checkoutLatest();
+    // --8<-- [end:versioning_checkout_latest]
+    const latestVersion = await table.version();
+    const versionsAfterCheckout = await table.listVersions();
+    expect(latestVersion).toBe(
+      versionsAfterCheckout[versionsAfterCheckout.length - 1].version,
+    );
+
+    // --8<-- [start:versioning_delete_data]
+    await table.delete("author = 'Morty'");
+    const rowsAfterDeletion = await table.countRows();
+    console.log(`Number of rows after deletion: ${rowsAfterDeletion}`);
+    // --8<-- [end:versioning_delete_data]
+    expect(rowsAfterDeletion).toBe(3);
+  });
+});
+
+test("consistency snippets (async)", async () => {
+  await withTempDirectory(async (databaseDir) => {
+    // --8<-- [start:consistency_strong]
+    const strongWriterDb = await lancedb.connect(databaseDir);
+    const strongReaderDb = await lancedb.connect(databaseDir, {
+      readConsistencyInterval: 0,
+    });
+    const strongWriterTable = await strongWriterDb.createTable(
+      "consistency_strong_table",
+      [{ id: 1 }],
+      { mode: "overwrite" },
+    );
+    const strongReaderTable = await strongReaderDb.openTable(
+      "consistency_strong_table",
+    );
+    await strongWriterTable.add([{ id: 2 }]);
+    const strongRowsAfterWrite = await strongReaderTable.countRows();
+    console.log(`Rows visible with strong consistency: ${strongRowsAfterWrite}`);
+    // --8<-- [end:consistency_strong]
+    expect(strongRowsAfterWrite).toBe(2);
+
+    // --8<-- [start:consistency_eventual]
+    const eventualWriterDb = await lancedb.connect(databaseDir);
+    const eventualReaderDb = await lancedb.connect(databaseDir, {
+      readConsistencyInterval: 3600,
+    });
+    const eventualWriterTable = await eventualWriterDb.createTable(
+      "consistency_eventual_table",
+      [{ id: 1 }],
+      { mode: "overwrite" },
+    );
+    const eventualReaderTable = await eventualReaderDb.openTable(
+      "consistency_eventual_table",
+    );
+    await eventualWriterTable.add([{ id: 2 }]);
+    const eventualRowsAfterWrite = await eventualReaderTable.countRows();
+    console.log(
+      `Rows visible before eventual refresh interval: ${eventualRowsAfterWrite}`,
+    );
+    // --8<-- [end:consistency_eventual]
+    expect(eventualRowsAfterWrite).toBe(1);
+
+    // --8<-- [start:consistency_checkout_latest]
+    const checkoutWriterDb = await lancedb.connect(databaseDir);
+    const checkoutReaderDb = await lancedb.connect(databaseDir);
+    const checkoutWriterTable = await checkoutWriterDb.createTable(
+      "consistency_checkout_latest_table",
+      [{ id: 1 }],
+      { mode: "overwrite" },
+    );
+    const checkoutReaderTable = await checkoutReaderDb.openTable(
+      "consistency_checkout_latest_table",
+    );
+    await checkoutWriterTable.add([{ id: 2 }]);
+    const rowsBeforeRefresh = await checkoutReaderTable.countRows();
+    console.log(`Rows before checkoutLatest: ${rowsBeforeRefresh}`);
+    await checkoutReaderTable.checkoutLatest();
+    const rowsAfterRefresh = await checkoutReaderTable.countRows();
+    console.log(`Rows after checkoutLatest: ${rowsAfterRefresh}`);
+    // --8<-- [end:consistency_checkout_latest]
+    expect(rowsBeforeRefresh).toBe(1);
+    expect(rowsAfterRefresh).toBe(2);
   });
 });

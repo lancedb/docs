@@ -69,7 +69,7 @@ def test_basic_usage(db_path_factory):
     )
     db.create_table("camelot_pa", schema=schema, mode="overwrite")
     # --8<-- [end:basic_create_empty_table]
-    assert "camelot_pa" in db.table_names()
+    assert "camelot_pa" in db.list_tables().tables
     db.drop_table("camelot_pa")
 
     # --8<-- [start:basic_add_data]
@@ -168,7 +168,7 @@ def test_basic_usage(db_path_factory):
     # --8<-- [start:basic_drop_table]
     db.drop_table("camelot")
     # --8<-- [end:basic_drop_table]
-    assert "camelot" not in db.table_names()
+    assert "camelot" not in db.list_tables().tables
 
 
 @pytest.mark.asyncio
