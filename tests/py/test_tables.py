@@ -1219,37 +1219,49 @@ def test_consistency_strong(tmp_db):
     # --8<-- [start:consistency_strong]
     from datetime import timedelta
 
-    uri = str(tmp_db.uri) if hasattr(tmp_db, "uri") else "memory://"
-    db = lancedb.connect(uri, read_consistency_interval=timedelta(0))
-    # Create table first
-    data = [{"vector": [1.1, 1.2], "lat": 45.5}]
-    db.create_table("test_table", data, mode="overwrite")
-    tbl = db.open_table("test_table")
+    uri = str(tmp_db.uri)
+    writer_db = lancedb.connect(uri)
+    reader_db = lancedb.connect(uri, read_consistency_interval=timedelta(0))
+    writer_table = writer_db.create_table("consistency_strong_table", [{"id": 1}], mode="overwrite")
+    reader_table = reader_db.open_table("consistency_strong_table")
+    writer_table.add([{"id": 2}])
+    rows_after_write = reader_table.count_rows()
+    print(f"Rows visible with strong consistency: {rows_after_write}")
     # --8<-- [end:consistency_strong]
+    assert rows_after_write == 2
 
 
 def test_consistency_eventual(tmp_db):
     # --8<-- [start:consistency_eventual]
     from datetime import timedelta
 
-    uri = str(tmp_db.uri) if hasattr(tmp_db, "uri") else "memory://"
-    db = lancedb.connect(uri, read_consistency_interval=timedelta(seconds=5))
-    # Create table first
-    data = [{"vector": [1.1, 1.2], "lat": 45.5}]
-    db.create_table("test_table", data, mode="overwrite")
-    tbl = db.open_table("test_table")
+    uri = str(tmp_db.uri)
+    writer_db = lancedb.connect(uri)
+    reader_db = lancedb.connect(uri, read_consistency_interval=timedelta(seconds=3600))
+    writer_table = writer_db.create_table("consistency_eventual_table", [{"id": 1}], mode="overwrite")
+    reader_table = reader_db.open_table("consistency_eventual_table")
+    writer_table.add([{"id": 2}])
+    rows_after_write = reader_table.count_rows()
+    print(f"Rows visible before eventual refresh interval: {rows_after_write}")
     # --8<-- [end:consistency_eventual]
+    assert rows_after_write == 1
 
 
 def test_consistency_checkout_latest(tmp_db):
     # --8<-- [start:consistency_checkout_latest]
-    db = tmp_db
-    # Create table first
-    data = [{"vector": [1.1, 1.2], "lat": 45.5}]
-    tbl = db.create_table("test_table", data, mode="overwrite")
+    uri = str(tmp_db.uri)
+    writer_db = lancedb.connect(uri)
+    reader_db = lancedb.connect(uri)
+    writer_table = writer_db.create_table("consistency_checkout_latest_table", [{"id": 1}], mode="overwrite")
+    reader_table = reader_db.open_table("consistency_checkout_latest_table")
 
-    # (Other writes happen to my_table from another process)
+    writer_table.add([{"id": 2}])
+    rows_before_refresh = reader_table.count_rows()
+    print(f"Rows before checkout_latest: {rows_before_refresh}")
 
-    # Check for updates
-    tbl.checkout_latest()
+    reader_table.checkout_latest()
+    rows_after_refresh = reader_table.count_rows()
+    print(f"Rows after checkout_latest: {rows_after_refresh}")
     # --8<-- [end:consistency_checkout_latest]
+    assert rows_before_refresh == 1
+    assert rows_after_refresh == 2

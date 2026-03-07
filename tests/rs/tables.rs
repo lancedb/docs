@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Copyright The LanceDB Authors
 
 use std::sync::Arc;
+use std::time::Duration as StdDuration;
 
 use arrow_array::types::Float32Type;
 use arrow_array::{
@@ -85,10 +86,8 @@ async fn update_connect_local_example() {
 #[tokio::main]
 async fn main() {
     let temp_dir = tempfile::tempdir().unwrap();
-    let db = connect(temp_dir.path().to_str().unwrap())
-        .execute()
-        .await
-        .unwrap();
+    let db_uri = temp_dir.path().to_str().unwrap().to_string();
+    let db = connect(&db_uri).execute().await.unwrap();
 
     // --8<-- [start:create_table_from_dicts]
     struct Location {
@@ -910,6 +909,105 @@ async fn main() {
         .await
         .unwrap();
     // --8<-- [end:update_optimize_cleanup]
+
+    // --8<-- [start:consistency_strong]
+    let strong_writer_db = connect(&db_uri).execute().await.unwrap();
+    let strong_reader_db = connect(&db_uri)
+        .read_consistency_interval(StdDuration::from_secs(0))
+        .execute()
+        .await
+        .unwrap();
+    let strong_writer_table = strong_writer_db
+        .create_table(
+            "consistency_strong_table",
+            make_users_reader(vec![1], vec!["Alice"], None),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    let strong_reader_table = strong_reader_db
+        .open_table("consistency_strong_table")
+        .execute()
+        .await
+        .unwrap();
+    strong_writer_table
+        .add(make_users_reader(vec![2], vec!["Bob"], None))
+        .execute()
+        .await
+        .unwrap();
+    let strong_rows_after_write = strong_reader_table.count_rows(None).await.unwrap();
+    println!(
+        "Rows visible with strong consistency: {}",
+        strong_rows_after_write
+    );
+    // --8<-- [end:consistency_strong]
+    assert_eq!(strong_rows_after_write, 2);
+
+    // --8<-- [start:consistency_eventual]
+    let eventual_writer_db = connect(&db_uri).execute().await.unwrap();
+    let eventual_reader_db = connect(&db_uri)
+        .read_consistency_interval(StdDuration::from_secs(3600))
+        .execute()
+        .await
+        .unwrap();
+    let eventual_writer_table = eventual_writer_db
+        .create_table(
+            "consistency_eventual_table",
+            make_users_reader(vec![1], vec!["Alice"], None),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    let eventual_reader_table = eventual_reader_db
+        .open_table("consistency_eventual_table")
+        .execute()
+        .await
+        .unwrap();
+    eventual_writer_table
+        .add(make_users_reader(vec![2], vec!["Bob"], None))
+        .execute()
+        .await
+        .unwrap();
+    let eventual_rows_after_write = eventual_reader_table.count_rows(None).await.unwrap();
+    println!(
+        "Rows visible before eventual refresh interval: {}",
+        eventual_rows_after_write
+    );
+    // --8<-- [end:consistency_eventual]
+    assert_eq!(eventual_rows_after_write, 1);
+
+    // --8<-- [start:consistency_checkout_latest]
+    let checkout_writer_db = connect(&db_uri).execute().await.unwrap();
+    let checkout_reader_db = connect(&db_uri).execute().await.unwrap();
+    let checkout_writer_table = checkout_writer_db
+        .create_table(
+            "consistency_checkout_latest_table",
+            make_users_reader(vec![1], vec!["Alice"], None),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    let checkout_reader_table = checkout_reader_db
+        .open_table("consistency_checkout_latest_table")
+        .execute()
+        .await
+        .unwrap();
+    checkout_writer_table
+        .add(make_users_reader(vec![2], vec!["Bob"], None))
+        .execute()
+        .await
+        .unwrap();
+    let rows_before_refresh = checkout_reader_table.count_rows(None).await.unwrap();
+    println!("Rows before checkout_latest: {}", rows_before_refresh);
+    checkout_reader_table.checkout_latest().await.unwrap();
+    let rows_after_refresh = checkout_reader_table.count_rows(None).await.unwrap();
+    println!("Rows after checkout_latest: {}", rows_after_refresh);
+    // --8<-- [end:consistency_checkout_latest]
+    assert_eq!(rows_before_refresh, 1);
+    assert_eq!(rows_after_refresh, 2);
 
     // --8<-- [start:versioning_basic_setup]
     let table_name = "quotes_versioning_example";

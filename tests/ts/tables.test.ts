@@ -736,3 +736,68 @@ test("versioning snippets (async)", async () => {
     expect(rowsAfterDeletion).toBe(3);
   });
 });
+
+test("consistency snippets (async)", async () => {
+  await withTempDirectory(async (databaseDir) => {
+    // --8<-- [start:consistency_strong]
+    const strongWriterDb = await lancedb.connect(databaseDir);
+    const strongReaderDb = await lancedb.connect(databaseDir, {
+      readConsistencyInterval: 0,
+    });
+    const strongWriterTable = await strongWriterDb.createTable(
+      "consistency_strong_table",
+      [{ id: 1 }],
+      { mode: "overwrite" },
+    );
+    const strongReaderTable = await strongReaderDb.openTable(
+      "consistency_strong_table",
+    );
+    await strongWriterTable.add([{ id: 2 }]);
+    const strongRowsAfterWrite = await strongReaderTable.countRows();
+    console.log(`Rows visible with strong consistency: ${strongRowsAfterWrite}`);
+    // --8<-- [end:consistency_strong]
+    expect(strongRowsAfterWrite).toBe(2);
+
+    // --8<-- [start:consistency_eventual]
+    const eventualWriterDb = await lancedb.connect(databaseDir);
+    const eventualReaderDb = await lancedb.connect(databaseDir, {
+      readConsistencyInterval: 3600,
+    });
+    const eventualWriterTable = await eventualWriterDb.createTable(
+      "consistency_eventual_table",
+      [{ id: 1 }],
+      { mode: "overwrite" },
+    );
+    const eventualReaderTable = await eventualReaderDb.openTable(
+      "consistency_eventual_table",
+    );
+    await eventualWriterTable.add([{ id: 2 }]);
+    const eventualRowsAfterWrite = await eventualReaderTable.countRows();
+    console.log(
+      `Rows visible before eventual refresh interval: ${eventualRowsAfterWrite}`,
+    );
+    // --8<-- [end:consistency_eventual]
+    expect(eventualRowsAfterWrite).toBe(1);
+
+    // --8<-- [start:consistency_checkout_latest]
+    const checkoutWriterDb = await lancedb.connect(databaseDir);
+    const checkoutReaderDb = await lancedb.connect(databaseDir);
+    const checkoutWriterTable = await checkoutWriterDb.createTable(
+      "consistency_checkout_latest_table",
+      [{ id: 1 }],
+      { mode: "overwrite" },
+    );
+    const checkoutReaderTable = await checkoutReaderDb.openTable(
+      "consistency_checkout_latest_table",
+    );
+    await checkoutWriterTable.add([{ id: 2 }]);
+    const rowsBeforeRefresh = await checkoutReaderTable.countRows();
+    console.log(`Rows before checkoutLatest: ${rowsBeforeRefresh}`);
+    await checkoutReaderTable.checkoutLatest();
+    const rowsAfterRefresh = await checkoutReaderTable.countRows();
+    console.log(`Rows after checkoutLatest: ${rowsAfterRefresh}`);
+    // --8<-- [end:consistency_checkout_latest]
+    expect(rowsBeforeRefresh).toBe(1);
+    expect(rowsAfterRefresh).toBe(2);
+  });
+});
