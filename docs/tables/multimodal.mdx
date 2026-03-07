@@ -8,13 +8,29 @@ keywords: ["blob", "large binary", "blobs", "multimodal"]
 
 import {
     PyMultimodalImports as MultimodalImports,
+    TsMultimodalImports as TsMultimodalImports,
+    RsMultimodalImports as RsMultimodalImports,
     PyCreateDummyData as CreateDummyData,
+    TsCreateDummyData as TsCreateDummyData,
+    RsCreateDummyData as RsCreateDummyData,
     PyDefineSchema as DefineSchema,
+    TsDefineSchema as TsDefineSchema,
+    RsDefineSchema as RsDefineSchema,
     PyIngestData as IngestData,
+    TsIngestData as TsIngestData,
+    RsIngestData as RsIngestData,
     PySearchData as SearchData,
+    TsSearchData as TsSearchData,
+    RsSearchData as RsSearchData,
     PyProcessResults as ProcessResults,
+    TsProcessResults as TsProcessResults,
+    RsProcessResults as RsProcessResults,
     PyBlobApiSchema as BlobApiSchema,
+    TsBlobApiSchema as TsBlobApiSchema,
+    RsBlobApiSchema as RsBlobApiSchema,
     PyBlobApiIngest as BlobApiIngest,
+    TsBlobApiIngest as TsBlobApiIngest,
+    RsBlobApiIngest as RsBlobApiIngest,
 } from '/snippets/multimodal.mdx';
 
 LanceDB handles multimodal data—images, audio, video, and PDF files—natively by storing the raw bytes in a binary column alongside your vectors and metadata. This approach simplifies your data infrastructure by keeping the raw assets and their embeddings in the same database, eliminating the need for separate object storage for many use cases.
@@ -23,15 +39,23 @@ This guide demonstrates how to ingest, store, and retrieve image data using stan
 
 ## Store binary data
 
-To store binary data, you need to use the `pa.binary()` data type in your Arrow schema. In Python, this corresponds to `bytes` objects if you're using LanceDB's Pydantic `LanceModel` to define the schema.
+To store binary data, define a binary Arrow field in your schema (`pa.binary()` in Python, `Binary` in TypeScript, and `DataType::Binary` in Rust).
 
 ### 1. Setup and imports
 
-First, let's import the necessary libraries. We'll use `PIL` (Pillow) for image handling and `io` for byte conversion.
+First, import the necessary libraries for LanceDB and Arrow in your SDK.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {MultimodalImports}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsMultimodalImports}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsMultimodalImports}
     </CodeBlock>
 </CodeGroup>
 
@@ -43,6 +67,14 @@ For this example, we'll create some dummy in-memory images. In a real applicatio
     <CodeBlock filename="Python" language="Python" icon="python">
     {CreateDummyData}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateDummyData}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateDummyData}
+    </CodeBlock>
 </CodeGroup>
 
 ### 3. Define the schema
@@ -52,6 +84,14 @@ When creating the table, it is **highly recommended** to define the schema expli
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {DefineSchema}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsDefineSchema}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsDefineSchema}
     </CodeBlock>
 </CodeGroup>
 
@@ -63,6 +103,14 @@ Now, create the table using the data and the defined schema.
     <CodeBlock filename="Python" language="Python" icon="python">
     {IngestData}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsIngestData}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsIngestData}
+    </CodeBlock>
 </CodeGroup>
 
 ## Retrieve and use blobs
@@ -73,21 +121,37 @@ When you search your LanceDB table, you can retrieve the binary column just like
     <CodeBlock filename="Python" language="Python" icon="python">
     {SearchData}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsSearchData}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsSearchData}
+    </CodeBlock>
 </CodeGroup>
 
 ### Convert bytes back to objects
 
-Once you have the `bytes` data back from the search result, you can decode it back into its original format (e.g., a PIL Image, an Audio buffer, etc.).
+Once you have the bytes back from the search result, you can decode them into the original format (for example, an image object or audio buffer).
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {ProcessResults}
     </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsProcessResults}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsProcessResults}
+    </CodeBlock>
 </CodeGroup>
 
 ## Large Blobs (Blob API)
 
-For larger files like high-resolution images or videos, Lance provides a specialized **Blob API**. By using `pa.large_binary()` and specific metadata, you enable **lazy loading** and optimized encoding. This allows you to work with massive datasets without loading all binary data into memory upfront.
+For larger files like high-resolution images or videos, Lance provides a specialized **Blob API**. By using a large-binary Arrow type (`pa.large_binary()` in Python, `LargeBinary` in TypeScript, and `DataType::LargeBinary` in Rust) and specific metadata, you enable **lazy loading** and optimized encoding. This allows you to work with massive datasets without loading all binary data into memory upfront.
 
 ### 1. Define a blob schema
 
@@ -96,6 +160,14 @@ To use the Blob API, you must mark the column with `{"lance-encoding:blob": "tru
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {BlobApiSchema}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBlobApiSchema}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBlobApiSchema}
     </CodeBlock>
 </CodeGroup>
 
@@ -106,6 +178,14 @@ You can then ingest data normally, and Lance will handle the optimized storage.
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {BlobApiIngest}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBlobApiIngest}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBlobApiIngest}
     </CodeBlock>
 </CodeGroup>
 
