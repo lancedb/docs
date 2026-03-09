@@ -1,0 +1,66 @@
+---
+title: Job Metrics (Diagnostics)
+sidebarTitle: Job Metrics
+description: Use metrics from Geneva to diagnose why a backfill/refresh job is slow.
+icon: chart-simple
+---
+
+## Where metrics come from
+
+Job metrics are attached to each job record in the Console/API response under
+`metrics`.
+
+- Job list:
+  - `GET /api/v1/jobs?table_name=<table>&db_uri_encoded=<...>`
+- Job detail:
+  - `GET /api/v1/jobs/<job_id>?db_uri_encoded=<...>`
+
+## Core diagnostic metrics
+
+| Metric | What it means | Common signal |
+| --- | --- | --- |
+| `rows_checkpointed` | Rows finished by read/UDF/checkpoint stage. | High value means upstream compute is progressing. |
+| `rows_ready_for_commit` | Rows ready for atomic commit (becoming visible to other DB connections). | If much lower than `rows_checkpointed`, writer path is likely bottlenecked. |
+| `rows_committed` | Rows already visible to other DB connections. | If lagging far behind `rows_ready_for_commit`, commit stage may be bottlenecked. |
+| `cnt_geneva_workers_active` | Current parallel UDF executors. | Lower than expected means reduced effective parallelism. |
+| `cnt_geneva_workers_pending` | Deficit from desired parallelism. | Persistently high value usually means scheduling/resource pressure. |
+| `read_io_time_ms` | Cumulative read IO time. | Dominant value suggests storage/read bottleneck. |
+| `udf_processing_time` | Cumulative UDF execution time. | Dominant value suggests compute/UDF bottleneck. |
+| `batch_checkpointing_time` | Cumulative batch checkpoint overhead. | High value suggests checkpoint overhead is expensive. |
+| `writer_write_time` | Cumulative writer output time. | High value often points to object storage throughput/throttling issues. |
+| `writer_queue_wait_time_ms` | Cumulative writer queue wait time. | High value can indicate writer starvation/backpressure. |
+| `commit_time_ms` | Cumulative commit time. | High value means commit itself is expensive. |
+| `commit_conflict_retries` | Commit retries due to version conflicts. | Non-trivial counts indicate commit contention. |
+| `commit_backoff_time_ms` | Time spent backing off during commit retries. | High value indicates contention/retry pressure. |
+| `commit_concurrent_writer_retries` | Retries from "Too many concurrent writers". | High value indicates writer concurrency contention. |
+
+## Quick diagnosis workflow
+
+1. Check `rows_checkpointed` vs `rows_ready_for_commit`.
+   - If `rows_checkpointed` is high but `rows_ready_for_commit` is low, fragment
+     writer is usually the bottleneck.
+   - This often indicates object storage read/write pressure (for example S3).
+2. Compare read, UDF, and checkpoint timing.
+   - High `read_io_time_ms`: storage or scan bottleneck.
+   - High `udf_processing_time`: UDF compute bottleneck.
+   - High `batch_checkpointing_time`: checkpoint overhead bottleneck.
+   - Typical mitigations: increase `checkpoint_size`, increase
+     `max_checkpoint_size`, or compact the table to produce larger fragments.
+3. Check writer timing.
+   - High `writer_write_time` is commonly object storage throttling/throughput
+     limit.
+   - Typical mitigations: use higher network-bandwidth node types, and keep
+     object storage and compute nodes in the same region.
+4. Check commit pressure.
+   - High `commit_conflict_retries`, `commit_backoff_time_ms`, or
+     `commit_concurrent_writer_retries` indicates commit contention.
+5. Check parallelism deficit.
+   - If `cnt_geneva_workers_pending` stays high while
+     `cnt_geneva_workers_active` stays low, the job is running below desired
+     parallelism due to cluster/resource constraints.
+
+## Notes
+
+- Timing metrics are cumulative and may overlap; do not sum them as exact wall
+  time.
+- For completed jobs, row counters should settle to stable final values.
