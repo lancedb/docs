@@ -184,6 +184,7 @@
                   "geneva/jobs/conflicts",
                   "geneva/jobs/materialized-views",
                   "geneva/jobs/performance",
+                  "geneva/jobs/job_metrics",
                   "geneva/jobs/troubleshooting"
                 ]
               },
