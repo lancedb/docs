@@ -61,6 +61,12 @@ geneva:
     # It should also have r/w access to the object storage bucket.
     # e.g., arn:aws:iam::123456789012:role/geneva-client-role
     clientRoleArn: ""
+
+  azure:
+    # Azure managed identity client ID for the Geneva client.
+    # This identity should have a federated credential for the Geneva namespace
+    # and Storage Blob Data Contributor role on the storage account.
+    clientPrincipalId: ""
 ```
 
 3. Install kuberay operator
