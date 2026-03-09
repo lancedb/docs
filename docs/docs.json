@@ -273,7 +273,6 @@
                   "integrations/data/pandas_and_pyarrow",
                   "integrations/data/polars_arrow",
                   "integrations/data/dlt",
-                  "integrations/data/phidata",
                   "integrations/data/voxel51"
                 ]
               },
@@ -281,6 +280,7 @@
                 "group": "AI Platforms & Frameworks",
                 "pages": [
                   "integrations/ai/huggingface",
+                  "integrations/ai/agno",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
                   "integrations/ai/genkit",
@@ -390,6 +390,10 @@
     {
       "source": "/integrations/frameworks/:slug*",
       "destination": "integrations/ai/:slug*"
+    },
+    {
+      "source": "/integrations/data/phidata",
+      "destination": "integrations/ai/agno"
     },
     {
       "source": "/tutorials/rag/:slug*",
