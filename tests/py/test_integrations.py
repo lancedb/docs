@@ -1399,273 +1399,79 @@ def test_platforms_duckdb_examples() -> None:
     # --8<-- [end:platforms_duckdb_mean_price]
 
 
-def test_platforms_phidata_transcript_module() -> None:
-    require_flag("RUN_PHIDATA_SNIPPETS")
+def test_frameworks_agno_openai_examples() -> None:
+    require_flag("RUN_AGNO_SNIPPETS")
+    pytest.importorskip("agno")
     pytest.importorskip("youtube_transcript_api")
 
-    # --8<-- [start:platforms_phidata_transcript_module]
+    # --8<-- [start:frameworks_agno_setup]
+    import os
     import re
 
+    from agno.agent import Agent
+    from agno.knowledge.embedder.openai import OpenAIEmbedder
+    from agno.knowledge.knowledge import Knowledge
+    from agno.models.openai import OpenAIResponses
+    from agno.vectordb.lancedb import LanceDb, SearchType
     from youtube_transcript_api import YouTubeTranscriptApi
 
-    def smodify(seconds):
-        hours, remainder = divmod(seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
-
-    def extract_transcript(youtube_url, segment_duration):
-        # Extract video ID from the URL
-        video_id = re.search(r"(?<=v=)[\w-]+", youtube_url)
-        if not video_id:
-            video_id = re.search(r"(?<=be/)[\w-]+", youtube_url)
-        if not video_id:
-            return None
-
-        video_id = video_id.group(0)
-
-        # Attempt to fetch the transcript
-        try:
-            # Try to get the official transcript
-            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
-        except Exception:
-            # If no official transcript is found, try to get auto-generated transcript
-            try:
-                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-                for transcript in transcript_list:
-                    transcript = transcript.translate("en").fetch()
-            except Exception:
-                return None
-
-        # Format the transcript into 120s chunks
-        transcript_text, dict_transcript = format_transcript(
-            transcript, segment_duration
-        )
-        # Open the file in write mode, which creates it if it doesn't exist
-        with open("transcript.txt", "w", encoding="utf-8") as file:
-            file.write(transcript_text)
-        return transcript_text, dict_transcript
-
-    def format_transcript(transcript, segment_duration):
-        chunked_transcript = []
-        chunk_dict = []
-        current_chunk = []
-        current_time = 0
-        # 2 minutes in seconds
-        start_time_chunk = 0  # To track the start time of the current chunk
-
-        for segment in transcript:
-            start_time = segment["start"]
-            end_time_x = start_time + segment["duration"]
-            text = segment["text"]
-
-            # Add text to the current chunk
-            current_chunk.append(text)
-
-            # Update the current time with the duration of the current segment
-            # The duration of the current segment is given by segment['start'] - start_time_chunk
-            if current_chunk:
-                current_time = start_time - start_time_chunk
-
-            # If current chunk duration reaches or exceeds 2 minutes, save the chunk
-            if current_time >= segment_duration:
-                # Use the start time of the first segment in the current chunk as the timestamp
-                chunked_transcript.append(
-                    f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}] "
-                    + " ".join(current_chunk)
-                )
-                current_chunk = re.sub(
-                    r"[\xa0\n]",
-                    lambda x: "" if x.group() == "\xa0" else " ",
-                    "\n".join(current_chunk),
-                )
-                chunk_dict.append(
-                    {
-                        "timestamp": f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}]",
-                        "text": "".join(current_chunk),
-                    }
-                )
-                current_chunk = []  # Reset the chunk
-                start_time_chunk = (
-                    start_time + segment["duration"]
-                )  # Update the start time for the next chunk
-                current_time = 0  # Reset current time
-
-        # Add any remaining text in the last chunk
-        if current_chunk:
-            chunked_transcript.append(
-                f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}] "
-                + " ".join(current_chunk)
-            )
-            current_chunk = re.sub(
-                r"[\xa0\n]",
-                lambda x: "" if x.group() == "\xa0" else " ",
-                "\n".join(current_chunk),
-            )
-            chunk_dict.append(
-                {
-                    "timestamp": f"[{smodify(start_time_chunk)} to {smodify(end_time_x)}]",
-                    "text": "".join(current_chunk),
-                }
-            )
-
-        return "\n\n".join(chunked_transcript), chunk_dict
-
-    # --8<-- [end:platforms_phidata_transcript_module]
-
-
-def test_platforms_phidata_openai_examples() -> None:
-    require_flag("RUN_PHIDATA_SNIPPETS")
-    pytest.importorskip("phi")
-    pytest.importorskip("openai")
-    pytest.importorskip("rich")
-
-    # --8<-- [start:platforms_phidata_openai_setup]
-    import os
-
-    import openai
-    from phi.assistant import Assistant
-    from phi.embedder.openai import OpenAIEmbedder
-    from phi.knowledge.text import TextKnowledgeBase
-    from phi.llm.openai import OpenAIChat
-    from phi.vectordb.lancedb import LanceDb
-    from rich.prompt import Prompt
-    from transcript import extract_transcript
-
     if "OPENAI_API_KEY" not in os.environ:
-        # OR set the key here as a variable
-        openai.api_key = "sk-..."
+        os.environ["OPENAI_API_KEY"] = "sk-..."
 
-    # The code below creates a file "transcript.txt" in the directory, the txt file will be used below
-    youtube_url = "https://www.youtube.com/watch?v=Xs33-Gzl8Mo"
-    segment_duration = 20
-    transcript_text, dict_transcript = extract_transcript(youtube_url, segment_duration)
-    # --8<-- [end:platforms_phidata_openai_setup]
+    def extract_video_id(youtube_url: str) -> str:
+        match = re.search(r"(?<=v=)[\w-]+", youtube_url) or re.search(
+            r"(?<=be/)[\w-]+", youtube_url
+        )
+        if not match:
+            raise ValueError("Could not parse YouTube video ID from URL")
+        return match.group(0)
 
-    # --8<-- [start:platforms_phidata_openai_knowledge_base]
-    # Create knowledge Base with OpenAIEmbedder in LanceDB
-    knowledge_base = TextKnowledgeBase(
-        path="transcript.txt",
+    knowledge = Knowledge(
         vector_db=LanceDb(
-            embedder=OpenAIEmbedder(api_key=openai.api_key),
-            table_name="transcript_documents",
-            uri="./t3mp/.lancedb",
+            uri="./tmp/lancedb",
+            table_name="youtube_transcripts",
+            search_type=SearchType.hybrid,
+            use_tantivy=False,
+            embedder=OpenAIEmbedder(id="text-embedding-3-small"),
         ),
-        num_documents=10,
     )
-    # --8<-- [end:platforms_phidata_openai_knowledge_base]
+    # --8<-- [end:frameworks_agno_setup]
 
-    # --8<-- [start:platforms_phidata_openai_assistant]
-    # define an assistant with gpt-4o-mini llm and reference to the knowledge base created above
-    assistant = Assistant(
-        llm=OpenAIChat(
-            model="gpt-4o-mini",
-            max_tokens=1000,
-            temperature=0.3,
-            api_key=openai.api_key,
-        ),
-        description="""You are an Expert in explaining youtube video transcripts. You are a bot that takes transcript of a video and answer the question based on it.
+    # --8<-- [start:frameworks_agno_ingest_youtube]
+    youtube_url = "https://www.youtube.com/watch?v=wl6mFyXoxos"
+    video_id = extract_video_id(youtube_url)
+    ytt = YouTubeTranscriptApi()
+    transcript_segments = ytt.fetch(video_id, languages=["en", "en-US"]).to_raw_data()
+    transcript_text = " ".join(segment["text"] for segment in transcript_segments)
 
-        This is transcript for the above timestamp: {relevant_document}
-        The user input is: {user_input}
-        generate highlights only when asked.
-        When asked to generate highlights from the video, understand the context for each timestamp and create key highlight points, answer in following way -
-        [timestamp] - highlight 1
-        [timestamp] - highlight 2
-        ... so on
-
-        Your task is to understand the user question, and provide an answer using the provided contexts. Your answers are correct, high-quality, and written by an domain expert. If the provided context does not contain the answer, simply state,'The provided context does not have the answer.'""",
-        knowledge_base=knowledge_base,
-        add_references_to_prompt=True,
+    knowledge.insert(
+        name=f"YouTube Transcript ({video_id})",
+        text_content=transcript_text,
+        metadata={"source": "youtube", "video_id": video_id, "video_url": youtube_url},
     )
-    # --8<-- [end:platforms_phidata_openai_assistant]
+    # --8<-- [end:frameworks_agno_ingest_youtube]
 
-    # --8<-- [start:platforms_phidata_load_knowledge_base]
-    assistant.knowledge_base.load(recreate=False)
-    # --8<-- [end:platforms_phidata_load_knowledge_base]
+    # --8<-- [start:frameworks_agno_agent]
+    agent = Agent(
+        model=OpenAIResponses(id="gpt-5-mini"),
+        knowledge=knowledge,
+        search_knowledge=True,
+        instructions="Search the transcript and answer only from retrieved context.",
+        markdown=True,
+    )
+    # --8<-- [end:frameworks_agno_agent]
 
-    # --8<-- [start:platforms_phidata_cli_chat]
-    assistant.print_response("Ask me about something from the knowledge base")
+    # --8<-- [start:frameworks_agno_cli_chat]
+    agent.print_response(
+        "Summarize the loaded video transcript in 5 concise bullet points.",
+        stream=True,
+    )
     while True:
-        message = Prompt.ask(f"[bold] :sunglasses: User [/bold]")
-        if message in ("exit", "bye"):
+        question = input("You: ").strip()
+        if question.lower() in {"exit", "quit", "bye"}:
             break
-        assistant.print_response(message, markdown=True)
-    # --8<-- [end:platforms_phidata_cli_chat]
-
-
-def test_platforms_phidata_ollama_examples() -> None:
-    require_flag("RUN_PHIDATA_SNIPPETS")
-    pytest.importorskip("phi")
-
-    # --8<-- [start:platforms_phidata_ollama_setup]
-    from phi.assistant import Assistant
-    from phi.embedder.ollama import OllamaEmbedder
-    from phi.knowledge.text import TextKnowledgeBase
-    from phi.llm.ollama import Ollama
-    from phi.vectordb.lancedb import LanceDb
-    from rich.prompt import Prompt
-    from transcript import extract_transcript
-
-    # The code below creates a file "transcript.txt" in the directory, the txt file will be used below
-    youtube_url = "https://www.youtube.com/watch?v=Xs33-Gzl8Mo"
-    segment_duration = 20
-    transcript_text, dict_transcript = extract_transcript(youtube_url, segment_duration)
-    # --8<-- [end:platforms_phidata_ollama_setup]
-
-    # --8<-- [start:platforms_phidata_ollama_knowledge_base]
-    # Create knowledge Base with OllamaEmbedder in LanceDB
-    knowledge_base = TextKnowledgeBase(
-        path="transcript.txt",
-        vector_db=LanceDb(
-            embedder=OllamaEmbedder(model="nomic-embed-text", dimensions=768),
-            table_name="transcript_documents",
-            uri="./t2mp/.lancedb",
-        ),
-        num_documents=10,
-    )
-    # --8<-- [end:platforms_phidata_ollama_knowledge_base]
-
-    # --8<-- [start:platforms_phidata_ollama_assistant]
-    # define an assistant with llama3.1 llm and reference to the knowledge base created above
-    assistant = Assistant(
-        llm=Ollama(model="llama3.1"),
-        description="""You are an Expert in explaining youtube video transcripts. You are a bot that takes transcript of a video and answer the question based on it.
-
-        This is transcript for the above timestamp: {relevant_document}
-        The user input is: {user_input}
-        generate highlights only when asked.
-        When asked to generate highlights from the video, understand the context for each timestamp and create key highlight points, answer in following way -
-        [timestamp] - highlight 1
-        [timestamp] - highlight 2
-        ... so on
-
-        Your task is to understand the user question, and provide an answer using the provided contexts. Your answers are correct, high-quality, and written by an domain expert. If the provided context does not contain the answer, simply state,'The provided context does not have the answer.'""",
-        knowledge_base=knowledge_base,
-        add_references_to_prompt=True,
-    )
-    # --8<-- [end:platforms_phidata_ollama_assistant]
-
-
-def test_platforms_phidata_document_model() -> None:
-    require_flag("RUN_PHIDATA_SNIPPETS")
-
-    # --8<-- [start:platforms_phidata_document_model]
-    from typing import Any, Dict, List, Optional
-
-    from pydantic import BaseModel
-
-    class Document(BaseModel):
-        """Model for managing a document"""
-
-        content: str  # <--- here data of chunk is stored
-        id: Optional[str] = None
-        name: Optional[str] = None
-        meta_data: Dict[str, Any] = {}
-        embedder: Optional["Embedder"] = None
-        embedding: Optional[List[float]] = None
-        usage: Optional[Dict[str, Any]] = None
-
-    # --8<-- [end:platforms_phidata_document_model]
+        agent.print_response(question, stream=True)
+    # --8<-- [end:frameworks_agno_cli_chat]
 
 
 def test_platforms_voxel51_examples() -> None:
