@@ -5,15 +5,9 @@ description: Use metrics from Geneva to diagnose why a backfill/refresh job is s
 icon: chart-simple
 ---
 
-## Where metrics come from
+## How to find metrics
 
-Job metrics are attached to each job record in the Console/API response under
-`metrics`.
-
-- Job list:
-  - `GET /api/v1/jobs?table_name=<table>&db_uri_encoded=<...>`
-- Job detail:
-  - `GET /api/v1/jobs/<job_id>?db_uri_encoded=<...>`
+Job metrics can be found in the [Geneva Console UI](https://docs.lancedb.com/geneva/jobs/console), by clicking on a job's ID to get to the "Job details" page.
 
 ## Core diagnostic metrics
 

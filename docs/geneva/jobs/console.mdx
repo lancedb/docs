@@ -23,8 +23,9 @@ The Geneva console is installed with the Geneva Helm chart; [contact LanceDB](ht
 1. Install or upgrade the Geneva Helm chart (see [Helm Deployment](/geneva/deployment/helm/)).
 2. Forward port 3000 from the geneva-console-ui service:
 ```bash
-kubectl port-forward svc/geneva-console-ui 3000:3000
+kubectl port-forward -n geneva svc/geneva-console-ui 3000:3000
 ```
+(Make sure you're using `-n` to specify the namespace correctly, using the value used when you installed the Helm chart. We advise `geneva`, so it's probably `geneva`.)
 3. Open `http://localhost:3000` in your browser. When prompted, enter your bucket and database, like:
 ```
 s3://my-bucket/my-db
