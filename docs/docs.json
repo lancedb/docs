@@ -158,46 +158,38 @@
             "pages": [
               "geneva/index",
               "geneva/overview/index",
-              "geneva/overview/udfs-and-udtfs",
               {
-                "group": "User Defined Functions (UDFs)",
+                "group": "Transforms",
                 "pages": [
+                  "geneva/overview/udfs-and-udtfs",
                   "geneva/udfs/index",
-                  {
-                    "group": "Built-in Providers",
-                    "pages": [
-                      "geneva/udfs/providers/index",
-                      "geneva/udfs/providers/openai",
-                      "geneva/udfs/providers/gemini",
-                      "geneva/udfs/providers/sentence-transformers"
-                    ]
-                  },
-                  "geneva/udfs/blobs",
                   "geneva/udfs/scalar-udtfs",
                   "geneva/udfs/batch-udtfs",
                   "geneva/udfs/error_handling",
-                  "geneva/udfs/advanced-configuration"
+                  "geneva/udfs/blobs"
                 ]
               },
               {
-                "group": "Jobs",
+                "group": "Built-in Providers",
                 "pages": [
-                  "geneva/jobs/lifecycle",
-                  "geneva/jobs/backfilling",
-                  "geneva/jobs/conflicts",
-                  "geneva/jobs/materialized-views",
-                  "geneva/jobs/performance",
-                  "geneva/jobs/job_metrics",
-                  "geneva/jobs/troubleshooting"
+                  "geneva/udfs/providers/index",
+                  "geneva/udfs/providers/openai",
+                  "geneva/udfs/providers/gemini",
+                  "geneva/udfs/providers/sentence-transformers"
                 ]
               },
               {
-                "group": "Operations",
+                "group": "Running Jobs",
                 "pages": [
                   "geneva/jobs/contexts",
-                  "geneva/deployment/dependency-verification",
-                  "geneva/jobs/startup",
-                  "geneva/jobs/console"
+                  "geneva/jobs/backfilling",
+                  "geneva/jobs/materialized-views",
+                  "geneva/jobs/lifecycle",
+                  "geneva/jobs/conflicts",
+                  "geneva/jobs/performance",
+                  "geneva/jobs/job_metrics",
+                  "geneva/jobs/console",
+                  "geneva/jobs/troubleshooting"
                 ]
               },
               {
@@ -205,6 +197,9 @@
                 "pages": [
                   "geneva/deployment/index",
                   "geneva/deployment/helm",
+                  "geneva/jobs/startup",
+                  "geneva/deployment/dependency-verification",
+                  "geneva/udfs/advanced-configuration",
                   "geneva/deployment/troubleshooting"
                 ]
               },

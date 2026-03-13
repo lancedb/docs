@@ -1,10 +1,13 @@
 ---
-title: User-Defined Functions
-sidebarTitle: Working with UDFs
+title: User-Defined Functions (UDFs)
+sidebarTitle: UDFs
+description: Define 1:1 transforms that add computed columns to your tables — embeddings, enrichment, scoring, and more.
 icon: function
 ---
 
-## Converting functions into UDFs
+UDFs are the core building block for feature engineering in Geneva. A UDF wraps a Python function and applies it to every row in a table, producing exactly **one output value per input row** (1:1). Use UDFs to compute embeddings, enrich data with external APIs, transform formats, or derive new features from existing columns.
+
+## Defining a UDF
 
 Converting your Python code to a Geneva UDF is simple.  There are three kinds of UDFs that you can provide — scalar UDFs, batched UDFs and stateful UDFs.
 
