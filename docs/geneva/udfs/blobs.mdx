@@ -9,7 +9,7 @@ Geneva supports UDFs that take [Lance Blobs](https://lancedb.github.io/lance/gui
 
 ## Reading Blobs
 
-Defining functions that read blob columns is straight forward.  
+Defining functions that read blob columns is straight forward.
 
 For scalar UDFs, blob columns are expected to be of type `BlobFile`
 
@@ -62,7 +62,7 @@ def batch_to_blob(batch: pa.RecordBatch) -> pa.Array:
     blobs = []
     for i in range(batch.num_rows):
         # do something that returns bytes
-        blob_data = ... 
+        blob_data = ...
         blobs.append(blob_data)
     return pa.array(blobs, type=pa.large_binary())
 ```
