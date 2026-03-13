@@ -223,7 +223,7 @@ chunks.refresh()  # Backfills embeddings on all existing chunks
 chunks.search(None).select(["doc_id", "title", "chunk_text", "embedding"]).to_pandas()
 ```
 
-For a comparison of all three function types (UDFs, Scalar UDTFs, Batch UDTFs), see [UDFs and UDTFs](/geneva/overview/udfs-and-udtfs).
+For a comparison of all three function types (UDFs, Scalar UDTFs, Batch UDTFs), see [Understanding Transforms](/geneva/udfs).
 
 Reference:
 * [`create_materialized_view` API](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_materialized_view)

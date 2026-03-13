@@ -23,7 +23,7 @@ Feature Engineering and the `geneva` Python package are currently only available
 in scaling up your feature engineering workloads for your AI and multimodal use cases.
 </Card>
 
-The `geneva` package uses Python [User Defined Functions (UDFs)](/geneva/udfs/) to define features
+The `geneva` package uses Python [User Defined Functions (UDFs)](/geneva/udfs/udfs) to define features
 as columns in a Lance dataset. Adding a feature is straightforward:
 
 <Steps>
@@ -31,7 +31,7 @@ as columns in a Lance dataset. Adding a feature is straightforward:
   Prototype your Python function in your favorite environment.
   </Step>
   <Step>
-  Wrap the function with a small UDF decorator (see [UDFs](/geneva/udfs/)).
+  Wrap the function with a small UDF decorator (see [UDFs](/geneva/udfs/udfs)).
   </Step>
   <Step>
   Register the UDF as a virtual column using `Table.add_columns()`.
@@ -50,6 +50,6 @@ You can build your Python feature generator function in an IDE or a notebook usi
 Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:
 
 - **Overview**: [What is Feature Engineering?](/geneva/overview/)
-- **UDFs**: [Using UDFs](/geneva/udfs/) · [Blob helpers](/geneva/udfs/blobs/) · [Error handling](/geneva/udfs/error_handling) · [Advanced configuration](/geneva/udfs/advanced-configuration) 
+- **UDFs**: [Using UDFs](/geneva/udfs/udfs) · [Blob helpers](/geneva/udfs/blobs/) · [Error handling](/geneva/udfs/error_handling) · [Advanced configuration](/geneva/udfs/advanced-configuration) 
 - **Jobs**: [Backfilling](/geneva/jobs/backfilling/) · [Startup optimizations](/geneva/jobs/startup/) · [Materialized views](/geneva/jobs/materialized-views/) · [Execution contexts](/geneva/jobs/contexts/) · [Geneva console](/geneva/jobs/console) · [Performance](/geneva/jobs/performance/)
 - **Deployment**: [Deployment overview](/geneva/deployment/) · [Helm deployment](/geneva/deployment/helm/) · [Troubleshooting](/geneva/deployment/troubleshooting/)

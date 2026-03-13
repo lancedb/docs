@@ -161,8 +161,8 @@
               {
                 "group": "Transforms",
                 "pages": [
-                  "geneva/overview/udfs-and-udtfs",
                   "geneva/udfs/index",
+                  "geneva/udfs/udfs",
                   "geneva/udfs/scalar-udtfs",
                   "geneva/udfs/batch-udtfs",
                   "geneva/udfs/error_handling",
@@ -170,7 +170,7 @@
                 ]
               },
               {
-                "group": "Built-in Providers",
+                "group": "Built-in Transforms",
                 "pages": [
                   "geneva/udfs/providers/index",
                   "geneva/udfs/providers/openai",
