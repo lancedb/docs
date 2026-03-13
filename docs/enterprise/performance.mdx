@@ -1,0 +1,82 @@
+---
+title: "Performance Characteristics"
+sidebarTitle: "Performance"
+description: "Understand LanceDB Enterprise performance characteristics, including representative latency and scalability benchmarks."
+icon: "tachometer-alt"
+---
+
+LanceDB Enterprise is designed for low-latency, high-throughput search, but observed performance depends on factors such as dataset shape, index configuration, cache warmth, filter selectivity, concurrency, and cluster sizing. The figures on this page should be read as representative benchmark results for a specific test setup, not as universal guarantees for every deployment.
+
+In our benchmark environment, warmed-cache vector search reached around **25ms** P50 latency, and metadata-filtered search reached around **50ms** P99 latency for the filter pattern shown below. 
+
+<Info>
+If you want performance guidance for your own workload, reach out to [contact@lancedb.com](mailto:contact@lancedb.com). The LanceDB engineering team can help map your latency, throughput, ingestion, and filtering requirements to an appropriate Enterprise cluster design.
+</Info>
+
+| Percentile | Vector Search | Vector Search w. Filtering | Full-Text Search |
+|:------------:|:------------:|:-------------------------:|:----------------:|
+| P50 | 25ms | 30ms | 26ms |
+| P90 | 26ms | 39ms | 37ms |
+| P99 | 35ms | 50ms | 42ms |
+
+Depending on workload and tuning, Enterprise clusters can also be configured for high concurrency, including thousands of QPS in some deployments, but the right configuration varies by use case. Training, search, and analytics workloads often benefit from different cluster shapes and resource allocation strategies. To understand which parts of the system influence these results, see the [Enterprise architecture](/enterprise/architecture) guide.
+
+## Dataset
+
+We used two datasets for this benchmark: the [dbpedia-entities-openai-1M](https://huggingface.co/datasets/KShivendu/dbpedia-entities-openai-1M)
+for vector search, and a synthetic dataset for vector search with metadata filtering.
+
+| Name | # Vectors | Vector Dimension |
+|:------|:---------:|:---------------:|
+| dbpedia-entities-openai-1M | 1,000,000 | 1536 |
+| synthetic dataset | 15,000,000 | 256 |
+
+These benchmark results are most useful as a directional baseline. Different data distributions, index choices, cache behavior, and cluster settings can materially change the latency profile.
+
+## Vector Search
+
+We ran vector queries against `dbpedia-entities-openai-1M` with a warmed-up cache. In that benchmark setup, we observed the following latency profile:
+
+| Percentile | Latency |
+|:------------:|:-------:|
+| P50 | 25ms |
+| P90 | 26ms |
+| P99 | 35ms |
+| Max | 49ms |
+
+## Full-Text Search
+
+With the same dataset and a warmed-up cache, full-text search fell into the following range:
+
+| Percentile | Latency |
+|:------------:|:-------:|
+| P50 | 26ms |
+| P90 | 37ms |
+| P99 | 42ms |
+| Max | 98ms |
+
+## Vector Search with Metadata Filtering
+
+We created a 15M-vector dataset to evaluate metadata-aware search under more complex filtering conditions.
+These filters can span a wide range of scalar columns, for example, "find Sci-fi movies since 1900".
+
+With a warmed-up cache, slightly more selective filters, for example, "find Sci-fi movies between the years 2000 and 2012", produced the following representative results:
+
+| Percentile | Latency |
+|:-----------:|:-------:|
+| P50 | 30ms |
+| P90 | 39ms |
+| P99 | 50ms |
+
+Broader or less selective filters, for example, "find Sci-fi movies since 1900", moved the latency range to:
+
+| Percentile | Latency |
+|:------------:|:-------:|
+| P50 | 65ms |
+| P90 | 76ms |
+| P99 | 100ms |
+
+
+<Info>
+These benchmarks are intended to provide consistent, reproducible reference points for LanceDB Enterprise rather than one-size-fits-all promises. We periodically re-run and update numbers as necessary, but production performance will still depend on workload shape, cluster tuning, and the architectural choices described in the [Enterprise architecture](/enterprise/architecture) guide.
+</Info>

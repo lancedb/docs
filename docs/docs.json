@@ -50,7 +50,7 @@
                   "enterprise/quickstart",
                   "enterprise/architecture",
                   "enterprise/security",
-                  "enterprise/benchmarks",
+                  "enterprise/performance",
                   {
                     "group": "Deployment",
                     "pages": [
