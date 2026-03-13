@@ -4,15 +4,6 @@ sidebarTitle: Working with UDFs
 icon: function
 ---
 
-## UDFs vs UDTFs
-
-Geneva provides two families of user-defined functions:
-
-- **UDFs** (this page) produce exactly **one output value per input row** (1:1). They are used with `add_columns` and standard materialized views.
-- **UDTFs** (User-Defined Table Functions) produce a **different number of output rows** than input rows. There are two kinds:
-  - [**Scalar UDTFs**](/geneva/udfs/scalar-udtfs) — 1:N per-row expansion (chunking, splitting, tiling) with automatic parent column inheritance and incremental refresh.
-  - [**Batch UDTFs**](/geneva/udfs/batch-udtfs) — N:M transformations (deduplication, clustering, aggregation) over entire tables or partitions.
-
 ## Converting functions into UDFs
 
 Converting your Python code to a Geneva UDF is simple.  There are three kinds of UDFs that you can provide — scalar UDFs, batched UDFs and stateful UDFs.

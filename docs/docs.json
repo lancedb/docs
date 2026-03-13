@@ -158,6 +158,7 @@
             "pages": [
               "geneva/index",
               "geneva/overview/index",
+              "geneva/overview/udfs-and-udtfs",
               {
                 "group": "User Defined Functions (UDFs)",
                 "pages": [

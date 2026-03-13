@@ -18,16 +18,16 @@ Geneva's standard UDFs operate **row-at-a-time** — one input row produces exac
 
 ## Defining a Batch UDTF
 
-Use the `@geneva.udtf` decorator on a class or function. The UDTF receives a query builder over the source data and **yields** `pa.RecordBatch` objects with an arbitrary output schema.
+Use the `@udtf` decorator on a class or function. The UDTF receives a query builder over the source data and **yields** `pa.RecordBatch` objects with an arbitrary output schema.
 
 ### Class-based
 
 ```python
-import geneva
+from geneva import udtf
 import pyarrow as pa
 from collections.abc import Iterator
 
-@geneva.udtf(
+@udtf(
     output_schema=pa.schema([
         pa.field("row_id", pa.int64()),
         pa.field("cluster_id", pa.int64()),
@@ -54,7 +54,7 @@ class PHashDedupe:
 ### Function-based
 
 ```python
-@geneva.udtf(output_schema=pa.schema([
+@udtf(output_schema=pa.schema([
     pa.field("label", pa.string()),
     pa.field("count", pa.int64()),
     pa.field("mean_score", pa.float64()),
@@ -123,7 +123,7 @@ On each refresh, Geneva checks the source table's version against the version st
 When neither `partition_by` nor `partition_by_indexed_column` is set, the UDTF runs as a **single Ray task** with access to the entire source dataset. Use this for global operations that need cross-row visibility.
 
 ```python
-@geneva.udtf(output_schema=...)
+@udtf(output_schema=...)
 class GlobalAggregation:
     def __call__(self, source: geneva.GenevaQueryBuilder) -> Iterator[pa.RecordBatch]:
         all_data = source.to_arrow()
@@ -136,7 +136,7 @@ class GlobalAggregation:
 The framework groups source data by the partition column and dispatches each partition as an independent Ray task. Use this when the computation is naturally parallelizable by some grouping key.
 
 ```python
-@geneva.udtf(
+@udtf(
     output_schema=pa.schema([
         ("row_id_a", pa.string()),
         ("row_id_b", pa.string()),
@@ -167,7 +167,7 @@ from geneva.partitioning import create_ivf_flat_index
 create_ivf_flat_index(images, "phash", k=16)
 
 # 2. Define the UDTF with index-based partitioning
-@geneva.udtf(
+@udtf(
     output_schema=pa.schema([
         ("row_id_a", pa.string()),
         ("row_id_b", pa.string()),
@@ -248,7 +248,7 @@ Checkpointed UDTFs must be **deterministic** — the same input must yield the s
 ### K-Means Clustering
 
 ```python
-@geneva.udtf(
+@udtf(
     output_schema=pa.schema([
         pa.field("row_id", pa.int64()),
         pa.field("cluster_id", pa.int64()),
@@ -281,7 +281,7 @@ class KMeansClustering:
 ### Aggregation
 
 ```python
-@geneva.udtf(
+@udtf(
     output_schema=pa.schema([
         pa.field("label", pa.string()),
         pa.field("count", pa.int64()),
