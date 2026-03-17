@@ -145,7 +145,8 @@ The vector column holds 3-dimensional embeddings representing each character.
 To ingest the data into LanceDB, obtain data of the required shape
 and pass in the data object to the `create_table` method as shown below.
 Note that LanceDB tables require a schema. If you don't provide one, LanceDB
-will infer it from the data.
+will infer it from the data. For the Rust snippet, you can find the helper functions in the
+[code](https://github.com/lancedb/docs/blob/main/tests/rs/quickstart.rs).
 
 <CodeGroup >
     <CodeBlock filename="Python (sync)" language="Python" icon="python">
@@ -210,11 +211,10 @@ to be used downstream in your application.
   </CodeBlock>
 </Accordion>
 
-
 <Info>
 See the full code for these examples (including helper functions) in the
 `quickstart` file for the appropriate client language in the
-[docs repo](https://github.com/lancedb/docs/tree/main/tests).
+[files provided here](https://github.com/lancedb/docs/tree/main/tests).
 </Info>
 
 

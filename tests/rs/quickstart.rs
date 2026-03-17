@@ -21,7 +21,6 @@ struct Adventurer {
     text: String,
     vector: [f32; 3],
 }
-// --8<-- [end:quickstart_define_struct]
 
 fn adventurers_schema() -> Arc<Schema> {
     Arc::new(Schema::new(vec![
@@ -34,6 +33,7 @@ fn adventurers_schema() -> Arc<Schema> {
         ),
     ]))
 }
+// --8<-- [end:quickstart_define_struct]
 
 type BatchIter = RecordBatchIterator<
     std::vec::IntoIter<std::result::Result<RecordBatch, arrow_schema::ArrowError>>,
