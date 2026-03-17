@@ -10,8 +10,7 @@ While joint vector and metadata search at scale presents a significant challenge
 LanceDB achieves sub-100ms latency at thousands of QPS, enabling efficient vector search 
 with filtering capabilities even on datasets containing billions of records. 
 
-**Pre-filtering is applied to top-k results by default** before executing the vector search. This narrow down the search space within large datasets, thereby reducing query latency. 
-You can also use **post-filtering** to refine results after the vector search completes.
+**Pre-filtering** means LanceDB applies the metadata `where(...)` condition before running vector search, so the search only considers rows that already match the filter. **Post-filtering** means LanceDB runs vector search first and only then filters the returned candidates. Pre-filtering is enabled by default. In practice, pre-filtering is better when the filter is part of the result contract; post-filtering can be lower-latency for expensive or non-indexable filters, but it can return fewer than `limit` rows, or even zero, if the nearest neighbors do not pass the filter.
 
 ## Example: Metadata Filtering
 
