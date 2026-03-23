@@ -37,6 +37,9 @@ as columns in a Lance dataset. Adding a feature is straightforward:
   Register the UDF as a virtual column using `Table.add_columns()`.
   </Step>
   <Step>
+  (Optional) Configure where the UDF will run: locally, on a Ray cluster, or on a Kubernetes cluster with KubeRay (see [Contexts](/geneva/jobs/contexts)).
+  </Step>
+  <Step>
   Trigger a `backfill` operation (see [Backfilling](/geneva/jobs/backfilling/)).
   </Step>
 </Steps>

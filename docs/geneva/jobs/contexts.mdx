@@ -1,7 +1,7 @@
 ---
 title: Execution Contexts
 sidebarTitle: Contexts
-description: Learn how Geneva automatically packages and deploys your Python execution environment to worker nodes for distributed execution.
+description: Learn how to set up your cluster for distributed execution.
 icon: circle-nodes
 ---
 
@@ -9,9 +9,7 @@ icon: circle-nodes
 The APIs on this page require Geneva **v0.10.0** or later.
 </Note>
 
-Geneva automatically packages and deploys your Python execution environment to its worker nodes. This ensures that distributed execution occurs in the same environment and dependencies as your prototype.
-
-We currently support one processing backend: **Ray**. There are 3 ways to connect to a Ray cluster: 
+Geneva currently supports one processing backend: **Ray**. There are 3 ways to connect to a Ray cluster: 
 
 1. Local Ray
 2. KubeRay: create a cluster on demand in your Kubernetes cluster.
