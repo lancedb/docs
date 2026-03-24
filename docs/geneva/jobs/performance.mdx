@@ -42,7 +42,6 @@ The head node runs the Ray GCS (Global Control Store), the driver task, and the 
 | Replicas | 1 (min: 0, max: 100) |
 | Idle Timeout | 60 seconds |
 
-
 ## Scaling computation resources
 
 Geneva jobs can split and schedule computational work into smaller batches that are assigned to *tasks* which are distributed across the cluster. As each task completes, it writes its output into a checkpoint file. If a job is interrupted or run again, Geneva will look to see if a checkpoint for the computation is already present and if not will kick off computations.
@@ -106,6 +105,16 @@ For a job with `concurrency=4`, `intra_applier_concurrency=2`, with a UDF that r
 |Queue actors  |0    |—      |4    |
 |Applier actors|1*2=2|1 GiB  |4    |
 |Total         |0.1+0.1+4*0.1+4*2 = **8.6**|128 MiB + 4 * 1GiB + 4 * 1GiB = **8.125 GiB**||
+
+### Overall Cluster Sizing
+
+Of course, the size of a cluster will vary dramatically for each task. But if you don't know how to estimate your workload, we can recommend the following cluster sizes as a starting point:
+
+| Cluster Size | Head Node | Workers |
+| --- | --- | --- |
+| **Small** (Dev / CI) | 1 CPU, 8 GB | 4 x 2 CPU, 8 GB |
+| **Medium** (Staging) | 2 CPU, 8 GB | 4 x 4 CPU, 8 GB |
+| **Large** (Production) | 4 CPU, 8 GB | 8+ x 8 CPU, 16 GB |
 
 ### Validation Thresholds
 
