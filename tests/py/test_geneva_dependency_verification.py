@@ -66,34 +66,41 @@ def test_pip_manifest(monkeypatch):
     assert "numpy==1.26.4" in manifest.pip
 
 
-def test_conda_manifest_path():
-    # --8<-- [start:conda_manifest_path]
-    from geneva.manifest.builder import CondaManifestBuilder
+def test_conda_cluster_path():
+    # --8<-- [start:conda_cluster_path]
+    from geneva.cluster.builder import KubeRayClusterBuilder
 
-    manifest = (
-        CondaManifestBuilder.create("my-manifest")
-        .conda_environment_path("environment.yml")
-        .build()
-    )
-    # --8<-- [end:conda_manifest_path]
-    assert manifest.conda_environment_path == "environment.yml"
-
-
-def test_conda_manifest_inline():
-    # --8<-- [start:conda_manifest_inline]
-    from geneva.manifest.builder import CondaManifestBuilder
-
-    manifest = (
-        CondaManifestBuilder.create("my-manifest")
-        .conda({
-            "channels": ["conda-forge"],
-            "dependencies": [
-                "python=3.10",
-                "ffmpeg<8",
-                "torchvision=0.22.1",
-            ],
+    cluster = (
+        KubeRayClusterBuilder.create("my-cluster")
+        .ray_init_kwargs({
+            "runtime_env": {"conda": "environment.yml"}
         })
         .build()
     )
-    # --8<-- [end:conda_manifest_inline]
-    assert manifest.conda["channels"] == ["conda-forge"]
+    # --8<-- [end:conda_cluster_path]
+    assert cluster.kuberay.ray_init_kwargs["runtime_env"]["conda"] == "environment.yml"
+
+
+def test_conda_cluster_inline():
+    # --8<-- [start:conda_cluster_inline]
+    from geneva.cluster.builder import KubeRayClusterBuilder
+
+    cluster = (
+        KubeRayClusterBuilder.create("my-cluster")
+        .ray_init_kwargs({
+            "runtime_env": {
+                "conda": {
+                    "channels": ["conda-forge"],
+                    "dependencies": [
+                        "python=3.10",
+                        "ffmpeg<8",
+                        "torchvision=0.22.1",
+                    ],
+                },
+                "config": {"eager_install": True},
+            }
+        })
+        .build()
+    )
+    # --8<-- [end:conda_cluster_inline]
+    assert cluster.kuberay.ray_init_kwargs["runtime_env"]["conda"]["channels"] == ["conda-forge"]

@@ -5,7 +5,7 @@ description: Diagnose and resolve package version mismatches between local and R
 icon: magnifying-glass-chart
 ---
 
-import { PyQuickFixManifest, PyEnvVarsViaCluster, PyPipManifest, PyCondaManifestPath, PyCondaManifestInline } from '/snippets/geneva_dependency_verification.mdx';
+import { PyQuickFixManifest, PyEnvVarsViaCluster, PyPipManifest, PyCondaClusterPath, PyCondaClusterInline } from '/snippets/geneva_dependency_verification.mdx';
 
 When running Geneva UDFs on Ray, your code is serialized locally and executed on remote workers. If the worker environment differs from your local environment, you may encounter subtle and difficult-to-debug errors.
 
@@ -262,13 +262,13 @@ spec:
 
 *Cons*: Requires image build/push workflow.
 
-**Option 3: Conda Manifest**
+**Option 3: Conda Environment**
 
-Use a conda environment on workers via the manifest builder:
+Use a conda environment on workers via the cluster builder:
 
 <CodeGroup>
   <CodeBlock filename="Python" language="python" icon="python">
-  {PyCondaManifestPath}
+  {PyCondaClusterPath}
   </CodeBlock>
 </CodeGroup>
 
@@ -276,7 +276,7 @@ Or specify conda channels and dependencies inline:
 
 <CodeGroup>
   <CodeBlock filename="Python" language="python" icon="python">
-  {PyCondaManifestInline}
+  {PyCondaClusterInline}
   </CodeBlock>
 </CodeGroup>
 
