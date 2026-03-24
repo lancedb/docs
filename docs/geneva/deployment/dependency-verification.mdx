@@ -5,6 +5,8 @@ description: Diagnose and resolve package version mismatches between local and R
 icon: magnifying-glass-chart
 ---
 
+import { PyQuickFixManifest, PyEnvVarsViaCluster, PyPipManifest, PyCondaManifestPath, PyCondaManifestInline } from '/snippets/geneva_dependency_verification.mdx';
+
 When running Geneva UDFs on Ray, your code is serialized locally and executed on remote workers. If the worker environment differs from your local environment, you may encounter subtle and difficult-to-debug errors.
 
 ## Example environment mismatch errors
@@ -42,10 +44,11 @@ If you are encountering a hang or exception you can use the following diagnosis 
   </Step>
   <Step>
   **Fix with manifest** for quick testing:
-  ```python
-  from geneva.manifest.builder import GenevaManifestBuilder
-  manifest = GenevaManifestBuilder.create("fix").pip(["numpy==1.26.4"]).build()
-  ```
+  <CodeGroup>
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyQuickFixManifest}
+    </CodeBlock>
+  </CodeGroup>
   </Step>
   <Step>
   **OPTIONAL: Build custom image** for production (if using KubeRay).
@@ -146,12 +149,12 @@ If critical environment variables are missing on workers, you can pass them via 
 
 <CodeGroup>
 ```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
+from geneva.manifest.builder import PipManifestBuilder
 import os
 
 manifest = (
-    GenevaManifestBuilder.create("my-manifest")
-    .env({
+    PipManifestBuilder.create("my-manifest")
+    .env_vars({
         "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"],
         "AWS_SECRET_ACCESS_KEY": os.environ["AWS_SECRET_ACCESS_KEY"],
         "MY_API_KEY": os.environ["MY_API_KEY"],
@@ -164,23 +167,9 @@ manifest = (
 **Option 2: Via Cluster Configuration**
 
 <CodeGroup>
-```python Python icon="python"
-from geneva.cluster.builder import GenevaClusterBuilder
-import os
-
-cluster = (
-    GenevaClusterBuilder.create("my-cluster")
-    .ray_init_kwargs({
-        "runtime_env": {
-            "env_vars": {
-                "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"],
-                "AWS_SECRET_ACCESS_KEY": os.environ["AWS_SECRET_ACCESS_KEY"],
-            }
-        }
-    })
-    .build()
-)
-```
+  <CodeBlock filename="Python" language="python" icon="python">
+  {PyEnvVarsViaCluster}
+  </CodeBlock>
 </CodeGroup>
 
 <Warning>
@@ -226,25 +215,9 @@ Watch for major version differences (NumPy 1.x vs 2.x) and PyTorch version misma
 Specify packages in a Geneva manifest for a quick fix:
 
 <CodeGroup>
-```python Python icon="python"
-from geneva.manifest.builder import GenevaManifestBuilder
-
-manifest = (
-    GenevaManifestBuilder.create("my-manifest")
-    .pip([
-        "numpy==1.26.4",
-        "torch==2.0.1",
-        "attrs==23.2.0",
-    ])
-    .build()
-)
-
-# Then use with db.context()
-conn = geneva.connect("s3://my-bucket/my-db")
-conn.define_manifest("my-manifest", manifest)
-with conn.context(cluster="my-cluster", manifest="my-manifest"):
-    conn.open_table("my-table").backfill("my-column")
-```
+  <CodeBlock filename="Python" language="python" icon="python">
+  {PyPipManifest}
+  </CodeBlock>
 </CodeGroup>
 
 *Pros*: Quick, reusable across sessions, stored with your database.
@@ -289,46 +262,22 @@ spec:
 
 *Cons*: Requires image build/push workflow.
 
-**Option 3: Conda Environment**
+**Option 3: Conda Manifest**
 
-Use a conda environment on workers via the cluster builder:
+Use a conda environment on workers via the manifest builder:
 
 <CodeGroup>
-```python Python icon="python"
-from geneva.cluster.builder import GenevaClusterBuilder
-
-cluster = (
-    GenevaClusterBuilder.create("my-cluster")
-    .ray_init_kwargs({
-        "runtime_env": {"conda": "environment.yml"}
-    })
-    .build()
-)
-```
+  <CodeBlock filename="Python" language="python" icon="python">
+  {PyCondaManifestPath}
+  </CodeBlock>
 </CodeGroup>
 
 Or specify conda channels and dependencies inline:
 
 <CodeGroup>
-```python Python icon="python"
-cluster = (
-    GenevaClusterBuilder.create("my-cluster")
-    .ray_init_kwargs({
-        "runtime_env": {
-            "conda": {
-                "channels": ["conda-forge"],
-                "dependencies": [
-                    "python=3.10",
-                    "ffmpeg<8",
-                    "torchvision=0.22.1"
-                ]
-            },
-            "config": {"eager_install": True}
-        }
-    })
-    .build()
-)
-```
+  <CodeBlock filename="Python" language="python" icon="python">
+  {PyCondaManifestInline}
+  </CodeBlock>
 </CodeGroup>
 
 *Pros*: Best for complex dependencies with native libraries (ffmpeg, CUDA).
