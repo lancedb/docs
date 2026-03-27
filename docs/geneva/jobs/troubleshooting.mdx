@@ -120,6 +120,16 @@ The client could not connect to the Ray cluster (e.g. after starting a KubeRay o
 
 If you see errors about the client already being connected (e.g. when re-running a notebook or script), ensure you're not holding an old Ray client connection. Restart the kernel or process so Ray is re-initialized cleanly. Geneva disconnects the client when the context exits; leaving a context open or reusing a stale connection can cause this.
 
+### Head node out of memory
+
+If the head node is under-provisioned (e.g. 1 CPU / 2 GB), it can OOM when:
+
+- Many workers connect and register with GCS
+- The Ray dashboard accumulates metrics
+- Object store spillover occurs
+
+**Recommendation**: Use at least 4 CPU / 8 GiB for the head node in any non-trivial deployment. This is the current default.
+
 ---
 ## Serialization library or `attrs` version mismatch
 
