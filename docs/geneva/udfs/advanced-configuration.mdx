@@ -41,6 +41,43 @@ This section configures retry logic for Lance I/O operations. Retries occur on `
 | `GENEVA_RETRY_LANCE_INITIAL_SECS` | `0.5` | Initial wait time in seconds for exponential backoff when retrying Lance I/O operations. |
 | `GENEVA_RETRY_LANCE_MAX_SECS` | `120.0` | Maximum wait time in seconds for exponential backoff when retrying Lance I/O operations. |
 
+## Checkpoint Storage
+
+<Warning>
+Checkpoint storage configuration is **experimental**. The environment variable names and behavior may change in a future release.
+</Warning>
+
+Configure where Geneva stores checkpoint data during job execution. Checkpoints enable fault-tolerant processing by saving intermediate results so that failed jobs can resume without reprocessing completed work.
+
+By default, Geneva stores checkpoints in a `_ckp/` subdirectory inside the table's own storage location. This means checkpoints share the same bucket and IOPS budget as the table data. You can override this to store checkpoints in a separate location.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JOB__CHECKPOINT__OBJECT_STORE__PATH` | _(table dir)_`/_ckp/` | URI where checkpoint data is stored. When set, overrides the default in-table checkpoint location. Accepts any URI supported by Lance (e.g., `gs://bucket/path/checkpoints`, `s3://bucket/checkpoints`). |
+
+<Tip>
+This variable maps to the config path `job.checkpoint.object_store.path`. It can also be set via config files in `.config/` or `pyproject.toml` under the `[geneva]` section.
+</Tip>
+
+### Why use a separate checkpoint path?
+
+At scale, checkpoint I/O and data I/O compete for the same object store IOPS budget when they share a bucket prefix. Setting `JOB__CHECKPOINT__OBJECT_STORE__PATH` to a **different bucket or prefix** decouples checkpoint I/O from data I/O, giving each its own IOPS budget and preventing shared-prefix rate limiting.
+
+```bash
+# Example: separate checkpoint bucket from dataset storage
+JOB__CHECKPOINT__OBJECT_STORE__PATH=gs://my-checkpoints-bucket/ckpts
+```
+
+Equivalent programmatic configuration:
+
+```python
+from geneva.config import override_config_kv
+
+override_config_kv({
+    "job.checkpoint.object_store.path": "gs://my-checkpoints-bucket/ckpts",
+})
+```
+
 ## Other Configuration
 
 | Variable | Default | Description |
