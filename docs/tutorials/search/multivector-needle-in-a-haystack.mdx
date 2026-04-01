@@ -6,9 +6,11 @@ description: "Tutorial on token-level retrieval with LanceDB multivector search.
 
 ![](/static/assets/images/search/multivector/multivector-1.png)
 
-In the development of advanced search and retrieval systems, moving from keyword matching to semantic understanding is a critical step. However, a key distinction exists between finding a relevant document and locating a specific piece of information within that document with precision. While there are techniques that perform well for retrieving documents, most of them work by extracting summarized semantic meaning of the document. This can be seen as these models trying to understand the "gist" of the documents. Both single-vector search and late-interaction approaches work well for these conditions with various tradeoffs involved. But there's another type of problem where the goal is not just to understand the overall topic of a document in general, but to also specifically account for the requested detail within the document. This "needle in a haystack" problem is a significant challenge, and addressing it is essential for building high-precision retrieval systems.
+In the development of advanced search and retrieval systems, moving from keyword matching to semantic understanding is a critical step. However, a key distinction exists between finding a relevant document and locating a specific piece of information within that document with precision. While there are techniques that perform well for retrieving documents, most of them work by extracting summarized semantic meaning of the document.
 
-This guide provides a technical analysis of multivector search for high-precision information retrieval. We will examine various optimization strategies and analyze their performance. This guide should be seen as complementary to resources like the [Answer.AI blog on ColBERT pooling](https://www.answer.ai/posts/colbert-pooling.html), which explains how pooling strategies can be effective for document-level retrieval. Here, we will demonstrate why those same techniques can be counterproductive when precision at an intra-document, token level is the primary objective.
+This can be seen as these models trying to understand the "gist" of the documents. Both single-vector search and late-interaction approaches work well for these conditions with various tradeoffs involved. But there's another type of problem where the goal is not just to understand the overall topic of a document in general, but to also specifically account for the requested detail within the document. This "needle in a haystack" problem is a significant challenge, and addressing it is essential for building high-precision retrieval systems.
+
+This guide provides a technical analysis of multivector search for high-precision information retrieval. We will examine various optimization strategies and analyze their performance. This guide should be seen as complementary to resources like [this blog post by Answer.AI](https://www.answer.ai/posts/colbert-pooling.html) on ColBERT pooling, which explains how pooling strategies can be effective for document-level retrieval. Here, we will demonstrate why those same techniques can be counterproductive when precision at an intra-document, token level is the primary objective.
 
 To reproduce the work below, see the code [here](https://github.com/lancedb/research/tree/main/multivector-needle-haystack-bench).
 
@@ -266,12 +268,9 @@ The "optimizations" are not all created equal. While simple pooling is fast, its
 | `flatten and multivector rerank` (Slower and Ineffective) | 0.692 s | 7.3% |
 | **`hierarchical token pooling` (Accurate & Fast)** | **0.144 s** | **91.6%** |
 | `base` (Most Accurate) | 0.668 s | **95.5%** |
+_Latency reported is as seen on NVIDIA H100 GPUs_
 
-
-*(Latency measured on NVIDIA H100 GPUs)*
-
-
-## Practical Considerations:
+## Practical Considerations
 
 The accuracy of `base` multivector search is impressive, but its computational intensity has historically limited its use.  `hierarchical token pooling` as a viable strategy creates a new, practical sweet spot on the accuracy-latency curve, making high-precision search accessible for a wider range of applications.
 
@@ -283,7 +282,7 @@ As the benchmark data shows, the search latency for `base` multivector search is
 *   **Modern ANN Search (for single vectors):** Algorithms like HNSW (Hierarchical Navigable Small World) provide sub-linear search times, often close to `O(log N)`, where `N` is the number of items in the index. This allows them to scale to billions of vectors with millisecond-level latency.
 *   **Late-Interaction Search (Multi-vector):** The search process is far more intensive. For each query, it must compute similarity scores between query tokens and the tokens of many candidate documents. The complexity is closer to `O(M * Q * D)`, where `M` is the number of candidate documents to score, `Q` is the number of query tokens, and `D` is the average number of tokens per document. `Hierarchical token pooling` directly attacks this problem by reducing `D`, leading to a significant reduction in search latency.
 
-### When to Use Multi-vector Search
+### When to Use Multi-Vector Search
 
 Given these constraints, the choice of strategy depends on the specific requirements of the application.
 
@@ -291,9 +290,9 @@ Given these constraints, the choice of strategy depends on the specific requirem
 *   **For a Balance of Precision and Performance (`hierarchical token pooling`):** This is the ideal choice for many applications. It makes high-precision search practical for larger datasets and more interactive use cases where the sub-second latency of the `base` search may be too high. It significantly lowers the barrier to entry for adopting multivector search. It should still not be seen as a drop-in replacement for ANN, as it still requires more computational resources than single-vector search.
 *   **For General-Purpose Document Retrieval (`flatten` / single-vector):** For large-scale retrieval where understanding the "gist" is sufficient or where in cases where large-context text-based models suffice, single-vector search remains the most practical and scalable solution.
 
-
-
 ## Appendix: Full Benchmark Results
+
+The full benchmark results are shown below.
 
 ```text
 | name                                        |   _runtime |   _step |    _timestamp | _wandb             |   avg_inference_latency |   avg_search_latency | hit_rates                                                                                                                                 | model_name                   | strategy             |
@@ -331,5 +330,3 @@ Given these constraints, the choice of strategy depends on the specific requirem
 | vidore/colqwen2.5-v0.2_hierarchical_pooling |       8430 |       0 |   1.75991e+09 | {'runtime': 8430}  |              0.043073   |           0.141276   | {'1': 0.11103030303030303, '10': 0.6892121212121212, '20': 0.8203636363636364, '3': 0.3185454545454545, '5': 0.4989090909090909}          | vidore/colqwen2.5-v0.2       | hierarchical_pooling |
 | vidore/colqwen2-v1.0_hierarchical_pooling   |       5685 |       0 |   1.75991e+09 | {'runtime': 5685}  |              0.0343824  |           0.144062   | {'1': 0.13745454545454547, '10': 0.822060606060606, '20': 0.9156363636363636, '3': 0.3856969696969697, '5': 0.6050909090909091}           | vidore/colqwen2-v1.0         | hierarchical_pooling |
 ```
-
-Update 1: Add token pooling method 
