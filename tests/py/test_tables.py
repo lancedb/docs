@@ -272,6 +272,14 @@ def test_table_creation_from_iterator(tmp_db):
     # --8<-- [start:create_table_from_iterator]
     import pyarrow as pa
 
+    schema = pa.schema(
+        [
+            pa.field("vector", pa.list_(pa.float32(), 4)),
+            pa.field("item", pa.utf8()),
+            pa.field("price", pa.float32()),
+        ]
+    )
+
     def make_batches():
         for i in range(5):
             yield pa.RecordBatch.from_arrays(
@@ -286,17 +294,9 @@ def test_table_creation_from_iterator(tmp_db):
                 ["vector", "item", "price"],
             )
 
-    schema = pa.schema(
-        [
-            pa.field("vector", pa.list_(pa.float32(), 4)),
-            pa.field("item", pa.utf8()),
-            pa.field("price", pa.float32()),
-        ]
-    )
     db = tmp_db
-    db.create_table("batched_tale", make_batches(), schema=schema, mode="overwrite")
+    db.create_table("batched_table", make_batches(), schema=schema, mode="overwrite")
     # --8<-- [end:create_table_from_iterator]
-
 
 def test_open_existing_table(tmp_db):
     # --8<-- [start:open_existing_table]

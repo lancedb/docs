@@ -42,7 +42,7 @@ In LanceDB, tables store records with a defined schema that specifies column nam
 - PyArrow schemas for explicit schema control
 - `LanceModel` for Pydantic-based validation
 
-## Create a LanceDB Table
+## Create a table with data
 
 Initialize a LanceDB connection and create a table
 
@@ -217,9 +217,9 @@ for a `created_at` field.
 
 When you run this code it, should raise the `ValidationError`.
 
-### Use Iterators / Write Large Datasets
+### From Batch Iterators
 
-For large ingests, prefer batching instead of adding one row at a time. Python and Rust can create a table directly from Arrow batch iterators or readers. In TypeScript, the practical pattern today is to create an empty table and append Arrow batches in chunks.
+For bulk ingestion on large datasets, prefer batching instead of adding one row at a time. Python and Rust can create a table directly from Arrow batch iterators or readers. In TypeScript, the practical pattern today is to create an empty table and append Arrow batches in chunks.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -235,25 +235,23 @@ For large ingests, prefer batching instead of adding one row at a time. Python a
     </CodeBlock>
 </CodeGroup>
 
+Use this pattern when:
+
+- Your source data already arrives in Arrow batches, readers, datasets, or streams.
+- Materializing the entire ingest as one giant in-memory list or array would be too expensive.
+- You want to control chunk size explicitly during ingestion.
+
 Python can also consume iterators of other supported types like Pandas DataFrames or Python lists.
 
-## Open existing tables
+### Write with Concurrency
 
-If you forget the name of your table, you can always get a listing of all table names.
+For Python users who want to speed up bulk ingest jobs, it is usually better to write from Arrow-native sources that already produce batches, such as readers, datasets, or scanners, instead of first materializing everything as one large Python list.
 
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {OpenExistingTable}
-    </CodeBlock>
+This is most useful when you are writing large amounts of data from an existing Arrow pipeline or another batch-oriented source.
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsOpenExistingTable}
-    </CodeBlock>
+The current codebase also contains a lower-level ingest mechanism for describing a batch source together with extra metadata such as row counts and retry behavior. However, that path is not accepted by the released Python `create_table(...)` and `add(...)` workflow in `lancedb==0.30.0`, so we are not showing it as a docs example yet.
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsOpenExistingTable}
-    </CodeBlock>
-</CodeGroup>
+In Rust, the same lower-level ingest mechanism is available, but the common batch-reader example above is usually the better starting point unless you specifically need to define your own batch source or provide size and retry hints. In TypeScript, this lower-level mechanism is not exposed publicly, so chunked Arrow batch writes remain the recommended pattern.
 
 ## Create empty table
 You can create an empty table for scenarios where you want to add data to the table later.
@@ -288,6 +286,25 @@ that has been extended to support LanceDB specific types like `Vector`.
 
 Once the empty table has been created, you can append to it or modify its contents,
 as explained in the [updating and modifying tables](/tables/update) section.
+
+## Open an existing table
+
+You can open an existing table by specifying the name of the table to the `open_table` / `openTable` method.
+If you forget the name of your table, you can always get a listing of all table names.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {OpenExistingTable}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsOpenExistingTable}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsOpenExistingTable}
+    </CodeBlock>
+</CodeGroup>
 
 ## Drop a table
 
