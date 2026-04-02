@@ -114,6 +114,8 @@ Jobs save intermediate results to a checkpoint store. If a job fails:
 2. **Resume from checkpoint** - Restarted jobs skip already-processed data
 3. **No duplicate processing** - Each batch is processed exactly once
 
+By default, checkpoints are stored in a `_ckp/` subdirectory inside the table's storage location. At scale, you can redirect checkpoints to a separate bucket to avoid IOPS contention. See [Checkpoint Storage configuration](/geneva/udfs/advanced-configuration#checkpoint-storage) for details.
+
 ### Resuming Failed Jobs
 
 To resume a failed job, simply re-run the same backfill or refresh command. The job will automatically detect existing checkpoints, skip already-processed fragments, and continue from where it left off.
