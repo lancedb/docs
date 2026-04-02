@@ -40,7 +40,7 @@ export const RsQuickstartCreateTable = "// Define an arrow schema named adventur
 
 export const RsQuickstartCreateTableNoOverwrite = "table = db\n    .create_table(\"adventurers\", adventurers_to_reader(schema.clone(), &data))\n    .execute()\n    .await\n    .unwrap();\n";
 
-export const RsQuickstartDefineStruct = "// Define a struct representing the data schema\n#[derive(Debug, Clone, Serialize, Deserialize)]\nstruct Adventurer {\n    id: String,\n    text: String,\n    vector: [f32; 3],\n}\n";
+export const RsQuickstartDefineStruct = "// Define a struct representing the data schema\n#[derive(Debug, Clone, Serialize, Deserialize)]\nstruct Adventurer {\n    id: String,\n    text: String,\n    vector: [f32; 3],\n}\n\nfn adventurers_schema() -> Arc<Schema> {\n    Arc::new(Schema::new(vec![\n        Field::new(\"id\", DataType::LargeUtf8, false),\n        Field::new(\"text\", DataType::LargeUtf8, false),\n        Field::new(\n            \"vector\",\n            DataType::FixedSizeList(Arc::new(Field::new(\"item\", DataType::Float32, true)), 3),\n            false,\n        ),\n    ]))\n}\n";
 
 export const RsQuickstartOpenTable = "let table: Table = db.open_table(\"adventurers\").execute().await.unwrap();\n";
 

@@ -1,11 +1,46 @@
 ---
-title: Distributed Job Performance
-sidebarTitle: Performance
+title: Distributed Job Performance and Cluster Sizing
+sidebarTitle: Performance and Sizing
 description: Learn how to tune Geneva distributed job performance by scaling compute resources and balancing write bandwidth.
 icon: chart-line
 ---
 
 When Geneva runs in distributed mode, jobs are deployed against a Kubernetes KubeRay instance that dynamically provisions a Ray cluster. Job execution time depends on sufficient CPU/GPU resources for *computation* and sufficient *write bandwidth* to store the output values. Tuning the performance of a job boils down to configuring the table or cluster resources.
+
+## Geneva defaults
+
+Geneva sets the following defaults when creating a KubeRay cluster via GenevaClusterBuilder. These apply as both Kubernetes requests and limits.
+
+### Head Node
+| Resource | Default |
+| --- | --- |
+| CPU | 4 |
+| Memory | 8 GiB |
+| GPU | 0 |
+| Node Selector | `geneva.lancedb.com/ray-head: true` |
+| Service Account | `geneva-service-account` |
+
+The head node runs the Ray GCS (Global Control Store), the driver task, and the dashboard. It does not run UDF applier actors.
+
+### CPU Workers
+| Resource | Default |
+| --- | --- |
+| CPU | 4 |
+| Memory | 8 GiB |
+| GPU | 0 |
+| Node Selector | `geneva.lancedb.com/ray-worker-cpu: true` |
+| Replicas | 1 (min: 0, max: 100) |
+| Idle Timeout | 60 seconds |
+
+### GPU Workers
+| Resource | Default |
+| --- | --- |
+| CPU | 8 |
+| Memory | 16 GiB |
+| GPU | 1 |
+| Node Selector | `geneva.lancedb.com/ray-worker-gpu: true` |
+| Replicas | 1 (min: 0, max: 100) |
+| Idle Timeout | 60 seconds |
 
 ## Scaling computation resources
 
@@ -48,6 +83,48 @@ Typical per-row sizes:
 - Images: ~200KB–2MB (depends on dataset and encoding)
 - Videos: ~10MB–200MB
 - Embeddings: `dimension * data_type_size` bytes (e.g. float32 embeddings use 4 bytes per value, so a 1536-dim embedding is `1536 * 4 = 6144` bytes)
+
+#### Internal Actor Resource Overhead
+In addition to UDF applier actors, each backfill job creates internal actors that consume resources:
+|Component |CPU |Memory |Count|
+|-------------|----|-------|-----|
+|Driver task  |0.1 |—      |1    |
+|JobTracker   |0.1 |128 MiB|1    |
+|Writer actors|0.1 |1 GiB  |1 per applier|
+|Queue actors |0   |—      |1 per applier|
+|Applier actors|UDF `num_cpus * intra_applier_concurrency`|UDF memory |`concurrency`|
+
+#### Example
+For a job with `concurrency=4`, `intra_applier_concurrency=2`, with a UDF that requests 1 CPU and 1GiB memory:
+
+|Component     |CPU  |Memory |Count|
+|--------------|-----|-------|-----|
+|Driver task   |0.1  |—      |1    |
+|JobTracker    |0.1  |128 MiB|1    |
+|Writer actors |0.1  |1 GiB  |4    |
+|Queue actors  |0    |—      |4    |
+|Applier actors|1*2=2|1 GiB  |4    |
+|Total         |0.1+0.1+4*0.1+4*2 = **8.6**|128 MiB + 4 * 1GiB + 4 * 1GiB = **8.125 GiB**||
+
+### Overall Cluster Sizing
+
+Of course, the size of a cluster will vary dramatically for each task. But if you don't know how to estimate your workload, we can recommend the following cluster sizes as a starting point:
+
+| Cluster Size | Head Node | Workers |
+| --- | --- | --- |
+| **Small** (Dev / CI) | 1 CPU, 8 GB | 4 x 2 CPU, 8 GB |
+| **Medium** (Staging) | 2 CPU, 8 GB | 4 x 4 CPU, 8 GB |
+| **Large** (Production) | 4 CPU, 8 GB | 8+ x 8 CPU, 16 GB |
+
+### Validation Thresholds
+
+The cluster builder validates memory configuration and warns or errors on suspicious values:
+
+| Threshold | Value | Behavior |
+| --- | --- | --- |
+| GPU worker minimum memory | `< 4 GiB` | **Error** — build fails if below this |
+| Large memory warning | `> 100 GB` | **Warning** — may exceed K8s node capacity |
+| Memory-per-CPU ratio warning | `> 16 GiB per CPU` | **Warning** — unusual ratio, likely misconfigured |
 
 ### GKE node pools
 

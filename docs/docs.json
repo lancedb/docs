@@ -50,7 +50,7 @@
                   "enterprise/quickstart",
                   "enterprise/architecture",
                   "enterprise/security",
-                  "enterprise/benchmarks",
+                  "enterprise/performance",
                   {
                     "group": "Deployment",
                     "pages": [
@@ -299,7 +299,14 @@
             "group": "Tutorials",
             "pages": [
               "tutorials/index",
-              "tutorials/search/index",
+              {
+                "group": "Search",
+                "expanded": true,
+                "pages": [
+                  "tutorials/search/index",
+                  "tutorials/search/multivector-needle-in-a-haystack"
+                ]
+              },
               {
                 "group": "RAG & Agents",
                 "expanded": true,
