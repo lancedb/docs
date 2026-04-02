@@ -44,7 +44,20 @@ For large-scale (>1M) or higher dimension vectors, it is beneficial to create a 
 
 ### How can I speed up data inserts?
 
-It's highly recommended to perform bulk inserts via batches (for e.g., Pandas DataFrames or lists of dicts in Python) to speed up inserts for large datasets. Inserting records one at a time is slow and can result in suboptimal performance because each insert creates a new data fragment on disk. Batching inserts allows LanceDB to create larger fragments (and their associated manifests), which are more efficient to read and write.
+LanceDB auto-parallelizes large writes when you call `table.add()` with materialized
+data such as `pa.Table`, `pd.DataFrame`, or `pa.dataset()`. No extra configuration
+is needed — writes are automatically split into partitions of ~1M rows or 2GB.
+
+For best results:
+
+- **Create an empty table first**, then call `table.add()`. The `add()` path enables
+  automatic write parallelism, while passing data directly to `create_table()` does not.
+- **For file-based data**, use `pyarrow.dataset.dataset("path/to/data/", format="parquet")`
+  so LanceDB can stream from disk without loading everything into memory.
+- **Avoid inserting one row at a time.** Each insert creates a new data fragment on
+  disk. Batch your data into Arrow tables, DataFrames, or use iterators.
+
+See [Loading Large Datasets](/tables/create#loading-large-datasets) for full examples.
 
 ### Do I need to set a refine factor when using an index?
 

@@ -19,6 +19,7 @@ import {
     RsCreateTableFromArrow as RsCreateTableFromArrow,
     PyCreateTableFromPydantic as CreateTableFromPydantic,
     PyCreateTableNestedSchema as CreateTableNestedSchema,
+    PyAddFromDataset as AddFromDataset,
     PyCreateTableFromIterator as CreateTableFromIterator,
     TsCreateTableFromIterator as TsCreateTableFromIterator,
     RsCreateTableFromIterator as RsCreateTableFromIterator,
@@ -217,9 +218,39 @@ for a `created_at` field.
 
 When you run this code it, should raise the `ValidationError`.
 
-### From Batch Iterators
+### Loading Large Datasets
 
-For bulk ingestion on large datasets, prefer batching instead of adding one row at a time. Python and Rust can create a table directly from Arrow batch iterators or readers. In TypeScript, the practical pattern today is to create an empty table and append Arrow batches in chunks.
+When ingesting large datasets, use `table.add()` on an existing table rather than
+passing all data to `create_table()`. The `add()` method auto-parallelizes large
+writes, while `create_table(name, data)` does not.
+
+<Tip>
+For best performance with large datasets, create an empty table first and then call
+`table.add()`. This enables automatic write parallelism for materialized data sources.
+</Tip>
+
+#### From files (Parquet, CSV, etc.)
+<Badge color="green">Python Only</Badge>
+
+For file-based data, pass a `pyarrow.dataset.Dataset` to `table.add()`. This streams
+data from disk without loading the entire dataset into memory.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {AddFromDataset}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+`pa.dataset()` input is currently Python-only. TypeScript and Rust support for
+file-based dataset ingestion is tracked in
+[lancedb#3173](https://github.com/lancedb/lancedb/issues/3173).
+</Note>
+
+#### From iterators (custom batch generation)
+
+When you need custom batch logic — generating embeddings on the fly, transforming
+rows from an external source, etc. — use an iterator of `RecordBatch` objects.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -243,15 +274,18 @@ Use this pattern when:
 
 Python can also consume iterators of other supported types like Pandas DataFrames or Python lists.
 
-### Write with Concurrency
+#### Write parallelism
 
-For Python users who want to speed up bulk ingest jobs, it is usually better to write from Arrow-native sources that already produce batches, such as readers, datasets, or scanners, instead of first materializing everything as one large Python list.
+<Note title="Automatic parallelism">
+For materialized data (`pa.Table`, `pd.DataFrame`, `pa.dataset()`), LanceDB
+automatically parallelizes large writes — no configuration needed. Auto-parallelism
+targets approximately 1M rows or 2GB per write partition.
 
-This is most useful when you are writing large amounts of data from an existing Arrow pipeline or another batch-oriented source.
-
-The current codebase also contains a lower-level ingest mechanism for describing a batch source together with extra metadata such as row counts and retry behavior. However, that path is not accepted by the released Python `create_table(...)` and `add(...)` workflow in `lancedb==0.30.0`, so we are not showing it as a docs example yet.
-
-In Rust, the same lower-level ingest mechanism is available, but the common batch-reader example above is usually the better starting point unless you specifically need to define your own batch source or provide size and retry hints. In TypeScript, this lower-level mechanism is not exposed publicly, so chunked Arrow batch writes remain the recommended pattern.
+For streaming sources (iterators, `RecordBatchReader`), LanceDB cannot determine
+total size upfront. A `parallelism` parameter to control this manually is planned
+but not yet exposed in Python or TypeScript
+([tracking issue](https://github.com/lancedb/lancedb/issues/3173)).
+</Note>
 
 ## Create empty table
 You can create an empty table for scenarios where you want to add data to the table later.
