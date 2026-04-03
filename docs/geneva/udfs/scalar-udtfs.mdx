@@ -140,7 +140,7 @@ def clip_embedding(clip_bytes: bytes) -> list[float]:
 clips.add_columns({"embedding": clip_embedding})
 
 # Backfill computes embeddings for all existing clips
-clips.refresh()
+clips.backfill("embedding")
 ```
 
 This is a powerful pattern: expand source rows with a scalar UDTF, then enrich the expanded rows with standard UDFs.
@@ -217,7 +217,7 @@ def embed_text(chunk_text: str) -> list[float]:
     return embedding_model.encode(chunk_text)
 
 chunks.add_columns({"embedding": embed_text})
-chunks.refresh()  # Backfills embeddings on all existing chunks
+chunks.backfill("embedding")  # Backfills embeddings on all existing chunks
 
 # Query — parent columns available alongside chunk columns
 chunks.search(None).select(["doc_id", "title", "chunk_text", "embedding"]).to_pandas()
