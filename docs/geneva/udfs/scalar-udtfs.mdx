@@ -54,7 +54,7 @@ If you prefer to build the full list in memory rather than yielding, you can ret
 
 ### Batched scalar UDTF
 
-For vectorized processing, use `batch=True`. The function receives Arrow arrays and returns a `RecordBatch` of expanded rows:
+For vectorized processing, use `batch=True`. The function receives Arrow arrays and returns a `RecordBatch` of expanded rows. Because the return type `pa.RecordBatch` cannot be inferred, you must supply `output_schema` explicitly:
 
 <CodeGroup>
   <CodeBlock filename="Python" language="python" icon="python">
@@ -64,7 +64,7 @@ For vectorized processing, use `batch=True`. The function receives Arrow arrays 
 
 ## Creating a Scalar UDTF View
 
-Scalar UDTFs use the existing `create_materialized_view` API with a `udtf=` parameter:
+Scalar UDTFs use the `create_scalar_udtf_view` API:
 
 <CodeGroup>
   <CodeBlock filename="Python" language="python" icon="python">

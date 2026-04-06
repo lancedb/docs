@@ -40,7 +40,6 @@ def test_scalar_udtf_iterator():
 
 
 def test_scalar_udtf_list_return():
-    # --8<-- [start:scalar_udtf_list]
     from geneva import scalar_udtf
     from typing import NamedTuple
 
@@ -49,6 +48,7 @@ def test_scalar_udtf_list_return():
         clip_end: float
         clip_bytes: bytes
 
+    # --8<-- [start:scalar_udtf_list]
     @scalar_udtf
     def extract_clips(video_path: str, duration: float) -> list[Clip]:
         clips = []
@@ -66,7 +66,6 @@ def test_scalar_udtf_list_return():
 
 
 def test_scalar_udtf_batch():
-    # --8<-- [start:scalar_udtf_batch]
     import pyarrow as pa
     from geneva import scalar_udtf
 
@@ -75,6 +74,7 @@ def test_scalar_udtf_batch():
         ("clip_end", pa.float64()),
     ])
 
+    # --8<-- [start:scalar_udtf_batch]
     @scalar_udtf(batch=True, output_schema=clip_schema)
     def extract_clips(batch: pa.RecordBatch) -> pa.RecordBatch:
         """Process rows in batches. Same 1:N semantic per row."""
@@ -100,9 +100,11 @@ def test_create_scalar_udtf_view(monkeypatch):
         for start in range(0, int(duration), 10):
             yield Clip(clip_start=start, clip_end=min(start + 10.0, duration), clip_bytes=b"")
 
+    import geneva
+    from unittest.mock import create_autospec
     mock_clips = MagicMock()
-    mock_db = MagicMock()
-    mock_db.create_materialized_view.return_value = mock_clips
+    mock_db = create_autospec(geneva.db.Connection, instance=True)
+    mock_db.create_scalar_udtf_view.return_value = mock_clips
     monkeypatch.setattr("geneva.connect", MagicMock(return_value=mock_db))
 
     # --8<-- [start:create_scalar_udtf_view]
@@ -112,19 +114,19 @@ def test_create_scalar_udtf_view(monkeypatch):
     videos = db.open_table("videos")
 
     # Create the 1:N materialized view
-    clips = db.create_materialized_view(
+    clips = db.create_scalar_udtf_view(
         "clips",
-        query=videos.search(None).select(["video_path", "metadata"]),
-        udtf=extract_clips,
+        source=videos.search(None).select(["video_path", "metadata"]),
+        scalar_udtf=extract_clips,
     )
 
     # Populate — runs the UDTF on every source row
     clips.refresh()
     # --8<-- [end:create_scalar_udtf_view]
 
-    call_kwargs = mock_db.create_materialized_view.call_args
+    call_kwargs = mock_db.create_scalar_udtf_view.call_args
     assert call_kwargs.args[0] == "clips"
-    assert call_kwargs.kwargs["udtf"] is extract_clips
+    assert call_kwargs.kwargs["scalar_udtf"] is extract_clips
     mock_clips.refresh.assert_called_once()
 
 
@@ -190,32 +192,31 @@ def test_chaining_udtf_views(monkeypatch):
     def extract_frames(clip_start: float, clip_end: float) -> Iterator[Frame]:
         yield Frame(frame_index=0, frame_bytes=b"")
 
-    mock_db = MagicMock()
-    mock_db.open_table.return_value = MagicMock()
-    monkeypatch.setattr("geneva.connect", MagicMock(return_value=mock_db))
-
-    # --8<-- [start:chaining_udtf_views]
     import geneva
+    from unittest.mock import create_autospec
+    mock_db = create_autospec(geneva.db.Connection, instance=True)
+    monkeypatch.setattr("geneva.connect", MagicMock(return_value=mock_db))
 
     db = geneva.connect("/data/mydb")
     videos = db.open_table("videos")
 
+    # --8<-- [start:chaining_udtf_views]
     # videos → clips (1:N)
-    clips = db.create_materialized_view(
-        "clips", query=videos.search(None), udtf=extract_clips
+    clips = db.create_scalar_udtf_view(
+        "clips", source=videos.search(None), scalar_udtf=extract_clips
     )
 
     # clips → frames (1:N)
-    frames = db.create_materialized_view(
-        "frames", query=clips.search(None), udtf=extract_frames
+    frames = db.create_scalar_udtf_view(
+        "frames", source=clips.search(None), scalar_udtf=extract_frames
     )
     # --8<-- [end:chaining_udtf_views]
 
-    assert mock_db.create_materialized_view.call_count == 2
-    first_call = mock_db.create_materialized_view.call_args_list[0]
-    second_call = mock_db.create_materialized_view.call_args_list[1]
-    assert first_call.kwargs["udtf"] is extract_clips
-    assert second_call.kwargs["udtf"] is extract_frames
+    assert mock_db.create_scalar_udtf_view.call_count == 2
+    first_call = mock_db.create_scalar_udtf_view.call_args_list[0]
+    second_call = mock_db.create_scalar_udtf_view.call_args_list[1]
+    assert first_call.kwargs["scalar_udtf"] is extract_clips
+    assert second_call.kwargs["scalar_udtf"] is extract_frames
 
 
 def test_document_chunking_udtf():
@@ -250,9 +251,11 @@ def test_document_chunking_full(monkeypatch):
     import pyarrow as pa
     from unittest.mock import MagicMock
 
+    import geneva
+    from unittest.mock import create_autospec
     mock_chunks_table = MagicMock()
-    mock_db = MagicMock()
-    mock_db.create_materialized_view.return_value = mock_chunks_table
+    mock_db = create_autospec(geneva.db.Connection, instance=True)
+    mock_db.create_scalar_udtf_view.return_value = mock_chunks_table
     monkeypatch.setattr("geneva.connect", MagicMock(return_value=mock_db))
 
     embedding_model = MagicMock()
@@ -281,10 +284,10 @@ def test_document_chunking_full(monkeypatch):
     docs = db.open_table("documents")
 
     # Create chunked view — inherits doc_id, title, etc. from source
-    chunks = db.create_materialized_view(
+    chunks = db.create_scalar_udtf_view(
         "doc_chunks",
-        query=docs.search(None).select(["doc_id", "title", "text"]),
-        udtf=chunk_document,
+        source=docs.search(None).select(["doc_id", "title", "text"]),
+        scalar_udtf=chunk_document,
     )
     chunks.refresh()
 
@@ -300,9 +303,9 @@ def test_document_chunking_full(monkeypatch):
     chunks.search(None).select(["doc_id", "title", "chunk_text", "embedding"]).to_pandas()
     # --8<-- [end:document_chunking_full]
 
-    call_kwargs = mock_db.create_materialized_view.call_args
+    call_kwargs = mock_db.create_scalar_udtf_view.call_args
     assert call_kwargs.args[0] == "doc_chunks"
-    assert call_kwargs.kwargs["udtf"] is chunk_document
+    assert call_kwargs.kwargs["scalar_udtf"] is chunk_document
     mock_chunks_table.refresh.assert_called_once()
     mock_chunks_table.add_columns.assert_called_once()
     mock_chunks_table.backfill.assert_called_once_with("embedding")

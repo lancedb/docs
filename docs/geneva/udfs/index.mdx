@@ -22,7 +22,7 @@ Geneva provides three types of user-defined functions for transforming data. Eac
 | **Refresh** | Incremental | Incremental | Full |
 | **Parallelism** | Fragment-parallel | Fragment-parallel | Partition-parallel |
 | **Inherited columns** | N/A — adds to existing rows | Automatic from query | Independent output schema |
-| **Registration** | `table.add_columns()` | `db.create_materialized_view(udtf=)` | `db.create_udtf_view()` |
+| **Registration** | [`table.add_columns()`](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.add_columns) | [`db.create_scalar_udtf_view()`](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_scalar_udtf_view) | [`db.create_udtf_view()`](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_udtf_view) |
 
 ## UDFs (1:1)
 
