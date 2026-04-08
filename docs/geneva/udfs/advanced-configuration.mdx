@@ -85,3 +85,8 @@ override_config_kv({
 | `GENEVA_RAY_INIT_MAX_RETRIES` | `5` | Maximum number of retry attempts for `ray.init()` connection failures. Useful when connecting to Ray clusters that may be temporarily unavailable. |
 | `GENEVA_K8S_AUTH_MAX_RETRIES` | `3` | Maximum number of retries for Kubernetes authentication operations. Must be at least 1. |
 | `GENEVA_CONFIG_DIR` | `./.config` | Directory path where Geneva looks for configuration files (`.yaml`, `.json`, `.toml`). Can be an absolute or relative path. |
+
+## API Reference
+
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator options including `checkpoint_size`, `timeout`, and error handling configs
+- [Cluster](https://lancedb.github.io/geneva/api/cluster/) — `KubeRayClusterBuilder` and related cluster configuration

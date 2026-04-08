@@ -67,3 +67,8 @@ def batch_to_blob(batch: pa.RecordBatch) -> pa.Array:
     return pa.array(blobs, type=pa.large_binary())
 ```
 </CodeGroup>
+
+## API Reference
+
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator for defining blob-processing functions
+- [Table](https://lancedb.github.io/geneva/api/table/) — `add_columns()`, `backfill()`

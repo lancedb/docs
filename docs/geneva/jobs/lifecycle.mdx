@@ -119,3 +119,8 @@ By default, checkpoints are stored in a `_ckp/` subdirectory inside the table's 
 ### Resuming Failed Jobs
 
 To resume a failed job, simply re-run the same backfill or refresh command. The job will automatically detect existing checkpoints, skip already-processed fragments, and continue from where it left off.
+
+## API Reference
+
+- [Table](https://lancedb.github.io/geneva/api/table/) — `backfill()`, `backfill_async()`, `refresh()`, `JobFuture`
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — `get_job()`, `list_jobs()`
