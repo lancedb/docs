@@ -17,7 +17,7 @@ If you need private deployments, high performance at extreme scale, or if you ha
 [reach out to our team](mailto:contact@lancedb.com) to set up a LanceDB Enterprise cluster in your environment.
 </Callout>
 
-## Key benefits of LanceDB Enterprise
+## Why use LanceDB Enterprise?
 
 Below, we list the three main benefits of using LanceDB Enterprise over the open-source version of LanceDB.
 
@@ -52,6 +52,34 @@ changes or data migration required!
 |:--------|:------------|
 | **Effortless Migration** | Migrate from Open Source LanceDB to LanceDB Enterprise by simply using a connection URL. |
 | **Observability** | First-class integration with existing observability systems for logging, monitoring, and distributed traces using OpenTelemetry. |
+
+## Enterprise core features
+
+This section summarizes the core capabilities LanceDB Enterprise adds over those available in OSS.
+
+### Scalable feature engineering with Geneva
+
+LanceDB Enterprise includes Geneva-backed feature engineering for UDF-derived columns and large-table backfills. Instead of wiring your own batch systems around OSS tables, you can manage feature workflows through Geneva clusters, manifests, and jobs, while the platform handles background backfill execution across larger datasets.
+
+### Distributed query serving with compute-storage separation
+
+Enterprise separates query serving, read execution, background workers, and durable storage into distinct layers. Query nodes and plan executors scale independently from object storage and background indexers, which gives you a distributed query system built for remote tables, larger datasets, and production workloads that outgrow a single process. Read more in [LanceDB Enterprise Architecture](/enterprise/architecture/).
+
+### SSD-backed cache for low-latency retrieval
+
+Enterprise adds a fleet-wide NVMe/SSD cache for read paths, so repeated reads do not always pay the full object-store round trip. In practice, this reduces latency, improves tail performance, and makes cache-backed retrieval more predictable as load grows. See [this page](/enterprise/architecture/) to learn more about LanceDB Enterprise's architecture.
+
+### Automatic indexing and online maintenance at scale
+
+Enterprise keeps tables optimized in the background instead of making your application own the maintenance lifecycle. That includes distributed index builds, automatic incremental reindexing as new data arrives, background compaction and cleanup, and optional [automatic GPU indexing](/indexing/gpu-indexing) for large vector workloads. The result is that indexes stay fresh and tables stay performant without recurring manual intervention. Learn more in [Indexing in LanceDB](/indexing/) and [Keeping Indexes Up-to-Date with Reindexing](/indexing/reindexing).
+
+### Enterprise deployment and production controls
+
+Enterprise also adds the platform features teams need to run LanceDB in production: managed or [BYOC deployments](/enterprise/deployment/), private networking and Private Link, RBAC-backed access controls, audit logging, SSO, compliance coverage, and OpenTelemetry-based observability. These capabilities make Enterprise fit security, governance, and operational requirements that go beyond what an embedded OSS deployment is designed to provide. See [Deployment](/enterprise/deployment/) and [Security & Compliance](/enterprise/security/).
+
+<Info>
+**Coming soon**: We are also working on an Enterprise training cache to extend the same model of storage-aware performance optimization to training and feature engineering pipelines. This will enable more efficient GPU utilization during model training.
+</Info>
 
 ## How is LanceDB Enterprise different from OSS?
 
@@ -110,12 +138,10 @@ LanceDB Enterprise comes in two flavors. The self-managed template installs the 
 
 Read More: [LanceDB Enterprise Performance](/enterprise/deployment/)
 
-## Which option is best?
+## Which one should I use?
 
-LanceDB OSS makes sense when the entire dataset fits on one machine, daily traffic remains under fifty queries per second, and your team can run manual maintenance without affecting users. 
-
-[It's very simple to get started with OSS](/quickstart/): Get started with `pip install lancedb` and begin ingesting your data and vectors into LanceDB.
+[It's very simple to get started with OSS](/quickstart/): Immediately get started with `pip install lancedb` and begin ingesting your data and vectors into LanceDB. LanceDB OSS makes sense when your entire dataset fits on one machine, daily traffic remains under fifty queries per second, and you are able to run manual maintenance (compaction, reindexing, etc.) without affecting users. 
 
 Move to LanceDB Enterprise when you have petabyte-scale data, or you need latency to be below 200 ms, or you need higher query throughput towards thousands of QPS, or your business requires high availability, compliance controls, and vendor support.
 
-If these sound like your use cases, [reach out via this form](https://lancedb.com/contact/) and we can help you scope your workload and arrange an Enterprise proof of concept.
+If these sound like your use cases, [reach out to us](mailto:contact@lancedb.com) and we can help you scope your workload and arrange an Enterprise proof of concept.
