@@ -7,10 +7,11 @@ mode: "wide"
 ---
 import { PyFtsIndexAsync as FtsIndexAsync, PyFtsIndexCreate as FtsIndexCreate, PyFtsIndexWait as FtsIndexWait } from '/snippets/indexing.mdx';
 
-LanceDB Cloud and Enterprise provide performant full-text search based on BM25, allowing you to incorporate keyword-based search in your retrieval solutions.
+LanceDB provides performant full-text search based on BM25, allowing you to incorporate keyword-based search in your retrieval solutions. This page shows
+examples on how to create and configure FTS indexes in LanceDB OSS and Enterprise, using the synchronous and asynchronous APIs.
 
 <Note>
-The `create_fts_index` API returns immediately, but index building happens asynchronously.
+In LanceDB Enterprise, `create_fts_index` API returns immediately, but index building happens asynchronously.
 </Note>
 
 ## Creating FTS Indexes

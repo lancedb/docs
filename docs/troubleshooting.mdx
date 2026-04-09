@@ -11,7 +11,7 @@ For commonly asked questions about LanceDB, please refer to our [FAQ section](/f
 
 ## Getting technical support
 
-If you're using LanceDB OSS or LanceDB Cloud, the best place to get help is in our
+If you're using LanceDB OSS, the best place to get help is in our
 [Discord community](https://discord.gg/AUEWnJ7Txb),
 under the relevant language channel for Python, TypeScript, or Rust.
 By asking in the language-specific channel, you can get help from the community
@@ -33,18 +33,3 @@ Read the full guide on [Query Optimization](/search/optimize-queries/).
 ### Python's multiprocessing module
 
 Multiprocessing with `fork` is not supported. You should use `spawn` instead.
-
-### Logging: LanceDB Cloud
-
-To provide more information, especially for LanceDB Cloud related issues, enable
-debug logging. You can set the `LANCEDB_LOG` environment variable:
-
-```bash
-export LANCEDB_LOG=debug
-```
-
-You can turn off colors and formatting in the logs by setting
-
-```bash
-export LANCEDB_LOG_STYLE=never
-```
