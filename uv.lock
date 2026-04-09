@@ -378,7 +378,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "geneva", specifier = ">=0.11.0" },
+    { name = "geneva", specifier = ">=0.12.0" },
     { name = "lance-namespace", specifier = ">=0.6.1" },
     { name = "lancedb", specifier = ">=0.30.0" },
     { name = "pandas", specifier = ">=3.0.1" },

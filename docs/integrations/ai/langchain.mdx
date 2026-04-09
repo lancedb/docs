@@ -48,8 +48,8 @@ The exhaustive list of parameters for `LanceDB` vector store are :
 |`id_key` |(Optional) `str`| Column name to use for id's in the table.|`'id'`|
 |`text_key` |(Optional) `str` |Column name to use for text in the table.|`'text'`|
 |`table_name` |(Optional) `str`| Name of your table in the database.|`'vectorstore'`|
-|`api_key` |(Optional `str`) |API key to use for LanceDB cloud database.|`None`|
-|`region` |(Optional) `str`| Region to use for LanceDB cloud database.|Only for LanceDB Cloud : `None`.|
+|`api_key` |(Optional `str`) |API key to use for LanceDB Enterprise deployment.|`None`|
+|`region` |(Optional) `str`| Region to use for LanceDB Enterprise deployment.| Only for LanceDB Enterprise : `None`.|
 |`mode` |(Optional) `str` | Mode to use for adding data to the table. Valid values are "append" and "overwrite".|`'overwrite'`|
 |`table`| (Optional) `Any`| You can connect to an existing table of LanceDB, created outside of langchain, and utilize it.|`None`|
 |`distance`|(Optional) `str`| The choice of distance metric used to calculate the similarity between vectors.|`'l2'`|

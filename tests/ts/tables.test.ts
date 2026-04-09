@@ -5,13 +5,13 @@ import * as arrow from "apache-arrow";
 import * as lancedb from "@lancedb/lancedb";
 import { withTempDirectory } from "./util.ts";
 
-async function updateConnectCloudExample() {
-  // --8<-- [start:update_connect_cloud]
+async function updateConnectEnterpriseExample() {
+  // --8<-- [start:update_connect_enterprise]
   const db = await lancedb.connect("db://your-project-slug", {
     apiKey: "your-api-key",
     region: "us-east-1",
   });
-  // --8<-- [end:update_connect_cloud]
+  // --8<-- [end:update_connect_enterprise]
   return db;
 }
 
@@ -416,8 +416,8 @@ test("schema evolution snippets (async)", async () => {
 });
 
 test("update snippets (async)", async () => {
-  // Keep connection snippets in this file, but do not run cloud/local examples in CI.
-  void updateConnectCloudExample;
+  // Keep connection snippets in this file, but do not run enterprise/local examples in CI.
+  void updateConnectEnterpriseExample;
   void updateConnectLocalExample;
 
   await withTempDirectory(async (databaseDir) => {

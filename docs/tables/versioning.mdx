@@ -240,6 +240,6 @@ Read-only and checkout operations shown here (`list_versions`/`listVersions`, `v
 **System Operations**
 
 System operations like `optimize()`, index updates, and table compaction also increment table version numbers.
-In LanceDB OSS and Cloud, `optimize()` can prune older versions based on its retention setting (`cleanup_older_than`, 7 days by default),
+In LanceDB OSS and Enterprise, `optimize()` can prune older versions based on its retention setting (`cleanup_older_than`, 7 days by default),
 which is when old-version files are removed and disk space is reclaimed.
 </Note>

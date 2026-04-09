@@ -1153,12 +1153,12 @@ def test_frameworks_llamaindex_examples() -> None:
     documents = SimpleDirectoryReader("./data/your-data-dir/").load_data()
     print("Document ID:", documents[0].doc_id, "Document Hash:", documents[0].hash)
 
-    ## For LanceDB cloud :
+    ## For LanceDB Enterprise :
     # vector_store = LanceDBVectorStore(
     #     uri="db://db_name", # your remote DB URI
-    #     api_key="sk_..", # lancedb cloud api key
+    #     api_key="sk_..", # lancedb enterprise api key
     #     region="your-region" # the region you configured
-    #     ...
+    #     host_override="https://your-host.com" # if you have a custom host, otherwise omit this
     # )
 
     vector_store = LanceDBVectorStore(

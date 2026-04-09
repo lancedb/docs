@@ -170,7 +170,7 @@ print(f"Query keywords: {query_dataset[0]['keywords']}")
 query_embed = query_dataset["keywords_embeddings"][0]
 
 # Open table and perform search
-table_name = "lancedb-cloud-quickstart"
+table_name = "lancedb-enterprise-quickstart"
 table = db.open_table(table_name)
 
 # Vector search with filters (pre-filtering is the default)
@@ -202,7 +202,7 @@ const dimensions = 768;
 const queryEmbed = Array.from({ length: dimensions }, () => Math.random() * 2 - 1);
 
 // Open table and perform search
-const tableName = "lancedb-cloud-quickstart";
+const tableName = "lancedb-enterprise-quickstart";
 const table = await db.openTable(tableName);
 
 // Vector search with filters (pre-filtering is the default)

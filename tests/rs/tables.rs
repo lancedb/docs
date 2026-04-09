@@ -66,12 +66,12 @@ fn make_quotes_reader(rows: Vec<(i64, &str, &str)>) -> Box<dyn RecordBatchReader
 // --8<-- [end:versioning_make_quotes_reader]
 
 #[allow(dead_code)]
-async fn update_connect_cloud_example() {
-    // --8<-- [start:update_connect_cloud]
+async fn update_connect_enterprise_example() {
+    // --8<-- [start:update_connect_enterprise]
     let uri = "db://your-project-slug";
     let api_key = "your-api-key";
     let region = "us-east-1";
-    // --8<-- [end:update_connect_cloud]
+    // --8<-- [end:update_connect_enterprise]
     let _ = (uri, api_key, region);
 }
 

@@ -28,8 +28,6 @@ export const TsQuickstartOpenTable = "table = await db.openTable(\"adventurers\"
 
 export const TsQuickstartOutputArray = "result = await table.search(queryVector).limit(2).toArray();\nconsole.table(result);\n";
 
-export const TsQuickstartOutputPandas = "result = await table.search(queryVector).limit(2).toArray();\n";
-
 export const TsQuickstartVectorSearch1 = "// Let's search for vectors similar to \"warrior\"\nlet queryVector = [0.8, 0.3, 0.8];\n\nlet result = await table.search(queryVector).limit(2).toArray();\nconsole.table(result);\n";
 
 export const TsQuickstartVectorSearch2 = "// Let's search for vectors similar to \"wizard\"\nqueryVector = [0.7, 0.3, 0.5];\n\nconst results = await table.search(queryVector).limit(2).toArray();\nconsole.table(results);\n";
