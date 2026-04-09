@@ -97,7 +97,7 @@ This method creates a scalar(for non-vector cols) or a vector index on a table.
 |`index_cache_size`|`Optional[int]` |Size of the index cache.|`None`|
 |`name`|`Optional[str]` |Name of the table to create index on.|`None`|
 
-For index creation make sure your table has enough data in it. An ANN index is ususally not needed for datasets ~100K vectors. For large-scale (>1M) or higher dimension vectors, it is beneficial to create an ANN index.
+For index creation make sure your table has enough data in it. An ANN index is usually not needed for datasets ~100K vectors. For large-scale (>1M) or higher dimension vectors, it is beneficial to create an ANN index.
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainCreateIndex}
@@ -209,7 +209,7 @@ Similarly, `max_marginal_relevance_search_by_vector()` function returns docs mos
 
 ##### add_images()
 
-This method ddds images by automatically creating their embeddings and adds them to the vectorstore.
+This method adds images by automatically creating their embeddings and adds them to the vectorstore.
 
 | Name       | Type                          | Purpose                        | Default |
 |------------|-------------------------------|--------------------------------|---------|

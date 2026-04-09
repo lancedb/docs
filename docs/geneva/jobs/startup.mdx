@@ -68,4 +68,4 @@ Here are some steps you can take to pre-warming worker nodes and pods so that ex
 
 **Make a warmup call:**  Making an initial request to ray will load the pod and zips content to the worker node so that subsequent startups will be fast.  
 
-**Prevent nodes from auto-scaling down:** During cluster creation, you can specifiy `idle_timeout_seconds` option  -- this is the amount of time before an node needs to be idle before it is considered for de-provisioning.
+**Prevent nodes from auto-scaling down:** During cluster creation, you can specify `idle_timeout_seconds` option  -- this is the amount of time before a node needs to be idle before it is considered for de-provisioning.

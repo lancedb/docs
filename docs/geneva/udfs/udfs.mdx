@@ -83,9 +83,9 @@ def sum_vals(vals: np.ndarray | None) -> int | None:
 
 You can also define a **stateful** UDF that retains its state across calls.
 
-This can be used to share code and **parameterize your UDFs**.  In the example below, the model being used is a parameter that can be specified at UDF registration time.  It can also be used to paramterize input column names of `pa.RecordBatch` batch UDFS.
+This can be used to share code and **parameterize your UDFs**.  In the example below, the model being used is a parameter that can be specified at UDF registration time.  It can also be used to parameterize input column names of `pa.RecordBatch` batch UDFS.
 
-This also can be used to **optimize expensive initialization** that may require heavy resource on the distributed workers.  For example, this can be used to load an model to the GPU once for all records sent to a worker instead of once per record or per batch of records.
+This also can be used to **optimize expensive initialization** that may require heavy resources on the distributed workers.  For example, this can be used to load a model to the GPU once for all records sent to a worker instead of once per record or per batch of records.
 
 A stateful UDF is a `Callable` class, with `__call__()` method.  The call method can be a scalar function or a batched function.
 
@@ -260,11 +260,11 @@ Let's say you backfilled data with your UDF then you noticed that your data has 
 2. Most values are correct but some values are incorrect due to a failure in UDF execution.
 3. Values calculated correctly and you want to perform a second pass to fixup some of the values.
 
-In scenario 1, you'll most likely want to replaced the UDF with a new version and recalulate all the values.  You should perform a `alter_table` and then `backfill`.
+In scenario 1, you'll most likely want to replace the UDF with a new version and recalculate all the values.  You should perform a `alter_table` and then `backfill`.
 
 In scenario 2, you'll most likely want to re-execute `backfill` to fill in the values.  If the error is in your code (certain cases not handled), you can modify the UDF, and perform an `alter_table`, and then `backfill` with some filters.
 
-In scenario 3, you have a few options. A) You could `alter` your UDF and include the fixup operations in the UDF.  You'd `alter_table` and then `backfill` recalculating all the values.  B) You could have a chain of computed columns -- create a new column, calculate the "fixed" up values and have your application use the new column or a combination of the original column.  This is similar to A but does not recalulate A and can incur more storage.   C) You could `update` the values in the the column with the fixed up values.  This may be expedient but also sacrifices reproducability.
+In scenario 3, you have a few options. A) You could `alter` your UDF and include the fixup operations in the UDF.  You'd `alter_table` and then `backfill` recalculating all the values.  B) You could have a chain of computed columns -- create a new column, calculate the "fixed" up values and have your application use the new column or a combination of the original column.  This is similar to A but does not recalculate A and can incur more storage.   C) You could `update` the values in the column with the fixed up values.  This may be expedient but also sacrifices reproducibility.
 
 The next section shows you how to change your column definition by `alter`ing the UDF.
 
