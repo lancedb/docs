@@ -45,8 +45,8 @@ You can create multiple scalar indexes within a table. By default, the index wil
     </CodeBlock>
 </CodeGroup>
 
-<Note title="LanceDB Cloud and Enterprise">
-If you are using Cloud or Enterprise, the `create_scalar_index` API returns immediately, but the building of the scalar index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_scalar_index()` or call `wait_for_index()` on the table.
+<Note title="LanceDB Enterprise">
+If you are using LanceDB Enterprise, the `create_scalar_index` API returns immediately, but the building of the scalar index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_scalar_index()` or call `wait_for_index()` on the table.
 </Note>
 
 ### 2. Check Index Status
@@ -67,8 +67,8 @@ Updating the table data (adding, deleting, or modifying records) requires that y
     </CodeBlock>
 </CodeGroup>
 
-<Note title="LanceDB Cloud">
-New data added after creating the scalar index will still appear in search results if optimize is not used, but with increased latency due to a flat search on the unindexed portion. LanceDB Cloud automates the optimize process, minimizing the impact on search speed.
+<Note title="LanceDB Enterprise">
+New data added after creating the scalar index will still appear in search results if optimize is not used, but with increased latency due to a flat search on the unindexed portion. LanceDB Enterprise automates the optimize process, minimizing the impact on search speed.
 </Note>
 
 ### 4. Run Indexed Searches

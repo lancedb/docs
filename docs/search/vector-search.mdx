@@ -9,7 +9,7 @@ Vector search is a technique used to search for similar items based on their vec
 
 ![](/static/assets/images/search/vector-db-basics.png)
 
-Raw data (e.g. text, images, audio, etc.) is converted into embeddings via an embedding model, which are then stored in a vector database like LanceDB. To perform similarity search at scale, an index is created on the stored embeddings, which can then used to perform fast lookups.
+Raw data (e.g. text, images, audio, etc.) is converted into embeddings via an embedding model, which are then stored in a multimodal lakehouse like LanceDB. To perform similarity search at scale, an index is created on the stored embeddings, which can then used to perform fast lookups.
 
 ## Supported distance metrics
 
@@ -170,7 +170,7 @@ print(f"Query keywords: {query_dataset[0]['keywords']}")
 query_embed = query_dataset["keywords_embeddings"][0]
 
 # Open table and perform search
-table_name = "lancedb-cloud-quickstart"
+table_name = "lancedb-enterprise-quickstart"
 table = db.open_table(table_name)
 
 # Vector search with filters (pre-filtering is the default)
@@ -202,7 +202,7 @@ const dimensions = 768;
 const queryEmbed = Array.from({ length: dimensions }, () => Math.random() * 2 - 1);
 
 // Open table and perform search
-const tableName = "lancedb-cloud-quickstart";
+const tableName = "lancedb-enterprise-quickstart";
 const table = await db.openTable(tableName);
 
 // Vector search with filters (pre-filtering is the default)

@@ -6,7 +6,7 @@ icon: "table"
 keywords: ["create table", "polars", "pandas", "pyarrow", "dataframe", "nested data"]
 ---
 
-import { PyConnect, PyConnectCloud, TsConnect, TsConnectCloud, RsConnect, RsConnectCloud } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectEnterprise, TsConnect, TsConnectEnterprise, RsConnect, RsConnectEnterprise } from '/snippets/connection.mdx';
 import {
     PyBasicImports,
     PyDataLoad,
@@ -177,21 +177,21 @@ You can also connect LanceDB OSS directly to object storage. For credentials, en
 
 ### Option 2: Remote tables
 
-If you're using a managed LanceDB service on LanceDB [Enterprise](/enterprise) or LanceDB Cloud, you can connect using a `db://` URI,
-along with any encessary credentials. Simply replace the local path with a remote `uri`
+If you're using LanceDB [Enterprise](/enterprise), you can connect using a `db://` URI,
+along with any necessary credentials. Simply replace the local path with a remote `uri`
 that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
-    {PyConnectCloud}
+    {PyConnectEnterprise}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsConnectCloud}
+    {TsConnectEnterprise}
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsConnectCloud}
+    {RsConnectEnterprise}
     </CodeBlock>
 </CodeGroup >
 

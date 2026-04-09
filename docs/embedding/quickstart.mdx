@@ -28,13 +28,13 @@ from lancedb.embeddings import get_registry
 - `Vector`: Field type for storing vector embeddings
 - `get_registry()`: Access to the embedding function registry. It has all the supported as well custom embedding functions registered by the user
 
-## Step 2: Connect to LanceDB Cloud
+## Step 2: Connect to LanceDB
 
-Establish a connection to your LanceDB instance:
+Establish a connection to your LanceDB OSS directory or Enterprise cluster:
 
 <CodeGroup>
 ```python Python icon="python"
-# Enter your LanceDB connection URI for OSS, Cloud or Enterprise here
+# Enter your LanceDB connection URI for OSS or Enterprise here
 db = lancedb.connect(...)
 ```
 </CodeGroup>
@@ -91,7 +91,7 @@ The `table.add()` call automatically:
 
 ## Step 6: Query with Automatic Embedding
 
-Note: On LanceDB cloud, automatic query embedding is not supported. You need to pass the embedding vector directly.
+Note: On LanceDB Enterprise, automatic query embedding is not supported. You need to pass the embedding vector directly.
 
 Search your data using natural language queries:
 

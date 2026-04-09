@@ -10,13 +10,13 @@ This section covers some common questions and issues that you may encounter when
 
 ### Is LanceDB open source?
 
-Yes, LanceDB is an open source vector database available under an Apache 2.0 license. We also have a serverless SaaS solution, LanceDB Cloud, available under a commercial license.
+LanceDB OSS is a permissively licensed embedded retrieval library available under an Apache 2.0 license. We also have a LanceDB Enterprise, a commercial product that can be deployed on a private cloud or a bring-your-own-cloud (BYOC) solution. LanceDB Enterprise transforms your data lake into a high-performance multimodal lakehouse.
 
 ### What is the difference between Lance and LanceDB?
 
-[Lance](https://github.com/lancedb/lance) is a modern columnar data format for AI, written in Rust. It's perfect for building search engines, feature stores and being the foundation of large-scale ML training jobs requiring high performance IO and shuffles. It also has native support for storing, querying, and inspecting deeply nested data for robotics or large blobs like images, point clouds, and more.
+[Lance](https://github.com/lancedb/lance) is a modern lakehouse format for multimodal AI. It's perfect for building search engines, feature stores and being the foundation of large-scale ML training jobs requiring high performance IO and shuffles. It also has native support for storing, querying, and inspecting deeply nested data for robotics or large blobs like images, point clouds, and more.
 
-LanceDB is the vector database that's built on top of Lance, and utilizes the underlying optimized storage format to build efficient disk-based indexes that power semantic search & retrieval applications, from RAGs to QA bots to recommender systems.
+LanceDB is the multimodal lakehouse that's built on top of Lance, and utilizes the underlying optimized storage format to build efficient disk-based indexes that power semantic search & retrieval applications, from RAGs to QA bots to recommender systems.
 
 ### Why invent another data format instead of using Parquet?
 

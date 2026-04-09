@@ -44,7 +44,7 @@ def test_tables_basic_connect_snippet(monkeypatch):
     assert isinstance(db, DummyDB)
 
 
-def test_update_connect_cloud_snippet(monkeypatch):
+def test_update_connect_enterprise_snippet(monkeypatch):
     calls = {}
 
     class DummyDB:
@@ -58,7 +58,7 @@ def test_update_connect_cloud_snippet(monkeypatch):
 
     monkeypatch.setattr(_lancedb, "connect", fake_connect)
 
-    # --8<-- [start:update_connect_cloud]
+    # --8<-- [start:update_connect_enterprise]
     import lancedb
 
     db = lancedb.connect(
@@ -66,7 +66,7 @@ def test_update_connect_cloud_snippet(monkeypatch):
         api_key="your-api-key",
         region="us-east-1",
     )
-    # --8<-- [end:update_connect_cloud]
+    # --8<-- [end:update_connect_enterprise]
 
     assert calls["uri"] == "db://your-project-slug"
     assert calls["api_key"] == "your-api-key"

@@ -5,7 +5,7 @@ description: "Learn how to update, merge, and delete rows in a LanceDB table."
 icon: "clone"
 ---
 import {
-    PyUpdateConnectCloud as UpdateConnectCloud,
+    PyUpdateConnectEnterprise as UpdateConnectEnterprise,
     PyUpdateConnectLocal as UpdateConnectLocal,
     PyUpdateExampleTableSetup as UpdateExampleTableSetup,
     PyUpdateOperation as UpdateOperation,
@@ -17,7 +17,7 @@ import {
     PyMergePartialColumns as MergePartialColumns,
     PyDeleteOperation as DeleteOperation,
     PyUpdateOptimizeCleanup as UpdateOptimizeCleanup,
-    TsUpdateConnectCloud,
+    TsUpdateConnectEnterprise,
     TsUpdateConnectLocal,
     TsUpdateExampleTableSetup,
     TsUpdateOperation,
@@ -29,7 +29,7 @@ import {
     TsMergePartialColumns,
     TsDeleteOperation,
     TsUpdateOptimizeCleanup,
-    RsUpdateConnectCloud,
+    RsUpdateConnectEnterprise,
     RsUpdateConnectLocal,
     RsUpdateExampleTableSetup,
     RsUpdateMakeUsersReader,
@@ -72,19 +72,19 @@ Connect to your local LanceDB instance:
     </CodeBlock>
 </CodeGroup>
 
-Or, connect to your LanceDB remote cluster:
+Or, connect to LanceDB Enterprise:
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {UpdateConnectCloud}
+    {UpdateConnectEnterprise}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsUpdateConnectCloud}
+    {TsUpdateConnectEnterprise}
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsUpdateConnectCloud}
+    {RsUpdateConnectEnterprise}
     </CodeBlock>
 </CodeGroup>
 
@@ -394,8 +394,7 @@ When rows are deleted, those rows are also excluded from the index segments, so 
 To permanently remove deleted rows, you can optimize the table, which will run compaction and cleans up the soft-deleted rows, which frees up storage space.
 
 - In LanceDB OSS, compaction and cleanup are manual. Run `table.optimize()` regularly to free up disk space.
-- In LanceDB Cloud, compaction and cleanup runs automatically in the background.
-- In LanceDB Enterprise, files aren't cleaned up by default. You can configure the compaction and cleanup behavior at cluster setup time to suit your organization's retention policy.
+- In LanceDB Enterprise, files aren't cleaned up by default. You can configure automatic compaction and cleanup behavior at cluster setup time to suit your organization's retention policy.
 
 By default, table cleanup removes data up to 7 days ago. If you need to reclaim space from deleted rows more aggressively, manually call `table.optimize()` use a shorter retention window as follows:
 

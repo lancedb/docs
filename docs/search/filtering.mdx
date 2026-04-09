@@ -111,7 +111,8 @@ const postFilteredResult = await (table.search([100, 102]) as VectorQuery)
 </CodeGroup>
 
 <Warning>
-When querying large tables, omitting a `limit` clause may overwhelm resources and return excessive data. It can also increase costs as query pricing scales with data scanned and data returned ([LanceDB Cloud pricing](https://lancedb.com/pricing)).
+When querying large tables, omitting a `limit` clause may overwhelm resources and return excessive data. It's always recommended
+to be mindful of the potential impact on performance and costs when working with really large tables.
 </Warning>
 
 ## Filtering with SQL

@@ -74,10 +74,6 @@ export const RsBasicCreateEmptyTable = "let schema = Arc::new(Schema::new(vec![\
 
 export const RsBasicCreateTable = "let mut table = db\n    .create_table(\"camelot\", characters_to_reader(schema.clone(), &data))\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await\n    .unwrap();\n";
 
-export const RsBasicCreateTablePandas = "let table_copy = db\n    .create_table(\"camelot_copy\", to_reader(&data)?)\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await?;\n";
-
-export const RsBasicCreateTablePolars = "let table_alt = db\n    .create_table(\"camelot_alt\", to_reader(&data)?)\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await?;\n";
-
 export const RsBasicDeleteRows = "table.delete(\"role = 'Traitor Knight'\").await.unwrap();\n";
 
 export const RsBasicDropColumns = "table.drop_columns(&[\"power\"]).await.unwrap();\n";
@@ -97,8 +93,6 @@ export const RsBasicVectorSearchQ2 = "// Who are the characters similar to \"wiz
 export const RsBasicVectorSearchQ3 = "// Who are the strongest characters?\nlet r3 = table\n    .query()\n    .only_if(\"stats.strength > 3\")\n    .select(Select::Columns(vec![\n        \"name\".to_string(),\n        \"role\".to_string(),\n        \"description\".to_string(),\n    ]))\n    .limit(5)\n    .execute()\n    .await\n    .unwrap()\n    .try_collect::<Vec<_>>()\n    .await\n    .unwrap();\nprintln!(\"{r3:?}\");\n";
 
 export const RsBasicVectorSearchQ4 = "// Who are the strongest characters?\nlet r4 = table\n    .query()\n    .select(Select::Columns(vec![\n        \"name\".to_string(),\n        \"role\".to_string(),\n        \"description\".to_string(),\n        \"power\".to_string(),\n    ]))\n    .execute()\n    .await\n    .unwrap()\n    .try_collect::<Vec<_>>()\n    .await\n    .unwrap();\nprintln!(\"{r4:?}\");\n";
-
-export const RsConnect = "let uri = \"ex_lancedb\";\nlet db = connect(uri).execute().await.unwrap();\n";
 
 export const RsDataLoad = "let data: Vec<Character> =\n    serde_json::from_str(&fs::read_to_string(camelot_json_path()).unwrap()).unwrap();\n";
 

@@ -7,15 +7,15 @@ icon: rocket
 import {
     PyConnect,
     PyConnectAsync,
-    PyConnectCloud,
-    PyConnectCloudAsync,
+    PyConnectEnterprise,
+    PyConnectEnterpriseAsync,
     PyConnectObjectStorage,
     PyConnectObjectStorageAsync,
     RsConnect,
-    RsConnectCloud,
+    RsConnectEnterprise,
     RsConnectObjectStorage,
     TsConnect,
-    TsConnectCloud,
+    TsConnectEnterprise,
     TsConnectObjectStorage,
 } from '/snippets/connection.mdx';
 import {
@@ -57,7 +57,7 @@ cargo add lancedb
 LanceDB supports several URI patterns to connect to a database.
 
 - A local filesystem path (when using it as an embedded library)
-- A `db://...` URI (when using LanceDB Cloud or Enterprise)
+- A `db://...` URI (when using LanceDB Enterprise)
 - An object storage URI: `s3://...`, `gs://...`, or `az://...` (OSS mode)
 
 ### Connect via local path with LanceDB
@@ -113,25 +113,25 @@ For credentials, endpoints, and provider-specific options, see
 
 ### Connect to LanceDB Enterprise
 
-If you're using a managed LanceDB service on either LanceDB Cloud or Enterprise, you can connect using a `db://` URI,
-along with any encessary credentials. Simply replace the local path with a remote `uri`
+If you're using LanceDB Enterprise, you can connect using a `db://` URI,
+along with any necessary credentials. Simply replace the local path with a remote `uri`
 that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
     <CodeBlock filename="Python (sync)" language="Python" icon="python">
-    {PyConnectCloud}
+    {PyConnectEnterprise}
     </CodeBlock>
 
     <CodeBlock filename="Python (async)" language="Python" icon="python">
-    {PyConnectCloudAsync}
+    {PyConnectEnterpriseAsync}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsConnectCloud}
+    {TsConnectEnterprise}
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsConnectCloud}
+    {RsConnectEnterprise}
     </CodeBlock>
 </CodeGroup >
 
@@ -243,17 +243,10 @@ and guides below to continue learning.
   Build on this quickstart with table creation, updates, and schema tips.
 </Card>
 <Card
-  title="LanceDB Cloud Quickstart"
-  icon="cloud"
-  href="/cloud/get-started"
+  title="Build a RAG App"
+  icon="search"
+  href="/tutorials/agents/"
 >
-    Get started with LanceDB Cloud in minutes.
+  Learn how to build Retrieval-Augmented Generation (RAG) applications using LanceDB.
 </Card>
-  <Card
-    title="Build a RAG App"
-    icon="search"
-    href="/tutorials/agents/"
-  >
-    Learn how to build Retrieval-Augmented Generation (RAG) applications using LanceDB.
-  </Card>
 </Columns>

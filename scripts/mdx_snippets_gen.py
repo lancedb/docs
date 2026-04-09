@@ -296,6 +296,8 @@ def generate_modules(
         lang_map = snippets_by_target[target]
         existing_langs = parse_existing_module(module_path)
         for lang, snippets in existing_langs.items():
+            if lang in lang_map:
+                continue
             print(module_path, " -- ", lang)
             merged_lang = lang_map.setdefault(lang, {})
             existing_export_names = {rec.export_name for rec in merged_lang.values()}

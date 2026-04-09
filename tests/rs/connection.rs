@@ -18,18 +18,18 @@ async fn main() {
     let uri = temp_dir.path().join("ex_lancedb");
     connect_example(uri.to_str().unwrap()).await;
 
-    // Keep the cloud snippet in this file, but don't run it in CI.
-    let _ = connect_cloud_config();
+    // Keep the enterprise snippet in this file, but don't run it in CI.
+    let _ = connect_enterprise_config();
     let _ = connect_enterprise_quickstart_config();
     let _ = connect_object_storage_config();
 }
 
-fn connect_cloud_config() -> (String, String, String) {
-    // --8<-- [start:connect_cloud]
+fn connect_enterprise_config() -> (String, String, String) {
+    // --8<-- [start:connect_enterprise]
     let uri = "db://your-database-uri";
     let api_key = "your-api-key";
     let region = "us-east-1";
-    // --8<-- [end:connect_cloud]
+    // --8<-- [end:connect_enterprise]
 
     (uri.to_string(), api_key.to_string(), region.to_string())
 }
