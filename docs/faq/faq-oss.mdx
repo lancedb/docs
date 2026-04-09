@@ -34,7 +34,9 @@ The Lance data format that powers our storage system also provides true zero-cop
 
 ### How large of a dataset can LanceDB handle?
 
-LanceDB and its underlying data format, Lance, are built to scale to really large amounts of data (hundreds of terabytes). We are currently working with customers who regularly perform operations on 200M+ vectors, and we're fast approaching billion scale and beyond, which are well-handled by our disk-based indexes, without you having to break the bank.
+LanceDB and its underlying data format, Lance, are built to scale to really large amounts of data. LanceDB OSS can comfortably handle millions of vectors on a single node, making it a great fit for most applications. Its disk-based indexes keep performance strong without requiring expensive infrastructure.
+
+If you need to scale to hundreds of millions of vectors or work with terabytes of data, we recommend [LanceDB Enterprise](/enterprise). Enterprise customers regularly operate on billions of rows, backed by distributed infrastructure designed for large-scale production workloads.
 
 ### Do I need to build a vector index to run vector search?
 
