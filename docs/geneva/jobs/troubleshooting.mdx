@@ -180,3 +180,10 @@ Refreshing a materialized view runs admission control for each UDF in the view. 
 - **Versions** – Same Ray version on client and cluster; same Python minor (e.g. 3.10.x) on both. See [Troubleshooting Geneva Deployments](/geneva/deployment/troubleshooting#confirming-dependency-versions).
 - **Remote execution** – Use `ray.available_resources()` and a simple `@ray.remote` task to confirm the cluster is reachable and has the expected CPUs/GPUs/memory.
 - **Permissions** – Run a minimal remote task that `import geneva` and touches the same bucket/path as your job to surface permission issues early.
+
+## API Reference
+
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator options: `num_gpus`, `num_cpus`, `memory`
+- [Cluster](https://lancedb.github.io/geneva/api/cluster/) — `KubeRayClusterBuilder`, `CpuWorkerBuilder`, `GpuWorkerBuilder`
+- [Table](https://lancedb.github.io/geneva/api/table/) — `backfill()`, `refresh()`
+- [Error Handling](https://lancedb.github.io/geneva/api/error_handling/) — `FatalWorkerOOMError`, `FatalWorkerCrashError`, and other worker error types

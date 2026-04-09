@@ -58,3 +58,7 @@ Setting `num_gpus` to a fractional value (e.g., `0.5`) tells the
 to co-locate multiple workers on the same physical GPU. For example, two UDFs with
 `num_gpus=0.5` will be scheduled on a single GPU. Note that Ray does not enforce GPU memory
 limits — it is your responsibility to ensure the combined models fit in GPU memory.
+
+## API Reference
+
+- [Embeddings](https://lancedb.github.io/geneva/api/embeddings/) — `sentence_transformer_udf()` — all parameters including `column`, `model`, `num_gpus`, `normalize`, and `batch_size`

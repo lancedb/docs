@@ -212,3 +212,8 @@ Retry(ValueError, match=r"[invalid")
 # But this will work:
 Retry(ValueError, match=r"rate.?limit")
 ```
+
+## API Reference
+
+- [Error Handling](https://lancedb.github.io/geneva/api/error_handling/) — `Retry`, `Skip`, `Fail`, `FatalWorkerOOMError`, `FatalWorkerCrashError`, and all exception matcher classes
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator `on_error` parameter

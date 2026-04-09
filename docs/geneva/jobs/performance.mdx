@@ -158,3 +158,9 @@ Certain jobs that take a small dataset and expand it may appear as if the writer
 An example is a table that contains a list of URLs pointing to large media files. This list is relatively small (&lt; 100MB) and can fit into a single fragment. A UDF that downloads will fetch all the data and then attempt to write all of it out through the single writer. This single writer can then be responsible for serially writing out 500+GB of data to a single file!
 
 To mitigate this, you can load your initial table so that there will be multiple fragments. Each fragment with new outputs can be written in parallel with higher write throughput.
+
+## API Reference
+
+- [Cluster](https://lancedb.github.io/geneva/api/cluster/) — `KubeRayClusterBuilder`, `CpuWorkerBuilder`, `GpuWorkerBuilder` — configure CPU/GPU/memory resources
+- [Table](https://lancedb.github.io/geneva/api/table/) — `backfill()`, `compact_files()`, `optimize()`
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator options: `num_cpus`, `num_gpus`, `memory`, `batch_size`

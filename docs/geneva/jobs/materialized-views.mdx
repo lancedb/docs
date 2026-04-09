@@ -106,3 +106,9 @@ No. The UDF does not but any UDF calculated values in the original table come to
 ### On MV refresh, do we force materialization of UDFs cols on the source table?
 
 No. They are managed at the source table only. If it is null the null values are propagated. Future options may force materialization/backfill "recursively".
+
+## API Reference
+
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — `create_materialized_view()`, `create_view()`
+- [Table](https://lancedb.github.io/geneva/api/table/) — `refresh()`, `plan_refresh()`
+- [Query](https://lancedb.github.io/geneva/api/query/) — `create_materialized_view()` on query builder
