@@ -65,7 +65,7 @@ LanceDB Enterprise includes [Geneva](https://docs.lancedb.com/geneva) for featur
 
 Enterprise separates query serving, read execution, background workers, and durable storage into distinct layers. Query nodes and plan executors scale independently from object storage and background indexers, which gives you a distributed query system built for remote tables, larger datasets, and production workloads that outgrow a single process. Read more in [LanceDB Enterprise Architecture](/enterprise/architecture/).
 
-### SSD-backed cache for low-latency retrieval
+### Low latency disk cache for retrieval
 
 Enterprise adds a fleet-wide NVMe/SSD cache for read paths, so repeated reads do not always pay the full object-store round trip. In practice, this reduces latency, improves tail performance, and makes cache-backed retrieval more predictable as load grows. See [LanceDB Enterprise Architecture](/enterprise/architecture/) to learn more.
 
