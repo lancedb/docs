@@ -59,7 +59,7 @@ This section summarizes the core capabilities LanceDB Enterprise adds beyond OSS
 
 ### Scalable feature engineering with Geneva
 
-LanceDB Enterprise includes Geneva-backed feature engineering for UDF-derived columns and large-table backfills. Instead of wiring your own batch systems around OSS tables, you can manage feature workflows through Geneva clusters, manifests, and jobs, while the platform handles background backfill execution across larger datasets.
+LanceDB Enterprise includes [Geneva](https://docs.lancedb.com/geneva) for feature engineering, which supports UDF-derived columns and large-table backfills. Instead of wiring your own batch systems around OSS tables, you can manage feature workflows through Geneva clusters, manifests, and jobs, while the platform handles background backfill execution across larger datasets.
 
 ### Distributed query serving with compute-storage separation
 
@@ -104,9 +104,9 @@ Read More: [LanceDB Enterprise Architecture](/enterprise/architecture/)
 
 ### Latency of data retrieval
 
-With LanceDB OSS, every query fetches data from S3, GCS, or Azure Blob. Each round trip to an object store adds several hundred milliseconds, especially when data is cold.
+With LanceDB OSS, read latency depends heavily on where the data lives. If you use local disk or shared file storage, reads can be quite fast. But if you point an embedded deployment at S3, GCS, or Azure Blob, each read still pays the latency of remote object storage, especially when data is cold.
 
-LanceDB Enterprise uses NVMe SSDs as a hybrid cache before the data store is even accessed. The first read fills the cache, and subsequent reads come from the local disk and return in tens of milliseconds. Parallel chunked reads further reduce tail latency. This gap matters when the application serves interactive dashboards or real-time recommendations.
+LanceDB Enterprise is designed for the object-storage-backed case. It uses NVMe SSDs as a hybrid cache and executes reads across a distributed serving layer, so repeated reads do not always pay the full object-store round trip. The first read fills the cache, subsequent reads can come from local disk, and parallel chunked reads further reduce tail latency. This matters when the application serves interactive dashboards, real-time recommendations, or other latency-sensitive workloads on top of object storage.
 
 Read More: [LanceDB Enterprise Performance](/enterprise/performance/)
 
