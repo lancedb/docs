@@ -32,28 +32,10 @@ import { Utf8 } from "apache-arrow";
 ```
 </CodeGroup>
 
-### 2. Connect to LanceDB Cloud
-Establish a connection to your LanceDB instance, with different options for Cloud, Enterprise, and Open Source deployments.
+### 2. Connect to LanceDB
+Establish a connection to your LanceDB instance, with different options for Enterprise setups or open source.
 
-<CodeGroup>
-```python Python icon="python"
-db = lancedb.connect(
-  uri="db://your-project-slug",
-  api_key="your-api-key",
-  region="us-east-1"
-)
-```
-
-```typescript TypeScript icon="square-js"
-const db = await lancedb.connect({
-  uri: "db://your-project-slug",
-  apiKey: "your-api-key",
-  region: "us-east-1",
-});
-```
-</CodeGroup>
-
-For Open Source:
+<Badge color="green">OSS</Badge>
 
 <CodeGroup>
 ```python Python icon="python"
@@ -65,24 +47,45 @@ db = lancedb.connect(uri)
 import * as lancedb from "@lancedb/lancedb";
 import * as arrow from "apache-arrow";
 
+const databaseDir = "data/sample-lancedb";
 const db = await lancedb.connect(databaseDir);
 ```
 </CodeGroup>
 
-For LanceDB Enterprise, set the host override to your private cloud endpoint:
+<Badge color="red">Enterprise</Badge>
+
+For LanceDB Enterprise, set the `db://` URI, region and the host override to your private cloud endpoint:
 
 <CodeGroup>
 ```python Python icon="python"
 host_override = os.environ.get("LANCEDB_HOST_OVERRIDE")
 
 db = lancedb.connect(
-uri=uri,
-api_key=api_key,
-region=region,
-host_override=host_override
+    uri=uri,
+    api_key=api_key,
+    region=region,
+    host_override=host_override
 )
 ```
+
+```typescript TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+import * as arrow from "apache-arrow";
+
+const uri = "db://my-lancedb-instance/my-database";
+const apiKey = process.env.LANCEDB_API_KEY;
+const region = process.env.LANCEDB_REGION;
+const hostOverride = process.env.LANCEDB_HOST_OVERRIDE;
+
+const db = await lancedb.connect(uri, {
+  apiKey,
+  region
+  hostOverride,
+});
+```
 </CodeGroup>
+
+
 
 ### 3. Configure Embedding Model
 Set up the any embedding model that will convert text into vector representations for semantic search.

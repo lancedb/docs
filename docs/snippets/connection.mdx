@@ -4,9 +4,9 @@ export const PyConnect = "import lancedb\n\nuri = \"ex_lancedb\"\ndb = lancedb.c
 
 export const PyConnectAsync = "import lancedb\n\nuri = \"ex_lancedb\"\nasync_db = await lancedb.connect_async(uri)\n";
 
-export const PyConnectCloud = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
+export const PyConnectEnterprise = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
 
-export const PyConnectCloudAsync = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
+export const PyConnectEnterpriseAsync = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\n";
 
 export const PyConnectEnterpriseQuickstart = "uri = \"db://your-database-uri\"\napi_key = \"your-api-key\"\nregion = \"us-east-1\"\nhost_override = \"https://your-enterprise-endpoint.com\"\n\ndb = lancedb.connect(\n    uri=uri,\n    api_key=api_key,\n    region=region,\n    host_override=host_override,\n)\n";
 
@@ -20,7 +20,7 @@ export const PyNamespaceTableOps = "import lancedb\n\ndb = lancedb.connect_names
 
 export const TsConnect = "import * as lancedb from \"@lancedb/lancedb\";\n\nasync function connectExample(uri: string) {\n  const db = await lancedb.connect(uri);\n  return db;\n}\n";
 
-export const TsConnectCloud = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\n";
+export const TsConnectEnterprise = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\n";
 
 export const TsConnectEnterpriseQuickstart = "const uri = \"db://your-database-uri\";\nconst apiKey = \"your-api-key\";\nconst region = \"us-east-1\";\nconst hostOverride = \"https://your-enterprise-endpoint.com\";\n\nconst db = await lancedb.connect(uri, {\n  apiKey,\n  region,\n  hostOverride,\n});\n";
 
@@ -28,7 +28,7 @@ export const TsConnectObjectStorage = "async function connectObjectStorageExampl
 
 export const RsConnect = "async fn connect_example(uri: &str) {\n    let db = connect(uri).execute().await.unwrap();\n    let _ = db;\n}\n";
 
-export const RsConnectCloud = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\n";
+export const RsConnectEnterprise = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\n";
 
 export const RsConnectEnterpriseQuickstart = "let uri = \"db://your-database-uri\";\nlet api_key = \"your-api-key\";\nlet region = \"us-east-1\";\nlet host_override = \"https://your-enterprise-endpoint.com\";\n";
 

@@ -8,8 +8,6 @@
 import pytest
 
 
-# TODO: remove skip once geneva 0.12.0 is on PyPI (head node defaults changed to 4 CPU / 8Gi)
-@pytest.mark.skip(reason="requires geneva>=0.12.0")
 def test_head_node_defaults():
     # If these change, update the Head Node table in performance.mdx
     from geneva.cluster.builder import KubeRayClusterBuilder

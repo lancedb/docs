@@ -28,18 +28,18 @@ async def connect_async_example():
     return async_db
 
 
-# --8<-- [start:connect_cloud]
+# --8<-- [start:connect_enterprise]
 uri = "db://your-database-uri"
 api_key = "your-api-key"
 region = "us-east-1"
-# --8<-- [end:connect_cloud]
+# --8<-- [end:connect_enterprise]
 
 
-# --8<-- [start:connect_cloud_async]
+# --8<-- [start:connect_enterprise_async]
 uri = "db://your-database-uri"
 api_key = "your-api-key"
 region = "us-east-1"
-# --8<-- [end:connect_cloud_async]
+# --8<-- [end:connect_enterprise_async]
 
 
 def connect_enterprise_quickstart_config():

@@ -31,7 +31,6 @@ Table optimization performs three maintenance operations:
     </CodeBlock>
 </CodeGroup>
 
-<Badge color="purple">Cloud</Badge>
 <Badge color="red">Enterprise</Badge>
 
 LanceDB Enterprise support incremental reindexing through an automated background process. When new data is added to a table, the system automatically triggers a new index build. As the dataset grows, indexes are asynchronously updated in the background.
@@ -39,8 +38,8 @@ LanceDB Enterprise support incremental reindexing through an automated backgroun
 - While indexes are being rebuilt, queries use brute force methods on unindexed rows, which may temporarily increase latency. To avoid this, set `fast_search=True` to search only indexed data.
 - Use `index_stats()` to view the number of unindexed rows. This will be zero when indexes are fully up-to-date.
 
-The benefit of using LanceDB Cloud & Enterprise is that they automate the reindexing process
-and operate continuously in the background, minimizing the impact on latency under high loads.
+The benefit of using LanceDB Enterprise is that it automates the reindexing process
+and operates continuously in the background, minimizing the impact on latency under high loads.
 In OSS, you must manually manage the reindexing cadence based on your data growth and performance needs.
 
 ## Disk utilization

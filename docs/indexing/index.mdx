@@ -140,7 +140,7 @@ HNSW builds on k-ANN in two main ways:
 
 This recursive structure can be thought of as separating into layers:
 
-* At the bottom-most layer, an k-ANN graph on the whole dataset is present.
+* At the bottom-most layer, a k-ANN graph on the whole dataset is present.
 * At the second layer, a k-ANN graph on a fraction of the dataset (e.g. 10%) is present.
 * At the Lth layer, a k-ANN graph is present. It is over a (constant) fraction (e.g. 10%) of the vectors/vertices present in the L-1th layer.
 

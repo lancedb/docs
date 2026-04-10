@@ -40,8 +40,9 @@ def test_env_vars_via_cluster(monkeypatch):
 
 
 def test_pip_manifest(monkeypatch):
-    from unittest.mock import MagicMock
-    mock_conn = MagicMock()
+    import geneva
+    from unittest.mock import MagicMock, create_autospec
+    mock_conn = create_autospec(geneva.db.Connection, instance=True)
     monkeypatch.setattr("geneva.connect", MagicMock(return_value=mock_conn))
 
     # --8<-- [start:pip_manifest]
