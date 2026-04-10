@@ -10,10 +10,18 @@ This example walks through a complete Geneva workflow: creating a raw table in S
 The dataset is a product catalog with titles and descriptions. We'll compute a `word_count` feature column, then create a materialized view that adds text embeddings.
 
 ## 0. What you need to run this
-Define all the constants below and the rest of the code should run easily:
-```python
-CLOUD_OBJECT_STORAGE_LOCATION = "s3://my-bucket/product-catalog"
 
+Before running this example, you'll need:
+
+- **An S3 bucket** (or other cloud object storage) that Geneva can read and write to
+- **A Kubernetes cluster** with the [KubeRay operator installed](/geneva/deployment/) and [Geneva deployed](/geneva/deployment/helm/)
+- **IAM credentials** granting your Geneva client access to the bucket and Kubernetes API — see [Manual Deployment](/geneva/deployment/) for the required permissions
+
+Fill in these constants and the rest of the code will run as-is:
+
+```python
+CLOUD_OBJECT_STORAGE_LOCATION = "s3://my-bucket/product-catalog" # your S3/GCS/ABS path
+K8S_NAMESPACE = "geneva" # namespace where Geneva is deployed
 ```
 
 ## 1. Connect and create a table
@@ -30,7 +38,7 @@ schema = pa.schema([
     pa.field("title", pa.string()),
     pa.field("description", pa.string()),
     pa.field("category", pa.string()),
-    pa.field("price", pa.float32()),
+    pa.field("price", pa.float64()),
 ])
 
 data = pa.table({
@@ -47,6 +55,10 @@ data = pa.table({
     "price": [129.99, 45.00, 59.99, 34.99, 24.99],
 })
 
+try:
+    db.drop_table("products_raw")
+except Exception:
+    pass
 table = db.create_table("products_raw", data=data, schema=schema)
 ```
 
@@ -77,36 +89,68 @@ def price_tier(price: float) -> str:
 ```python
 from geneva.cluster.builder import KubeRayClusterBuilder
 from geneva.manifest.builder import PipManifestBuilder
+import sys
+import ray
+from importlib.metadata import version
+from geneva.utils.ray import get_ray_image
 
 # Define the Python environment for workers
 manifest = (
     PipManifestBuilder.create("product-catalog-manifest")
-    .pip(["sentence-transformers==3.3.1", "torch==2.5.1"])
+    .pip([
+        "sentence-transformers==3.3.1",
+        "torch==2.5.1",
+        f"geneva[udf-text-sentence-transformers]=={version('geneva')}",
+    ])
     .build()
+)
+db.define_manifest("product-catalog-manifest", manifest)
+
+# Make sure to use an image that:
+# 1. matches your local ray and python versions
+# 2. matches the architecture of the k8s nodes. These are in AWS and are
+#    x64 nodes, so we set arm=False.
+# get_ray_image() helps you get the right image.
+ray_image = get_ray_image(
+    ray.__version__,
+    f"{sys.version_info.major}.{sys.version_info.minor}",
+    arm=False,
 )
 
 # Define the KubeRay cluster
 cluster = (
     KubeRayClusterBuilder.create("product-catalog-cluster")
-    .namespace("geneva")
-    .k8s_cluster_name("my-eks-cluster")
-    .head(num_cpus=4, memory="8Gi")
-    .add_cpu_worker_group(num_cpus=8, memory="16Gi", min_replicas=2, max_replicas=8)
+    .namespace(K8S_NAMESPACE)
+    .head_group(cpus=4, memory="8Gi", image=ray_image)
+    .add_worker_group(
+        KubeRayClusterBuilder.cpu_worker()
+        .cpus(4)
+        .memory("16Gi")
+        .min_replicas(1)
+        .max_replicas(3)
+        .image(ray_image)
+        .build()
+    )
     .build()
 )
+db.define_cluster("product-catalog-cluster", cluster)
 
 # Add computed columns
 table.add_columns({
-    "word_count": word_count(column="description"),
-    "price_tier": price_tier(column="price"),
+    "word_count": word_count,
+    "price_tier": price_tier,
 })
 
 # Run the backfill on the KubeRay cluster
-with db.context(cluster=cluster, manifest=manifest):
-    table.backfill(["word_count", "price_tier"])
+with db.context(cluster="product-catalog-cluster", manifest="product-catalog-manifest"):
+    table.backfill("word_count")
+    table.backfill("price_tier")
 ```
 
 ## 4. Create a materialized view with embeddings
+
+The materialized view selects a subset of columns from the source table — here we drop `price` and `price_tier`, keeping only what's needed for search.
+After creating a materialized view, we will add and backfill a new column of embeddings.
 
 ```python
 from geneva.udfs import sentence_transformer_udf
@@ -116,15 +160,16 @@ embed = sentence_transformer_udf(
     column="description",
     model="BAAI/bge-small-en-v1.5",
     normalize=True,
+    dimension=384,  # BAAI/bge-small-en-v1.5 output dimension; avoids loading model locally
 )
 
-# Build a query: select enriched columns and add an embedding
+# Select only the columns needed for search — price and price_tier are excluded
 query = (
     table.search()
-    .select(["product_id", "title", "description", "category", "price", "word_count", "price_tier"])
+    .select(["product_id", "title", "description", "category", "word_count"])
 )
 
-# Create the materialized view
+# Create the materialized view with an embedding column derived from description
 db.create_materialized_view(
     "products_enriched",
     query,
@@ -133,8 +178,10 @@ db.create_materialized_view(
 
 # Populate the materialized view
 enriched = db.open_table("products_enriched")
-with db.context(cluster=cluster, manifest=manifest):
+with db.context(cluster="product-catalog-cluster", manifest="product-catalog-manifest"):
     enriched.refresh()
+    enriched.add_columns({"embedding": embed})
+    enriched.backfill("embedding") # refresh (above) adds rows but doesn't compute UDF columns
 ```
 
 ## 5. Query the enriched table
@@ -151,10 +198,10 @@ results = (
     .to_arrow()
 )
 
-# Filtered search — budget items only
-budget_results = (
+# Filtered search — armor category only
+armor_results = (
     enriched.search([0.1] * 384, vector_column_name="embedding")
-    .where("price_tier = 'budget'")
+    .where("category = 'armor'")
     .limit(3)
     .to_arrow()
 )
@@ -178,7 +225,9 @@ new_data = pa.table({
 })
 table.add(new_data)
 
-# Refresh only processes the new fragments
-with db.context(cluster=cluster_with_gpu, manifest=manifest):
+with db.context(cluster="product-catalog-cluster", manifest="product-catalog-manifest"):
+    table.backfill("word_count") # only fills null values
+    table.backfill("price_tier")
     enriched.refresh()
+    enriched.backfill("embedding") # refresh adds new rows but doesn't compute UDF columns
 ```
