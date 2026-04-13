@@ -238,7 +238,8 @@
                   "integrations/embedding/openai",
                   "integrations/embedding/openclip",
                   "integrations/embedding/sentence-transformers",
-                  "integrations/embedding/voyageai"
+                  "integrations/embedding/voyageai",
+                  "integrations/embedding/superlinked"
                 ]
               },
               {
