@@ -304,6 +304,7 @@
                 "expanded": true,
                 "pages": [
                   "tutorials/agents/index",
+                  "tutorials/agents/nvidia-rag-blueprint/index",
                   "tutorials/agents/time-travel-rag/index",
                   "tutorials/agents/multimodal-agent/index"
                 ]
