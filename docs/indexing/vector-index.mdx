@@ -23,7 +23,7 @@ You can create and manage multiple vector indexes on any Lance dataset. LanceDB 
 <Info>
 **IVF + HNSW**
 
-In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph (with quantization via `IVF_HNSW_PQ` / `IVF_HNSW_SQ`). This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
+In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph. LanceDB supports the unquantized variant `IVF_HNSW_FLAT`, along with quantized variants such as `IVF_HNSW_PQ` and `IVF_HNSW_SQ`. This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
 </Info>
 
 ### Manual Indexing
@@ -54,12 +54,13 @@ Use this table as a quick starting point for choosing the right index type and q
 
 | If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
 | :--- | :--- | :--- | :--- |
+| Highest recall / no quantization | `IVF_HNSW_FLAT` | Uses raw vectors inside the IVF+HNSW structure, avoiding quantization loss. | Around raw vector size plus HNSW graph overhead |
 | Best recall/latency trade-off | `IVF_HNSW_SQ` | Combines IVF partitioning with HNSW graph search for strong quality at low latency. | Typically a little larger than `1/4` of raw size |
 | Maximum compression | `IVF_RQ` | RaBitQ-style quantization with very strong compression. | Around `1/32` of raw size |
 | Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | On small-dimensional vectors, `IVF_PQ` often provides higher accuracy with similar performance compared to `IVF_RQ`. | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) |
 
 <Warning>
-If your vector search frequently includes metadata filters (`where(...)`), prefer `IVF_RQ` or `IVF_PQ`. In filtered workloads, `IVF_HNSW_SQ` latency can fluctuate significantly.
+If your vector search frequently includes metadata filters (`where(...)`), prefer `IVF_RQ` or `IVF_PQ`. In filtered workloads, HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ` can show higher latency variance.
 </Warning>
 
 Compression ratios are practical rules of thumb and can vary with vector distribution, metric, and configuration.
@@ -69,7 +70,7 @@ For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher co
 
 Start with these values, then tune for your workload:
 
-- `IVF_HNSW_SQ`
+- HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`)
   - `num_partitions`: start at `num_rows // 1,048,576` (rounded to an integer)
   - Lower `num_partitions` can reduce search latency, but index build may become slower because partitions are larger.
   - `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
@@ -91,13 +92,14 @@ Make sure you have enough data in your table (at least a few thousand rows) for 
 Sometimes you need to configure the index beyond default parameters:
 
 - Index Types:
+    - `IVF_HNSW_FLAT`: highest recall, with no vector quantization
     - `IVF_HNSW_SQ`: best recall/latency trade-off
     - `IVF_RQ`: best compression for large, high-dimensional datasets
     - `IVF_PQ`: often higher accuracy than `IVF_RQ` for small dimensions (`<= 256`) at similar query performance
 - `metrics`: default is `l2`, other available are `cosine` or `dot`
     - When using `cosine` similarity, distances range from 0 (identical vectors) to 2 (maximally dissimilar)
 - `num_partitions`: use index-specific starting points from the section above:
-    - `IVF_HNSW_SQ`: `num_rows // 1,048,576`
+    - HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`): `num_rows // 1,048,576`
     - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
 - `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension // 8`. Larger values often improve recall but can slow search.
 
@@ -122,7 +124,7 @@ Connect to LanceDB and open the table you want to index.
 
 ### 2. Construct an IVF Index
 
-Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. You can switch `index_type` to `IVF_RQ` or `IVF_HNSW_SQ` depending on your recall/latency/compression target.
+Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. You can switch `index_type` to `IVF_RQ`, `IVF_HNSW_SQ`, or `IVF_HNSW_FLAT` depending on your recall/latency/compression target.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -146,9 +148,9 @@ The previous query uses:
 
 - `limit`: number of results to return
 - `nprobes`: number of IVF partitions to scan. LanceDB auto-tunes this by default.
-- `ef`: primarily relevant for `IVF_HNSW_SQ`; start around `1.5 * k` (where `k=limit`) and increase up to `10 * k` for higher recall.
+- `ef`: primarily relevant for HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ`; start around `1.5 * k` (where `k=limit`) and increase up to `10 * k` for higher recall.
 - `nprobes` by index type:
-    - `IVF_HNSW_SQ`: usually keep auto-tuned `nprobes`, then tune `ef` first. For filtered search (`where(...)`), expect higher latency variance.
+    - `IVF_HNSW_FLAT` and `IVF_HNSW_SQ`: usually keep auto-tuned `nprobes`, then tune `ef` first. For filtered search (`where(...)`), expect higher latency variance.
     - `IVF_RQ`: keep auto-tuned `nprobes`; increase only when recall is insufficient.
     - `IVF_PQ`: keep auto-tuned `nprobes`; increase when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`.
 - `refine_factor`: reads additional candidates and reranks in memory
@@ -158,13 +160,16 @@ The previous query uses:
 
 ### Index Configuration
 
-There are three key parameters to set when constructing an HNSW index:
+There are four key parameters to set when constructing an HNSW index:
 
+- `index_type`: choose `IVF_HNSW_SQ` for a strong recall/latency/size trade-off, or `IVF_HNSW_FLAT` when you want the IVF+HNSW structure without vector quantization.
 - `metric`: The default is `l2` euclidean distance metric. Other available are `dot` and `cosine`.
 - `m`: The number of neighbors to select for each vector in the HNSW graph.
 - `ef_construction`: The number of candidates to evaluate during the construction of the HNSW graph.
 
 ### 1. Construct an HNSW Index
+
+The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, change `index_type` to `IVF_HNSW_FLAT`.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">

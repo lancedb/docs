@@ -158,7 +158,7 @@ class EdgeDetection:
 
 ### Index-based partitioning (`partition_by_indexed_column`)
 
-Instead of partitioning by a materialized column, the framework reads partition assignments directly from an existing **IVF vector index** (IVF_FLAT, IVF_PQ, IVF_HNSW_SQ, etc.). This avoids materializing a `partition_id` column and keeps partitions synchronized with the index.
+Instead of partitioning by a materialized column, the framework reads partition assignments directly from an existing **IVF vector index** (IVF_FLAT, IVF_PQ, IVF_HNSW_FLAT, IVF_HNSW_SQ, etc.). This avoids materializing a `partition_id` column and keeps partitions synchronized with the index.
 
 ```python
 from geneva.partitioning import create_ivf_flat_index
