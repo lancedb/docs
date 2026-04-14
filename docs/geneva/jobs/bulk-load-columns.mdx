@@ -110,15 +110,10 @@ The `carry` mode is particularly important for partial and multi-pass loads — 
 
 ### Concurrency
 
-The `concurrency` parameter controls the number of worker processes processing destination fragments in parallel. The default is 8.
-
-- Set this to match your available cluster resources (e.g., number of CPUs or GPUs).
-- Higher concurrency speeds up the destination scan phase but does not affect the index build phase.
-- If set higher than available resources, Geneva will schedule as many workers as it can.
+The `concurrency` parameter controls the number of worker processes. The default is 8 — set this to match your available cluster resources.
 
 <CodeGroup>
 ```python Python icon="python"
-# Use 16 workers for faster processing
 table.load_columns(
     source="s3://bucket/embeddings/",
     pk="document_id",
@@ -128,27 +123,23 @@ table.load_columns(
 ```
 </CodeGroup>
 
-### Checkpoint sizing and fault tolerance
+### Checkpointing
 
-Bulk load jobs use the same checkpoint infrastructure as UDF backfill. Each batch is checkpointed so that partial results are not lost on job failure and resumed jobs skip already-completed work.
+Bulk load jobs checkpoint each batch for fault tolerance, using the same infrastructure as [backfill jobs](/geneva/jobs/backfilling#adaptive-checkpoint-sizing). Key parameters:
 
-Adaptive checkpoint sizing works the same as [backfill jobs](/geneva/jobs/backfilling#adaptive-checkpoint-sizing). Smaller initial checkpoints give faster proof-of-life; larger checkpoints reduce commit overhead.
-
-- `checkpoint_size`: Initial/fixed checkpoint size in rows.
-- `min_checkpoint_size` / `max_checkpoint_size`: Bounds for adaptive sizing. When both are equal, adaptive sizing is disabled.
-- `checkpoint_interval_seconds`: Target seconds per adaptive checkpoint batch. The adaptive sizer grows or shrinks batch sizes to hit this target. Defaults to 60 seconds for bulk load (longer than the 10-second UDF backfill default because bulk load is I/O-bound and benefits from larger batches that amortize write overhead).
+- `checkpoint_interval_seconds`: Target seconds per checkpoint batch (default 60s). The adaptive sizer grows or shrinks batch sizes to hit this target.
+- `min_checkpoint_size` / `max_checkpoint_size`: Bounds for adaptive sizing.
 
 <Tip>
-If your job is small enough to complete without needing fault tolerance, you can get better performance by effectively disabling checkpoints. Increase `checkpoint_interval_seconds` to a large value and set `min_checkpoint_size` high enough that each worker processes its entire workload in a single batch. This avoids checkpoint write overhead entirely.
+If your job is small enough to complete without needing fault tolerance, you can get better performance by effectively disabling checkpoints. Increase `checkpoint_interval_seconds` to a large value and set `min_checkpoint_size` high enough that each worker processes its entire workload in a single batch.
 </Tip>
 
 ### Commit visibility
 
-The `commit_granularity` parameter controls how many fragments must complete before an intermediate commit makes results visible to readers. Lower values give more frequent visibility but add commit overhead. This is especially useful for long-running jobs on large tables.
+For long-running jobs, `commit_granularity` controls how many fragments complete before an intermediate commit makes partial results visible to readers.
 
 <CodeGroup>
 ```python Python icon="python"
-# Commit every 10 fragments so readers see incremental progress
 table.load_columns(
     source="s3://bucket/embeddings/",
     pk="document_id",
@@ -158,28 +149,18 @@ table.load_columns(
 ```
 </CodeGroup>
 
-### Memory sizing
+### Multi-pass loads for large sources
 
-`load_columns` builds an in-memory primary-key index from the source dataset before distributing work. The index size depends on the primary key type and row count:
+`load_columns` builds an in-memory primary-key index from the source. If the source is too large to fit in memory, split it into chunks and run sequential calls. Carry semantics guarantee correctness across passes.
+
+Index memory depends on primary key type:
 
 | PK type | ~Memory per row | 100M rows | 1B rows |
 |---------|----------------|-----------|---------|
 | int64   | ~8 bytes        | ~800 MB   | ~8 GB   |
 | string (avg 32 bytes) | ~32 bytes | ~3.2 GB | ~32 GB |
 
-The index is broadcast to all worker nodes. Each node holds one zero-copy reference, so the per-node cost equals the index size regardless of how many workers run on that node.
-
-<Tip>
-If your source has **string primary keys**, expect significantly higher memory usage than integer keys. For very large string-keyed sources, consider multi-pass loads to keep per-pass index size manageable.
-</Tip>
-
-### Index build latency
-
-The index is built with a single sequential scan of the source pk column before any workers start. Expect roughly 30-60 seconds for 1B int64 rows. This is upfront latency — once built, worker lookups are O(1).
-
-### Multi-pass loads for large sources
-
-When the source dataset is too large for a single in-memory primary-key index, split the source files into chunks and run sequential `load_columns` calls. Carry semantics guarantee correctness — each pass writes only rows matching its chunk and preserves all values from prior passes.
+Choose N so that `source_size / N` fits in memory:
 
 <CodeGroup>
 ```python Python icon="python"
@@ -201,9 +182,7 @@ for i in range(N):
 ```
 </CodeGroup>
 
-Each pass reads only its assigned files, so the total source I/O across all passes stays at 1x the full dataset. Per-pass memory cost is `source_size / N`.
-
-If the source is already partitioned into subdirectories, you can pass each subdirectory URI directly:
+Each pass reads only its assigned files, so total source I/O stays at 1x. If the source is already partitioned into subdirectories, pass each URI directly:
 
 <CodeGroup>
 ```python Python icon="python"
@@ -217,31 +196,8 @@ for shard in range(4):
 </CodeGroup>
 
 <Warning>
-Multi-pass loads must run **sequentially**, not concurrently. Two `load_columns` calls running at the same time against the same column produce an interleaved end state (last-writer-wins per fragment). Use a plain `for` loop, not `concurrent.futures`.
+Multi-pass loads must run **sequentially**, not concurrently. Two `load_columns` calls running at the same time against the same column produce an interleaved end state. Use a plain `for` loop, not `concurrent.futures`.
 </Warning>
-
-#### When to use multi-pass
-
-| Scenario | Recommendation |
-|----------|---------------|
-| Source pk index fits in memory | Single call — simplest and fastest |
-| Source too large for single index | Multi-pass — choose N so that `source_size / N` fits in memory |
-
-### Cost model
-
-The dominant cost factors are:
-
-```
-Dest I/O  ≈  N_passes × num_fragments × (pk_bytes + carry_col_bytes) × rows_per_fragment
-Source I/O ≈  source_rows × value_col_bytes  (constant — each source row is read exactly once)
-```
-
-Source I/O is fixed regardless of approach. The variable cost is **destination I/O**, which scales with `N_passes × carry_col_bytes`:
-
-- **New columns** (carry volume = 0): Destination I/O is minimal — only pk + rowaddr are read. Multi-pass is cheap.
-- **Updating existing wide columns** (e.g., 768-dim embeddings): Each pass must read existing values to carry them. Multiple passes multiply this cost.
-
-For single-pass loads, destination I/O is read once. For multi-pass with N chunks, it's read N times.
 
 ## Reference
 
