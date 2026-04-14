@@ -1,0 +1,327 @@
+---
+title: Bulk Loading & Updating Columns
+sidebarTitle: Bulk Load / Update Columns
+description: Load or update column data from external sources (Parquet, Lance, IPC) into your LanceDB table using a primary-key join.
+icon: columns-3
+---
+
+## Overview
+
+A common scenario is having column data that **already exists** in an external dataset — embeddings from a vendor, features exported from a data warehouse, or columnar data in cloud storage — that you want to load into an existing LanceDB table.
+
+`load_columns` joins value columns from an external source into your table by primary key. It works for both use cases:
+
+- **Adding new columns:** If the specified columns don't exist in the destination table, they are created automatically.
+- **Updating existing columns:** If the columns already exist, matched rows are updated with the source values. Unmatched rows are controlled by the `on_missing` parameter.
+
+**Destination table (before):**
+
+| pk | col_a | col_b |
+|----|-------|-------|
+| 1  | x     | 10    |
+| 2  | y     | 20    |
+| 3  | z     | 30    |
+
+**External source (Parquet / Lance / IPC):**
+
+| pk | embedding  |
+|----|------------|
+| 1  | [.1, .2]   |
+| 2  | [.3, .4]   |
+| 3  | [.5, .6]   |
+
+**Destination table (after `load_columns` join on `pk`):**
+
+| pk | col_a | col_b | embedding |
+|----|-------|-------|-----------|
+| 1  | x     | 10    | [.1, .2]  |
+| 2  | y     | 20    | [.3, .4]  |
+| 3  | z     | 30    | [.5, .6]  |
+
+### When to use
+
+- **Loading new columns:** Attach pre-computed embeddings from a vendor, or add features exported from Spark/BigQuery as Parquet.
+- **Updating existing columns:** Replace outdated embeddings with a newer model's output, or refresh feature values from an updated export.
+- **Partial updates:** Update a subset of rows (e.g., only rows whose embeddings were recomputed) while preserving all other values via carry semantics.
+- **Format consolidation:** Merge columnar data spread across Parquet files into an existing Lance table.
+
+## Basic usage
+
+<CodeGroup>
+```python Python icon="python"
+import lancedb
+
+db = lancedb.connect("my_db")
+table = db.open_table("my_table")
+
+# Add a new embedding column from a Parquet source
+table.load_columns(
+    source="s3://bucket/embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+)
+
+# Later, update the same column with refreshed embeddings
+table.load_columns(
+    source="s3://bucket/embeddings_v2/",
+    pk="document_id",
+    columns=["embedding"],
+)
+```
+</CodeGroup>
+
+This reads the external Parquet dataset, matches rows by `document_id`, and writes the `embedding` column into the destination table. If the column doesn't already exist, it is created. If it does exist, matched rows are updated with the new source values.
+
+## Supported source formats
+
+`load_columns` supports three source formats:
+
+| Format  | File extension | Notes |
+|---------|---------------|-------|
+| Parquet | `.parquet`    | Most common; supports cloud storage URIs |
+| Lance   | `.lance`      | Must be a single URI (not a file list) |
+| IPC     | `.ipc`, `.arrow`, `.feather` | Arrow IPC / Feather format |
+
+The format is auto-detected from the URI suffix. You can override it with `source_format`:
+
+<CodeGroup>
+```python Python icon="python"
+table.load_columns(
+    source="/data/embeddings/",
+    pk="pk",
+    columns=["embedding"],
+    source_format="lance",
+)
+```
+</CodeGroup>
+
+## Handling missing keys
+
+When the source doesn't cover every row in the destination, the `on_missing` parameter controls what happens to unmatched rows:
+
+| Mode | Behavior |
+|------|----------|
+| `"carry"` (default) | Keep existing value. NULL if the column is new. |
+| `"null"` | Explicitly set to NULL. |
+| `"error"` | Raise an error on the first unmatched row. |
+
+<CodeGroup>
+```python Python icon="python"
+# Default: unmatched rows keep their current value
+table.load_columns(
+    source="s3://bucket/partial_embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+    on_missing="carry",
+)
+
+# Strict mode: fail if source doesn't cover all rows
+table.load_columns(
+    source="s3://bucket/embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+    on_missing="error",
+)
+```
+</CodeGroup>
+
+The `carry` mode is particularly important for partial and multi-pass loads — it ensures that previously loaded values are never overwritten.
+
+## Loading multiple columns
+
+You can load multiple columns in a single call:
+
+<CodeGroup>
+```python Python icon="python"
+table.load_columns(
+    source="s3://bucket/features/",
+    pk="document_id",
+    columns=["embedding", "sentiment_score", "category"],
+)
+```
+</CodeGroup>
+
+## Async API
+
+For non-blocking execution, use `load_columns_async` which returns a `JobFuture`:
+
+<CodeGroup>
+```python Python icon="python"
+future = table.load_columns_async(
+    source="s3://bucket/embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+)
+
+# Do other work...
+
+# Block until completion
+future.result()
+```
+</CodeGroup>
+
+## Validation and error handling
+
+`load_columns` validates inputs before starting the distributed job:
+
+- The **primary key column** must exist in both source and destination with compatible types.
+- The **value columns** must exist in the source dataset.
+- **Duplicate primary keys** in the source raise a `ValueError`.
+- **NULL primary keys** in the source are excluded with a warning.
+- Type mismatches between source and destination raise a `ValueError` during planning.
+
+## Performance tuning
+
+### Memory sizing
+
+`load_columns` builds an in-memory primary-key index from the source dataset before distributing work. The index size depends on the primary key type and row count:
+
+| PK type | ~Memory per row | 100M rows | 1B rows |
+|---------|----------------|-----------|---------|
+| int64   | ~8 bytes        | ~800 MB   | ~8 GB   |
+| string (avg 32 bytes) | ~32 bytes | ~3.2 GB | ~32 GB |
+
+The index is broadcast to all worker nodes. Each node holds one zero-copy reference, so the per-node cost equals the index size regardless of how many workers run on that node.
+
+<Tip>
+If your source has **string primary keys**, expect significantly higher memory usage than integer keys. For very large string-keyed sources, consider multi-pass loads to keep per-pass index size manageable.
+</Tip>
+
+### Index build latency
+
+The index is built with a single sequential scan of the source pk column before any workers start. Expect roughly 30-60 seconds for 1B int64 rows. This is upfront latency — once built, worker lookups are O(1).
+
+### Concurrency
+
+The `concurrency` parameter controls the number of worker processes processing destination fragments in parallel. The default is 8.
+
+- Set this to match your available cluster resources (e.g., number of CPUs or GPUs).
+- Higher concurrency speeds up the destination scan phase but does not affect the index build phase.
+- If set higher than available resources, Geneva will schedule as many workers as it can.
+
+<CodeGroup>
+```python Python icon="python"
+# Use 16 workers for faster processing
+table.load_columns(
+    source="s3://bucket/embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+    concurrency=16,
+)
+```
+</CodeGroup>
+
+### Checkpoint sizing and fault tolerance
+
+Bulk load jobs use the same checkpoint infrastructure as UDF backfill. Each batch is checkpointed so that partial results are not lost on job failure and resumed jobs skip already-completed work.
+
+Adaptive checkpoint sizing works the same as [backfill jobs](/geneva/jobs/backfilling#adaptive-checkpoint-sizing). Smaller initial checkpoints give faster proof-of-life; larger checkpoints reduce commit overhead.
+
+- `checkpoint_size`: Initial/fixed checkpoint size in rows.
+- `min_checkpoint_size` / `max_checkpoint_size`: Bounds for adaptive sizing. When both are equal, adaptive sizing is disabled.
+- `checkpoint_interval_seconds`: Target seconds per adaptive checkpoint batch. The adaptive sizer grows or shrinks batch sizes to hit this target. Defaults to 60 seconds for bulk load (longer than the 10-second UDF backfill default because bulk load is I/O-bound and benefits from larger batches that amortize write overhead).
+
+<Tip>
+If your job is small enough to complete without needing fault tolerance, you can get better performance by effectively disabling checkpoints. Increase `checkpoint_interval_seconds` to a large value and set `min_checkpoint_size` high enough that each worker processes its entire workload in a single batch. This avoids checkpoint write overhead entirely.
+</Tip>
+
+<CodeGroup>
+```python Python icon="python"
+table.load_columns(
+    source="s3://bucket/embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+    checkpoint_size=5000,
+    min_checkpoint_size=1000,
+    max_checkpoint_size=10000,
+)
+```
+</CodeGroup>
+
+### Commit visibility
+
+The `commit_granularity` parameter controls how many fragments must complete before an intermediate commit makes results visible to readers. Lower values give more frequent visibility but add commit overhead. This is especially useful for long-running jobs on large tables.
+
+<CodeGroup>
+```python Python icon="python"
+# Commit every 10 fragments so readers see incremental progress
+table.load_columns(
+    source="s3://bucket/embeddings/",
+    pk="document_id",
+    columns=["embedding"],
+    commit_granularity=10,
+)
+```
+</CodeGroup>
+
+### Multi-pass loads for large sources
+
+When the source dataset is too large for a single in-memory primary-key index, split the source files into chunks and run sequential `load_columns` calls. Carry semantics guarantee correctness — each pass writes only rows matching its chunk and preserves all values from prior passes.
+
+<CodeGroup>
+```python Python icon="python"
+import pyarrow.dataset as pads
+
+# Discover source files (metadata only, no data I/O)
+source_files = pads.dataset("s3://bucket/embeddings/", format="parquet").files
+
+# Split into N chunks and run sequentially
+N = 4
+chunk_size = len(source_files) // N
+for i in range(N):
+    chunk = source_files[i * chunk_size : (i + 1) * chunk_size]
+    table.load_columns(
+        source=chunk,
+        pk="document_id",
+        columns=["embedding"],
+    )
+```
+</CodeGroup>
+
+Each pass reads only its assigned files, so the total source I/O across all passes stays at 1x the full dataset. Per-pass memory cost is `source_size / N`.
+
+If the source is already partitioned into subdirectories, you can pass each subdirectory URI directly:
+
+<CodeGroup>
+```python Python icon="python"
+for shard in range(4):
+    table.load_columns(
+        source=f"s3://bucket/embeddings/shard_{shard}/",
+        pk="document_id",
+        columns=["embedding"],
+    )
+```
+</CodeGroup>
+
+<Warning>
+Multi-pass loads must run **sequentially**, not concurrently. Two `load_columns` calls running at the same time against the same column produce an interleaved end state (last-writer-wins per fragment). Use a plain `for` loop, not `concurrent.futures`.
+</Warning>
+
+#### When to use multi-pass
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Source pk index fits in memory | Single call — simplest and fastest |
+| Source too large, carry columns are light (new or scalar columns) | Multi-pass with N = 4-8 chunks |
+| Source too large, carry columns are heavy (existing embeddings) | Multi-pass with small N, or wait for future partitioned-index support |
+
+### Cost model
+
+The dominant cost factors are:
+
+```
+Dest I/O  ≈  N_passes × num_fragments × (pk_bytes + carry_col_bytes) × rows_per_fragment
+Source I/O ≈  source_rows × value_col_bytes  (constant — each source row is read exactly once)
+```
+
+Source I/O is fixed regardless of approach. The variable cost is **destination I/O**, which scales with `N_passes × carry_col_bytes`:
+
+- **New columns** (carry volume = 0): Destination I/O is minimal — only pk + rowaddr are read. Multi-pass is cheap.
+- **Updating existing wide columns** (e.g., 768-dim embeddings): Each pass must read existing values to carry them. Multiple passes multiply this cost.
+
+For single-pass loads, destination I/O is read once. For multi-pass with N chunks, it's read N times.
+
+## Reference
+
+* [`load_columns` API](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.load_columns)
+* [`load_columns_async` API](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.load_columns_async)
