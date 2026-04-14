@@ -47,6 +47,8 @@ A common scenario is having column data that **already exists** in an external d
 
 ## Basic usage
 
+Supports Parquet, Lance, and IPC sources. The format is auto-detected from the URI suffix, or can be overridden with `source_format`. You can load one or more columns in a single call.
+
 <CodeGroup>
 ```python Python icon="python"
 import lancedb
@@ -70,30 +72,7 @@ table.load_columns(
 ```
 </CodeGroup>
 
-This reads the external Parquet dataset, matches rows by `document_id`, and writes the `embedding` column into the destination table. If the column doesn't already exist, it is created. If it does exist, matched rows are updated with the new source values.
-
-## Supported source formats
-
-`load_columns` supports three source formats:
-
-| Format  | File extension | Notes |
-|---------|---------------|-------|
-| Parquet | `.parquet`    | Most common; supports cloud storage URIs |
-| Lance   | `.lance`      | Must be a single URI (not a file list) |
-| IPC     | `.ipc`, `.arrow`, `.feather` | Arrow IPC / Feather format |
-
-The format is auto-detected from the URI suffix. You can override it with `source_format`:
-
-<CodeGroup>
-```python Python icon="python"
-table.load_columns(
-    source="/data/embeddings/",
-    pk="pk",
-    columns=["embedding"],
-    source_format="lance",
-)
-```
-</CodeGroup>
+For non-blocking execution, use `load_columns_async` which returns a `JobFuture` — call `.result()` to block until completion.
 
 ## Handling missing keys
 
@@ -127,69 +106,7 @@ table.load_columns(
 
 The `carry` mode is particularly important for partial and multi-pass loads — it ensures that previously loaded values are never overwritten.
 
-## Loading multiple columns
-
-You can load multiple columns in a single call:
-
-<CodeGroup>
-```python Python icon="python"
-table.load_columns(
-    source="s3://bucket/features/",
-    pk="document_id",
-    columns=["embedding", "sentiment_score", "category"],
-)
-```
-</CodeGroup>
-
-## Async API
-
-For non-blocking execution, use `load_columns_async` which returns a `JobFuture`:
-
-<CodeGroup>
-```python Python icon="python"
-future = table.load_columns_async(
-    source="s3://bucket/embeddings/",
-    pk="document_id",
-    columns=["embedding"],
-)
-
-# Do other work...
-
-# Block until completion
-future.result()
-```
-</CodeGroup>
-
-## Validation and error handling
-
-`load_columns` validates inputs before starting the distributed job:
-
-- The **primary key column** must exist in both source and destination with compatible types.
-- The **value columns** must exist in the source dataset.
-- **Duplicate primary keys** in the source raise a `ValueError`.
-- **NULL primary keys** in the source are excluded with a warning.
-- Type mismatches between source and destination raise a `ValueError` during planning.
-
 ## Performance tuning
-
-### Memory sizing
-
-`load_columns` builds an in-memory primary-key index from the source dataset before distributing work. The index size depends on the primary key type and row count:
-
-| PK type | ~Memory per row | 100M rows | 1B rows |
-|---------|----------------|-----------|---------|
-| int64   | ~8 bytes        | ~800 MB   | ~8 GB   |
-| string (avg 32 bytes) | ~32 bytes | ~3.2 GB | ~32 GB |
-
-The index is broadcast to all worker nodes. Each node holds one zero-copy reference, so the per-node cost equals the index size regardless of how many workers run on that node.
-
-<Tip>
-If your source has **string primary keys**, expect significantly higher memory usage than integer keys. For very large string-keyed sources, consider multi-pass loads to keep per-pass index size manageable.
-</Tip>
-
-### Index build latency
-
-The index is built with a single sequential scan of the source pk column before any workers start. Expect roughly 30-60 seconds for 1B int64 rows. This is upfront latency — once built, worker lookups are O(1).
 
 ### Concurrency
 
@@ -225,19 +142,6 @@ Adaptive checkpoint sizing works the same as [backfill jobs](/geneva/jobs/backfi
 If your job is small enough to complete without needing fault tolerance, you can get better performance by effectively disabling checkpoints. Increase `checkpoint_interval_seconds` to a large value and set `min_checkpoint_size` high enough that each worker processes its entire workload in a single batch. This avoids checkpoint write overhead entirely.
 </Tip>
 
-<CodeGroup>
-```python Python icon="python"
-table.load_columns(
-    source="s3://bucket/embeddings/",
-    pk="document_id",
-    columns=["embedding"],
-    checkpoint_size=5000,
-    min_checkpoint_size=1000,
-    max_checkpoint_size=10000,
-)
-```
-</CodeGroup>
-
 ### Commit visibility
 
 The `commit_granularity` parameter controls how many fragments must complete before an intermediate commit makes results visible to readers. Lower values give more frequent visibility but add commit overhead. This is especially useful for long-running jobs on large tables.
@@ -253,6 +157,25 @@ table.load_columns(
 )
 ```
 </CodeGroup>
+
+### Memory sizing
+
+`load_columns` builds an in-memory primary-key index from the source dataset before distributing work. The index size depends on the primary key type and row count:
+
+| PK type | ~Memory per row | 100M rows | 1B rows |
+|---------|----------------|-----------|---------|
+| int64   | ~8 bytes        | ~800 MB   | ~8 GB   |
+| string (avg 32 bytes) | ~32 bytes | ~3.2 GB | ~32 GB |
+
+The index is broadcast to all worker nodes. Each node holds one zero-copy reference, so the per-node cost equals the index size regardless of how many workers run on that node.
+
+<Tip>
+If your source has **string primary keys**, expect significantly higher memory usage than integer keys. For very large string-keyed sources, consider multi-pass loads to keep per-pass index size manageable.
+</Tip>
+
+### Index build latency
+
+The index is built with a single sequential scan of the source pk column before any workers start. Expect roughly 30-60 seconds for 1B int64 rows. This is upfront latency — once built, worker lookups are O(1).
 
 ### Multi-pass loads for large sources
 
@@ -302,8 +225,7 @@ Multi-pass loads must run **sequentially**, not concurrently. Two `load_columns`
 | Scenario | Recommendation |
 |----------|---------------|
 | Source pk index fits in memory | Single call — simplest and fastest |
-| Source too large, carry columns are light (new or scalar columns) | Multi-pass with N = 4-8 chunks |
-| Source too large, carry columns are heavy (existing embeddings) | Multi-pass with small N, or wait for future partitioned-index support |
+| Source too large for single index | Multi-pass — choose N so that `source_size / N` fits in memory |
 
 ### Cost model
 
