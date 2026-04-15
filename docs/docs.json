@@ -176,6 +176,7 @@
                 "pages": [
                   "geneva/jobs/contexts",
                   "geneva/jobs/backfilling",
+                  "geneva/jobs/bulk-load-columns",
                   "geneva/jobs/materialized-views",
                   "geneva/jobs/lifecycle",
                   "geneva/jobs/conflicts",
