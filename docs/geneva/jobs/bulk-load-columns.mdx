@@ -173,9 +173,9 @@ source_files = pads.dataset("s3://bucket/embeddings/", format="parquet").files
 
 # Split into N chunks and run sequentially
 N = 4
-chunk_size = len(source_files) // N
+total = len(source_files)
 for i in range(N):
-    chunk = source_files[i * chunk_size : (i + 1) * chunk_size]
+    chunk = source_files[i * total // N : (i + 1) * total // N]
     table.load_columns(
         source=chunk,
         pk="document_id",
