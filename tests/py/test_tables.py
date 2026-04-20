@@ -268,6 +268,42 @@ def test_tables_tz_validator_snippet():
     assert ok is not None
 
 
+def test_add_from_dataset(tmp_db, tmp_path):
+    import pyarrow as pa
+    import pyarrow.dataset as ds
+    import pyarrow.parquet as pq
+
+    schema = pa.schema(
+        [
+            pa.field("vector", pa.list_(pa.float32(), 4)),
+            pa.field("item", pa.utf8()),
+            pa.field("price", pa.float32()),
+        ]
+    )
+    for i in range(3):
+        batch = pa.table(
+            {
+                "vector": [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]],
+                "item": [f"item{i * 2}", f"item{i * 2 + 1}"],
+                "price": [float(i * 2), float(i * 2 + 1)],
+            },
+            schema=schema,
+        )
+        pq.write_table(batch, tmp_path / f"part-{i}.parquet")
+
+    data_path = str(tmp_path)
+
+    # --8<-- [start:add_from_dataset]
+    import pyarrow.dataset as ds
+
+    dataset = ds.dataset(data_path, format="parquet")
+    db = tmp_db
+    table = db.create_table("my_table", schema=dataset.schema, mode="overwrite")
+    table.add(dataset)
+    # --8<-- [end:add_from_dataset]
+    assert table.count_rows() == 6
+
+
 def test_table_creation_from_iterator(tmp_db):
     # --8<-- [start:create_table_from_iterator]
     import pyarrow as pa
@@ -451,7 +487,7 @@ def test_batch_data_insertion(tmp_db):
             yield pa.RecordBatch.from_arrays(
                 [
                     pa.array([[3.1, 4.1], [5.9, 26.5]], pa.list_(pa.float32(), 2)),
-                    pa.array([f"item{i*2+1}", f"item{i*2+2}"]),
+                    pa.array([f"item{i * 2 + 1}", f"item{i * 2 + 2}"]),
                     pa.array([float((i * 2 + 1) * 10), float((i * 2 + 2) * 10)]),
                 ],
                 ["vector", "item", "price"],
@@ -584,11 +620,7 @@ def test_merge_matched_update_only(tmp_db):
         }
     )
 
-    (
-        table.merge_insert("id")
-        .when_matched_update_all()
-        .execute(incoming_users)
-    )
+    (table.merge_insert("id").when_matched_update_all().execute(incoming_users))
     # --8<-- [end:merge_matched_update_only]
     rows = table.to_arrow().sort_by("id").to_pylist()
     assert rows == [
@@ -623,11 +655,7 @@ def test_insert_if_not_exists(tmp_db):
         }
     )
 
-    (
-        table.merge_insert("id")
-        .when_not_matched_insert_all()
-        .execute(incoming_users)
-    )
+    (table.merge_insert("id").when_not_matched_insert_all().execute(incoming_users))
     # --8<-- [end:insert_if_not_exists]
     rows = table.to_arrow().sort_by("id").to_pylist()
     assert rows == [
@@ -1222,7 +1250,9 @@ def test_consistency_strong(tmp_db):
     uri = str(tmp_db.uri)
     writer_db = lancedb.connect(uri)
     reader_db = lancedb.connect(uri, read_consistency_interval=timedelta(0))
-    writer_table = writer_db.create_table("consistency_strong_table", [{"id": 1}], mode="overwrite")
+    writer_table = writer_db.create_table(
+        "consistency_strong_table", [{"id": 1}], mode="overwrite"
+    )
     reader_table = reader_db.open_table("consistency_strong_table")
     writer_table.add([{"id": 2}])
     rows_after_write = reader_table.count_rows()
@@ -1238,7 +1268,9 @@ def test_consistency_eventual(tmp_db):
     uri = str(tmp_db.uri)
     writer_db = lancedb.connect(uri)
     reader_db = lancedb.connect(uri, read_consistency_interval=timedelta(seconds=3600))
-    writer_table = writer_db.create_table("consistency_eventual_table", [{"id": 1}], mode="overwrite")
+    writer_table = writer_db.create_table(
+        "consistency_eventual_table", [{"id": 1}], mode="overwrite"
+    )
     reader_table = reader_db.open_table("consistency_eventual_table")
     writer_table.add([{"id": 2}])
     rows_after_write = reader_table.count_rows()
@@ -1252,7 +1284,9 @@ def test_consistency_checkout_latest(tmp_db):
     uri = str(tmp_db.uri)
     writer_db = lancedb.connect(uri)
     reader_db = lancedb.connect(uri)
-    writer_table = writer_db.create_table("consistency_checkout_latest_table", [{"id": 1}], mode="overwrite")
+    writer_table = writer_db.create_table(
+        "consistency_checkout_latest_table", [{"id": 1}], mode="overwrite"
+    )
     reader_table = reader_db.open_table("consistency_checkout_latest_table")
 
     writer_table.add([{"id": 2}])
