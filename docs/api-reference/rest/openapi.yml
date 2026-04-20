@@ -1489,7 +1489,7 @@ paths:
       operationId: CreateTableIndex
       description: |
         Create an index on a table column for faster search operations.
-        Supports vector indexes (IVF_FLAT, IVF_HNSW_FLAT, IVF_HNSW_SQ, IVF_PQ, etc.) and scalar indexes (BTREE, BITMAP, FTS, etc.).
+        Supports vector indexes (IVF_FLAT, IVF_HNSW_SQ, IVF_PQ, etc.) and scalar indexes (BTREE, BITMAP, FTS, etc.).
         Index creation is handled asynchronously.
         Use the `ListTableIndices` and `DescribeTableIndexStats` operations to monitor index creation progress.
       requestBody:
@@ -2928,7 +2928,7 @@ components:
           description: Name of the column to create index on
         index_type:
           type: string
-          description: Type of index to create (e.g., BTREE, BITMAP, LABEL_LIST, IVF_FLAT, IVF_HNSW_FLAT, IVF_PQ, IVF_HNSW_SQ, FTS)
+          description: Type of index to create (e.g., BTREE, BITMAP, LABEL_LIST, IVF_FLAT, IVF_PQ, IVF_HNSW_SQ, FTS)
         name:
           type: string
           nullable: true
