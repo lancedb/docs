@@ -181,7 +181,7 @@ def test_fts_fuzzy_query():
         ),
         mode="overwrite",
     )
-    table.create_fts_index("text", use_tantivy=False, replace=True)
+    table.create_fts_index("text", replace=True)
 
     results = table.search(MatchQuery("foo", "text", fuzziness=1)).to_pandas()
     assert len(results) == 4
@@ -219,7 +219,7 @@ def test_fts_boost_query():
         ),
         mode="overwrite",
     )
-    table.create_fts_index("desc", use_tantivy=False, replace=True)
+    table.create_fts_index("desc", replace=True)
 
     results = table.search(
         BoostQuery(
@@ -252,9 +252,7 @@ def test_fts_native():
         mode="overwrite",
     )
 
-    # passing `use_tantivy=False` to use lance FTS index
-    # `use_tantivy=True` by default
-    table.create_fts_index("text", use_tantivy=False)
+    table.create_fts_index("text")
     table.search("puppy").limit(10).select(["text"]).to_list()
     # [{'text': 'Frodo was a happy puppy', '_score': 0.6931471824645996}]
     # ...
@@ -265,7 +263,6 @@ def test_fts_native():
     # --8<-- [start:fts_config_folding]
     table.create_fts_index(
         "text",
-        use_tantivy=False,
         language="French",
         stem=True,
         ascii_folding=True,
@@ -279,7 +276,7 @@ def test_fts_native():
     table.search("puppy").limit(10).where("text='foo'", prefilter=False).to_list()
     # --8<-- [end:fts_postfiltering]
     # --8<-- [start:fts_with_position]
-    table.create_fts_index("text", use_tantivy=False, with_position=True, replace=True)
+    table.create_fts_index("text", with_position=True, replace=True)
     # --8<-- [end:fts_with_position]
     # --8<-- [start:fts_incremental_index]
     table.add([{"vector": [3.1, 4.1], "text": "Frodo was a happy puppy"}])

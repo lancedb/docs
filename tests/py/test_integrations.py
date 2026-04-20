@@ -1431,7 +1431,6 @@ def test_frameworks_agno_openai_examples() -> None:
             uri="./tmp/lancedb",
             table_name="youtube_transcripts",
             search_type=SearchType.hybrid,
-            use_tantivy=False,
             embedder=OpenAIEmbedder(id="text-embedding-3-small"),
         ),
     )
