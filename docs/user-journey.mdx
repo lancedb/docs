@@ -1,0 +1,127 @@
+---
+title: "Start here"
+sidebarTitle: "Start here"
+description: "Understand the LanceDB ecosystem and find your path."
+icon: "map"
+---
+
+If you've arrived looking for LanceDB and aren't sure where to begin — or you've been using
+[Lance](https://lance.org/), the open-source file format, and want to know how LanceDB fits
+in — this page is for you.
+
+## Lance vs. LanceDB: what's the difference?
+
+[**Lance**](https://lance.org/) is an open-source **file and table format** for multimodal AI data.
+Think of it like Parquet — but designed from the ground up for AI workloads: vectors, images,
+video, audio, and text, all in one place. Lance is a standalone open-source project with its own
+documentation at [lance.org](https://lance.org/).
+
+**LanceDB** is a **multimodal data platform** built *on top of* Lance. It adds the query engine,
+vector and full-text indexing, catalog management, embedding pipelines, and managed infrastructure
+that turn the Lance format into a production-grade system for AI applications.
+
+| | **Lance** | **LanceDB** |
+|---|---|---|
+| **What it is** | Open-source file + table format | Multimodal data platform |
+| **Layer** | Storage format | Compute + catalog layer |
+| **Use it when...** | You want low-level data access or want to integrate Lance tables with other compute engines | You want to build search, RAG, training pipelines, or feature engineering workflows |
+| **Deployment** | Library (Rust, Python, TypeScript) | Embedded library (OSS) or fully managed (Enterprise) |
+| **Docs** | [lance.org](https://lance.org/) | You're here |
+
+LanceDB handles query planning, vector + full-text + hybrid search, table versioning,
+embeddings, and more — all on top of the same open Lance tables your data already lives in.
+For a deeper dive into the format itself, see the [Lance format](/lance) page.
+
+## What can I build with LanceDB?
+
+LanceDB is built for two broad classes of workloads:
+
+<Steps>
+  <Step title="Search and retrieval for AI applications">
+    Use LanceDB as the data and retrieval layer for RAG pipelines, agents, semantic search, and
+    recommendation systems. Store multimodal data, metadata, and embeddings in the same table and
+    query them via vector search, full-text search, or hybrid search — with no ETL required.
+  </Step>
+  <Step title="Large-scale multimodal data management">
+    Curate, explore, and distribute large multimodal datasets for model training and fine-tuning.
+    LanceDB provides built-in versioning, schema evolution, and fast random access for dataset
+    workflows at any scale.
+  </Step>
+</Steps>
+
+## Choose your starting point
+
+Not sure where to begin? Pick the path that matches what you're here to do.
+
+<Columns cols={2}>
+  <Card title="Build a search or RAG app" icon="magnifying-glass" href="/quickstart">
+    Start with the quickstart to connect, ingest data, and run your first vector search in minutes.
+  </Card>
+  <Card title="Evaluate LanceDB for your team" icon="building" href="/enterprise">
+    Learn about LanceDB Enterprise: distributed, managed, and designed for production scale.
+  </Card>
+  <Card title="Understand the architecture" icon="diagram-project" href="/tables-and-namespaces">
+    Understand how tables, namespaces, and the Lance format fit together.
+  </Card>
+  <Card title="Migrate from another vector database" icon="database" href="/search/">
+    Jump straight to search and indexing concepts.
+  </Card>
+</Columns>
+
+## Recommended learning path
+
+If you're new to LanceDB and want a structured introduction, work through these steps in order:
+
+<Steps>
+  <Step title="Run the quickstart">
+    Install LanceDB, create your first table, and run a vector search — no external services or
+    accounts required.
+
+    → [Quickstart](/quickstart)
+  </Step>
+  <Step title="Learn the core data model">
+    Understand how LanceDB organizes data into tables and namespaces, and how this maps to the
+    underlying Lance format.
+
+    → [Tables and Namespaces](/tables-and-namespaces)
+  </Step>
+  <Step title="Explore table operations">
+    Create tables with rich schemas, ingest multimodal data, update records, and manage versions.
+
+    → [Table Operations](/tables/)
+  </Step>
+  <Step title="Build your first search pipeline">
+    Add a vector index for fast ANN search, combine it with full-text and metadata filters, and
+    tune for your latency and recall targets.
+
+    → [Indexing](/indexing/) → [Search](/search/)
+  </Step>
+  <Step title="Add embeddings to your workflow">
+    Connect an embedding model so LanceDB automatically vectorizes incoming data, or bring
+    your own vectors.
+
+    → [Embeddings](/embedding/)
+  </Step>
+  <Step title="Integrate with your stack">
+    Connect LanceDB to your AI framework (LangChain, LlamaIndex, etc.) or data platform.
+
+    → [Integrations](/integrations/)
+  </Step>
+  <Step title="Scale to production">
+    When you're ready to move beyond the embedded library, LanceDB Enterprise provides a fully
+    managed distributed lakehouse with enterprise-grade security and performance.
+
+    → [LanceDB Enterprise](/enterprise)
+  </Step>
+</Steps>
+
+## Still have questions?
+
+<Columns cols={2}>
+  <Card title="FAQ" icon="circle-question" href="/faq/">
+    Common questions about LanceDB, Lance, and the differences between OSS and Enterprise.
+  </Card>
+  <Card title="Tutorials" icon="graduation-cap" href="/tutorials/">
+    End-to-end tutorials for RAG, semantic search, feature engineering, and more.
+  </Card>
+</Columns>

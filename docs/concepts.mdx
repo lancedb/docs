@@ -1,0 +1,446 @@
+---
+title: "Key concepts"
+sidebarTitle: "Key concepts"
+description: "A plain-language guide to the ideas and terminology used throughout the LanceDB documentation."
+icon: "book-open"
+---
+
+This page explains the terminology and concepts you'll encounter across the LanceDB documentation.
+It's aimed at data practitioners who may be less familiar with the AI infrastructure and vector
+search space. Concepts are grouped by theme — start anywhere.
+
+---
+
+## Data fundamentals
+
+<AccordionGroup>
+  <Accordion title="Multimodal data">
+    Most databases store one type of data — rows of structured text and numbers. **Multimodal data**
+    means data of multiple types together: text, images, audio, video, point clouds, and structured
+    metadata all in the same table.
+
+    AI applications typically need to store, search, and process all of these types side by side.
+    LanceDB is built specifically to handle them efficiently in a single system.
+  </Accordion>
+
+  <Accordion title="Lakehouse">
+    A **lakehouse** combines the scalability and low cost of a data lake (files in object storage like
+    S3) with the query features and structure of a data warehouse. You get the openness of flat files
+    with the ability to run fast, structured queries on top.
+
+    LanceDB is a *multimodal lakehouse* — a lakehouse that is also designed to store and query
+    non-tabular data like vectors and images efficiently.
+  </Accordion>
+
+  <Accordion title="Columnar storage">
+    In a **columnar** format, all values for a single column are stored together on disk, rather than
+    storing each row's values together. This makes it much faster to run analytical queries that only
+    read a few columns from a large table (e.g., "sum all prices") because the system can skip entire
+    columns it doesn't need.
+
+    Both [Lance](/lance) (the underlying format) and LanceDB use columnar storage. This is the same
+    principle behind formats like Parquet and Apache ORC.
+  </Accordion>
+
+  <Accordion title="Apache Arrow">
+    **Apache Arrow** is an open-source standard for representing tabular data in memory. Because many
+    data tools (Pandas, Polars, DuckDB, Spark, etc.) speak Arrow natively, data can pass between them
+    with zero copying.
+
+    Lance is built on top of Arrow, which means LanceDB integrates seamlessly with the modern Python
+    data ecosystem without costly conversions.
+  </Accordion>
+
+  <Accordion title="Object storage (S3, GCS, Azure Blob)">
+    **Object storage** services like Amazon S3, Google Cloud Storage, and Azure Blob Storage store
+    data as files ("objects") at low cost and at nearly unlimited scale. Unlike a traditional database
+    server, there is no machine that "owns" the data — it just lives in files in the cloud.
+
+    Both Lance and LanceDB OSS can read and write directly to object storage, which means you don't
+    need to run a separate database server to use them at scale.
+  </Accordion>
+
+  <Accordion title="Schema">
+    A **schema** describes the structure of a table: the names and data types of its columns. LanceDB
+    tables always have a schema, but it can be inferred automatically from the data you provide, or
+    defined explicitly up front.
+
+    Unlike traditional databases, LanceDB supports **schema evolution** — you can add new columns to
+    an existing table without rewriting the data that's already there.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## The Lance format
+
+<AccordionGroup>
+  <Accordion title="Lance (the file format)">
+    **Lance** is an open-source columnar file format and table format, similar to Parquet but
+    designed from the ground up for AI and multimodal data. It handles vectors, images, and other
+    non-tabular types efficiently, supports fast random access, and has data versioning built in.
+
+    Lance is a standalone open-source project at [lance.org](https://lance.org/). LanceDB is a
+    data platform *built on top of* Lance — see [Lance vs. LanceDB](/user-journey#lance-vs-lancedb-whats-the-difference)
+    for the full comparison.
+  </Accordion>
+
+  <Accordion title="Data versioning">
+    Every time you write data to a Lance table (insert, update, or delete), a new **version** is
+    created. Old versions are retained until explicitly cleaned up. This means you can:
+
+    - Query a table as it existed at any past point in time
+    - Roll back to a previous state if something goes wrong
+    - Maintain a full audit trail of data changes
+
+    Versioning does not duplicate all your data on each write — only the changed data is stored
+    anew, along with a small metadata update.
+  </Accordion>
+
+  <Accordion title="Fragments">
+    A Lance table is physically divided into **fragments** — chunks of rows stored together as a
+    group of files. Think of fragments as the "pages" of a table on disk.
+
+    Fragments are created as you append new data. Over time, a heavily-written table can accumulate
+    many small fragments, which can slow down scans. That's where compaction comes in.
+  </Accordion>
+
+  <Accordion title="Compaction">
+    **Compaction** is a maintenance operation that merges small fragments into larger ones, removes
+    deleted rows from storage, and drops columns that have been removed from the schema. It improves
+    read performance and reduces the metadata overhead of managing many small files.
+
+    Think of it like defragmenting a hard drive or running a VACUUM in PostgreSQL — it doesn't
+    change the data you see, just makes storage and queries more efficient. LanceDB Enterprise can
+    run compaction automatically as a managed platform workflow.
+  </Accordion>
+
+  <Accordion title="Manifest">
+    The **manifest** is a metadata file at the root of a Lance table that tracks all versions,
+    fragments, and schema changes. When LanceDB opens a table, it reads the manifest to understand
+    what the table looks like and where all its data lives.
+
+    You typically don't interact with the manifest directly, but it's why LanceDB can support data
+    versioning and time-travel queries efficiently.
+  </Accordion>
+
+  <Accordion title="Zero-copy column additions">
+    Because Lance stores columns independently, you can add a new column to an existing table
+    without rewriting the existing data. Only the new column's data is written. This is what
+    **zero-copy data evolution** means: evolving the table schema has minimal I/O cost.
+
+    This is especially valuable for AI workflows where you regularly derive new features or
+    embeddings from existing data, which would otherwise require expensive full-table rewrites.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## The LanceDB platform
+
+<AccordionGroup>
+  <Accordion title="Table">
+    A **table** in LanceDB is the primary unit of data storage — equivalent to a table in a
+    relational database. It has a schema, holds rows of data (including vector columns), and
+    supports indexes, updates, versioning, and queries.
+
+    Unlike a traditional database table, a LanceDB table can hold multimodal data (images, audio,
+    vectors, text) in the same row, not just numbers and strings.
+  </Accordion>
+
+  <Accordion title="Namespace">
+    A **namespace** is a grouping of tables within a catalog, similar to a "schema" or "database"
+    in SQL systems. Namespaces help organize large numbers of tables and control how they are
+    resolved and accessed.
+
+    In LanceDB OSS (local mode), the "namespace" is just a folder on disk. In LanceDB Enterprise,
+    namespaces are managed by the catalog service and can span storage locations.
+  </Accordion>
+
+  <Accordion title="Catalog">
+    The **catalog** is the service that knows where all your tables and namespaces live. It resolves
+    names like `my_table` to actual storage locations, manages access control, and tracks metadata
+    about tables.
+
+    LanceDB OSS uses the filesystem as an implicit catalog. LanceDB Enterprise provides a managed
+    catalog service that works across distributed storage.
+  </Accordion>
+
+  <Accordion title="LanceDB OSS (embedded mode)">
+    **LanceDB OSS** is the open-source, embeddable version of LanceDB — it runs inside your
+    application process, like SQLite. There is no separate database server to manage.
+
+    You point it at a local folder or an object storage path, and it reads and writes Lance tables
+    directly. It's the fastest way to get started and works for a very wide range of workloads.
+  </Accordion>
+
+  <Accordion title="LanceDB Enterprise">
+    **LanceDB Enterprise** is the fully managed, distributed version of LanceDB. It adds a server
+    cluster, a catalog service, distributed query execution, managed indexing and compaction,
+    access controls, and SLA-backed performance on top of the same Lance format and API as OSS.
+
+    Enterprise is designed for teams running production AI workloads at scale — where you need
+    thousands of queries per second, petabyte-scale datasets, and enterprise security requirements.
+  </Accordion>
+
+  <Accordion title="Bring-your-own-cloud (BYOC)">
+    **BYOC** (Bring Your Own Cloud) means LanceDB Enterprise runs *inside your own cloud account*,
+    not in a shared multi-tenant environment. Your data stays in your S3/GCS/Azure bucket; LanceDB
+    deploys the compute layer into your VPC.
+
+    This is the default deployment model for LanceDB Enterprise, which matters for teams with strict
+    data residency, compliance, or security requirements.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Embeddings
+
+<AccordionGroup>
+  <Accordion title="Embedding">
+    An **embedding** is a list of numbers (a *vector*) that represents the meaning or content of
+    a piece of data — a sentence, an image, a sound clip, etc. Embedding models are trained so that
+    data with similar content produces vectors that are close together in the number space, and
+    dissimilar data produces vectors that are far apart.
+
+    For example, the sentences "the cat sat on the mat" and "a feline rested on the rug" would
+    produce very similar embedding vectors, even though they share no words.
+  </Accordion>
+
+  <Accordion title="Embedding model">
+    An **embedding model** (sometimes called an *encoder*) is a machine learning model that converts
+    raw data into embeddings. Examples include OpenAI's `text-embedding-ada-002` for text, CLIP for
+    images, or Whisper for audio.
+
+    You choose an embedding model based on the type of data you're working with and the kind of
+    similarity you want to capture. All data you want to search together must be embedded with the
+    same model.
+  </Accordion>
+
+  <Accordion title="Embedding function (LanceDB)">
+    An **embedding function** in LanceDB is a configured integration between a table column and an
+    embedding model. When you set one up, LanceDB automatically calls the embedding model to
+    generate vectors whenever you insert new rows — so you don't have to embed data yourself before
+    storing it.
+
+    Embedding functions also let you query using raw text or images directly, instead of having
+    to convert your query to a vector manually.
+  </Accordion>
+
+  <Accordion title="Dimensionality">
+    The **dimensionality** of an embedding is the number of numbers in the vector — e.g., a
+    1536-dimensional embedding has 1,536 floating-point values. Higher dimensionality can capture
+    more nuance but requires more storage and compute.
+
+    All vectors stored in a single column must have the same dimensionality, and your query vector
+    must match the dimensionality of the stored vectors.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Search
+
+<AccordionGroup>
+  <Accordion title="Vector search (similarity search)">
+    **Vector search** finds the rows in your table whose embedding vectors are most similar to a
+    query vector. "Similar" means close in the mathematical vector space — typically measured by
+    distance metrics like L2 (Euclidean) or cosine similarity.
+
+    This is what makes it possible to search by meaning rather than by exact keyword match. You
+    embed your query (a sentence, an image, etc.), then find the stored items whose embeddings are
+    closest to it.
+  </Accordion>
+
+  <Accordion title="Full-text search (FTS)">
+    **Full-text search** finds rows that contain specific keywords or phrases in text columns. It
+    uses a text index (based on the BM25 ranking algorithm) that tokenizes and indexes the words in
+    your text data so keyword lookups are fast.
+
+    FTS and vector search complement each other: FTS is precise and literal, while vector search
+    is fuzzy and semantic. Hybrid search combines both.
+  </Accordion>
+
+  <Accordion title="Hybrid search">
+    **Hybrid search** runs vector search and full-text search simultaneously and merges the results.
+    This captures both semantic similarity (from vectors) and exact keyword relevance (from FTS),
+    and typically produces better results than either approach alone for most real-world queries.
+
+    The scores from each approach are combined using a fusion strategy (such as Reciprocal Rank
+    Fusion) before returning the final ranked results.
+  </Accordion>
+
+  <Accordion title="Reranking">
+    **Reranking** takes an initial set of search results and re-scores them using a more powerful
+    (but slower) model. For example, you might retrieve the top 100 results with fast vector search,
+    then run a cross-encoder reranker to reorder them by a more precise relevance score before
+    returning the top 10.
+
+    Reranking adds latency but significantly improves result quality for applications where
+    relevance matters more than raw speed.
+  </Accordion>
+
+  <Accordion title="Distance metric">
+    A **distance metric** is the formula used to measure how "far apart" two embedding vectors are.
+    The most common choices are:
+
+    - **L2 (Euclidean)**: straight-line distance between two points. The default and a good
+      general-purpose choice.
+    - **Cosine**: measures the *angle* between two vectors, ignoring their length. Good for text
+      embeddings where the direction of the vector matters more than its magnitude.
+    - **Dot product**: measures raw alignment between vectors. Useful when your embedding model
+      explicitly normalizes vectors for dot-product similarity.
+
+    The same metric must be used at index creation time and at query time.
+  </Accordion>
+
+  <Accordion title="Exact search vs. approximate search (ANN)">
+    **Exact search** (also called brute-force or exhaustive search) computes the distance between
+    the query vector and every single vector in the table. It always finds the true nearest
+    neighbors, but it gets slow as the table grows.
+
+    **Approximate Nearest Neighbor (ANN)** search uses an index to find vectors that are *very
+    likely* to be the nearest neighbors without scanning everything. It's much faster but may
+    occasionally miss the single closest match. For most AI applications, ANN quality is more
+    than sufficient.
+  </Accordion>
+
+  <Accordion title="Recall">
+    **Recall** in the context of vector search measures how many of the true nearest neighbors
+    an ANN search actually returns. A recall of 0.95 means the ANN index returned 95% of the
+    exact correct answers.
+
+    There is a trade-off between recall and speed: a tighter search (higher recall) takes longer
+    because it examines more candidates. You tune this via index parameters like `nprobes` (IVF)
+    or `ef` (HNSW).
+  </Accordion>
+
+  <Accordion title="Prefiltering and postfiltering">
+    When you combine vector search with a metadata filter (e.g., "find similar items *where
+    category = 'shoes'*"), LanceDB can apply the filter either before or after the vector search:
+
+    - **Prefiltering**: the metadata filter runs first, then vector search runs only on the
+      matching rows. Faster, but the filtered subset must be large enough to return good results.
+    - **Postfiltering**: vector search runs first on the full dataset, then the filter is applied
+      to the top results. More accurate, but the filter may discard many results.
+
+    LanceDB chooses a strategy automatically based on the query, or you can specify it explicitly.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Indexes
+
+<AccordionGroup>
+  <Accordion title="Index">
+    An **index** is a data structure built on top of your table data to make certain queries faster.
+    Without an index, every query has to scan all the data; with an index, the system can jump
+    directly to the relevant rows.
+
+    LanceDB supports three index families: **vector indexes** for similarity search, **full-text
+    search indexes** for keyword search, and **scalar indexes** for filtering on structured columns.
+  </Accordion>
+
+  <Accordion title="Vector index (IVF-PQ, HNSW)">
+    A **vector index** organizes embedding vectors so that similarity search can be done
+    approximately but very quickly, without comparing the query against every stored vector.
+
+    LanceDB supports several index types for vectors:
+
+    - **IVF-PQ**: partitions vectors into clusters (IVF) and compresses them (PQ) to fit on disk
+      efficiently. Good balance of speed and memory for large datasets.
+    - **IVF-HNSW**: partitions with IVF, then uses a graph-based structure (HNSW) within each
+      partition for higher recall. Better quality than IVF-PQ.
+    - **HNSW-flat**: pure graph-based index, highest quality, suitable for datasets that fit
+      comfortably in memory.
+
+    The right choice depends on your dataset size, latency requirements, and recall targets.
+  </Accordion>
+
+  <Accordion title="Quantization">
+    **Quantization** compresses embedding vectors to use less memory and storage. Instead of storing
+    each number as a full 32-bit float, quantization represents vectors with fewer bits — trading a
+    small amount of precision for large reductions in size and faster distance computations.
+
+    Quantization is a property of the vector index, not the stored data. The original full-precision
+    vectors remain in the table and can be used to re-score results after the approximate search
+    phase.
+  </Accordion>
+
+  <Accordion title="Scalar index (BTree, Bitmap)">
+    A **scalar index** speeds up filtering on structured columns like numbers, categories, and
+    timestamps — the same role indexes play in traditional databases.
+
+    LanceDB supports BTree indexes (good for ranges and equality on numeric/string columns),
+    Bitmap indexes (good for low-cardinality categorical columns, like "status" or "category"),
+    and LabelList indexes (for filtering on list-typed columns, like tags or labels).
+  </Accordion>
+
+  <Accordion title="Full-text search index">
+    A **full-text search (FTS) index** tokenizes and indexes the words in your text columns so
+    keyword searches are fast. It uses the **BM25** ranking algorithm — the same algorithm that
+    underpins many traditional search engines — to score results by keyword relevance.
+
+    Creating an FTS index on a text column enables both standalone keyword search and the text
+    leg of hybrid search.
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## AI application patterns
+
+<AccordionGroup>
+  <Accordion title="RAG (Retrieval-Augmented Generation)">
+    **RAG** is a pattern for building AI applications where a language model's answer is grounded
+    in retrieved documents rather than (or in addition to) what the model has memorized from
+    training.
+
+    The typical flow: (1) a user asks a question, (2) the question is embedded and used to search
+    a LanceDB table for relevant documents, (3) those documents are passed as context to the
+    language model, (4) the model generates an answer based on the retrieved content.
+
+    LanceDB is a common choice as the retrieval layer in RAG systems.
+  </Accordion>
+
+  <Accordion title="Feature engineering">
+    **Feature engineering** is the process of creating new columns (features) from existing data
+    — for example, computing embeddings, extracting statistics, or deriving categorical labels from
+    raw fields — in preparation for model training or inference.
+
+    LanceDB's zero-copy column addition and LanceDB Enterprise's built-in transform workflows are
+    designed to make feature engineering practical at large scale, without needing a separate
+    feature store.
+  </Accordion>
+
+  <Accordion title="Schema evolution">
+    **Schema evolution** means changing the structure of a table over time — adding columns,
+    changing types, or dropping unused fields — without breaking existing data or requiring a
+    full rewrite of the table.
+
+    Because Lance stores columns independently, adding a new column is cheap. This makes schema
+    evolution practical in production, where requirements change frequently.
+  </Accordion>
+
+  <Accordion title="Data ingestion">
+    **Data ingestion** is the process of loading data into LanceDB — converting raw records
+    (JSON, Pandas DataFrames, Arrow tables, Polars DataFrames, etc.) into Lance tables stored
+    on disk or in object storage.
+
+    LanceDB supports incremental ingestion (appending new rows) as well as full overwrites,
+    and can automatically generate embeddings during ingestion if an embedding function is
+    configured.
+  </Accordion>
+
+  <Accordion title="QPS and latency">
+    **QPS** (Queries Per Second) measures how many search requests a system can handle per second.
+    **Latency** measures how long a single query takes to return results.
+
+    These are the two primary performance metrics for a search system: QPS matters for high-traffic
+    applications, latency matters for interactive user experiences. LanceDB Enterprise is designed
+    to deliver significantly higher QPS and lower latency than OSS for production workloads by
+    using distributed query execution and a tiered cache.
+  </Accordion>
+</AccordionGroup>
