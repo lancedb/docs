@@ -1,5 +1,5 @@
 ---
-name: docs-snippet
+name: docs-writer
 description: Use when adding or editing a code example on a LanceDB docs page, creating a new snippet, modifying anything under docs/snippets/, or answering questions about the snippet marker syntax, the test → MDX regenerator, or CodeGroup rendering. Also trigger whenever the user asks to cross-check or verify docs claims against a specific source repo (e.g., "check in the sophon repo", "verify against lancedb", "reference the geneva repo") — the skill specifies how to resolve the repo path and ground the docs in its code. Encodes the repo-specific pipeline that would otherwise have to be reverse-engineered from scripts/mdx_snippets_gen.py.
 ---
 
