@@ -1,0 +1,118 @@
+name = "indexing"
+description = "Audit the indexing docs against user-facing evidence from lancedb, docs snippets/tests, and sophon."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "index",
+  "IVF",
+  "HNSW",
+  "PQ",
+  "SQ",
+  "RQ",
+  "FTS",
+  "BTree",
+  "Bitmap",
+  "LabelList",
+  "wait_for_index",
+  "index_stats",
+  "prewarm_index",
+  "drop_index",
+  "optimize",
+  "fast_search",
+  "bypass_vector_index",
+  "quantization",
+  "reindexing",
+]
+
+[[pages]]
+id = "overview"
+title = "Indexing Overview"
+path = "docs/indexing/index.mdx"
+keywords = ["IVF", "HNSW", "FTS", "BTree", "Bitmap", "LabelList", "quantization"]
+
+[[pages]]
+id = "vector-index"
+title = "Vector Index"
+path = "docs/indexing/vector-index.mdx"
+keywords = ["IVF", "HNSW", "PQ", "SQ", "RQ", "wait_for_index", "index_stats", "bypass_vector_index"]
+
+[[pages]]
+id = "scalar-index"
+title = "Scalar Index"
+path = "docs/indexing/scalar-index.mdx"
+keywords = ["BTree", "Bitmap", "LabelList", "wait_for_index", "optimize"]
+
+[[pages]]
+id = "fts-index"
+title = "FTS Index"
+path = "docs/indexing/fts-index.mdx"
+keywords = ["FTS", "phrase", "tokenizer", "stop words", "wait_for_index"]
+
+[[pages]]
+id = "reindexing"
+title = "Reindexing"
+path = "docs/indexing/reindexing.mdx"
+keywords = ["optimize", "reindexing", "fast_search", "index_stats"]
+
+[[pages]]
+id = "quantization"
+title = "Quantization"
+path = "docs/indexing/quantization.mdx"
+keywords = ["PQ", "RQ", "num_bits", "num_partitions", "sample_rate", "max_iterations"]
+
+[[pages]]
+id = "gpu-indexing"
+title = "GPU Indexing"
+path = "docs/indexing/gpu-indexing.mdx"
+keywords = ["GPU", "cuda", "mps", "wait_for_index"]
+
+[[sources]]
+id = "lancedb-core-index"
+repo = "lancedb"
+kind = "core_api"
+applies_to = ["overview", "vector-index", "scalar-index", "fts-index", "reindexing", "quantization"]
+paths = [
+  "rust/lancedb/src/index.rs",
+  "rust/lancedb/src/index/vector.rs",
+  "rust/lancedb/src/index/scalar.rs",
+]
+extract_keywords = ["Index", "Builder", "IVF", "HNSW", "FTS", "BTree", "Bitmap", "LabelList", "PQ", "RQ", "SQ"]
+
+[[sources]]
+id = "lancedb-table-query"
+repo = "lancedb"
+kind = "lifecycle_api"
+applies_to = ["overview", "vector-index", "scalar-index", "fts-index", "reindexing", "gpu-indexing"]
+paths = [
+  "rust/lancedb/src/table.rs",
+  "rust/lancedb/src/query.rs",
+  "rust/lancedb/src/index/waiter.rs",
+]
+extract_keywords = ["create_index", "wait_for_index", "index_stats", "drop_index", "prewarm_index", "optimize", "fast_search", "bypass_vector_index"]
+
+[[sources]]
+id = "docs-snippets-tests"
+repo = "docs"
+kind = "snippets_and_tests"
+applies_to = ["overview", "vector-index", "scalar-index", "fts-index", "reindexing", "gpu-indexing"]
+paths = [
+  "docs/snippets/indexing.mdx",
+  "tests/py/test_indexing.py",
+  "tests/py/test_search.py",
+  "tests/ts/ann_indexes.test.ts",
+  "tests/ts/full_text_search.test.ts",
+]
+extract_keywords = ["create_index", "wait_for_index", "index_stats", "optimize", "nprobes", "refine_factor", "FTS"]
+
+[[sources]]
+id = "sophon-api-ui-config"
+repo = "sophon"
+kind = "enterprise_surface"
+applies_to = ["overview", "vector-index", "scalar-index", "fts-index", "reindexing", "gpu-indexing"]
+paths = [
+  "src/rust/phalanx/src/rest/table/create_index.rs",
+  "src/dash/src/components/tables/components/TableIndexTabs.tsx",
+  "helm/lancedb/values.yaml",
+  "src/lancedb_integtest/tests/test_table_lifecycle.py",
+]
+extract_keywords = ["IVF", "HNSW", "RQ", "FTS", "wait_for_index", "index_stats", "scaleout", "GPU", "threshold", "prewarm"]
