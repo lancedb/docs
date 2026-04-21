@@ -81,6 +81,18 @@ python -m pytest tests/py/test_indexing.py
 
 (TS/Rust suites have their own runners — check `tests/ts/package.json` and `tests/rs/Cargo.toml`.)
 
+## Pre-PR checklist
+
+Before opening (or updating) a PR, **always** run `make snippets` from the repo root so the regenerated `docs/snippets/*.mdx` files land in the same commit as the test changes that produced them. Otherwise the PR will ship stale snippets and CI (or a later regen run) will flag a diff.
+
+```bash
+cd /Users/prrao/code/docs   # or wherever the repo is checked out
+make snippets
+git status                  # confirm any regenerated docs/snippets/*.mdx are staged
+```
+
+If `git status` shows modified files under `docs/snippets/` after `make snippets`, stage and commit them alongside your test and MDX changes — do not push a PR with an un-regenerated snippets tree.
+
 ## Importing a snippet into a docs page
 
 Use the absolute `/snippets/...` path (not relative) and alias the long `Py|Ts|Rs` export names:
