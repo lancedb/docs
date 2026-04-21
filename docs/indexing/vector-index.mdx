@@ -16,6 +16,10 @@ import {
     PyVectorIndexBinaryBuildIndex as VectorIndexBinaryBuildIndex,
     PyVectorIndexBinarySearch as VectorIndexBinarySearch,
     PyVectorIndexCheckStatus as VectorIndexCheckStatus,
+    PyVectorIndexNprobes as VectorIndexNprobes,
+    PyVectorIndexDistanceRange as VectorIndexDistanceRange,
+    PyVectorIndexBypassRecall as VectorIndexBypassRecall,
+    PyVectorIndexCustomName as VectorIndexCustomName,
 } from '/snippets/indexing.mdx';
 
 You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two kinds of vector indexing algorithms: **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
@@ -144,17 +148,65 @@ Search using a random 1,536-dimensional embedding.
 
 #### Search Configuration
 
-The previous query uses:
+Core knobs available on a vector search call:
 
-- `limit`: number of results to return
-- `nprobes`: number of IVF partitions to scan. LanceDB auto-tunes this by default.
-- `ef`: primarily relevant for HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ`; start around `1.5 * k` (where `k=limit`) and increase up to `10 * k` for higher recall.
-- `nprobes` by index type:
-    - `IVF_HNSW_FLAT` and `IVF_HNSW_SQ`: usually keep auto-tuned `nprobes`, then tune `ef` first. For filtered search (`where(...)`), expect higher latency variance.
-    - `IVF_RQ`: keep auto-tuned `nprobes`; increase only when recall is insufficient.
-    - `IVF_PQ`: keep auto-tuned `nprobes`; increase when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`.
-- `refine_factor`: reads additional candidates and reranks in memory
-- `.to_pandas()`: converts the results to a pandas DataFrame
+| Parameter | Description |
+| :--- | :--- |
+| `limit` | Number of results to return (`k`). |
+| `nprobes` | Shorthand that sets both `minimum_nprobes` and `maximum_nprobes` to the same value. LanceDB auto-tunes this by default. |
+| `minimum_nprobes` | Partitions that are *always* scanned. Higher values raise recall at the cost of latency. |
+| `maximum_nprobes` | Upper bound on partitions scanned. The partitions above `minimum_nprobes` are only searched if the initial pass does not return enough results — useful for narrow filters. Set to `0` to remove the cap. |
+| `ef` | HNSW search-time exploration factor. Relevant for `IVF_HNSW_FLAT` and `IVF_HNSW_SQ`; start around `1.5 * k` and increase up to `10 * k` for higher recall. |
+| `refine_factor` | Reads additional candidates and reranks them in memory to recover recall lost to quantization. |
+
+<Note>
+**Filtered queries and adaptive nprobes.** When a `where(...)` filter is active, LanceDB starts by scanning `minimum_nprobes` partitions and only extends toward `maximum_nprobes` if fewer than `limit` rows survive the filter. Setting `minimum_nprobes == maximum_nprobes` (or calling `nprobes(n)`) disables this adaptive behavior and fixes the partition count.
+</Note>
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexNprobes}
+    </CodeBlock>
+</CodeGroup>
+
+Recommended `nprobes` behavior by index type:
+
+| Index type | Guidance |
+| :--- | :--- |
+| `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the auto-tuned `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
+| `IVF_RQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
+| `IVF_PQ` | Keep auto-tuned `nprobes`; raise when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`. |
+
+#### Advanced Search Controls
+
+These controls are useful for thresholded retrieval, recall measurement, and working around index-level metric constraints.
+
+| Method | Description |
+| :--- | :--- |
+| `distance_range(lower_bound, upper_bound)` | Return only rows whose distance falls within `[lower_bound, upper_bound)`. Either bound is optional. Useful for near-duplicate detection or "close-enough" matching. |
+| `bypass_vector_index()` | Skip the ANN index and perform an exhaustive (flat) scan. Primary uses: (1) compute ground-truth results to measure ANN recall@k, and (2) query with a metric the index was not built for (e.g., a non-cosine query on a multivector column). |
+
+**Thresholding with `distance_range`:**
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexDistanceRange}
+    </CodeBlock>
+</CodeGroup>
+
+**Measuring recall with `bypass_vector_index`:**
+
+Compare ANN results against a flat-scan ground truth to compute recall@k. This is the standard way to pick `nprobes` for your workload.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexBypassRecall}
+    </CodeBlock>
+</CodeGroup>
+
+<Warning>
+Flat search is $O(n)$ — reserve `bypass_vector_index()` for sampled recall measurements or small tables, not production queries.
+</Warning>
 
 ## Example: Construct an HNSW Index
 
@@ -238,11 +290,21 @@ Navigate to your table page - the "Index" column shows index status. It remains 
 
 ### Option 2: Use the API
 
-Use `list_indices()` and `index_stats()` to check index status. The index name is formed by appending "\_idx" to the column name. Note that `list_indices()` only returns information after the index is fully built.
+Use `list_indices()` and `index_stats()` to check index status. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
 To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_index()` or call `wait_for_index()` on the table.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexCheckStatus}
+    </CodeBlock>
+</CodeGroup>
+
+#### Custom Index Names
+
+The `{column}_idx` suffix is a default convention, not the only supported naming path. Pass `name=...` to `create_index()` to override it — useful when you want to manage multiple indexes on the same column (for example, side-by-side `IVF_PQ` and `IVF_HNSW_SQ` builds) or when you script index replacement by name. Once set, `list_indices()`, `index_stats(name)`, and `wait_for_index([name])` all reference the custom name.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexCustomName}
     </CodeBlock>
 </CodeGroup>

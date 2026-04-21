@@ -98,6 +98,104 @@ def test_vector_index_query_ivf(tmp_db):
     assert len(df) == 2
 
 
+def test_vector_index_nprobes(tmp_db):
+    dim = 128
+    data = [
+        {"id": i, "keywords_embeddings": np.random.random(dim).tolist()}
+        for i in range(512)
+    ]
+    table = tmp_db.create_table("vector_index_nprobes", data, mode="overwrite")
+    table.create_index(
+        metric="cosine",
+        vector_column_name="keywords_embeddings",
+    )
+
+    # --8<-- [start:vector_index_nprobes]
+    # Always scan 10 partitions; scan up to 50 only if the initial pass
+    # returns fewer than `limit` results (common with narrow filters).
+    (
+        table.search(np.random.random(128))
+        .minimum_nprobes(10)
+        .maximum_nprobes(50)
+        .where("id > 100")
+        .limit(5)
+        .to_pandas()
+    )
+    # --8<-- [end:vector_index_nprobes]
+
+
+def test_vector_index_distance_range(tmp_db):
+    dim = 128
+    data = [
+        {"id": i, "keywords_embeddings": np.random.random(dim).tolist()}
+        for i in range(256)
+    ]
+    table = tmp_db.create_table("vector_index_distance_range", data, mode="overwrite")
+    table.create_index(
+        metric="cosine",
+        vector_column_name="keywords_embeddings",
+    )
+
+    # --8<-- [start:vector_index_distance_range]
+    # Only return results whose distance falls within [0.0, 0.5).
+    # Useful for near-duplicate detection or thresholded similarity search.
+    (
+        table.search(np.random.random(128))
+        .distance_range(lower_bound=0.0, upper_bound=0.5)
+        .limit(10)
+        .to_pandas()
+    )
+    # --8<-- [end:vector_index_distance_range]
+
+
+def test_vector_index_bypass_recall(tmp_db):
+    dim = 128
+    data = [
+        {"id": i, "keywords_embeddings": np.random.random(dim).tolist()}
+        for i in range(256)
+    ]
+    table = tmp_db.create_table("vector_index_bypass_recall", data, mode="overwrite")
+    table.create_index(
+        metric="cosine",
+        vector_column_name="keywords_embeddings",
+    )
+
+    # --8<-- [start:vector_index_bypass_recall]
+    query = np.random.random(128)
+    k = 10
+
+    # Ground truth: flat (exhaustive) scan, ignoring the ANN index.
+    truth = set(table.search(query).bypass_vector_index().limit(k).to_pandas()["id"])
+
+    # ANN results with the current nprobes setting.
+    ann = set(table.search(query).nprobes(20).limit(k).to_pandas()["id"])
+
+    recall_at_k = len(truth & ann) / k
+    # --8<-- [end:vector_index_bypass_recall]
+    assert 0.0 <= recall_at_k <= 1.0
+
+
+def test_vector_index_custom_name(tmp_db):
+    table = tmp_db.create_table(
+        "vector_index_custom_name",
+        _make_vector_rows(512, 8, column="keywords_embeddings"),
+        mode="overwrite",
+    )
+
+    # --8<-- [start:vector_index_custom_name]
+    # Override the default `{column}_idx` convention by passing `name=...`.
+    table.create_index(
+        metric="cosine",
+        vector_column_name="keywords_embeddings",
+        name="my_custom_index",
+    )
+    table.wait_for_index(["my_custom_index"])
+    print(table.index_stats("my_custom_index"))
+    # --8<-- [end:vector_index_custom_name]
+
+    assert table.index_stats("my_custom_index")
+
+
 def test_vector_index_hnsw(tmp_db):
     table = tmp_db.create_table(
         "vector_index_hnsw",
