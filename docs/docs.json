@@ -35,14 +35,15 @@
             "group": "Get started",
             "pages": [
               "user-journey",
+              "concepts",
               "quickstart",
               {
                 "group": "What is LanceDB?",
                 "pages": [
                   "index",
                   "lance",
-                  "tables-and-namespaces",
-                  "concepts"
+                  "tables-and-namespaces"
+
                 ]
               },
               {
