@@ -8,9 +8,11 @@ sidebarTitle: Superlinked
 ## Installation
 
 <CodeGroup>
+```bash Python
 pip install sie-lancedb
 ```
 
+```bash TypeScript
 npm install @superlinked/sie-lancedb @lancedb/lancedb
 ```
 </CodeGroup>
@@ -33,6 +35,7 @@ Supported parameters on `.create()`:
 
 ## Usage
 
+```python
 import lancedb
 from lancedb.embeddings import get_registry
 from lancedb.pydantic import LanceModel, Vector
@@ -65,6 +68,7 @@ LanceDB handles embedding generation for both inserts and queries automatically,
 
 `SIEReranker` plugs into LanceDB's hybrid search pipeline. It uses SIE's cross-encoder `score()` to rerank combined vector + full-text search results. You need a full-text search index on the column first:
 
+```python
 from sie_lancedb import SIEReranker
 
 # Create FTS index for hybrid search
@@ -87,6 +91,7 @@ The reranker also works with pure vector or pure FTS search via `.rerank()`.
 
 `SIEMultiVectorEmbeddingFunction` (registered as `"sie-multivector"`) works with LanceDB's native `MultiVector` type and MaxSim scoring for ColBERT and ColPali models:
 
+```python
 from lancedb.pydantic import MultiVector
 
 sie_colbert = get_registry().get("sie-multivector").create(
