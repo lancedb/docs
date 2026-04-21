@@ -44,9 +44,17 @@ export const PyVectorIndexBuildHnsw = "table.create_index(index_type=\"IVF_HNSW_
 
 export const PyVectorIndexBuildIvf = "table_name = \"vector-index-build-ivf\"\ntable = db.open_table(table_name)\ntable.create_index(\n    metric=\"cosine\",\n    vector_column_name=\"keywords_embeddings\",\n)\n";
 
+export const PyVectorIndexBypassRecall = "query = np.random.random(128)\nk = 10\n\n# Ground truth: flat (exhaustive) scan, ignoring the ANN index.\ntruth = set(table.search(query).bypass_vector_index().limit(k).to_pandas()[\"id\"])\n\n# ANN results with the current nprobes setting.\nann = set(table.search(query).nprobes(20).limit(k).to_pandas()[\"id\"])\n\nrecall_at_k = len(truth & ann) / k\n";
+
 export const PyVectorIndexCheckStatus = "index_name = \"keywords_embeddings_idx\"\ntable.wait_for_index([index_name])\nprint(table.index_stats(index_name))\n";
 
 export const PyVectorIndexConfigureIvf = "table.create_index(metric=\"l2\", num_partitions=16, num_sub_vectors=4)\n";
+
+export const PyVectorIndexCustomName = "# Override the default `{column}_idx` convention by passing `name=...`.\ntable.create_index(\n    metric=\"cosine\",\n    vector_column_name=\"keywords_embeddings\",\n    name=\"my_custom_index\",\n)\ntable.wait_for_index([\"my_custom_index\"])\nprint(table.index_stats(\"my_custom_index\"))\n";
+
+export const PyVectorIndexDistanceRange = "# Only return results whose distance falls within [0.0, 0.5).\n# Useful for near-duplicate detection or thresholded similarity search.\n(\n    table.search(np.random.random(128))\n    .distance_range(lower_bound=0.0, upper_bound=0.5)\n    .limit(10)\n    .to_pandas()\n)\n";
+
+export const PyVectorIndexNprobes = "# Always scan 10 partitions; scan up to 50 only if the initial pass\n# returns fewer than `limit` results (common with narrow filters).\n(\n    table.search(np.random.random(128))\n    .minimum_nprobes(10)\n    .maximum_nprobes(50)\n    .where(\"id > 100\")\n    .limit(5)\n    .to_pandas()\n)\n";
 
 export const PyVectorIndexQueryHnsw = "tbl = table\ntbl.search(np.random.random((16))).limit(2).to_pandas()\n";
 
