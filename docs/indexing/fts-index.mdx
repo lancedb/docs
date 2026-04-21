@@ -62,6 +62,10 @@ The `create_fts_index` method is not available on `AsyncTable`. Use `create_inde
 | `stem` | bool | `True` | Apply stemming (`running` → `run`) |
 | `remove_stop_words` | bool | `True` | Drop common stop words |
 | `ascii_folding` | bool | `True` | Normalize accented characters |
+| `custom_stop_words` | list[str] | `None` | Extra stop words to drop in addition to the language defaults. Requires `remove_stop_words=True`. |
+| `min_ngram_length` | int | `3` | Minimum n-gram length. Applies only when `base_tokenizer="ngram"`. |
+| `max_ngram_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
+| `prefix_only` | bool | `False` | Index only prefix n-grams rather than all substrings. Applies only when `base_tokenizer="ngram"`. |
 
 <Note title="Key parameters">
 - `max_token_length` can filter out base64 blobs or long URLs.

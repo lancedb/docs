@@ -18,3 +18,9 @@ boost-example
 .vscode
 node_modules
 tests/rs/target
+
+# Generated docs-audit workflow state
+workflows/docs-audit/artifacts/**
+!workflows/docs-audit/artifacts/
+workflows/docs-audit/state/**
+!workflows/docs-audit/state/

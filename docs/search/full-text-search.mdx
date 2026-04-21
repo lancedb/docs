@@ -156,6 +156,7 @@ The tokenizer is customizable, you can specify how the tokenizer splits the text
 - `stem`: true
 - `remove_stop_words`: true
 - `ascii_folding`: true
+- `custom_stop_words`: `None` — pass a `list[str]` to drop additional words beyond the language defaults. Requires `remove_stop_words=True`.
 
 For example, for language with accents, you can specify the tokenizer to use `ascii_folding` to remove accents, e.g. 'é' to 'e':
 

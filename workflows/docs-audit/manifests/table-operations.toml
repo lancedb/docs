@@ -1,0 +1,157 @@
+name = "table-operations"
+description = "Audit the table operations docs against user-facing evidence from lancedb, docs snippets/tests, and sophon."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "table",
+  "create_table",
+  "open_table",
+  "schema",
+  "update",
+  "merge_insert",
+  "delete",
+  "versioning",
+  "restore",
+  "consistency",
+  "read_consistency_interval",
+  "blob",
+  "on_bad_vectors",
+]
+
+[[pages]]
+id = "overview"
+title = "Basic Table Operations"
+path = "docs/tables/index.mdx"
+keywords = ["create table", "open table", "add rows", "add columns", "drop table", "nested data"]
+
+[[pages]]
+id = "ingesting"
+title = "Ingesting Data"
+path = "docs/tables/create.mdx"
+keywords = ["create_table", "schema", "pandas", "polars", "pyarrow", "pydantic", "create_empty_table", "iterator"]
+
+[[pages]]
+id = "schema-evolution"
+title = "Schema and Data Evolution"
+path = "docs/tables/schema.mdx"
+keywords = ["add_columns", "alter_columns", "drop_columns", "rename", "nullable", "data type"]
+
+[[pages]]
+id = "update-data"
+title = "Updating and Modifying Table Data"
+path = "docs/tables/update.mdx"
+keywords = ["update", "merge_insert", "delete", "when_matched_update_all", "when_not_matched_insert_all", "when_not_matched_by_source_delete"]
+
+[[pages]]
+id = "versioning"
+title = "Versioning and Reproducibility"
+path = "docs/tables/versioning.mdx"
+keywords = ["list_versions", "checkout", "checkout_latest", "restore", "tags"]
+
+[[pages]]
+id = "consistency"
+title = "Consistency"
+path = "docs/tables/consistency.mdx"
+keywords = ["read_consistency_interval", "checkout_latest", "on_bad_vectors", "RemoteTable"]
+
+[[pages]]
+id = "multimodal-data"
+title = "Multimodal Data (Blobs)"
+path = "docs/tables/multimodal.mdx"
+keywords = ["binary", "large_binary", "blob", "lance-encoding:blob", "image_blob"]
+
+[[sources]]
+id = "docs-table-snippets-tests"
+repo = "docs"
+kind = "snippets_and_tests"
+applies_to = ["overview", "ingesting", "schema-evolution", "update-data", "versioning", "consistency"]
+paths = [
+  "docs/snippets/basic_usage.mdx",
+  "docs/snippets/tables.mdx",
+  "tests/py/test_tables.py",
+  "tests/ts/tables.test.ts",
+  "tests/rs/tables.rs",
+]
+extract_keywords = ["create_table", "open_table", "create_empty_table", "add", "add_columns", "alter_columns", "drop_columns", "update", "merge_insert", "delete", "list_versions", "checkout_latest", "restore", "read_consistency_interval", "on_bad_vectors"]
+
+[[sources]]
+id = "docs-multimodal-snippets-tests"
+repo = "docs"
+kind = "multimodal_examples"
+applies_to = ["multimodal-data"]
+paths = [
+  "docs/snippets/multimodal.mdx",
+  "tests/py/test_multimodal.py",
+  "tests/ts/multimodal.test.ts",
+  "tests/rs/multimodal.rs",
+]
+extract_keywords = ["binary", "large_binary", "blob", "lance-encoding:blob", "image_blob", "video"]
+
+[[sources]]
+id = "lancedb-public-table-api"
+repo = "lancedb"
+kind = "public_table_api"
+applies_to = ["overview", "ingesting", "update-data", "versioning", "consistency"]
+paths = [
+  "rust/lancedb/src/table.rs",
+  "rust/lancedb/src/connection/create_table.rs",
+  "python/python/lancedb/table.py",
+  "python/python/lancedb/remote/table.py",
+]
+extract_keywords = ["create_table", "open_table", "create_empty_table", "update", "merge_insert", "delete", "list_versions", "checkout_latest", "restore", "tags", "read_consistency_interval", "on_bad_vectors"]
+
+[[sources]]
+id = "lancedb-schema-and-write-tests"
+repo = "lancedb"
+kind = "public_examples_and_tests"
+applies_to = ["ingesting", "schema-evolution", "update-data"]
+paths = [
+  "rust/lancedb/src/table/schema_evolution.rs",
+  "rust/lancedb/src/table/update.rs",
+  "rust/lancedb/src/table/merge.rs",
+  "rust/lancedb/src/table/delete.rs",
+  "python/python/tests/docs/test_guide_tables.py",
+  "python/python/tests/docs/test_merge_insert.py",
+  "python/python/tests/test_table.py",
+]
+extract_keywords = ["schema", "add_columns", "alter_columns", "drop_columns", "update", "merge_insert", "delete", "nullable", "rename", "cast_to"]
+
+[[sources]]
+id = "sophon-enterprise-table-lifecycle"
+repo = "sophon"
+kind = "enterprise_surface"
+applies_to = ["overview", "ingesting", "update-data"]
+paths = [
+  "src/lancedb_integtest/tests/test_table_lifecycle.py",
+  "src/rust/phalanx/src/rest/table/create_table.rs",
+  "src/rust/phalanx/src/rest/table/update_table.rs",
+  "src/rust/phalanx/src/rest/table/merge_insert_table.rs",
+  "src/rust/phalanx/src/rest/table/delete_from_table.rs",
+]
+extract_keywords = ["create_table", "overwrite", "exist_ok", "update", "merge_insert", "delete", "RemoteTable"]
+
+[[sources]]
+id = "sophon-enterprise-schema-api"
+repo = "sophon"
+kind = "enterprise_schema_surface"
+applies_to = ["schema-evolution"]
+paths = [
+  "src/rust/phalanx/src/rest/table/add_columns.rs",
+  "src/rust/phalanx/src/rest/table/alter_columns.rs",
+  "src/rust/phalanx/src/rest/table/drop_columns.rs",
+]
+extract_keywords = ["add_columns", "alter_columns", "drop_columns", "virtual_column", "nullable", "data_type"]
+
+[[sources]]
+id = "sophon-enterprise-versioning-consistency"
+repo = "sophon"
+kind = "enterprise_versioning_surface"
+applies_to = ["versioning", "consistency"]
+paths = [
+  "src/lancedb_integtest/tests/test_table_versions.py",
+  "src/rust/phalanx/src/rest/table/list_table_versions.rs",
+  "src/rust/phalanx/src/rest/table/restore.rs",
+  "src/rust/phalanx/src/init.rs",
+  "src/rust/phalanx/src/rest/table/declare_table.rs",
+]
+extract_keywords = ["list_versions", "checkout_latest", "restore", "tags", "weak_read_consistency_interval_seconds"]

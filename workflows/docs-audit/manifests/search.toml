@@ -1,0 +1,145 @@
+name = "search"
+description = "Audit the search docs against user-facing evidence from lancedb, docs snippets/tests, and sophon."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "search",
+  "query",
+  "vector",
+  "distance_type",
+  "distance_range",
+  "FTS",
+  "nearest_to_text",
+  "hybrid",
+  "rerank",
+  "filter",
+  "prefilter",
+  "postfilter",
+  "multivector",
+  "with_row_id",
+  "fast_search",
+  "bypass_vector_index",
+  "nprobes",
+  "refine_factor",
+  "explain_plan",
+  "analyze_plan",
+  "SQL",
+  "FlightSQL",
+]
+
+[[pages]]
+id = "overview"
+title = "Search"
+path = "docs/search/index.mdx"
+keywords = ["vector search", "full-text search", "hybrid search", "filtering", "SQL"]
+
+[[pages]]
+id = "vector-search"
+title = "Vector Search"
+path = "docs/search/vector-search.mdx"
+keywords = ["l2", "cosine", "dot", "hamming", "distance_type", "distance_range", "nprobes", "refine_factor", "fast_search", "bypass_vector_index"]
+
+[[pages]]
+id = "full-text-search"
+title = "Full-Text Search (FTS)"
+path = "docs/search/full-text-search.mdx"
+keywords = ["FTS", "BM25", "create_fts_index", "nearest_to_text", "with_position", "phrase query", "fuzzy"]
+
+[[pages]]
+id = "hybrid-search"
+title = "Hybrid Search"
+path = "docs/search/hybrid-search.mdx"
+keywords = ["hybrid", "query_type", "nearest_to_text", "rerank", "RRF", "vector", "text"]
+
+[[pages]]
+id = "filtering"
+title = "Metadata Filtering in LanceDB"
+path = "docs/search/filtering.mdx"
+keywords = ["where", "prefilter", "postfilter", "filter", "limit"]
+
+[[pages]]
+id = "multivector-search"
+title = "Multivector Search"
+path = "docs/search/multivector-search.mdx"
+keywords = ["multivector", "multi_vector", "MaxSim", "cosine", "nearest_to"]
+
+[[pages]]
+id = "optimize-queries"
+title = "Optimize Query Performance"
+path = "docs/search/optimize-queries.mdx"
+keywords = ["explain_plan", "analyze_plan", "KNNVectorDistance", "LanceRead", "AnalyzeExec", "metrics"]
+
+[[pages]]
+id = "sql-overview"
+title = "Query with SQL"
+path = "docs/search/sql/index.mdx"
+keywords = ["SQL", "FlightSQL", "DataFusion", "run_query", "EXPLAIN"]
+
+[[pages]]
+id = "sql-fts"
+title = "Full-Text Search with SQL"
+path = "docs/search/sql/fts-sql.mdx"
+keywords = ["fts()", "UDTF", "phrase query", "with_position", "match", "contains_tokens"]
+
+[[sources]]
+id = "docs-search-snippets-tests"
+repo = "docs"
+kind = "snippets_and_tests"
+applies_to = ["overview", "vector-search", "full-text-search", "hybrid-search", "filtering"]
+paths = [
+  "docs/snippets/search.mdx",
+  "docs/snippets/filtering.mdx",
+  "docs/snippets/full_text_search.mdx",
+  "tests/py/test_search.py",
+  "tests/ts/search.test.ts",
+  "tests/ts/filtering.test.ts",
+  "tests/ts/full_text_search.test.ts",
+]
+extract_keywords = ["distance_type", "distance_range", "nearest_to_text", "nearestToText", "FTS", "hybrid", "prefilter", "postfilter"]
+
+[[sources]]
+id = "lancedb-public-search-tests"
+repo = "lancedb"
+kind = "public_query_tests"
+applies_to = ["overview", "vector-search", "full-text-search", "hybrid-search", "filtering", "multivector-search", "optimize-queries"]
+paths = [
+  "python/python/tests/docs/test_search.py",
+  "python/python/tests/test_hybrid_query.py",
+  "python/python/tests/docs/test_multivector.py",
+  "python/python/tests/test_query.py",
+]
+extract_keywords = ["nearest_to_text", "distance_range", "prefilter", "postfilter", "multivector", "with_row_id", "explain_plan", "analyze_plan", "fast_search", "bypass_vector_index", "nprobes", "refine_factor", "rerank"]
+
+[[sources]]
+id = "lancedb-sql-fts"
+repo = "lancedb"
+kind = "sql_api"
+applies_to = ["sql-overview", "sql-fts"]
+paths = [
+  "rust/lancedb/src/table/datafusion/udtf/fts.rs",
+]
+extract_keywords = ["fts", "FTS query JSON", "table_name", "query_json", "match", "phrase"]
+
+[[sources]]
+id = "sophon-query-api"
+repo = "sophon"
+kind = "enterprise_surface"
+applies_to = ["overview", "vector-search", "full-text-search", "hybrid-search", "filtering", "multivector-search"]
+paths = [
+  "src/rust/phalanx/openapi.yml",
+  "src/rust/phalanx/src/rest/table/query_table.rs",
+  "src/lancedb_integtest/tests/test_search.py",
+]
+extract_keywords = ["full_text_query", "prefilter", "with_row_id", "fast_search", "bypass_vector_index", "nprobes", "refine_factor", "single_vector", "multi_vector"]
+
+[[sources]]
+id = "sophon-query-analysis-sql"
+repo = "sophon"
+kind = "enterprise_analysis_and_sql"
+applies_to = ["optimize-queries", "sql-overview", "sql-fts"]
+paths = [
+  "src/rust/phalanx/src/rest/table/explain_plan.rs",
+  "src/rust/phalanx/src/rest/table/analyze_plan.rs",
+  "src/control_plane/sophon/control_plane/routers_geneva_console/sql.py",
+]
+extract_keywords = ["explain_plan", "analyze_plan", "FlightSQL", "EXPLAIN", "fts"]

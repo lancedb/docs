@@ -208,6 +208,10 @@ Compare ANN results against a flat-scan ground truth to compute recall@k. This i
 Flat search is $O(n)$ — reserve `bypass_vector_index()` for sampled recall measurements or small tables, not production queries.
 </Warning>
 
+<Note title="Multivector distance constraint">
+Multivector indexing currently requires `distance_type="cosine"` — `l2` is rejected at index-creation time. That restriction is why `bypass_vector_index()` is the escape hatch for non-cosine queries on a multivector column: the metric you want at query time cannot be served by the index, so you fall back to a flat scan. See [Multivector Search](/search/multivector-search) for the full rules.
+</Note>
+
 ## Example: Construct an HNSW Index
 
 ### Index Configuration
@@ -247,6 +251,13 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 - Index Type: `IVF_FLAT` is used for indexing binary vectors
 - `metric`: the `hamming` distance is used for similarity search
 - The dimension of binary vectors must be a multiple of 8. For example, a 128-dimensional vector is stored as a uint8 array of size 16.
+
+<Warning>
+**`IVF_FLAT` + `hamming` is the only supported path for binary vectors.**
+
+- `hamming` distance is only valid on packed binary (uint8) data; it is rejected on float vector columns.
+- Quantized index types (`IVF_PQ`, `IVF_RQ`, `IVF_SQ`, `IVF_HNSW_PQ`, `IVF_HNSW_SQ`) do not accept binary inputs — their `distance_type` is restricted to `l2`, `cosine`, or `dot`.
+</Warning>
 
 ### 1. Create Table and Schema
 

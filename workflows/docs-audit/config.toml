@@ -1,0 +1,25 @@
+version = 1
+enabled_areas = [
+    "indexing",
+    # "search"
+]
+
+[repos.lancedb]
+path = "../../../lancedb"
+
+[repos.docs]
+path = "../.."
+
+[repos.sophon]
+path = "../../../sophon"
+
+[selection]
+rotation_extra_pages = 10
+prefer_changed_pages = true
+
+[paths]
+artifacts_dir = "artifacts/runs"
+latest_run_file = "artifacts/latest_run.json"
+state_file = "state/state.json"
+prompts_dir = "prompts"
+manifests_dir = "manifests"
