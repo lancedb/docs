@@ -275,6 +275,7 @@ paths:
       - $ref: "#/components/parameters/delimiter"
       - $ref: "#/components/parameters/page_token"
       - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/include_declared"
     get:
       tags:
         - Namespace
@@ -291,6 +292,7 @@ paths:
         - `id`: pass through path parameter of the same name
         - `page_token`: pass through query parameter of the same name
         - `limit`: pass through query parameter of the same name
+        - `include_declared`: pass through query parameter of the same name
       responses:
         200:
           $ref: "#/components/responses/ListTablesResponse"
@@ -326,10 +328,12 @@ paths:
         - `page_token`: pass through query parameter of the same name
         - `limit`: pass through query parameter of the same name
         - `delimiter`: pass through query parameter of the same name
+        - `include_declared`: pass through query parameter of the same name
       parameters:
         - $ref: "#/components/parameters/delimiter"
         - $ref: "#/components/parameters/page_token"
         - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/include_declared"
       responses:
         200:
           $ref: "#/components/responses/ListTablesResponse"
@@ -388,6 +392,7 @@ paths:
       - $ref: "#/components/parameters/delimiter"
       - $ref: "#/components/parameters/with_table_uri"
       - $ref: "#/components/parameters/load_detailed_metadata"
+      - $ref: "#/components/parameters/check_declared"
     post:
       tags:
         - Table
@@ -398,7 +403,7 @@ paths:
         Describe the detailed information for table `id`.
 
         REST NAMESPACE ONLY
-        REST namespace passes `with_table_uri` and `load_detailed_metadata` as query parameters instead of in the request body.
+        REST namespace passes `with_table_uri`, `load_detailed_metadata`, and `check_declared` as query parameters instead of in the request body.
       requestBody:
         required: true
         content:
@@ -1321,6 +1326,25 @@ paths:
         required: false
         schema:
           type: string
+      - name: "properties"
+        in: query
+        required: false
+        schema:
+          type: string
+        description: |
+          Business logic properties managed by the namespace implementation outside Lance context.
+          The map is translated to a single JSON-encoded query parameter such as
+          `properties={"user":"alice","team":"eng"}`.
+      - name: "storage_options"
+        in: query
+        required: false
+        schema:
+          type: string
+        description: |
+          Storage options that configure overrides for writing table data and metadata during
+          table creation. These are passed to Lance for the write path.
+          The map is translated to a single JSON-encoded query parameter such as
+          `storage_options={"aws_region":"us-east-1","timeout":"30s"}`.
     post:
       tags:
         - Table
@@ -1338,6 +1362,12 @@ paths:
         It passes in the `CreateTableRequest` information in the following way:
         - `id`: pass through path parameter of the same name
         - `mode`: pass through query parameter of the same name
+        - `properties`: serialize as a single JSON-encoded query parameter such as
+          `properties={"user":"alice","team":"eng"}`; these are business logic properties
+          managed by the namespace implementation outside Lance context
+        - `storage_options`: serialize as a single JSON-encoded query parameter such as
+          `storage_options={"aws_region":"us-east-1","timeout":"30s"}`; these configure
+          write-time overrides for data and metadata written during table creation
       requestBody:
         description: Arrow IPC data
         content:
@@ -1357,6 +1387,8 @@ paths:
           $ref: "#/components/responses/ForbiddenErrorResponse"
         404:
           $ref: "#/components/responses/NotFoundErrorResponse"
+        409:
+          $ref: "#/components/responses/ConflictErrorResponse"
         503:
           $ref: "#/components/responses/ServiceUnavailableErrorResponse"
         5XX:
@@ -1792,49 +1824,6 @@ paths:
         5XX:
           $ref: "#/components/responses/ServerErrorResponse"
 
-  /v1/table/{id}/create-empty:
-    parameters:
-      - $ref: "#/components/parameters/id"
-      - $ref: "#/components/parameters/delimiter"
-    post:
-      tags:
-        - Table
-        - Metadata
-      summary: Create an empty table
-      operationId: CreateEmptyTable
-      deprecated: true
-      description: |
-        Create an empty table with the given name without touching storage.
-        This is a metadata-only operation that records the table existence and sets up aspects like access control.
-
-        For DirectoryNamespace implementation, this creates a `.lance-reserved` file in the table directory
-        to mark the table's existence without creating actual Lance data files.
-
-        **Deprecated**: Use `DeclareTable` instead.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateEmptyTableRequest"
-      responses:
-        200:
-          $ref: "#/components/responses/CreateEmptyTableResponse"
-        400:
-          $ref: "#/components/responses/BadRequestErrorResponse"
-        401:
-          $ref: "#/components/responses/UnauthorizedErrorResponse"
-        403:
-          $ref: "#/components/responses/ForbiddenErrorResponse"
-        404:
-          $ref: "#/components/responses/NotFoundErrorResponse"
-        409:
-          $ref: "#/components/responses/ConflictErrorResponse"
-        503:
-          $ref: "#/components/responses/ServiceUnavailableErrorResponse"
-        5XX:
-          $ref: "#/components/responses/ServerErrorResponse"
-
   /v1/table/{id}/tags/create:
     parameters:
       - $ref: "#/components/parameters/id"
@@ -2058,12 +2047,36 @@ components:
       schema:
         type: boolean
         default: false
+    include_declared:
+      name: include_declared
+      description: |
+        When true (default), includes tables that have been declared in the namespace
+        but not yet created on storage, in addition to tables that have
+        been created. When false, only tables with storage
+        components are returned.
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: true
     load_detailed_metadata:
       name: load_detailed_metadata
       description: |
         Whether to load detailed metadata that requires opening the dataset.
         When false (default), only `location` is required in the response.
         When true, the response includes additional metadata such as `version`, `schema`, and `stats`.
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+    check_declared:
+      name: check_declared
+      description: |
+        Whether to check if the table exists only as a namespace declaration
+        without storage data. When false (default), the response should return
+        null for `is_only_declared` unless another option such as
+        `load_detailed_metadata` requires the check.
       in: query
       required: false
       schema:
@@ -2403,10 +2416,11 @@ components:
           $ref: "#/components/schemas/PageLimit"
         include_declared:
           type: boolean
+          default: true
           description: |
-            When true, includes tables that have been declared in the namespace
+            When true (default), includes tables that have been declared in the namespace
             but not yet created on storage, in addition to tables that have
-            been created. When false or not set, only tables with storage
+            been created. When false, only tables with storage
             components are returned.
 
     ListTablesResponse:
@@ -2458,6 +2472,16 @@ components:
             When not set, the implementation can decide whether to return detailed metadata
             and which parts of detailed metadata to return.
           type: boolean
+        check_declared:
+          description: |
+            Whether to check if the table exists only as a namespace declaration
+            without storage data. Default is false.
+            When true, the response should populate `is_only_declared`.
+            When false, the implementation should return null for `is_only_declared`
+            unless another option such as `load_detailed_metadata` requires
+            checking declared-only table state.
+          type: boolean
+          default: false
         vend_credentials:
           description: |
             Whether to include vended credentials in the response `storage_options`.
@@ -2546,13 +2570,18 @@ components:
             to manage table versions instead of relying on Lance's native version management.
         is_only_declared:
           type: boolean
+          nullable: true
           description: |
             When true, indicates that the table has been declared in the namespace
             but not yet created on storage. This means the table exists in the
             namespace but has no data files on the underlying storage.
-            Operations like describe_table with load_detailed_metadata=true may fail
-            for such tables. When false or not set, the table has storage components
-            (data and metadata files).
+            When false, the table has storage components (data and metadata files).
+            When null, the implementation did not check whether the table is only
+            declared. Clients should treat an omitted value as null. Implementations
+            should populate this field when `check_declared` is true or another
+            option such as `load_detailed_metadata` requires checking declared-only
+            table state. Operations like describe_table with load_detailed_metadata=true
+            may fail for declared-only tables.
 
     TableBasicStats:
       type: object
@@ -3163,6 +3192,8 @@ components:
       type: object
       description: |
         Request for creating a table, excluding the Arrow IPC stream.
+        The table location and any credential vending behavior are determined by the implementation
+        and returned in the response, rather than specified in this request.
       properties:
         identity:
           $ref: "#/components/schemas/Identity"
@@ -3184,7 +3215,15 @@ components:
         properties:
           type: object
           description: |
-            Properties stored on the table, if supported by the implementation.
+            Business logic properties stored and managed by the namespace implementation outside
+            Lance context, if supported by the implementation.
+          additionalProperties:
+            type: string
+        storage_options:
+          type: object
+          description: |
+            Storage options that configure overrides for writing table data and metadata during
+            table creation. These are passed to Lance for the write path.
           additionalProperties:
             type: string
 
@@ -3211,72 +3250,9 @@ components:
         properties:
           type: object
           description: |
-            If the implementation does not support table properties, it should return null for this field. Otherwise it should return the properties.
-          additionalProperties:
-            type: string
-          example: { "owner": "Ralph", "created_at": "1452120468" }
-          default: {}
-          nullable: true
-
-    CreateEmptyTableRequest:
-      type: object
-      deprecated: true
-      description: |
-        Request for creating an empty table.
-
-        **Deprecated**: Use `DeclareTableRequest` instead.
-      properties:
-        identity:
-          $ref: "#/components/schemas/Identity"
-        context:
-          $ref: "#/components/schemas/Context"
-        id:
-          type: array
-          items:
-            type: string
-        location:
-          type: string
-          description: |
-            Optional storage location for the table.
-            If not provided, the namespace implementation should determine the table location.
-        vend_credentials:
-          description: |
-            Whether to include vended credentials in the response `storage_options`.
-            When true, the implementation should provide vended credentials for accessing storage.
-            When not set, the implementation can decide whether to return vended credentials.
-          type: boolean
-        properties:
-          type: object
-          description: |
-            Properties stored on the table, if supported by the server.
-          additionalProperties:
-            type: string
-
-    CreateEmptyTableResponse:
-      type: object
-      deprecated: true
-      description: |
-        Response for creating an empty table.
-
-        **Deprecated**: Use `DeclareTableResponse` instead.
-      properties:
-        transaction_id:
-          type: string
-          description: Optional transaction identifier
-        location:
-          type: string
-        storage_options:
-          type: object
-          description: |
-            Configuration options to be used to access storage. The available
-            options depend on the type of storage in use. These will be
-            passed directly to Lance to initialize storage access.
-          additionalProperties:
-            type: string
-        properties:
-          type: object
-          description: |
-            If the implementation does not support table properties, it should return null for this field. Otherwise it should return the properties.
+            Business logic properties stored and managed by the namespace implementation outside
+            Lance context. If the implementation does not support table properties, it should
+            return null for this field.
           additionalProperties:
             type: string
           example: { "owner": "Ralph", "created_at": "1452120468" }
@@ -3310,7 +3286,8 @@ components:
         properties:
           type: object
           description: |
-            Properties stored on the table, if supported by the server.
+            Business logic properties stored and managed by the namespace implementation outside
+            Lance context, if supported by the implementation.
           additionalProperties:
             type: string
 
@@ -5204,13 +5181,6 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/DeclareTableResponse"
-
-    CreateEmptyTableResponse:
-      description: Table properties result when creating an empty table
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/CreateEmptyTableResponse"
 
     # Error Responses
 
