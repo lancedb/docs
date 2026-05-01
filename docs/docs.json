@@ -35,6 +35,7 @@
             "group": "Get started",
             "pages": [
               "quickstart",
+              "performance",
               {
                 "group": "What is LanceDB?",
                 "pages": [
