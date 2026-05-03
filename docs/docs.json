@@ -141,7 +141,13 @@
                 "group": "Training",
                 "pages": [
                   "training/index",
-                  "training/torch"
+                  "training/torch",
+                  {
+                    "group": "E2E Examples",
+                    "pages": [
+                      "training/object-detection"
+                    ]
+                  }
                 ]
               }
             ]
