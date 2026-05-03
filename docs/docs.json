@@ -141,7 +141,8 @@
                 "group": "Training",
                 "pages": [
                   "training/index",
-                  "training/torch"
+                  "training/torch",
+                  "training/object-detection"
                 ]
               }
             ]
