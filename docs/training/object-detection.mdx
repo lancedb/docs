@@ -9,7 +9,30 @@ This example walks through fine-tuning an autonomous-vehicle perception model on
 
 The full pipeline lives in the [lancedb/training](https://github.com/lancedb/training/tree/main/object-detection) repository. This page focuses on the parts most relevant to training: defining curated splits as materialized views, loading them through the [`Permutation`](/training/) API, and pinning checkpoints to an exact data version.
 
-## Why this shape
+## What you get
+
+Fine-tuning Faster R-CNN ResNet50 FPN v2 for 10 epochs on each curated slice (batch size 64, AMP, A100), starting from the same COCO-pretrained checkpoint and evaluating on the matching validation view:
+
+| Failure mode | Metric | Baseline (COCO) | Fine-tuned | Δ% |
+|---|---|---|---|---|
+| **Nighttime pedestrian** | mAP@0.5 | 0.4025 | **0.5192** | **+29.0%** |
+|                          | Recall  | 0.5923 | **0.7570** | **+27.8%** |
+| **Rider**                | mAP@0.5 | 0.5563 | **0.6676** | **+20.0%** |
+|                          | Recall  | 0.6788 | **0.7847** | **+15.6%** |
+| **Distant pedestrian**   | mAP@0.5 | 0.4746 | **0.5788** | **+22.0%** |
+|                          | Recall  | 0.6794 | **0.8024** | **+18.1%** |
+
+No external data added — only training-distribution correction via SQL filters over a single Lance table. Each panel below shows the same frame with three overlaid predictions: **green** = ground truth · **red** = pretrained COCO baseline · **blue** = fine-tuned model.
+
+![Rider detection — ground truth vs baseline vs fine-tuned](/static/assets/images/training/rider_04.jpg)
+
+![Nighttime pedestrian detection — ground truth vs baseline vs fine-tuned](/static/assets/images/training/nighttime_person_01.jpg)
+
+![Distant pedestrian detection — ground truth vs baseline vs fine-tuned](/static/assets/images/training/distant_person_00.jpg)
+
+The rest of the page walks through the pipeline that produced these checkpoints.
+
+## The failure modes
 
 A perception model fine-tuned on a generic dataset typically misses the long-tail scenarios that matter most in deployment. Three common failure modes drive this example:
 
@@ -340,21 +363,6 @@ for view_name in gconn.table_names():
 ```
 
 The next training run picks up the new data automatically — and pins itself to the new `version`.
-
-## Results
-
-Fine-tuning Faster R-CNN ResNet50 FPN v2 on each curated split for 10 epochs (batch size 64, AMP, A100), starting from the same COCO-pretrained checkpoint and evaluating on the matching validation view:
-
-| Failure mode | Metric | Baseline (COCO) | Fine-tuned | Δ% |
-|---|---|---|---|---|
-| **Nighttime pedestrian** | mAP@0.5 | 0.4025 | **0.5192** | **+29.0%** |
-|                          | Recall  | 0.5923 | **0.7570** | **+27.8%** |
-| **Rider**                | mAP@0.5 | 0.5563 | **0.6676** | **+20.0%** |
-|                          | Recall  | 0.6788 | **0.7847** | **+15.6%** |
-| **Distant pedestrian**   | mAP@0.5 | 0.4746 | **0.5788** | **+22.0%** |
-|                          | Recall  | 0.6794 | **0.8024** | **+18.1%** |
-
-No external data added — only training-distribution correction via SQL filters over a single Lance table.
 
 ## Full source
 
