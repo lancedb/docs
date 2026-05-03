@@ -142,12 +142,7 @@
                 "pages": [
                   "training/index",
                   "training/torch",
-                  {
-                    "group": "E2E Examples",
-                    "pages": [
-                      "training/object-detection"
-                    ]
-                  }
+                  "training/object-detection"
                 ]
               }
             ]

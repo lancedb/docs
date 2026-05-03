@@ -1,11 +1,11 @@
 ---
-title: "AV Perception (Object Detection)"
-sidebarTitle: "AV Perception (Object Detection)"
+title: "Object Detection for AV Perception"
+sidebarTitle: "Example: Object Detection"
 description: End-to-end fine-tuning of a Faster R-CNN object detector on curated dashcam slices, using LanceDB as the data backbone from raw frames to checkpoints.
 icon: car
 ---
 
-This example walks through fine-tuning an autonomous-vehicle perception model on targeted failure-mode slices of [BDD100K](https://www.bdd100k.com/) — riders, nighttime pedestrians, and distant pedestrians — using LanceDB as a single multimodal table from raw JPEG bytes through to the PyTorch training loop.
+This example walks through fine-tuning an autonomous vehicle (AV) perception model on targeted failure-mode slices of [BDD100K](https://www.bdd100k.com/) — riders, nighttime pedestrians, and distant pedestrians — using LanceDB as a single multimodal table from raw JPEG bytes through to the PyTorch training loop.
 
 The full pipeline lives in the [lancedb/training](https://github.com/lancedb/training/tree/main/object-detection) repository. This page focuses on the parts most relevant to training: defining curated splits as materialized views, loading them through the [`Permutation`](/training/) API, and pinning checkpoints to an exact data version.
 
@@ -164,7 +164,6 @@ import torchvision.io as tio
 from lancedb.permutation import Permutation
 
 DETECTION_COLS = ["image_bytes", "ann_categories", "ann_bboxes"]
-
 
 class LanceDetectionDataset(torch.utils.data.Dataset):
     def __init__(self, uri: str, table_name: str):
@@ -366,4 +365,4 @@ The next training run picks up the new data automatically — and pins itself to
 
 ## Full source
 
-Complete code, including a synthetic-data mode for pipeline verification (`--synthetic 500`), GPU UDFs for CLIP embeddings and dHash deduplication, and the EDA notebook, is at [github.com/lancedb/training/tree/main/object-detection](https://github.com/lancedb/training/tree/main/object-detection).
+The complete code, including a synthetic-data mode for pipeline verification (`--synthetic 500`), GPU UDFs for CLIP embeddings and dHash deduplication, and the EDA notebook, is in this [GitHub repository](https://github.com/lancedb/training/tree/main/object-detection).
