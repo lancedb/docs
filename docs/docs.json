@@ -50,7 +50,7 @@
                   "enterprise/quickstart",
                   "enterprise/architecture",
                   "enterprise/security",
-                  "enterprise/performance",
+                  "enterprise/benchmarks",
                   {
                     "group": "Deployment",
                     "pages": [
@@ -59,7 +59,8 @@
                     ]
                   }
                 ]
-              }
+              },
+              "performance"
             ]
           },
           {
@@ -409,6 +410,10 @@
     {
       "source": "/geneva/udfs/built-in",
       "destination": "/geneva/udfs/providers"
+    },
+    {
+      "source": "/enterprise/performance",
+      "destination": "/enterprise/benchmarks"
     }
   ]
 }
