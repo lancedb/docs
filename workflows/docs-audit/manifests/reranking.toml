@@ -1,0 +1,108 @@
+name = "reranking"
+description = "Audit the user-guide reranking docs against public SDK reranker APIs, tested behavior, and user-facing examples in lancedb and docs snippets/tests."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "rerank_hybrid",
+  "rerank_vector",
+  "rerank_fts",
+  "rerank_multivector",
+  "return_score",
+  "RRFReranker",
+  "MRRReranker",
+  "LinearCombinationReranker",
+]
+
+[[pages]]
+id = "overview"
+title = "Reranking Search Results"
+path = "docs/reranking/index.mdx"
+keywords = ["reranking", "CohereReranker", "CrossEncoderReranker", "ColbertReranker", "rerank_multivector", "deduplicate"]
+
+[[pages]]
+id = "custom-reranker"
+title = "Building Custom Rerankers"
+path = "docs/reranking/custom-reranker.mdx"
+keywords = ["custom reranker", "Reranker", "rerank_hybrid", "rerank_vector", "rerank_fts", "merge_results", "return_score"]
+
+[[pages]]
+id = "evaluation"
+title = "Evaluating Hybrid Search Performance"
+path = "docs/reranking/eval.mdx"
+keywords = ["hybrid search", "reranking strategies", "score-based", "relevance-based", "Linear Combination", "Cross Encoder", "Cohere", "ColBERT"]
+
+[[sources]]
+id = "lancedb-python-reranker-core"
+repo = "lancedb"
+kind = "public_python_api"
+applies_to = ["overview", "custom-reranker", "evaluation"]
+paths = [
+  "python/python/lancedb/rerankers/__init__.py",
+  "python/python/lancedb/rerankers/base.py",
+  "python/python/lancedb/rerankers/linear_combination.py",
+  "python/python/lancedb/rerankers/mrr.py",
+  "python/python/lancedb/rerankers/rrf.py",
+  "python/python/lancedb/query.py",
+]
+extract_keywords = ["Reranker", "rerank_hybrid", "rerank_vector", "rerank_fts", "merge_results", "rerank_multivector", "return_score", "_relevance_score", "RRFReranker", "MRRReranker", "LinearCombinationReranker"]
+
+[[sources]]
+id = "lancedb-python-reranker-tests"
+repo = "lancedb"
+kind = "public_python_tests"
+applies_to = ["overview", "custom-reranker", "evaluation"]
+paths = [
+  "python/python/tests/test_rerankers.py",
+  "python/python/tests/test_hybrid_query.py",
+]
+extract_keywords = ["return_score", "_relevance_score", "rerank_multivector", "deduplicate", "RRFReranker", "MRRReranker", "LinearCombinationReranker", "CohereReranker", "CrossEncoderReranker", "ColbertReranker"]
+
+[[sources]]
+id = "lancedb-python-provider-rerankers-overview"
+repo = "lancedb"
+kind = "public_python_api"
+applies_to = ["overview"]
+paths = [
+  "python/python/lancedb/rerankers/cohere.py",
+  "python/python/lancedb/rerankers/colbert.py",
+  "python/python/lancedb/rerankers/cross_encoder.py",
+]
+extract_keywords = ["CohereReranker", "ColbertReranker", "CrossEncoderReranker", "model_name", "return_score", "_relevance_score"]
+
+[[sources]]
+id = "lancedb-typescript-rust-rerankers"
+repo = "lancedb"
+kind = "typescript_rust_api"
+applies_to = ["overview", "custom-reranker"]
+paths = [
+  "nodejs/lancedb/rerankers/index.ts",
+  "nodejs/lancedb/rerankers/rrf.ts",
+  "nodejs/__test__/rerankers.test.ts",
+  "rust/lancedb/src/rerankers.rs",
+  "rust/lancedb/src/rerankers/rrf.rs",
+  "rust/lancedb/src/query.rs",
+]
+extract_keywords = ["Reranker", "RRFReranker", "rerankHybrid", "rerank_hybrid", "_relevance_score", "custom reranker"]
+
+[[sources]]
+id = "lancedb-generated-js-reranker-docs"
+repo = "lancedb"
+kind = "generated_api_docs"
+applies_to = ["overview"]
+paths = [
+  "docs/src/js/namespaces/rerankers/README.md",
+  "docs/src/js/namespaces/rerankers/interfaces/Reranker.md",
+  "docs/src/js/namespaces/rerankers/classes/RRFReranker.md",
+  "docs/src/js/classes/VectorQuery.md",
+]
+extract_keywords = ["rerankers", "Reranker", "RRFReranker", "create", "rerank"]
+
+[[sources]]
+id = "sophon-reranking-example-surface"
+repo = "sophon"
+kind = "enterprise_surface"
+applies_to = ["overview"]
+paths = [
+  "src/dash/src/components/examples/components/ExampleCards.tsx",
+]
+extract_keywords = ["reranking", "RRF", "hybrid-search", "custom reranking"]

@@ -115,13 +115,16 @@ So `--area indexing` maps to `manifests/indexing.toml`. If you add `manifests/se
 uv run python scripts/run_audit.py prepare --area search --refresh
 ```
 
-This creates a new run directory under `artifacts/runs/<run_id>/` and prints a JSON summary to stdout.
+This creates a pending run directory under `artifacts/pending/<run_id>/` and prints a JSON summary to stdout.
 
-After the LLM phase writes the expected outputs into that run directory, complete the run with:
+After the LLM phase writes the expected outputs into that pending run directory, complete the run with:
 
 ```bash
 uv run python scripts/run_audit.py complete --run-id <run_id>
 ```
+
+Completion publishes the directory to `artifacts/runs/<run_id>/`. Directories under `artifacts/runs/`
+are completed audit artifacts and should contain `report.md`.
 
 To clean up old generated run artifacts, use:
 
@@ -146,7 +149,7 @@ uv run python scripts/run_audit.py prepare \
 
 ## Inspecting Artifacts
 
-Each run directory contains:
+Each completed run directory under `artifacts/runs/<run_id>/` contains:
 
 - `metadata.json`: run-level metadata, repo refresh results, selection decisions
 - `page_bundles/*.json`: deterministic evidence bundles per page
@@ -155,6 +158,10 @@ Each run directory contains:
 - `report.md`: final human-readable report
 
 `artifacts/latest_run.json` points to the most recently completed run.
+
+Pending run directories under `artifacts/pending/<run_id>/` are working directories from `prepare`.
+They are used for manifest validation and LLM drafting, and are not considered completed artifacts
+until `complete` publishes them.
 
 ## Using and Updating Area Manifests
 
@@ -272,7 +279,7 @@ A practical workflow:
 5. Replace each source block with a small set of relevant files.
 6. Make sure every `applies_to` entry refers to a real page `id`.
 7. Add the area to `enabled_areas` in `config.toml` if your automation depends on that list.
-8. Run `prepare --area <new-area>` and inspect the generated `page_bundles/*.json`.
+8. Run `prepare --area <new-area>` and inspect the generated `page_bundles/*.json` in the printed pending `run_dir`.
 
 ### 6. Sanity-check the manifest before using it weekly
 
@@ -284,9 +291,10 @@ uv run python scripts/run_audit.py prepare --area <new-area>
 
 Then inspect:
 
-- `artifacts/runs/<run_id>/metadata.json`
-- `artifacts/runs/<run_id>/selected_pages.json`
-- `artifacts/runs/<run_id>/page_bundles/*.json`
+- the `run_dir` printed by `prepare` (normally `artifacts/pending/<run_id>`)
+- `<run_dir>/metadata.json`
+- `<run_dir>/selected_pages.json`
+- `<run_dir>/page_bundles/*.json`
 
 If the bundles look noisy, the fix is usually one of:
 

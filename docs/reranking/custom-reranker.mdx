@@ -5,9 +5,16 @@ description: Learn how to create custom rerankers in LanceDB by extending the ba
 icon: "code"
 ---
 
-You can build your own custom reranker in LanceDB by subclassing the `Reranker` class and implementing the
-`rerank_hybrid()` method. Optionally, you can also implement the `rerank_vector()` and `rerank_fts()`
-methods if you want to support reranking for vector and FTS search separately.
+You can build your own custom reranker in LanceDB by subclassing the base `Reranker` class. At a
+minimum, you need to implement `rerank_hybrid()`, which is the logic that combines vector and
+full-text search results. Beyond that, you can optionally implement `rerank_vector()` and
+`rerank_fts()` if you want your reranker to also handle pure vector or pure full-text searches.
+
+Decide up front which surfaces — hybrid, pure vector, or pure full-text — your reranker should
+cover, and only override the ones you need. The base class leaves `rerank_vector()` and
+`rerank_fts()` unimplemented, so calling `.rerank(...)` on a single-modality search you haven't
+overridden raises `NotImplementedError` rather than silently returning unsorted results. That's a
+useful guard, but worth knowing about before you wire up a query path you didn't plan for.
 
 ## Interface
 
@@ -17,6 +24,11 @@ the results and removes the duplicates without taking the scores into considerat
 first copy of the row encountered. This works well in cases that don't require the scores of semantic
 and full-text search to combine the results. If you want to use the scores or want to support
 `return_score="all"`, you'll need to implement your own merging algorithm.
+
+Whichever methods you override, your reranker has one job on the way out: attach a
+`_relevance_score` column with the most relevant rows at the top. LanceDB will reject the result
+if that column is missing, and downstream `.limit(...)` calls trust the order you return, so
+sort descending before handing the table back.
 
 Below, we show the pseudocode of a custom reranker that combines the results of semantic and full-text
 search using a linear combination of the scores:

@@ -15,9 +15,26 @@ Combining results from multiple searches thus requires a reranking step.
 
 There are two common approaches for reranking search results from multiple sources.
 
-- **Score-based**: Calculate final relevance scores based on a weighted linear combination of individual search algorithm scores. Example: Weighted linear combination of semantic search & keyword-based search results.
+- **Score-based**: Calculate final relevance scores from the individual search algorithm scores. Examples: Reciprocal Rank Fusion (the default in LanceDB), and weighted linear combination of semantic & keyword-based search scores.
 
-- **Relevance-based**: Discards the existing scores and calculates the relevance of each search result-query pair. Example: Cross Encoder models
+- **Relevance-based**: Discards the existing scores and calculates the relevance of each search result-query pair. Example: Cross Encoder models
+
+<Info>
+If you call `.rerank()` on a hybrid query without passing a reranker, LanceDB defaults to
+`RRFReranker()` — a score-based reranker that uses Reciprocal Rank Fusion. This is the
+score-based path most readers encounter first; `LinearCombinationReranker` is an alternative
+score-based strategy you opt into explicitly.
+</Info>
+
+The hybrid `rerank(...)` method also accepts a `normalize` argument that controls how the raw
+vector and FTS scores are made comparable before reranking:
+
+- `normalize="score"` (the default) — normalizes the raw vector and FTS scores directly.
+- `normalize="rank"` — converts each result list to ranks first, then normalizes.
+
+This choice materially affects score-based rerankers (such as `LinearCombinationReranker`), so
+when you evaluate score-based strategies, treat `normalize` as a tunable hyperparameter
+alongside the reranker itself.
 
 Even though there may many more strategies for reranking, there are no "universally best"
 ones that work well for all cases, because they be dataset or application specific.
