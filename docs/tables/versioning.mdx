@@ -32,6 +32,9 @@ import {
     PyVersioningDeleteData as VersioningDeleteData,
     TsVersioningDeleteData as TsVersioningDeleteData,
     RsVersioningDeleteData as RsVersioningDeleteData,
+    PyVersioningTags as VersioningTags,
+    TsVersioningTags as TsVersioningTags,
+    RsVersioningTags as RsVersioningTags,
     RsVersioningMakeQuotesReader as RsVersioningMakeQuotesReader,
 } from '/snippets/tables.mdx';
 
@@ -184,6 +187,37 @@ Now let's restore a captured version snapshot:
     </CodeBlock>
 </CodeGroup>
 
+## Tag-Based Versioning
+
+Numeric table versions like `v3` or `v17` are precise but hard to remember. Tags
+let you attach human-readable labels (e.g., `"prod"`, `"baseline"`,
+`"q3-evaluation"`) to specific versions and check those out by name. They are
+conceptually similar to git tags, and unlike numeric versions, **tagged versions
+are preserved when old versions are pruned** (see the cleanup note at the bottom
+of this page).
+
+The tags API supports the standard CRUD operations — create, list, update, delete —
+plus checking out by tag name.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VersioningTags}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsVersioningTags}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsVersioningTags}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+Deleting a tag only removes the label, not the version it points to. After
+deletion, the underlying table version becomes eligible for cleanup again.
+</Note>
+
 ## Delete Data From the Table
 
 Let's demonstrate how deletions also create new versions:
@@ -242,4 +276,8 @@ Read-only and checkout operations shown here (`list_versions`/`listVersions`, `v
 System operations like `optimize()`, index updates, and table compaction also increment table version numbers.
 In LanceDB OSS and Enterprise, `optimize()` can prune older versions based on its retention setting (`cleanup_older_than`, 7 days by default),
 which is when old-version files are removed and disk space is reclaimed.
+
+**Tagged versions are exempt from cleanup.** A version with a tag pointing at it is
+retained regardless of age, and its files are not removed by `optimize()`. To make
+a tagged version eligible for pruning, [delete the tag](#tag-based-versioning) first.
 </Note>

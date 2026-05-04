@@ -43,6 +43,23 @@ test("table creation snippets (async)", async () => {
     // --8<-- [end:create_table_from_dicts]
     expect(await table.countRows()).toBe(2);
 
+    await db.createTable("conflict_table", data);
+    // --8<-- [start:create_table_conflict_handling]
+    // Idempotent open: reuse the existing table if it exists.
+    // The provided data is ignored; the schema is validated against the
+    // existing table and a mismatch raises an error.
+    let conflictTable = await db.createTable("conflict_table", data, {
+      existOk: true,
+    });
+
+    // Overwrite: drop the existing table and create a new one with the
+    // provided data. This permanently discards the old table's data.
+    conflictTable = await db.createTable("conflict_table", data, {
+      mode: "overwrite",
+    });
+    // --8<-- [end:create_table_conflict_handling]
+    expect(await conflictTable.countRows()).toBe(2);
+
     // --8<-- [start:create_table_custom_schema]
     const customSchema = new arrow.Schema([
       new arrow.Field(
@@ -734,6 +751,49 @@ test("versioning snippets (async)", async () => {
     console.log(`Number of rows after deletion: ${rowsAfterDeletion}`);
     // --8<-- [end:versioning_delete_data]
     expect(rowsAfterDeletion).toBe(3);
+
+    const tagsTable = await db.createTable(
+      "quotes_tags_example",
+      [{ id: 1, author: "Richard", quote: "Wubba Lubba Dub Dub!" }],
+      { mode: "overwrite" },
+    ); // v1
+    await tagsTable.add([
+      { id: 2, author: "Morty", quote: "Aww geez, Rick!" },
+    ]); // v2
+    await tagsTable.add([
+      { id: 3, author: "Summer", quote: "Whatever, Grandpa" },
+    ]); // v3
+
+    // --8<-- [start:versioning_tags]
+    const tags = await tagsTable.tags();
+
+    // Create a tag pointing at a specific version
+    await tags.create("baseline", 1);
+    await tags.create("with-edits", await tagsTable.version());
+
+    // List all tags on this table
+    console.log(await tags.list());
+
+    // Look up the version a tag points at
+    console.log(await tags.getVersion("baseline"));
+
+    // Move an existing tag to a different version
+    await tags.update("baseline", 2);
+
+    // Check out a version by tag name
+    await tagsTable.checkout("baseline");
+    console.log(await tagsTable.version());
+
+    // Delete a tag (does not delete the underlying version)
+    await tags.delete("with-edits");
+
+    // Return to the latest version
+    await tagsTable.checkoutLatest();
+    // --8<-- [end:versioning_tags]
+    expect(await tagsTable.version()).toBe(3);
+    const remainingTags = await tags.list();
+    expect(remainingTags).toHaveProperty("baseline");
+    expect(remainingTags).not.toHaveProperty("with-edits");
   });
 });
 

@@ -9,6 +9,9 @@ import {
     PyCreateTableFromDicts as CreateTableFromDicts,
     TsCreateTableFromDicts as TsCreateTableFromDicts,
     RsCreateTableFromDicts as RsCreateTableFromDicts,
+    PyCreateTableConflictHandling as CreateTableConflictHandling,
+    TsCreateTableConflictHandling as TsCreateTableConflictHandling,
+    RsCreateTableConflictHandling as RsCreateTableConflictHandling,
     PyCreateTableFromPandas as CreateTableFromPandas,
     PyCreateTableCustomSchema as CreateTableCustomSchema,
     TsCreateTableCustomSchema as TsCreateTableCustomSchema,
@@ -81,6 +84,39 @@ support lists/arrays of dictionaries, while the Rust SDK supports lists of struc
     {RsCreateTableFromDicts}
     </CodeBlock>
 </CodeGroup>
+
+### Handle existing tables
+
+By default, `create_table` raises an error if a table with the same name already exists.
+You can change this behavior with two parameters that resolve the conflict in different ways:
+
+- **Idempotent open**: return the existing table without modifying it. Use when your
+  code may run more than once (notebooks, retries, init scripts) and you want to reuse
+  the table on subsequent runs. The provided data is ignored, but the schema is
+  validated against the existing table and a mismatch raises an error.
+- **Overwrite**: drop the existing table and create a new one with the provided data.
+  Use this for test fixtures or when you intentionally want to replace prior contents.
+  This permanently discards the old table's data.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {CreateTableConflictHandling}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsCreateTableConflictHandling}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsCreateTableConflictHandling}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+`exist_ok` / `existOk` does not append the provided data to an existing table. Use
+[`table.add()`](/tables/update) for that. If you need to ensure a table exists *and*
+contains specific rows, prefer the [empty-table-then-add pattern](#create-empty-table).
+</Note>
 
 ### From a custom schema
 
