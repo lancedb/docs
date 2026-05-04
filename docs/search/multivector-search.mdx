@@ -123,6 +123,15 @@ tbl.create_index(metric="cosine", vector_column_name="vector")
 ```
 </CodeGroup>
 
+<Info>
+**Indexing matters more for multivector tables than for single-vector ones.**
+
+A brute-force scan over a multivector column has to compare every query vector to every document vector in every row, so the cost grows with both the row count and the number of vectors per row. 
+In LanceDB OSS, the query will just run, so a large unindexed multivector table can stall a process for a long time before returning results.
+
+On LanceDB Enterprise, the brute-force KNN safety check applies a stricter row threshold to multivector columns — roughly 10× lower than for single-vector columns. So an unindexed multivector table will start being rejected with a "vector search would use brute-force KNN" error well before a comparable single-vector table would. Build the index before you start hitting it from production traffic, even if the dataset is small enough that you'd skip indexing for a single-vector workload.
+</Info>
+
 ### 6. Query a Single Vector
 
 When searching with a single query vector, it will be compared against all vectors in each document, and the similarity scores will be aggregated to find the most relevant documents.
@@ -200,9 +209,11 @@ for d, emb in zip(docs, doc_embs):
 
 tbl = db.create_table("docs", data=rows, schema=schema, mode="overwrite")
 
-# 4) If your dataset is large, build an index + query using a query matrix
-# For small datasets < 100k records, you can skip indexing
-# tbl.create_index(vector_column_name="mv", metric="cosine")
+# 4) Build an index + query using a query matrix.
+# Multivector brute-force scales with rows × vectors-per-row, so build the index
+# at much smaller dataset sizes than you would for single-vector search — and
+# always before exposing the table to remote traffic.
+tbl.create_index(vector_column_name="mv", metric="cosine")
 
 query = "Tell me about ramen in Japan"
 q_emb = np.asarray(model.encode([query], is_query=True)[0], dtype=np.float32)  # (Tq, dim) :contentReference[oaicite:5]{index=5}

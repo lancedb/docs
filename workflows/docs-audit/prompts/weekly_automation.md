@@ -39,23 +39,27 @@ Then read the manifest file for each area listed in `enabled_areas` in `config.t
      - `uv run python scripts/run_audit.py prepare --area <first-area> --refresh`
    - For subsequent areas in the same weekly run, skip the refresh to avoid repeating `git pull`:
      - `uv run python scripts/run_audit.py prepare --area <next-area>`
-4. Read the JSON summary printed by each `prepare` command and locate each new run directory.
-5. For each run directory, read `selected_pages.json` and the corresponding files in `page_bundles/`.
+4. Read the JSON summary printed by each `prepare` command and locate each pending run directory.
+   - Use the printed `run_dir`; it should point under `artifacts/pending/<run_id>`.
+   - Do not create or write directly under `artifacts/runs/<run_id>` before completion.
+5. For each pending run directory, read `selected_pages.json` and the corresponding files in `page_bundles/`.
 6. For each selected page bundle:
    - apply `prompts/page_audit_guidelines.md` as the page-level review rubric
    - infer normalized code claims from the evidence bundle
    - infer normalized doc claims from the docs bundle
    - identify only the missing documentation
-7. Write semantic outputs under `llm_outputs/` in each run directory.
+7. Write semantic outputs under `llm_outputs/` in each pending run directory.
    - one file per page for code claims
    - one file per page for doc claims
    - one file per page for candidate gaps
-8. Write `report.md` in each run directory.
+8. Write `report.md` in each pending run directory.
    - `report.md` is the docs-gap summary only.
    - Do not include refresh status, manifest-maintenance notes, selected-pages bookkeeping, or any other workflow narration in `report.md`.
    - Include operational notes only if they materially affected audit quality, such as an unrefreshable repo, missing source files, or a manifest ambiguity that changes confidence in the findings.
 9. Complete each run:
    - `uv run python scripts/run_audit.py complete --run-id <run_id>`
+   - Completion publishes the pending directory to `artifacts/runs/<run_id>` and updates `artifacts/latest_run.json`.
+   - Only completed runs with `report.md` should appear under `artifacts/runs/`.
 10. Return a concise markdown summary suitable for the Codex inbox item.
 
 ## Manifest maintenance rules

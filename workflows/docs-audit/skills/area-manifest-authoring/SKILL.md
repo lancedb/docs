@@ -7,7 +7,7 @@ description: Use when creating or updating a docs audit area manifest in this re
 
 Use this skill to create or refresh `manifests/<area>.toml` for the docs-audit workspace.
 
-This repo does not vendor the watched repos. The job is to map a docs domain to compact, user-facing evidence in the external repos.
+This repo does not vendor the watched repos. The job is to map a docs domain to compact, user-facing evidence in the external repos. Use the description from existing manifests as a starting point.
 
 ## Read first
 
@@ -133,9 +133,14 @@ uv run python scripts/run_audit.py prepare --area <area>
 
 Inspect:
 
-- `artifacts/runs/<run_id>/metadata.json`
-- `artifacts/runs/<run_id>/selected_pages.json`
-- `artifacts/runs/<run_id>/page_bundles/*.json`
+- the `run_dir` printed by `prepare` (normally `artifacts/pending/<run_id>`)
+- `<run_dir>/metadata.json`
+- `<run_dir>/selected_pages.json`
+- `<run_dir>/page_bundles/*.json`
+
+Manifest validation is intentionally a pending run. Do not write `report.md` or call `complete`
+unless you are running the full docs audit. Completed runs with reports are the only directories
+that should be published under `artifacts/runs/`.
 
 If the bundles are noisy, tighten:
 

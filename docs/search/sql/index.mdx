@@ -115,3 +115,41 @@ const flights = (await result.collectToObjects()) as FlightRecord[];
 console.log(flights);
 ```
 </CodeGroup>
+
+### Inspecting query plans
+
+The SQL endpoint runs queries through DataFusion, which means DataFusion's `EXPLAIN` family of statements is available unchanged. They're the SQL counterpart of the Python/TypeScript [`explain_plan` and `analyze_plan` methods](/search/optimize-queries) and are useful for the same things: confirming index usage, checking filter pushdown, and finding the slow operator in a query that's underperforming.
+
+| Statement                | What it returns                                                                     |
+| :----------------------- | :---------------------------------------------------------------------------------- |
+| `EXPLAIN <query>`        | Logical and physical plan, without executing the query.                             |
+| `EXPLAIN ANALYZE <query>`| Executes the query and annotates each operator with runtime metrics (rows, timing). |
+| `EXPLAIN VERBOSE <query>`| Adds intermediate optimizer plans on top of `EXPLAIN`.                              |
+
+Run them through the same client you use for regular queries — the result is a small Arrow table with `plan_type` and `plan` columns:
+
+<CodeGroup>
+```python Python icon="python"
+plan = run_query(
+    "EXPLAIN ANALYZE SELECT origin, destination "
+    "FROM flights WHERE origin = 'SFO' LIMIT 100"
+)
+for row in plan.to_pylist():
+    print(row["plan_type"])
+    print(row["plan"])
+    print()
+```
+
+```typescript TypeScript icon="square-js"
+const plan = await client.query(
+    "EXPLAIN ANALYZE SELECT origin, destination " +
+    "FROM flights WHERE origin = 'SFO' LIMIT 100"
+);
+for (const row of (await plan.collectToObjects()) as Array<{ plan_type: string; plan: string }>) {
+    console.log(row.plan_type);
+    console.log(row.plan);
+}
+```
+</CodeGroup>
+
+The operators that show up in the SQL plan are the same ones documented on the [Optimize Query Performance](/search/optimize-queries) page (`LanceScan`, `ScalarIndexQuery`, `KNNVectorDistance`, `ANNIvfPartition`, and so on), so the same reasoning about index coverage and filter pushdown applies — just read the plan from a SQL client instead of a query builder.

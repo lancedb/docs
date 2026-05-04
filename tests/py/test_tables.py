@@ -111,6 +111,27 @@ def test_table_creation_from_dicts(tmp_db):
     # --8<-- [end:create_table_from_dicts]
 
 
+def test_create_table_conflict_handling(tmp_db):
+    db = tmp_db
+    data = [
+        {"vector": [1.1, 1.2], "lat": 45.5, "long": -122.7},
+        {"vector": [0.2, 1.8], "lat": 40.1, "long": -74.1},
+    ]
+    db.create_table("conflict_table", data)
+
+    # --8<-- [start:create_table_conflict_handling]
+    # Idempotent open: reuse the existing table if it exists.
+    # The provided data is ignored; the schema is validated against the
+    # existing table and a mismatch raises an error.
+    tbl = db.create_table("conflict_table", data, exist_ok=True)
+
+    # Overwrite: drop the existing table and create a new one with the
+    # provided data. This permanently discards the old table's data.
+    tbl = db.create_table("conflict_table", data, mode="overwrite")
+    # --8<-- [end:create_table_conflict_handling]
+    assert tbl.count_rows() == 2
+
+
 def test_table_creation_from_pandas(tmp_db):
     # --8<-- [start:create_table_from_pandas]
     import pandas as pd
@@ -1236,6 +1257,54 @@ def test_versioning_flow(tmp_db):
     print(f"Number of rows after deletion: {rows_after_deletion}")
     # --8<-- [end:versioning_delete_data]
     assert rows_after_deletion == 3
+
+
+def test_versioning_tags(tmp_db):
+    import pyarrow as pa
+
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            pa.field("author", pa.string()),
+            pa.field("quote", pa.string()),
+        ]
+    )
+    table = tmp_db.create_table(
+        "quotes_tags_example",
+        [{"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"}],
+        schema=schema,
+        mode="overwrite",
+    )  # v1
+    table.add([{"id": 2, "author": "Morty", "quote": "Aww geez, Rick!"}])  # v2
+    table.add([{"id": 3, "author": "Summer", "quote": "Whatever, Grandpa"}])  # v3
+
+    # --8<-- [start:versioning_tags]
+    # Create a tag pointing at a specific version
+    table.tags.create("baseline", 1)
+    table.tags.create("with-edits", table.version)
+
+    # List all tags on this table
+    print(table.tags.list())
+
+    # Look up the version a tag points at
+    print(table.tags.get_version("baseline"))
+
+    # Move an existing tag to a different version
+    table.tags.update("baseline", 2)
+
+    # Check out a version by tag name
+    table.checkout("baseline")
+    print(table.version)
+
+    # Delete a tag (does not delete the underlying version)
+    table.tags.delete("with-edits")
+
+    # Return to the latest version
+    table.checkout_latest()
+    # --8<-- [end:versioning_tags]
+    assert table.version == 3
+    assert "baseline" in table.tags.list()
+    assert "with-edits" not in table.tags.list()
 
 
 # ============================================================================
