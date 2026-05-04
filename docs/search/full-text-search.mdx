@@ -8,6 +8,7 @@ icon: "book"
 import {
     PyFtsPrefiltering,
     PyFtsPostfiltering,
+    PyFtsIncrementalIndex,
 } from '/snippets/search.mdx'
 
 LanceDB provides support for Full-Text Search via Lance, allowing you to incorporate keyword-based search (based on BM25) in your retrieval solutions.
@@ -128,6 +129,28 @@ If you want to specify which columns to search use `fts_columns="text"`
 <Note>
 LanceDB automatically searches on the existing FTS index if the input to the search is of type `str`. If you provide a vector as input, LanceDB will search the ANN index instead.
 </Note>
+
+### Keeping the index up to date
+
+Rows you add after building an FTS index aren't part of the index until you optimize the table. Until then, queries fall back to a flat scan over the unindexed fragments to keep results complete, which slows them down as the unindexed tail grows. Call `table.optimize()` to fold new rows into the existing index — it's the same operation used for vector indexes:
+
+<CodeGroup>
+<CodeBlock filename="Python" language="python" icon="python">
+{PyFtsIncrementalIndex}
+</CodeBlock>
+
+```typescript TypeScript icon="square-js"
+await tbl.add([{ vector: [3.1, 4.1], text: "Frodo was a happy puppy" }]);
+await tbl.optimize();
+```
+
+```rust Rust icon="rust"
+tbl.add(new_data).execute().await?;
+tbl.optimize(OptimizeAction::All).await?;
+```
+</CodeGroup>
+
+A useful rule of thumb is to call `optimize()` after roughly 100,000 row changes or 20 data-modification operations, whichever comes first. For tables with continuous ingest, schedule it on a cadence that keeps `num_unindexed_rows` (from `table.index_stats(...)`) close to zero. If you want to skip the flat scan over unindexed rows entirely — for example, on a hot read path where stale results are acceptable — call `.fast_search()` on the query so the search returns only indexed results.
 
 ## Advanced Usage
 
