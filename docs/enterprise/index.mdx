@@ -98,7 +98,7 @@ With LanceDB OSS, read latency depends heavily on where the data lives. If you u
 
 LanceDB Enterprise is designed for the object-storage-backed case. It uses NVMe SSDs as a hybrid cache and executes reads across a distributed serving layer, so repeated reads do not always pay the full object-store round trip. The first read fills the cache, subsequent reads can come from local disk, and parallel chunked reads further reduce tail latency. This matters when the application serves interactive dashboards, real-time recommendations, or other latency-sensitive workloads on top of object storage.
 
-Read More: [LanceDB Enterprise Performance](/enterprise/performance/)
+Read More: [LanceDB Enterprise Benchmarks](/enterprise/benchmarks/)
 
 ### Throughput of search queries
 
