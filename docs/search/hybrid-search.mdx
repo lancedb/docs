@@ -240,6 +240,104 @@ text_query = "flower moon"
 ```
 </CodeGroup>
 
+## Query controls
+
+Hybrid queries inherit the same builder API as vector and FTS queries, so the same knobs for filtering, distance bounds, and row identity apply. These compose with `.rerank(...)` and the explicit `.vector()` / `.text()` form shown above.
+
+### Returning row IDs
+
+Pass `with_row_id(True)` (Python) or `withRowId()` (TypeScript) to include the internal `_rowid` column in the results. This is useful for joining hybrid results back to a primary table, or for deduping across multiple queries:
+
+<CodeGroup>
+```python Python icon="python"
+results = (
+    table.search("flower moon", query_type="hybrid")
+    .with_row_id(True)
+    .limit(10)
+    .to_pandas()
+)
+# results now contains a `_rowid` column alongside `_relevance_score`
+```
+
+```typescript TypeScript icon="square-js"
+const results = await table
+    .query()
+    .fullTextSearch("flower moon")
+    .nearestTo(queryVector)
+    .withRowId()
+    .limit(10)
+    .toArray();
+```
+</CodeGroup>
+
+### Bounding vector distance
+
+`distance_range(lower, upper)` (Python) and `distanceRange(lower, upper)` (TypeScript) constrain the vector half of the hybrid query to the half-open interval `[lower, upper)`. This is helpful when you want to cap how far semantic candidates can drift from the query vector before reranking:
+
+<CodeGroup>
+```python Python icon="python"
+results = (
+    table.search("flower moon", query_type="hybrid")
+    .distance_range(lower_bound=0.0, upper_bound=0.4)
+    .limit(10)
+    .to_pandas()
+)
+```
+
+```typescript TypeScript icon="square-js"
+const results = await table
+    .query()
+    .fullTextSearch("flower moon")
+    .nearestTo(queryVector)
+    .distanceRange(0.0, 0.4)
+    .limit(10)
+    .toArray();
+```
+</CodeGroup>
+
+Either bound can be omitted to leave that side unbounded.
+
+### Prefilter vs. postfilter
+
+When the query carries a metadata filter via `where(...)`, you can choose whether the filter runs before or after the vector and FTS sub-queries. **Prefiltering** (the default) applies `where` to the candidate set before scoring, which is usually what you want — it shrinks the working set and benefits from any scalar indexes on the filter columns. **Postfiltering** runs the filter on the already-ranked top-k from each sub-query; this can be faster when the filter is non-selective or unindexed, but it may return fewer than `limit` rows because some of the top-k may be filtered out.
+
+<CodeGroup>
+```python Python icon="python"
+# Prefilter (default): filter applied before scoring
+table.search("flower moon", query_type="hybrid") \
+    .where("category = 'film'", prefilter=True) \
+    .limit(10) \
+    .to_pandas()
+
+# Postfilter: filter applied after the sub-queries return top-k
+table.search("flower moon", query_type="hybrid") \
+    .where("category = 'film'", prefilter=False) \
+    .limit(10) \
+    .to_pandas()
+```
+
+```typescript TypeScript icon="square-js"
+// Prefilter (default): just call .where(...)
+await table.query()
+    .fullTextSearch("flower moon")
+    .nearestTo(queryVector)
+    .where("category = 'film'")
+    .limit(10)
+    .toArray();
+
+// Postfilter: chain .postfilter() after .where(...)
+await table.query()
+    .fullTextSearch("flower moon")
+    .nearestTo(queryVector)
+    .where("category = 'film'")
+    .postfilter()
+    .limit(10)
+    .toArray();
+```
+</CodeGroup>
+
+The choice gets baked into both sub-queries, so the vector and FTS halves see the filter applied the same way. Use [`explain_plan`](/search/optimize-queries#analyzing-non-vector-queries) on a hybrid query to see whether the filter pushed into the scan or ran as a separate `FilterExec` step.
+
 ## More on Reranking 
 
 You can perform hybrid search in LanceDB by combining the results of semantic and full-text search via a reranking algorithm of your choice. LanceDB comes with [**built-in rerankers**](https://lancedb.github.io/lancedb/reranking/) and you can implement your own **custom reranker** as well. 
