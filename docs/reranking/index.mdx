@@ -42,6 +42,16 @@ LanceDB supports several rerankers out of the box. Here are a few examples:
 
 You can find more details about these and other rerankers in the [integrations](/integrations/reranking) section.
 
+<Note>
+**SDK coverage differs across languages**
+
+The provider-specific rerankers in the table above
+(`CohereReranker`, `CrossEncoderReranker`, `ColbertReranker`, and others under `lancedb.rerankers`)
+are currently **Python-only**. The TypeScript and Rust SDKs currently expose the generic `Reranker`
+interface (`rerankHybrid` / `rerank_hybrid`) and the built-in `RRFReranker`. To use a
+model-based reranker from TypeScript or Rust, you must implement the `Reranker` interface yourself.
+</Note>
+
 
 ### Multi-vector reranking
 Most rerankers support reranking based on multiple vectors. To rerank based on multiple vectors, you can pass a list of vectors to the `rerank` method. Here's an example of how to rerank based on multiple vector columns using the `CrossEncoderReranker`:
@@ -54,13 +64,21 @@ reranker = CrossEncoderReranker()
 
 query = "hello"
 
-res1 = table.search(query, vector_column_name="vector").limit(3)
-res2 = table.search(query, vector_column_name="text_vector").limit(3)
-res3 = table.search(query, vector_column_name="meta_vector").limit(3)
+# `deduplicate=True` requires `_rowid` on every input result set,
+# so call `.with_row_id(True)` on each search before passing it in.
+res1 = table.search(query, vector_column_name="vector").limit(3).with_row_id(True)
+res2 = table.search(query, vector_column_name="text_vector").limit(3).with_row_id(True)
+res3 = table.search(query, vector_column_name="meta_vector").limit(3).with_row_id(True)
 
-reranked = reranker.rerank_multivector([res1, res2, res3],  deduplicate=True)
+reranked = reranker.rerank_multivector([res1, res2, res3], deduplicate=True)
 ```
 </CodeGroup>
+
+- Passing `deduplicate=True` to `rerank_multivector(...)` raises a `ValueError` if any of the
+input result sets is missing the `_rowid` column. Therefore, it's recommended to add `.with_row_id(True)` to every
+`table.search(...)` call before reranking, or omit `deduplicate=True` if you don't need it.
+- `RRFReranker.rerank_multivector(...)` always requires `_rowid` on its inputs, regardless of
+the `deduplicate` flag.
 
 ## Creating Custom Rerankers
 
