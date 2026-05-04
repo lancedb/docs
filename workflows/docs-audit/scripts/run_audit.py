@@ -23,6 +23,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG = ROOT / "config.toml"
+DEFAULT_PENDING_ARTIFACTS_DIR = "artifacts/pending"
 EXCERPT_LIMIT = 12
 SYMBOL_PATTERNS = [
     re.compile(r"\b(pub\s+enum|pub\s+struct|pub\s+fn|async\s+fn|fn\s+test_|def\s+test_|test\(|describe\()"),
@@ -272,6 +273,14 @@ def write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def completed_runs_dir(config: dict[str, Any]) -> Path:
+    return ROOT / config["paths"]["artifacts_dir"]
+
+
+def pending_runs_dir(config: dict[str, Any]) -> Path:
+    return ROOT / config["paths"].get("pending_artifacts_dir", DEFAULT_PENDING_ARTIFACTS_DIR)
+
+
 def load_state(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"version": 1, "areas": {}}
@@ -318,7 +327,9 @@ def refresh_latest_run_file(latest_run_file: Path, runs_dir: Path, deleted_run_i
     latest = json.loads(latest_run_file.read_text(encoding="utf-8"))
     if latest.get("run_id") not in deleted_run_ids:
         return
-    remaining_runs = sorted(path for path in runs_dir.iterdir() if path.is_dir())
+    remaining_runs = sorted(
+        path for path in runs_dir.iterdir() if path.is_dir() and (path / "report.md").exists()
+    )
     if not remaining_runs:
         latest_run_file.unlink()
         return
@@ -332,7 +343,7 @@ def refresh_latest_run_file(latest_run_file: Path, runs_dir: Path, deleted_run_i
     if metadata_path.exists():
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         replacement["area"] = metadata.get("area", "")
-        replacement["completed_at"] = metadata.get("created_at", "")
+        replacement["completed_at"] = metadata.get("completed_at", metadata.get("created_at", ""))
     if report_path.exists():
         replacement["report_path"] = str(report_path)
     write_json(latest_run_file, replacement)
@@ -434,7 +445,7 @@ def prepare(args: argparse.Namespace) -> int:
     previous_fingerprints = area_state.get("page_fingerprints", {})
     rotation_index = int(area_state.get("rotation_index", 0))
     run_id = utc_run_id()
-    run_dir = ROOT / config["paths"]["artifacts_dir"] / run_id
+    run_dir = pending_runs_dir(config) / run_id
     page_dir = run_dir / "page_bundles"
     llm_dir = run_dir / "llm_outputs"
     ensure_dir(page_dir)
@@ -468,9 +479,11 @@ def prepare(args: argparse.Namespace) -> int:
     }
     write_json(run_dir / "selected_pages.json", selected_payload)
 
+    created_at = datetime.now(timezone.utc).isoformat()
     metadata = {
         "run_id": run_id,
         "area": args.area,
+        "status": "prepared",
         "manifest": {
             "name": manifest.name,
             "description": manifest.description,
@@ -485,13 +498,16 @@ def prepare(args: argparse.Namespace) -> int:
         },
         "selected_pages": selected_pages,
         "changed_pages": changed_pages,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": created_at,
+        "prepared_at": created_at,
     }
     write_json(run_dir / "metadata.json", metadata)
 
     summary = {
         "run_id": run_id,
         "run_dir": str(run_dir),
+        "final_run_dir": str(completed_runs_dir(config) / run_id),
+        "pending": True,
         "selected_pages": selected_pages,
         "changed_pages": changed_pages,
     }
@@ -503,10 +519,16 @@ def complete(args: argparse.Namespace) -> int:
     config = load_config(Path(args.config))
     state_path = ROOT / config["paths"]["state_file"]
     latest_run_file = ROOT / config["paths"]["latest_run_file"]
-    run_dir = ROOT / config["paths"]["artifacts_dir"] / args.run_id
+    final_run_dir = completed_runs_dir(config) / args.run_id
+    pending_run_dir = pending_runs_dir(config) / args.run_id
+    run_dir = pending_run_dir if pending_run_dir.exists() else final_run_dir
     metadata_path = run_dir / "metadata.json"
     selected_path = run_dir / "selected_pages.json"
     report_path = run_dir / "report.md"
+    if not run_dir.exists():
+        raise SystemExit(
+            f"Missing prepared run {args.run_id}. Looked in {pending_run_dir} and {final_run_dir}"
+        )
     if not metadata_path.exists():
         raise SystemExit(f"Missing metadata.json for run {args.run_id}")
     if not selected_path.exists():
@@ -516,6 +538,20 @@ def complete(args: argparse.Namespace) -> int:
 
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     selected = json.loads(selected_path.read_text(encoding="utf-8"))
+    completed_at = datetime.now(timezone.utc).isoformat()
+    if run_dir == pending_run_dir:
+        if final_run_dir.exists():
+            raise SystemExit(f"Cannot publish run {args.run_id}: {final_run_dir} already exists")
+        ensure_dir(final_run_dir.parent)
+        shutil.move(str(pending_run_dir), str(final_run_dir))
+        run_dir = final_run_dir
+        metadata_path = run_dir / "metadata.json"
+        report_path = run_dir / "report.md"
+
+    metadata["status"] = "completed"
+    metadata["completed_at"] = completed_at
+    write_json(metadata_path, metadata)
+
     state = load_state(state_path)
     areas = state.setdefault("areas", {})
     area_state = areas.setdefault(metadata["area"], {})
@@ -525,7 +561,7 @@ def complete(args: argparse.Namespace) -> int:
     area_state["last_selected_pages"] = selected["selected_pages"]
     area_state["last_changed_pages"] = selected["changed_pages"]
     area_state["last_report_path"] = str(report_path)
-    area_state["completed_at"] = datetime.now(timezone.utc).isoformat()
+    area_state["completed_at"] = completed_at
     write_json(state_path, state)
     write_json(
         latest_run_file,
@@ -534,7 +570,7 @@ def complete(args: argparse.Namespace) -> int:
             "area": metadata["area"],
             "run_dir": str(run_dir),
             "report_path": str(report_path),
-            "completed_at": area_state["completed_at"],
+            "completed_at": completed_at,
         },
     )
     print(json.dumps({"completed": True, "run_id": args.run_id, "run_dir": str(run_dir)}, indent=2))
@@ -543,7 +579,7 @@ def complete(args: argparse.Namespace) -> int:
 
 def cleanup(args: argparse.Namespace) -> int:
     config = load_config(Path(args.config))
-    runs_dir = ROOT / config["paths"]["artifacts_dir"]
+    runs_dir = completed_runs_dir(config)
     latest_run_file = ROOT / config["paths"]["latest_run_file"]
     state_path = ROOT / config["paths"]["state_file"]
     if not runs_dir.exists():
