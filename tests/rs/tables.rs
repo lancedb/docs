@@ -148,6 +148,83 @@ async fn main() {
     // --8<-- [end:create_table_from_dicts]
     assert_eq!(table.count_rows(None).await.unwrap(), 2);
 
+    // Seed an existing table so the conflict-handling examples have something to act on.
+    let conflict_seed = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    data.iter()
+                        .map(|row| Some(row.vector.iter().copied().map(Some).collect::<Vec<_>>())),
+                    2,
+                ),
+            ),
+            Arc::new(Float32Array::from_iter_values(
+                data.iter().map(|row| row.lat),
+            )),
+            Arc::new(Float32Array::from_iter_values(
+                data.iter().map(|row| row.long),
+            )),
+        ],
+    )
+    .unwrap();
+    let conflict_seed_reader =
+        RecordBatchIterator::new(vec![Ok(conflict_seed)].into_iter(), schema.clone());
+    db.create_table("conflict_table", conflict_seed_reader)
+        .execute()
+        .await
+        .unwrap();
+
+    // Build readers for the rows we want to ingest. Outside the snippet markers
+    // because the docs only need to highlight the `.mode(...)` differences.
+    let make_reader = || {
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(
+                    FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                        data.iter().map(|row| {
+                            Some(row.vector.iter().copied().map(Some).collect::<Vec<_>>())
+                        }),
+                        2,
+                    ),
+                ),
+                Arc::new(Float32Array::from_iter_values(
+                    data.iter().map(|row| row.lat),
+                )),
+                Arc::new(Float32Array::from_iter_values(
+                    data.iter().map(|row| row.long),
+                )),
+            ],
+        )
+        .unwrap();
+        RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema.clone())
+    };
+    let exist_ok_reader = make_reader();
+    let overwrite_reader = make_reader();
+
+    // --8<-- [start:create_table_conflict_handling]
+    // Idempotent open: reuse the existing table if it exists.
+    // The provided data is ignored; the schema is validated against the
+    // existing table and a mismatch raises an error.
+    let _conflict_table = db
+        .create_table("conflict_table", exist_ok_reader)
+        .mode(CreateTableMode::exist_ok(|req| req))
+        .execute()
+        .await
+        .unwrap();
+
+    // Overwrite: drop the existing table and create a new one with the
+    // provided data. This permanently discards the old table's data.
+    let conflict_table = db
+        .create_table("conflict_table", overwrite_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    // --8<-- [end:create_table_conflict_handling]
+    assert_eq!(conflict_table.count_rows(None).await.unwrap(), 2);
+
     // --8<-- [start:create_table_custom_schema]
     let custom_schema = Arc::new(Schema::new(vec![
         Field::new(
@@ -1114,4 +1191,59 @@ async fn main() {
     println!("Number of rows after deletion: {}", rows_after_deletion);
     // --8<-- [end:versioning_delete_data]
     assert_eq!(rows_after_deletion, 3);
+
+    // Setup: build a table with three versions to operate on with tags.
+    let tags_table = db
+        .create_table(
+            "quotes_tags_example",
+            make_quotes_reader(vec![(1, "Richard", "Wubba Lubba Dub Dub!")]),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap(); // v1
+    tags_table
+        .add(make_quotes_reader(vec![(2, "Morty", "Aww geez, Rick!")]))
+        .execute()
+        .await
+        .unwrap(); // v2
+    tags_table
+        .add(make_quotes_reader(vec![(3, "Summer", "Whatever, Grandpa")]))
+        .execute()
+        .await
+        .unwrap(); // v3
+
+    // --8<-- [start:versioning_tags]
+    let mut tags = tags_table.tags().await.unwrap();
+
+    // Create a tag pointing at a specific version
+    tags.create("baseline", 1).await.unwrap();
+    let current_version = tags_table.version().await.unwrap();
+    tags.create("with-edits", current_version).await.unwrap();
+
+    // List all tags on this table
+    let all_tags = tags.list().await.unwrap();
+    println!("Tags: {:?}", all_tags);
+
+    // Look up the version a tag points at
+    let baseline_version = tags.get_version("baseline").await.unwrap();
+    println!("baseline -> v{}", baseline_version);
+
+    // Move an existing tag to a different version
+    tags.update("baseline", 2).await.unwrap();
+
+    // Check out a version by tag name (separate method in Rust)
+    tags_table.checkout_tag("baseline").await.unwrap();
+    println!("Current version: {}", tags_table.version().await.unwrap());
+
+    // Delete a tag (does not delete the underlying version)
+    tags.delete("with-edits").await.unwrap();
+
+    // Return to the latest version
+    tags_table.checkout_latest().await.unwrap();
+    // --8<-- [end:versioning_tags]
+    assert_eq!(tags_table.version().await.unwrap(), 3);
+    let remaining = tags.list().await.unwrap();
+    assert!(remaining.contains_key("baseline"));
+    assert!(!remaining.contains_key("with-edits"));
 }

@@ -1,7 +1,8 @@
 version = 1
 enabled_areas = [
-    "indexing",
-    # "search"
+    # "indexing",
+    # "search",
+    "table-operations",
 ]
 
 [repos.lancedb]
