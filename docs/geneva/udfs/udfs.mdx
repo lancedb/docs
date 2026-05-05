@@ -59,6 +59,30 @@ def recordbatch_filename_len(batch: pa.RecordBatch) -> pa.Array:
 
 > **Note**:  Batch UDFS require you to specify `data_type` in the ``@udf`` decorator for batched UDFs which defines `pyarrow.DataType` of the returned `pyarrow.Array`.
 
+### Struct outputs
+
+A UDF can return multiple related values as a single `struct` column by setting `data_type` to a `pa.struct(...)` and returning a tuple (matched by field order) or a `dict` keyed by field name.
+
+```python
+import io
+import pyarrow as pa
+from geneva import udf
+
+@udf(
+    data_type=pa.struct(
+        [pa.field("width", pa.int32()), pa.field("height", pa.int32())]
+    ),
+)
+def dimensions(image: bytes) -> tuple[int, int]:
+    """Extract image dimensions (width, height)."""
+    from PIL import Image
+
+    img = Image.open(io.BytesIO(image))
+    return img.size
+```
+
+Downstream UDFs can then read individual fields via dot notation in `input_columns` (see below).
+
 ### Struct fields and list inputs
 
 You can pass nested `struct` fields directly into a UDF by specifying `input_columns` with dot notation. For list-typed inputs, Geneva can pass a NumPy array when the argument is annotated as `np.ndarray` (use `np.ndarray | None` for nullable lists).
