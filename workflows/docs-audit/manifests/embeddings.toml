@@ -1,0 +1,144 @@
+name = "embeddings"
+description = "Audit the embeddings docs against public SDK embedding APIs, tested snippets, provider surfaces, and Enterprise behavior."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "embedding",
+  "embeddings",
+  "vector",
+  "EmbeddingFunction",
+  "TextEmbeddingFunction",
+  "EmbeddingFunctionRegistry",
+  "get_registry",
+  "getRegistry",
+  "SourceField",
+  "VectorField",
+  "sourceField",
+  "vectorField",
+  "add_embedding",
+  "EmbeddingDefinition",
+  "compute_query_embeddings",
+  "computeQueryEmbeddings",
+  "compute_source_embeddings",
+  "computeSourceEmbeddings",
+]
+
+[[pages]]
+id = "overview"
+title = "Managing Embeddings"
+path = "docs/embedding/index.mdx"
+keywords = ["embedding registry", "providers", "SourceField", "VectorField", "custom embedding functions", "Enterprise", "manual query embeddings", "max_retries", "$var"]
+
+[[pages]]
+id = "quickstart"
+title = "Embeddings: Quickstart"
+path = "docs/embedding/quickstart.mdx"
+keywords = ["quickstart", "get_registry", "sentence-transformers", "BAAI/bge-small-en-v1.5", "SourceField", "VectorField", "automatic embedding", "table.search(query)", "Enterprise"]
+
+[[sources]]
+id = "docs-embedding-snippets-tests"
+repo = "docs"
+kind = "snippets_and_tests"
+applies_to = ["overview", "quickstart"]
+paths = [
+  "docs/snippets/embedding.mdx",
+  "docs/snippets/custom_embedding_function.mdx",
+  "tests/py/test_embedding.py",
+  "tests/ts/embedding.test.ts",
+  "tests/ts/custom_embedding_function.test.ts",
+  "tests/ts/sentence-transformers.test.ts",
+  "tests/rs/embedding.rs",
+  "tests/rs/sentence_transformers.rs",
+]
+extract_keywords = ["get_registry", "getRegistry", "SourceField", "VectorField", "sourceField", "vectorField", "LanceSchema", "TextEmbeddingFunction", "EmbeddingFunction", "manual_query_embeddings", "register_secret", "set_var", "setVar", "sentence-transformers"]
+
+[[sources]]
+id = "docs-provider-integration-examples"
+repo = "docs"
+kind = "related_provider_docs_and_tests"
+applies_to = ["overview"]
+paths = [
+  "docs/integrations/embedding/openai.mdx",
+  "docs/integrations/embedding/sentence-transformers.mdx",
+  "docs/integrations/embedding/cohere.mdx",
+  "docs/integrations/embedding/gemini.mdx",
+  "docs/integrations/embedding/huggingface.mdx",
+  "docs/integrations/embedding/openclip.mdx",
+  "docs/integrations/embedding/imagebind.mdx",
+  "docs/integrations/embedding/colpali.mdx",
+  "docs/integrations/embedding/voyageai.mdx",
+  "tests/py/test_integrations.py",
+]
+extract_keywords = ["openai", "sentence-transformers", "cohere", "gemini", "huggingface", "open-clip", "imagebind", "colpali", "voyageai", "SourceField", "VectorField", "ndims", "api_key", "output_dimension", "multimodal"]
+
+[[sources]]
+id = "lancedb-python-embedding-api"
+repo = "lancedb"
+kind = "public_python_api"
+applies_to = ["overview", "quickstart"]
+paths = [
+  "python/python/lancedb/embeddings/__init__.py",
+  "python/python/lancedb/embeddings/base.py",
+  "python/python/lancedb/embeddings/registry.py",
+  "python/python/lancedb/embeddings/openai.py",
+  "python/python/lancedb/embeddings/sentence_transformers.py",
+  "python/python/lancedb/table.py",
+  "python/python/lancedb/remote/table.py",
+]
+extract_keywords = ["EmbeddingFunction", "TextEmbeddingFunction", "EmbeddingFunctionRegistry", "get_registry", "register", "SourceField", "VectorField", "compute_query_embeddings", "compute_source_embeddings", "generate_embeddings", "ndims", "max_retries", "sensitive_keys", "set_var", "safe_model_dump", "on_bad_vectors"]
+
+[[sources]]
+id = "lancedb-python-embedding-tests"
+repo = "lancedb"
+kind = "public_python_tests"
+applies_to = ["overview", "quickstart"]
+paths = [
+  "python/python/tests/docs/test_embeddings_optional.py",
+  "python/python/tests/test_embeddings.py",
+  "python/python/tests/test_table.py",
+]
+extract_keywords = ["openai_embeddings", "async_openai_embeddings", "register_secret", "register_device", "SourceField", "VectorField", "embedding_functions", "compute_query_embeddings", "on_bad_vectors", "merge_insert", "multiple embeddings", "sensitive key"]
+
+[[sources]]
+id = "lancedb-typescript-embedding-api"
+repo = "lancedb"
+kind = "typescript_api_and_tests"
+applies_to = ["overview", "quickstart"]
+paths = [
+  "nodejs/lancedb/embedding/index.ts",
+  "nodejs/lancedb/embedding/registry.ts",
+  "nodejs/lancedb/embedding/embedding_function.ts",
+  "nodejs/lancedb/embedding/openai.ts",
+  "nodejs/lancedb/embedding/transformers.ts",
+  "nodejs/lancedb/table.ts",
+  "nodejs/__test__/embedding.test.ts",
+  "nodejs/examples/custom_embedding_function.test.ts",
+  "nodejs/examples/sentence-transformers.test.ts",
+]
+extract_keywords = ["LanceSchema", "EmbeddingFunction", "TextEmbeddingFunction", "getRegistry", "register", "sourceField", "vectorField", "computeQueryEmbeddings", "computeSourceEmbeddings", "generateEmbeddings", "setVar", "apiKey", "embeddingFunction", "search(query)", "No embedding functions"]
+
+[[sources]]
+id = "lancedb-rust-embedding-api"
+repo = "lancedb"
+kind = "rust_api_and_tests"
+applies_to = ["overview", "quickstart"]
+paths = [
+  "rust/lancedb/src/embeddings.rs",
+  "rust/lancedb/src/embeddings/openai.rs",
+  "rust/lancedb/src/embeddings/sentence_transformers.rs",
+  "rust/lancedb/tests/embedding_registry_test.rs",
+  "rust/lancedb/tests/embeddings_parallel_test.rs",
+  "rust/lancedb/examples/openai.rs",
+  "rust/lancedb/examples/sentence_transformers.rs",
+]
+extract_keywords = ["EmbeddingFunction", "EmbeddingDefinition", "EmbeddingRegistry", "embedding_registry", "add_embedding", "compute_source_embeddings", "compute_query_embeddings", "dest_type", "source_type", "multiple embeddings", "parallel", "OpenAIEmbeddingFunction", "SentenceTransformersEmbeddings"]
+
+[[sources]]
+id = "sophon-enterprise-embedding-surface"
+repo = "sophon"
+kind = "enterprise_surface"
+applies_to = ["overview", "quickstart"]
+paths = [
+  "src/lancedb_integtest/tests/test_table_lifecycle.py",
+]
+extract_keywords = ["MockTextEmbeddingFunction", "SourceField", "VectorField", "test_embedding_function", "test_hybrid_search", "RemoteTable", "table.search", "create_index", "create_fts_index"]

@@ -3,9 +3,11 @@
 import { expect, test } from "@jest/globals";
 import { withTempDirectory } from "./util.ts";
 
+// --8<-- [start:quickstart_imports]
 import * as lancedb from "@lancedb/lancedb";
 import "@lancedb/lancedb/embedding/transformers";
 import { Utf8 } from "apache-arrow";
+// --8<-- [end:quickstart_imports]
 
 test("full text search", async () => {
   await withTempDirectory(async (databaseDir) => {
@@ -59,3 +61,36 @@ test("full text search", async () => {
     expect(actual[0].text).toBe("The human body has 206 bones.");
   });
 }, 100_000);
+
+test.skip("embedding quickstart snippets", async () => {
+  // --8<-- [start:quickstart_connect]
+  const db = await lancedb.connect("data/sample-lancedb");
+  // --8<-- [end:quickstart_connect]
+
+  // --8<-- [start:quickstart_init_model]
+  const model = (await lancedb.embedding
+    .getRegistry()
+    .get("huggingface")
+    ?.create()) as lancedb.embedding.EmbeddingFunction;
+  // --8<-- [end:quickstart_init_model]
+
+  // --8<-- [start:quickstart_schema]
+  const wordsSchema = lancedb.embedding.LanceSchema({
+    text: model.sourceField(new Utf8()),
+    vector: model.vectorField(),
+  });
+  // --8<-- [end:quickstart_schema]
+
+  // --8<-- [start:quickstart_create_table]
+  const table = await db.createEmptyTable("words", wordsSchema, {
+    mode: "overwrite",
+  });
+  await table.add([{ text: "hello world" }, { text: "goodbye world" }]);
+  // --8<-- [end:quickstart_create_table]
+
+  // --8<-- [start:quickstart_query]
+  const query = "greetings";
+  const actual = (await table.search(query).limit(1).toArray())[0];
+  console.log(actual.text);
+  // --8<-- [end:quickstart_query]
+});
