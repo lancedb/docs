@@ -16,12 +16,17 @@ This workflow also includes manifest maintenance. Before each audit run, review 
 - `prompts/page_audit_guidelines.md`
 - `skills/area-manifest-authoring/SKILL.md`
 
-Then read the manifest file for each area listed in `enabled_areas` in `config.toml`.
+Then select the area manifests for this run using the deterministic area selector.
 
 ## Required workflow
 
 1. Read `config.toml` and determine the enabled areas from `enabled_areas`.
-2. For each enabled area, run a manifest maintenance pass before `prepare`.
+2. Select the areas for this weekly run:
+   - `uv run python scripts/run_audit.py select-areas --refresh --advance`
+   - Use the printed `selected_areas` list for the rest of this workflow.
+   - The selector refreshes watched repos once, detects changed enabled areas, and fills the remaining weekly slots by area rotation.
+   - Do not run unselected enabled areas in this weekly pass.
+3. For each selected area, run a manifest maintenance pass before `prepare`.
    - Use `skills/area-manifest-authoring/SKILL.md` as the procedure.
    - Read the current `manifests/<area>.toml`.
    - Check whether the docs area boundary has changed:
@@ -34,33 +39,31 @@ Then read the manifest file for each area listed in `enabled_areas` in `config.t
      - source blocks whose `applies_to` mapping is now too broad or too narrow
    - Keep the manifest compact. Do not add files just because they mention the topic; add them only if they are likely to expose user-visible behavior the docs may be missing.
    - If the manifest changes, save the updated `manifests/<area>.toml` before preparing the run.
-3. Run the deterministic prepare step for each enabled area.
-   - For the first area, refresh the watched repos:
-     - `uv run python scripts/run_audit.py prepare --area <first-area> --refresh`
-   - For subsequent areas in the same weekly run, skip the refresh to avoid repeating `git pull`:
-     - `uv run python scripts/run_audit.py prepare --area <next-area>`
-4. Read the JSON summary printed by each `prepare` command and locate each pending run directory.
+4. Run the deterministic prepare step for each selected area.
+   - Repos were already refreshed by `select-areas`, so skip `--refresh` here:
+     - `uv run python scripts/run_audit.py prepare --area <area>`
+5. Read the JSON summary printed by each `prepare` command and locate each pending run directory.
    - Use the printed `run_dir`; it should point under `artifacts/pending/<run_id>`.
    - Do not create or write directly under `artifacts/runs/<run_id>` before completion.
-5. For each pending run directory, read `selected_pages.json` and the corresponding files in `page_bundles/`.
-6. For each selected page bundle:
+6. For each pending run directory, read `selected_pages.json` and the corresponding files in `page_bundles/`.
+7. For each selected page bundle:
    - apply `prompts/page_audit_guidelines.md` as the page-level review rubric
    - infer normalized code claims from the evidence bundle
    - infer normalized doc claims from the docs bundle
    - identify only the missing documentation
-7. Write semantic outputs under `llm_outputs/` in each pending run directory.
+8. Write semantic outputs under `llm_outputs/` in each pending run directory.
    - one file per page for code claims
    - one file per page for doc claims
    - one file per page for candidate gaps
-8. Write `report.md` in each pending run directory.
+9. Write `report.md` in each pending run directory.
    - `report.md` is the docs-gap summary only.
    - Do not include refresh status, manifest-maintenance notes, selected-pages bookkeeping, or any other workflow narration in `report.md`.
    - Include operational notes only if they materially affected audit quality, such as an unrefreshable repo, missing source files, or a manifest ambiguity that changes confidence in the findings.
-9. Complete each run:
+10. Complete each run:
    - `uv run python scripts/run_audit.py complete --run-id <run_id>`
    - Completion publishes the pending directory to `artifacts/runs/<run_id>` and updates `artifacts/latest_run.json`.
    - Only completed runs with `report.md` should appear under `artifacts/runs/`.
-10. Return a concise markdown summary suitable for the Codex inbox item.
+11. Return a concise markdown summary suitable for the Codex inbox item.
 
 ## Manifest maintenance rules
 

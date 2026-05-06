@@ -39,21 +39,22 @@ The audit runner only reads those repos and records refresh status. This workspa
 Each weekly run follows the same sequence:
 
 1. Refresh watched repos with safe fast-forward pulls.
-2. Read the enabled area manifests.
-3. Build deterministic evidence bundles for each page in the selected area.
-4. Compare current evidence fingerprints to the last completed run.
-5. Select pages to audit:
+2. Select a bounded set of enabled area manifests for the weekly run.
+3. Read the selected area manifests.
+4. Build deterministic evidence bundles for each page in the selected area.
+5. Compare current evidence fingerprints to the last completed run.
+6. Select pages to audit:
    - always include pages whose mapped evidence changed
-   - then include one rotating extra page for broader coverage
-   - if no pages changed, the rotating extra page becomes the only selected page
-   - the rotation walks through the pages in manifest order and advances one slot after each completed run
-6. Use Codex LLM passes on the selected page bundles to extract:
+   - then include rotating extra pages for broader coverage
+   - if no pages changed, the rotating extra pages become the selected pages
+   - the rotation walks through the pages in manifest order and advances as rotating pages are added
+7. Use Codex LLM passes on the selected page bundles to extract:
    - code claims
    - doc claims
    - candidate gaps and final markdown observations
-7. Save artifacts under a timestamped run directory.
-8. Mark the run complete and update state.
-9. Surface the final markdown report through a Codex inbox item.
+8. Save artifacts under a timestamped run directory.
+9. Mark the run complete and update state.
+10. Surface the final markdown report through a Codex inbox item.
 
 ## Workspace Layout
 
@@ -72,11 +73,12 @@ The deterministic layer is responsible for the parts that should not require sem
 
 - refreshing repos with `git pull --ff-only`
 - reading manifests
+- selecting changed enabled areas first, then filling the weekly area budget by rotation
 - selecting source files per page
 - hashing file contents and detecting changed pages
 - extracting compact raw signals from docs pages and code-side surfaces
 - writing page-scoped evidence bundles
-- selecting changed pages plus one rotating extra page
+- selecting changed pages plus rotating extra pages
 - updating local state after a completed run
 
 The deterministic layer intentionally keeps evidence compact so the LLM does not need to read entire files or repos.
@@ -102,7 +104,16 @@ The saved artifacts should include:
 From this workspace root:
 
 ```bash
-uv run python scripts/run_audit.py prepare --area indexing --refresh
+uv run python scripts/run_audit.py select-areas --refresh --advance
+```
+
+This chooses a bounded list of enabled area manifests for the weekly run. The selector uses
+`[area_selection]` in `config.toml`: changed enabled areas are considered first, then any remaining
+weekly slots are filled by rotating through `enabled_areas`. Use the printed `selected_areas` list
+for the per-area `prepare` commands.
+
+```bash
+uv run python scripts/run_audit.py prepare --area indexing
 ```
 
 `--area` is the manifest name, not a hardcoded value in the script. The runner loads:
@@ -112,10 +123,35 @@ uv run python scripts/run_audit.py prepare --area indexing --refresh
 So `--area indexing` maps to `manifests/indexing.toml`. If you add `manifests/search.toml`, you would run:
 
 ```bash
-uv run python scripts/run_audit.py prepare --area search --refresh
+uv run python scripts/run_audit.py prepare --area search
 ```
 
 This creates a pending run directory under `artifacts/pending/<run_id>/` and prints a JSON summary to stdout.
+
+When running after `select-areas --refresh`, omit `--refresh` from `prepare`; the repos were already
+refreshed once for the weekly selection.
+For a standalone one-area audit where you skip `select-areas`, pass `--refresh` to `prepare`.
+
+## Area Selection
+
+`enabled_areas` is the full pool of manifests the weekly automation may audit. The `[area_selection]`
+block controls how many of those enabled manifests are selected for a single weekly run:
+
+```toml
+[area_selection]
+mode = "changed_first_rotate"
+areas_per_run = 2
+```
+
+Supported modes:
+
+- `all`: select every enabled area.
+- `rotate`: ignore changed-area detection and select only by rotating through `enabled_areas`.
+- `changed_first_rotate`: select changed enabled areas first, up to `areas_per_run`, then fill any remaining slots by rotation.
+
+The area rotation cursor is stored in `state/state.json` under `area_selection.rotation_index` when
+you run `select-areas --advance`. Page-level rotation still happens independently inside each
+selected area through `[selection].rotation_extra_pages`.
 
 After the LLM phase writes the expected outputs into that pending run directory, complete the run with:
 
