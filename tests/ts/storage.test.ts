@@ -54,6 +54,49 @@ async function storageS3Ddb() {
 }
 // --8<-- [end:storage_s3_ddb]
 
+// --8<-- [start:storage_s3_ddb_local]
+async function storageS3DdbLocal() {
+  const db = await lancedb.connect(
+    "s3+ddb://bucket/path?ddbTableName=my-dynamodb-table",
+    {
+      storageOptions: {
+        endpoint: "http://localhost:4566",
+        dynamodbEndpoint: "http://localhost:4566",
+        allowHttp: "true",
+      },
+    },
+  );
+  return db;
+}
+// --8<-- [end:storage_s3_ddb_local]
+
+// --8<-- [start:storage_s3_sse_kms]
+async function storageS3SseKms() {
+  const db = await lancedb.connect("s3://bucket/path", {
+    storageOptions: {
+      awsServerSideEncryption: "aws:kms",
+      awsSseKmsKeyId: "<your-kms-key-id-or-arn>",
+    },
+  });
+  return db;
+}
+// --8<-- [end:storage_s3_sse_kms]
+
+// --8<-- [start:storage_azure_sas]
+async function storageAzureSas() {
+  const db = await lancedb.connect(
+    "az://my-container/my-database",
+    {
+      storageOptions: {
+        azureStorageAccountName: "some-account",
+        azureStorageSasToken: "<sas-token>",
+      },
+    },
+  );
+  return db;
+}
+// --8<-- [end:storage_azure_sas]
+
 // --8<-- [start:storage_s3_minio]
 async function storageS3Minio() {
   const db = await lancedb.connect("s3://bucket/path", {
@@ -132,10 +175,13 @@ test("storage ts snippets compile", async () => {
   expect(storageConnectTimeout).toBeDefined();
   expect(storageTableTimeout).toBeDefined();
   expect(storageS3Ddb).toBeDefined();
+  expect(storageS3DdbLocal).toBeDefined();
   expect(storageS3Minio).toBeDefined();
   expect(storageS3Express).toBeDefined();
+  expect(storageS3SseKms).toBeDefined();
   expect(storageGcsServiceAccount).toBeDefined();
   expect(storageAzureAccount).toBeDefined();
+  expect(storageAzureSas).toBeDefined();
   expect(storageTigrisConnect).toBeDefined();
 });
 

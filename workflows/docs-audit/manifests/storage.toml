@@ -1,0 +1,101 @@
+name = "storage"
+description = "Audit the storage docs against user-facing evidence from lancedb, docs snippets/tests, and sophon."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "storage",
+  "object store",
+  "S3",
+  "GCS",
+  "Azure Blob",
+  "MinIO",
+  "Tigris",
+  "storage_options",
+  "storageOptions",
+  "StorageOptionsProvider",
+  "DynamoDB",
+  "s3+ddb",
+  "S3 Express",
+  "new_table_data_storage_version",
+  "new_table_enable_v2_manifest_paths",
+  "new_table_enable_stable_row_ids",
+  "stable row IDs",
+  "v2 manifest paths",
+  "credential vending",
+]
+
+[[pages]]
+id = "overview"
+title = "Storage Architecture in LanceDB"
+path = "docs/storage/index.mdx"
+keywords = ["storage backend", "object storage", "file storage", "block storage", "local storage", "latency", "scalability", "cost", "reliability"]
+
+[[pages]]
+id = "configuration"
+title = "Configuring Cloud Storage in LanceDB"
+path = "docs/storage/configuration.mdx"
+keywords = ["S3", "GCS", "Azure Blob", "storage_options", "StorageOptionsProvider", "S3 Express", "DynamoDB", "MinIO", "Tigris", "new table configuration"]
+
+[[sources]]
+id = "docs-storage-snippets-tests"
+repo = "docs"
+kind = "snippets_and_tests"
+applies_to = ["configuration"]
+paths = [
+  "docs/snippets/storage.mdx",
+  "tests/py/test_storage.py",
+  "tests/ts/storage.test.ts",
+]
+extract_keywords = ["storage_options", "storageOptions", "StorageOptionsProvider", "fetch_storage_options", "expires_at_millis", "s3+ddb", "ddbTableName", "s3_express", "allow_http"]
+
+[[sources]]
+id = "lancedb-storage-public-apis"
+repo = "lancedb"
+kind = "public_api_doc_comments"
+applies_to = ["configuration"]
+paths = [
+  "python/python/lancedb/db.py",
+  "nodejs/lancedb/index.ts",
+  "nodejs/lancedb/connection.ts",
+  "rust/lancedb/src/connection.rs",
+  "rust/lancedb/src/database/listing.rs",
+  "rust/lancedb/src/table.rs",
+]
+extract_keywords = ["storage_options", "storageOptions", "storage_option", "StorageOptionsProvider", "new_table_data_storage_version", "new_table_enable_v2_manifest_paths", "new_table_enable_stable_row_ids", "initial_storage_options", "latest_storage_options"]
+
+[[sources]]
+id = "lancedb-object-store-tests"
+repo = "lancedb"
+kind = "object_store_integration_tests"
+applies_to = ["overview", "configuration"]
+paths = [
+  "python/python/tests/test_s3.py",
+  "nodejs/__test__/s3_integration.test.ts",
+  "rust/lancedb/tests/object_store_test.rs",
+]
+extract_keywords = ["S3", "DynamoDB", "s3+ddb", "ddbTableName", "concurrent", "KMS", "server side encryption", "storage_options", "allow_http", "dynamodb_endpoint"]
+
+[[sources]]
+id = "sophon-enterprise-storage-config"
+repo = "sophon"
+kind = "enterprise_config"
+applies_to = ["overview", "configuration"]
+paths = [
+  "helm/lancedb/values.yaml",
+  "helm/lancedb/configs/query-node/base.toml",
+]
+extract_keywords = ["rootUri", "externalManifestTable", "useS3Express", "cache_uri", "index_cache", "metadata_cache", "diskCache", "storageClassName", "useV2ManifestPaths"]
+
+[[sources]]
+id = "sophon-federated-storage-vending"
+repo = "sophon"
+kind = "enterprise_api_and_integration"
+applies_to = ["configuration"]
+paths = [
+  "src/rust/phalanx/openapi.yml",
+  "src/rust/phalanx/src/rest/table/table_utils.rs",
+  "src/rust/phalanx/configs/local-dir-ns-s3.toml",
+  "src/rust/phalanx/configs/local-dir-ns-azure.toml",
+  "src/lancedb_integtest/tools/verify_azure_credential_vending.py",
+]
+extract_keywords = ["storage_options", "credential vending", "vend_credentials", "expires_at_millis", "x-azure-storage-account-name", "azure_storage_account_name", "azure_storage_sas_token", "storage.allow_http", "federated_dbs"]
