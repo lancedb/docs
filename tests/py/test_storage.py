@@ -22,7 +22,6 @@ class DummyConnection:
         name: str,
         data,
         storage_options: dict | None = None,
-        storage_options_provider=None,
     ):
         table = DummyTable(name, storage_options=storage_options)
         self.created_tables.append(table)
@@ -76,6 +75,37 @@ def test_storage_snippets(fake_connect):
     )
     # --8<-- [end:storage_s3_ddb]
 
+    # --8<-- [start:storage_s3_ddb_local]
+    db = lancedb.connect(
+        "s3+ddb://bucket/path?ddbTableName=my-dynamodb-table",
+        storage_options={
+            "endpoint": "http://localhost:4566",
+            "dynamodb_endpoint": "http://localhost:4566",
+            "allow_http": "true",
+        },
+    )
+    # --8<-- [end:storage_s3_ddb_local]
+
+    # --8<-- [start:storage_s3_sse_kms]
+    db = lancedb.connect(
+        "s3://bucket/path",
+        storage_options={
+            "aws_server_side_encryption": "aws:kms",
+            "aws_sse_kms_key_id": "<your-kms-key-id-or-arn>",
+        },
+    )
+    # --8<-- [end:storage_s3_sse_kms]
+
+    # --8<-- [start:storage_azure_sas]
+    db = lancedb.connect(
+        "az://my-container/my-database",
+        storage_options={
+            "azure_storage_account_name": "some-account",
+            "azure_storage_sas_token": "<sas-token>",
+        },
+    )
+    # --8<-- [end:storage_azure_sas]
+
     # --8<-- [start:storage_s3_minio]
     db = lancedb.connect(
         "s3://bucket/path",
@@ -125,30 +155,7 @@ def test_storage_snippets(fake_connect):
     )
     # --8<-- [end:storage_tigris_connect]
 
-    # --8<-- [start:storage_provider_refresh]
-    class StsStorageOptionsProvider:
-        # LanceDB calls this method whenever credentials need refresh.
-        def fetch_storage_options(self) -> dict[str, str]:
-            # Replace this with your credential manager or STS call.
-            return {
-                "region": "us-east-1",
-                "aws_access_key_id": "<temp-access-key-id>",
-                "aws_secret_access_key": "<temp-secret-access-key>",
-                "aws_session_token": "<temp-session-token>",
-                "expires_at_millis": "1735707600000",
-                "refresh_offset_millis": "120000",
-            }
-
-    provider = StsStorageOptionsProvider()
-    db = lancedb.connect("s3://bucket/path")
-    table = db.create_table(
-        "table_with_temp_creds",
-        [{"id": 1}],
-        storage_options_provider=provider,
-    )
-    # --8<-- [end:storage_provider_refresh]
-
-    assert len(fake_connect) == 11
+    assert len(fake_connect) == 13
     assert all(
         conn.uri.startswith(("s3://", "gs://", "az://", "s3+ddb://"))
         for conn in fake_connect

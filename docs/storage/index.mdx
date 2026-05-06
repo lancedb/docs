@@ -33,6 +33,12 @@ Below is a high-level comparison ordered from lowest cost to lowest latency.
 
 LanceDB separates storage and compute and writes immutable fragments, making it a strong fit for stateless, horizontally scalable deployments.
 
+<Note>
+**Concurrent writers on S3**
+
+Plain S3 lacks atomic writes, so multiple writers against the same table need an external commit coordinator. LanceDB ships a DynamoDB-backed coordinator behind the `s3+ddb://` URI scheme — see [DynamoDB commit store for concurrent writes](/storage/configuration#dynamodb-commit-store-for-concurrent-writes). Bucket-level [server-side encryption with KMS](/storage/configuration#server-side-encryption-with-kms) and [S3 Express One Zone](/storage/configuration#s3-express) are also supported on this tier.
+</Note>
+
 ### 2. File storage (EFS / GCS Filestore / Azure File)
 
 - **Latency**: Better than object storage; p95 under ~&lt;100ms is typical.
@@ -64,4 +70,12 @@ Keep a copy of data in object storage for disaster recovery. If zero downtime is
 - **Reliability/Availability**: Data is tied to the instance; backups must be rigorous.
 
 Use local disk only when you need extremely low latency and are comfortable owning the operational overhead.
+
+## File-format choices that interact with the backend
+
+A few `storage_options` keys shape new tables in ways that depend on the backend you picked above. They are documented in full on the [configuration page](/storage/configuration#new-table-configuration); the architecture-level summary is:
+
+- `new_table_enable_v2_manifest_paths` matters most on object stores, where opening a table with many versions is dominated by listing cost. Leave it off for backward compatibility with clients older than LanceDB 0.10.0.
+- `new_table_enable_stable_row_ids` keeps row IDs stable across compaction, delete, and merge. The choice is independent of the backend but affects any system that joins on row ID.
+- `new_table_data_storage_version` selects the on-disk format. The default `stable` is recommended for all new tables; pick `legacy` only when older readers must keep working.
 

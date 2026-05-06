@@ -6,59 +6,70 @@ icon: "wrench"
 ---
 import {
     PyStorageAzureAccount,
+    PyStorageAzureSas,
     PyStorageConnectAzure,
     PyStorageConnectGcs,
     PyStorageConnectS3,
     PyStorageConnectTimeout,
-    PyStorageProviderRefresh,
     PyStorageGcsServiceAccount,
     PyStorageS3Ddb,
+    PyStorageS3DdbLocal,
     PyStorageS3Express,
     PyStorageS3Minio,
+    PyStorageS3SseKms,
     PyStorageTableTimeout,
     PyStorageTigrisConnect,
     TsStorageAzureAccount,
+    TsStorageAzureSas,
     TsStorageConnectAzure,
     TsStorageConnectGcs,
     TsStorageConnectS3,
     TsStorageConnectTimeout,
     TsStorageGcsServiceAccount,
     TsStorageS3Ddb,
+    TsStorageS3DdbLocal,
     TsStorageS3Express,
     TsStorageS3Minio,
+    TsStorageS3SseKms,
     TsStorageTableTimeout,
     TsStorageTigrisConnect,
 } from '/snippets/storage.mdx';
 
 When using LanceDB OSS, you can choose where to store your data. The tradeoffs between storage options are covered in the [storage architecture guide](/storage). This page shows how to configure each backend.
 
+<Note>
+**LanceDB Enterprise storage configuration**
+
+In LanceDB Enterprise, you connect with `db://...` and the cluster owns the storage credentials, so `storage_options` are not passed at runtime. Cloud auth is set at deployment time. For federated databases, the namespace service vends per-request credentials automatically. See the [Enterprise quickstart](/enterprise/quickstart) and the [Azure deployment guide](/enterprise/deployment/azure) for the Enterprise flow.
+</Note>
+
 ## Object stores
 
 LanceDB supports AWS S3 (and compatible stores), Azure Blob Storage, and Google Cloud Storage. The URI scheme in your `connect` call selects the backend.
 
 <CodeGroup>
-    <CodeBlock language="Python" title="AWS S3" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageConnectS3}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="AWS S3" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageConnectS3}
     </CodeBlock>
 </CodeGroup>
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Google Cloud Storage" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageConnectGcs}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Google Cloud Storage" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageConnectGcs}
     </CodeBlock>
 </CodeGroup>
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Azure Blob Storage" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageConnectAzure}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Azure Blob Storage" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageConnectAzure}
     </CodeBlock>
 </CodeGroup>
@@ -68,37 +79,36 @@ LanceDB supports AWS S3 (and compatible stores), Azure Blob Storage, and Google 
 When running inside the target cloud with correct IAM bindings, LanceDB often needs no extra configuration. When running elsewhere, provide credentials via environment variables or `storage_options`.
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Set a request timeout" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageConnectTimeout}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Set a request timeout" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageConnectTimeout}
     </CodeBlock>
 </CodeGroup>
 
-<Info title="Storage option casing">
+<Info>
+**Storage option casing**
+
 Keys are case-insensitive. Use lowercase in `storage_options` and uppercase in environment variables.
 </Info>
 
-If you need the option to apply only to a specific table:
+Table-level `storage_options` inherit every key from the connection and override on a per-key basis. Pass them to `create_table` or `open_table` for options that should apply to a single table:
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Table-level storage options" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageTableTimeout}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Table-level storage options" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageTableTimeout}
     </CodeBlock>
 </CodeGroup>
 
-### Dynamic credentials with `StorageOptionsProvider` <Badge color="green">Python-only</Badge>  
-Use a storage options provider when credentials expire (for example, short-lived STS credentials). Pass any provider object that implements `fetch_storage_options()` with `storage_options_provider` on table operations such as `create_table` and `open_table`. In SDK versions that expose `StorageOptionsProvider`, you can subclass it directly.
+<Tip>
+**Inspect the effective options**
 
-If `fetch_storage_options()` returns `expires_at_millis`, LanceDB refreshes credentials before that timestamp. You can optionally set `refresh_offset_millis` (in milliseconds) to refresh earlier.
-
-<CodeBlock language="Python" title="Refresh cloud credentials automatically" icon="python">
-{PyStorageProviderRefresh}
-</CodeBlock>
+On `AsyncTable`, `await table.initial_storage_options()` returns the options the table was opened with, and `await table.latest_storage_options()` returns the current options after any provider-driven refresh. The deprecated `table.storage_options()` method will be removed in a future release.
+</Tip>
 
 #### General object store options
 
@@ -116,13 +126,15 @@ If `fetch_storage_options()` returns `expires_at_millis`, LanceDB refreshes cred
 | `client_max_retries` | Maximum retries for object-store client requests. |
 | `client_retry_timeout` | Total retry timeout (seconds) for object-store client requests. |
 
-<Info title="Option support varies by backend">
+<Info>
+**Option support varies by backend**
+
 These are commonly used options. Cloud-specific keys (for example `region`, `endpoint`, `service_account`, and Azure credential keys) are backend-dependent and can be provided in `storage_options` as needed.
 </Info>
 
 #### New table configuration
 
-These options control the Lance file format and features used when creating new tables. Pass them via `storage_options` at connection or table level.
+These options control the Lance file format and features used when creating new tables. Pass them via `storage_options` at connection or table level. They are evaluated only at table creation; setting them on an existing connection does not rewrite or alter tables that already exist.
 
 | Key | Values | Default | Description |
 | :-- | :-- | :-- | :-- |
@@ -168,7 +180,9 @@ const db = await lancedb.connect("s3://bucket/path", {
 ```
 </CodeGroup>
 
-<Warning title="Deprecated parameter">
+<Warning>
+**Deprecated parameter**
+
 The `data_storage_version` parameter on `create_table()` is deprecated. Use `new_table_data_storage_version` in `storage_options` instead.
 </Warning>
 
@@ -183,10 +197,10 @@ Minimum permissions usually include `s3:PutObject`, `s3:GetObject`, `s3:DeleteOb
 ### S3-compatible stores
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Connect to an S3-compatible endpoint" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageS3Minio}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Connect to an S3-compatible endpoint" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageS3Minio}
     </CodeBlock>
 </CodeGroup>
@@ -196,10 +210,10 @@ If the endpoint is `http://` (common in local development), also set `ALLOW_HTTP
 ### S3 Express
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Use an S3 Express One Zone bucket" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageS3Express}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Use an S3 Express One Zone bucket" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageS3Express}
     </CodeBlock>
 </CodeGroup>
@@ -211,19 +225,49 @@ Consult AWS networking requirements for S3 Express before enabling.
 S3 lacks atomic writes. To enable safe concurrent writers, use DynamoDB as a commit store by switching to the `s3+ddb` scheme and specifying the table name.
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Enable DynamoDB-backed commits" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageS3Ddb}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Enable DynamoDB-backed commits" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageS3Ddb}
     </CodeBlock>
 </CodeGroup>
 
 Create the DynamoDB table with hash key `base_uri` (string) and range key `version` (number). Small provisioned throughput (for example `ReadCapacityUnits=1`, `WriteCapacityUnits=1`) is sufficient for coordination.
 
-<Tip title="Clean up failed multipart uploads">
+The IAM principal that runs LanceDB needs `dynamodb:GetItem`, `dynamodb:PutItem`, and `dynamodb:DescribeTable` on the commit table, in addition to the usual S3 actions on the data bucket.
+
+To point at a non-AWS endpoint (for example LocalStack during local development), set `dynamodb_endpoint` alongside the regular S3 options:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyStorageS3DdbLocal}
+    </CodeBlock>
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsStorageS3DdbLocal}
+    </CodeBlock>
+</CodeGroup>
+
+<Tip>
+**Clean up failed multipart uploads**
+
 LanceDB aborts multipart uploads on graceful shutdown, but crashes can leave incomplete uploads. Add an S3 lifecycle rule to delete in-progress uploads after a few days.
 </Tip>
+
+### Server-side encryption with KMS
+
+To encrypt at rest with an AWS KMS key, set `aws_server_side_encryption` to `aws:kms` and `aws_sse_kms_key_id` to the key ID or ARN. The same options apply at connection or table level and combine with bucket-level default encryption.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyStorageS3SseKms}
+    </CodeBlock>
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsStorageS3SseKms}
+    </CodeBlock>
+</CodeGroup>
+
+The IAM principal needs `kms:Encrypt`, `kms:Decrypt`, and `kms:GenerateDataKey` on the configured KMS key.
 
 ## Google Cloud Storage
 
@@ -232,10 +276,10 @@ LanceDB aborts multipart uploads on graceful shutdown, but crashes can leave inc
 Provide credentials via `GOOGLE_SERVICE_ACCOUNT` (path to JSON) or include the path in `storage_options`. GCS defaults to HTTP/1; set `HTTP1_ONLY=false` if you need HTTP/2.
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Connect with a service account" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageGcsServiceAccount}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Connect with a service account" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageGcsServiceAccount}
     </CodeBlock>
 </CodeGroup>
@@ -247,15 +291,26 @@ Provide credentials via `GOOGLE_SERVICE_ACCOUNT` (path to JSON) or include the p
 Set `AZURE_STORAGE_ACCOUNT_NAME` and `AZURE_STORAGE_ACCOUNT_KEY` as environment variables, or pass them via `storage_options`.
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Connect to Azure Blob Storage" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageAzureAccount}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Connect to Azure Blob Storage" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageAzureAccount}
     </CodeBlock>
 </CodeGroup>
 
-Other supported keys include service principal credentials (`azure_client_id`, `azure_client_secret`, `azure_tenant_id`), SAS tokens, managed identities, and custom endpoints.
+For SAS-token auth, set `azure_storage_account_name` and `azure_storage_sas_token`:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyStorageAzureSas}
+    </CodeBlock>
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsStorageAzureSas}
+    </CodeBlock>
+</CodeGroup>
+
+Other supported keys include service principal credentials (`azure_client_id`, `azure_client_secret`, `azure_tenant_id`), managed identities, and custom endpoints.
 
 ## Tigris Object Storage
 
@@ -264,10 +319,10 @@ Other supported keys include service principal credentials (`azure_client_id`, `
 Tigris exposes an S3-compatible API. Configure the endpoint and region:
 
 <CodeGroup>
-    <CodeBlock language="Python" title="Connect to Tigris Object Storage" icon="python">
+    <CodeBlock filename="Python" language="Python" icon="python">
     {PyStorageTigrisConnect}
     </CodeBlock>
-    <CodeBlock language="TypeScript" title="Connect to Tigris Object Storage" icon="square-js">
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
     {TsStorageTigrisConnect}
     </CodeBlock>
 </CodeGroup>
