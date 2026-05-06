@@ -15,7 +15,7 @@ import {
 
 As your table organization needs grow over time and your projects become more complex, you can use namespaces to organize your tables in a way that reflects your business domains, teams, or environments.
 
-As described in the [Namespaces and Catalog Model](/namespaces) section, namespaces are LanceDB's way of generalizing catalog specs, providing developers a clean way to manage hierarchical organization of tables in the catalog. The SDKs treat `namespace` as a path and can use it for table resolution when you use LanceDB outside the root namespace.
+As described in the [Namespaces and Catalog Model](/namespaces) section, namespaces are LanceDB's way of generalizing catalog specs, providing developers a clean way to manage hierarchical organization of tables in the catalog. The SDKs treat a namespace as a path and can use it for table resolution when you use LanceDB outside the root namespace.
 
 ## Table operations with namespace paths
 
@@ -33,7 +33,13 @@ Let's imagine a scenario where your table management needs have evolved, and you
 
 Below, we show how you would express table operations within that namespace. Each item in the namespace
 list (`["prod", "search"]`) represents a level in the namespace hierarchy, and the table name is
-specified when you create, open, or drop it.
+specified when you create, open, list, or drop it.
+
+The SDK methods expose the namespace path in the idiom of each language:
+
+- Python: pass `namespace_path=["prod", "search"]` to table operations.
+- Rust: call builder methods such as `.namespace(vec!["prod".to_string(), "search".to_string()])`.
+- TypeScript: pass a `namespacePath` array, for example `await db.openTable("user", ["prod", "search"])`.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -50,6 +56,13 @@ Using namespaces is **optional** in LanceDB, and most basic use cases do not req
 An empty namespace (`[]`), which is the default, means "root namespace", and the data will be stored in
 the `data/` directory under the specified root path.
 </Note>
+
+In TypeScript, namespace-scoped table operations are available on `Connection` even though namespace
+lifecycle operations are not exposed there. These calls use the same namespace path array:
+
+- Create a table: `await db.createTable("user", rows, ["prod", "search"], { mode: "create" })`
+- List tables: `await db.tableNames(["prod", "search"])`
+- Drop a table: `await db.dropTable("user", ["prod", "search"])`
 
 ## Namespace management APIs
 
@@ -71,8 +84,20 @@ and `drop_namespace`.
 </CodeGroup>
 
 <Note>
-In TypeScript, namespace lifecycle and namespace-scoped table operations are not currently exposed on `Connection`. In practice, namespaces in TypeScript are managed through a namespace-aware admin surface (for example [REST](/api-reference/rest/index)/admin tooling), and the Connection APIs operate at the root namespace.
+In TypeScript, namespace lifecycle operations such as creating, listing, describing, and dropping
+namespaces are not currently exposed on `Connection`. Use a namespace-aware admin surface, such as
+[REST](/api-reference/rest/index), when you need to manage namespace lifecycle from TypeScript.
 </Note>
+
+Namespace creation and deletion have modes that control what happens when the target already exists,
+doesn't exist, or contains data:
+
+- Create mode: `create` fails if the namespace already exists, `exist_ok` keeps the existing namespace, and `overwrite` replaces it.
+- Drop mode: `FAIL` reports an error when the namespace doesn't exist, and `SKIP` treats a missing namespace as a successful no-op.
+- Drop behavior: `RESTRICT` keeps non-empty namespaces from being dropped, and `CASCADE` drops child namespaces and tables first.
+
+Namespace path components can't be empty. Each component can contain only letters, numbers,
+underscores, hyphens, and periods.
 
 ## Namespaces in LanceDB Enterprise
 
@@ -109,6 +134,10 @@ forward_header_prefixes = ["X-forward"]
 With `forward_header_prefixes = ["X-forward"]`, any incoming header starting with `X-forward` is forwarded to
 `http://<your_org>.internal.catalog.com`. This is useful for auth propagation, for example sending
 `X-forward-authorization: Bearer xxxx`.
+
+For the LanceDB REST API itself, requests use `x-api-key` for API-key authentication. If your endpoint
+serves more than one database, LanceDB can also use headers such as `x-lancedb-database` or
+`x-lancedb-database-prefix` to route the request to the right database context.
 
 ## Related references
 
