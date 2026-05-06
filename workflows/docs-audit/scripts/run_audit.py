@@ -24,6 +24,7 @@ except ModuleNotFoundError:  # pragma: no cover
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG = ROOT / "config.toml"
 DEFAULT_PENDING_ARTIFACTS_DIR = "artifacts/pending"
+DEFAULT_AREA_SELECTION_MODE = "all"
 EXCERPT_LIMIT = 12
 SYMBOL_PATTERNS = [
     re.compile(r"\b(pub\s+enum|pub\s+struct|pub\s+fn|async\s+fn|fn\s+test_|def\s+test_|test\(|describe\()"),
@@ -281,6 +282,17 @@ def pending_runs_dir(config: dict[str, Any]) -> Path:
     return ROOT / config["paths"].get("pending_artifacts_dir", DEFAULT_PENDING_ARTIFACTS_DIR)
 
 
+def repo_infos(config: dict[str, Any]) -> dict[str, RepoInfo]:
+    return {
+        name: RepoInfo(name=name, path=Path(info["path"]))
+        for name, info in config["repos"].items()
+    }
+
+
+def manifest_path(config: dict[str, Any], area: str) -> Path:
+    return ROOT / config["paths"]["manifests_dir"] / f"{area}.toml"
+
+
 def load_state(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {"version": 1, "areas": {}}
@@ -408,6 +420,31 @@ def collect_page_bundle(
     }
 
 
+def collect_area_fingerprints(
+    manifest: AreaManifest,
+    config: dict[str, Any],
+    repos: dict[str, RepoInfo],
+) -> dict[str, str]:
+    fingerprints: dict[str, str] = {}
+    for page in manifest.pages:
+        bundle = collect_page_bundle(manifest, config, page, repos)
+        fingerprints[page.id] = bundle["page_fingerprint"]
+    return fingerprints
+
+
+def changed_pages_for_area(
+    pages: list[Page],
+    fingerprints: dict[str, str],
+    previous_fingerprints: dict[str, str],
+) -> list[str]:
+    ordered_ids = [page.id for page in pages]
+    return [
+        page_id
+        for page_id in ordered_ids
+        if previous_fingerprints.get(page_id) != fingerprints[page_id]
+    ]
+
+
 def select_pages(
     pages: list[Page],
     fingerprints: dict[str, str],
@@ -432,13 +469,121 @@ def select_pages(
     return changed, selected, next_index
 
 
+def select_area_names(
+    enabled_areas: list[str],
+    changed_areas: list[str],
+    rotation_index: int,
+    areas_per_run: int,
+    mode: str,
+) -> tuple[list[str], int]:
+    if not enabled_areas:
+        return [], rotation_index
+    if areas_per_run <= 0:
+        raise SystemExit("area_selection.areas_per_run must be greater than 0")
+    if mode == "all":
+        return enabled_areas, rotation_index
+    if mode not in {"rotate", "changed_first_rotate"}:
+        raise SystemExit(
+            "area_selection.mode must be one of: all, rotate, changed_first_rotate"
+        )
+
+    selected: list[str] = []
+    if mode == "changed_first_rotate":
+        selected.extend(changed_areas[:areas_per_run])
+
+    next_index = rotation_index
+    visited = 0
+    while len(selected) < areas_per_run and visited < len(enabled_areas):
+        candidate = enabled_areas[next_index % len(enabled_areas)]
+        next_index = (next_index + 1) % len(enabled_areas)
+        visited += 1
+        if candidate in selected:
+            continue
+        selected.append(candidate)
+
+    return selected, next_index
+
+
+def select_areas(args: argparse.Namespace) -> int:
+    config = load_config(Path(args.config))
+    enabled_areas = list(config.get("enabled_areas", []))
+    if not enabled_areas:
+        raise SystemExit("No enabled_areas configured")
+
+    area_selection = config.get("area_selection", {})
+    mode = str(area_selection.get("mode", DEFAULT_AREA_SELECTION_MODE))
+    areas_per_run = int(area_selection.get("areas_per_run", len(enabled_areas)))
+    state_path = ROOT / config["paths"]["state_file"]
+    state = load_state(state_path)
+    selection_state = state.setdefault("area_selection", {})
+    rotation_index = int(selection_state.get("rotation_index", 0))
+    repos = repo_infos(config)
+
+    refresh_results = []
+    simulated = set(args.simulate_refresh_failure or [])
+    for repo in repos.values():
+        refresh_results.append(repo_snapshot(repo, args.refresh, repo.name in simulated))
+
+    area_status: dict[str, Any] = {}
+    changed_areas: list[str] = []
+    for area in enabled_areas:
+        manifest = load_manifest(manifest_path(config, area))
+        fingerprints = collect_area_fingerprints(manifest, config, repos)
+        previous_fingerprints = (
+            state.get("areas", {}).get(area, {}).get("page_fingerprints", {})
+        )
+        changed_pages = changed_pages_for_area(
+            manifest.pages,
+            fingerprints,
+            previous_fingerprints,
+        )
+        if changed_pages:
+            changed_areas.append(area)
+        area_status[area] = {
+            "changed_pages": changed_pages,
+            "page_count": len(manifest.pages),
+        }
+
+    selected_areas, next_rotation_index = select_area_names(
+        enabled_areas,
+        changed_areas,
+        rotation_index,
+        areas_per_run,
+        mode,
+    )
+
+    created_at = datetime.now(timezone.utc).isoformat()
+    summary = {
+        "created_at": created_at,
+        "mode": mode,
+        "areas_per_run": areas_per_run,
+        "enabled_areas": enabled_areas,
+        "changed_areas": changed_areas,
+        "selected_areas": selected_areas,
+        "rotation": {
+            "previous_index": rotation_index,
+            "next_index": next_rotation_index,
+        },
+        "area_status": area_status,
+        "refresh": refresh_results,
+        "advanced": args.advance,
+    }
+
+    if args.advance:
+        selection_state["rotation_index"] = next_rotation_index
+        selection_state["last_selected_areas"] = selected_areas
+        selection_state["last_changed_areas"] = changed_areas
+        selection_state["selected_at"] = created_at
+        write_json(state_path, state)
+
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
 def prepare(args: argparse.Namespace) -> int:
     config = load_config(Path(args.config))
-    repos = {
-        name: RepoInfo(name=name, path=Path(info["path"]))
-        for name, info in config["repos"].items()
-    }
-    manifest = load_manifest(ROOT / config["paths"]["manifests_dir"] / f"{args.area}.toml")
+    repos = repo_infos(config)
+    manifest = load_manifest(manifest_path(config, args.area))
     state_path = ROOT / config["paths"]["state_file"]
     state = load_state(state_path)
     area_state = state.get("areas", {}).get(args.area, {})
@@ -630,6 +775,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Simulate an unrefreshable repo for manual validation",
     )
     prepare_parser.set_defaults(func=prepare)
+
+    select_areas_parser = subparsers.add_parser(
+        "select-areas",
+        help="Select enabled area manifests for a weekly run",
+    )
+    select_areas_parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Attempt git pull --ff-only on watched repos before detecting changed areas",
+    )
+    select_areas_parser.add_argument(
+        "--advance",
+        action="store_true",
+        help="Persist the next area rotation cursor after selecting areas",
+    )
+    select_areas_parser.add_argument(
+        "--simulate-refresh-failure",
+        action="append",
+        choices=["lancedb", "docs", "sophon"],
+        help="Simulate an unrefreshable repo for manual validation",
+    )
+    select_areas_parser.set_defaults(func=select_areas)
 
     complete_parser = subparsers.add_parser("complete", help="Mark a run complete and update state")
     complete_parser.add_argument("--run-id", required=True, help="Run ID returned by prepare")

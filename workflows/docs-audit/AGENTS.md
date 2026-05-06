@@ -6,7 +6,7 @@ This workspace orchestrates a docs-gap audit across external local repos. It doe
 
 - Deterministic scripts live in `scripts/`.
 - Area manifests live in `manifests/`.
-- Codex prompt templates live in `prompts/`.
+- Agent prompt templates live in `prompts/`.
 - Run state lives in `state/`.
 - Generated run artifacts live in `artifacts/`.
 

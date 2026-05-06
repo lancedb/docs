@@ -5,9 +5,13 @@ enabled_areas = [
     "table-operations",
     "reranking",
     "embeddings",
-    "storage",,
+    "storage",
     "namespaces",
 ]
+
+[area_selection]
+mode = "changed_first_rotate"
+areas_per_run = 2
 
 [repos.lancedb]
 path = "../../../lancedb"
@@ -19,7 +23,7 @@ path = "../.."
 path = "../../../sophon"
 
 [selection]
-rotation_extra_pages = 10
+rotation_extra_pages = 5
 prefer_changed_pages = true
 
 [paths]
