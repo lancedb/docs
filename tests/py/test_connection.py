@@ -108,22 +108,22 @@ def namespace_table_ops_example():
     db.create_table(
         "user",
         data=[{"id": 1, "vector": [0.1, 0.2], "name": "alice"}],
-        namespace=["prod", "search"],
+        namespace_path=["prod", "search"],
         mode="create",  # use "overwrite" only if you want to replace existing table
     )
 
     db.create_table(
         "user",
         data=[{"id": 2, "vector": [0.3, 0.4], "name": "bob"}],
-        namespace=["prod", "recommendations"],
+        namespace_path=["prod", "recommendations"],
         mode="create",  # use "overwrite" only if you want to replace existing table
     )
 
     # Verify
     print(db.list_namespaces())  # ['prod']
-    print(db.list_namespaces(namespace=["prod"]))  # ['recommendations', 'search']
-    print(db.list_tables(namespace=["prod", "search"]))  # ['user']
-    print(db.list_tables(namespace=["prod", "recommendations"]))  # ['user']
+    print(db.list_namespaces(namespace_path=["prod"]))  # ['recommendations', 'search']
+    print(db.list_tables(namespace_path=["prod", "search"]))  # ['user']
+    print(db.list_tables(namespace_path=["prod", "recommendations"]))  # ['user']
     # --8<-- [end:namespace_table_ops]
 
 
@@ -137,7 +137,7 @@ def namespace_admin_ops_example():
     db.create_namespace(["prod"])
     db.create_namespace(["prod", "search"])
 
-    child_namespaces = db.list_namespaces(namespace=["prod"]).namespaces
+    child_namespaces = db.list_namespaces(namespace_path=["prod"]).namespaces
     print(f"Child namespaces under {namespace}: {child_namespaces}")
     # Child namespaces under ['prod', 'search']: ['search']
 

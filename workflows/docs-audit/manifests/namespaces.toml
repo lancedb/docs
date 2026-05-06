@@ -1,0 +1,133 @@
+name = "namespaces"
+description = "Audit namespace and catalog-model docs against user-facing evidence from lancedb SDKs, docs snippets/tests, and sophon enterprise namespace surfaces."
+docs_repo = "docs"
+rotation_unit = "page"
+keywords = [
+  "namespace",
+  "namespaces",
+  "catalog",
+  "connect_namespace",
+  "namespace_path",
+  "namespacePath",
+  "create_namespace",
+  "list_namespaces",
+  "describe_namespace",
+  "drop_namespace",
+  "DirectoryNamespace",
+  "RestNamespace",
+  "federated_dbs",
+  "ns_impl",
+  "delimiter",
+  "root namespace",
+]
+
+[[pages]]
+id = "tables-and-namespaces"
+title = "Tables and Namespaces"
+path = "docs/tables-and-namespaces.mdx"
+keywords = ["table abstraction", "namespace", "catalog layer", "table resolution", "LanceTable", "RemoteTable"]
+
+[[pages]]
+id = "overview"
+title = "Namespaces and the Catalog Model"
+path = "docs/namespaces/index.mdx"
+keywords = ["catalog model", "namespace hierarchy", "DirectoryNamespace", "RestNamespace", "connect_namespace", "headers", "root namespace"]
+
+[[pages]]
+id = "usage"
+title = "Using Namespaces"
+path = "docs/namespaces/usage.mdx"
+keywords = ["namespace path", "create_table", "open_table", "list_tables", "create_namespace", "list_namespaces", "drop_namespace", "federated_dbs", "ns_impl"]
+
+[[sources]]
+id = "docs-namespace-snippets-tests"
+repo = "docs"
+kind = "snippets_and_tests"
+applies_to = ["overview", "usage"]
+paths = [
+  "docs/snippets/connection.mdx",
+  "tests/py/test_connection.py",
+  "tests/rs/connection.rs",
+]
+extract_keywords = ["connect_namespace", "namespace_table_ops", "namespace_admin_ops", "create_namespace", "list_namespaces", "describe_namespace", "drop_namespace", "namespace"]
+
+[[sources]]
+id = "lancedb-python-namespace-api"
+repo = "lancedb"
+kind = "python_public_api_and_tests"
+applies_to = ["tables-and-namespaces", "overview", "usage"]
+paths = [
+  "python/python/lancedb/__init__.py",
+  "python/python/lancedb/namespace.py",
+  "python/python/lancedb/remote/db.py",
+  "python/python/tests/test_namespace.py",
+  "python/python/tests/test_namespace_integration.py",
+]
+extract_keywords = ["connect_namespace", "connect_namespace_async", "namespace_client_impl", "namespace_client_properties", "namespace_client_pushdown_operations", "namespace_path", "create_namespace", "drop_namespace", "describe_namespace", "table_names"]
+
+[[sources]]
+id = "lancedb-rust-namespace-api"
+repo = "lancedb"
+kind = "rust_public_api_and_tests"
+applies_to = ["tables-and-namespaces", "overview", "usage"]
+paths = [
+  "rust/lancedb/src/connection.rs",
+  "rust/lancedb/src/database/namespace.rs",
+  "rust/lancedb/src/database/listing.rs",
+  "rust/lancedb/src/utils/mod.rs",
+]
+extract_keywords = ["connect_namespace", "CreateNamespaceRequest", "ListNamespacesRequest", "DropNamespaceRequest", "DescribeNamespaceRequest", "namespace_client_properties", "namespace_path", "validate_namespace", "root namespace"]
+
+[[sources]]
+id = "lancedb-typescript-namespace-paths"
+repo = "lancedb"
+kind = "typescript_public_api"
+applies_to = ["tables-and-namespaces", "usage"]
+paths = [
+  "nodejs/lancedb/connection.ts",
+  "nodejs/src/connection.rs",
+]
+extract_keywords = ["namespacePath", "targetNamespacePath", "tableNames", "openTable", "createTable", "dropTable", "dropAllTables", "namespace_client_properties"]
+
+[[sources]]
+id = "sophon-rest-namespace-api"
+repo = "sophon"
+kind = "enterprise_rest_api"
+applies_to = ["tables-and-namespaces", "overview", "usage"]
+paths = [
+  "src/rust/phalanx/openapi.yml",
+  "src/rust/phalanx/src/rest/identifier.rs",
+  "src/rust/phalanx/src/rest/namespace_routes.rs",
+  "src/rust/phalanx/src/rest/namespace/create_namespace.rs",
+  "src/rust/phalanx/src/rest/namespace/list_namespaces.rs",
+  "src/rust/phalanx/src/rest/namespace/describe_namespace.rs",
+  "src/rust/phalanx/src/rest/namespace/drop_namespace.rs",
+  "src/rust/phalanx/src/rest/namespace/list_tables.rs",
+]
+extract_keywords = ["/v1/namespace", "delimiter", "ns1$ns2", "root namespace", "CreateNamespaceMode", "DropNamespaceBehavior", "CASCADE", "RESTRICT", "list_tables"]
+
+[[sources]]
+id = "sophon-federated-namespace-config-tests"
+repo = "sophon"
+kind = "enterprise_config_and_integration"
+applies_to = ["overview", "usage"]
+paths = [
+  "src/rust/phalanx/configs/local-federated.toml",
+  "src/rust/phalanx/configs/ci-integ-test-federated.toml",
+  "src/lancedb_integtest/tests/test_federated_with_lancedb_namespace.py",
+]
+extract_keywords = ["federated_dbs", "ns_impl", "dir", "rest", "root", "vend_input_storage_options", "namespace_client_impl", "header.x-lancedb-database", "header.x-api-key", "namespace_path"]
+
+[[sources]]
+id = "sophon-namespace-explorer-ui"
+repo = "sophon"
+kind = "enterprise_ui"
+applies_to = ["overview", "usage"]
+paths = [
+  "src/dash/src/components/namespace/hooks/useNamespaces.ts",
+  "src/dash/src/components/namespace/RootNamespaces.tsx",
+  "src/dash/src/components/namespace/NamespaceExplorer.tsx",
+  "src/dash/src/components/namespace/NamespaceNode.tsx",
+  "src/dash/src/components/namespace/TableNode.tsx",
+]
+extract_keywords = ["namespace", "namespacePath", "NamespaceExplorer", "Load more namespaces", "Load more tables", "search", "tablePath", "NAMESPACE_DELIMITER"]
