@@ -49,6 +49,18 @@ async fn main() -> Result<()> {
 }
 // --8<-- [end:openai_embeddings]
 
+// --8<-- [start:create_embedding_function]
+use std::sync::Arc;
+
+use lancedb::embeddings::openai::OpenAIEmbeddingFunction;
+
+let api_key = std::env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY is not set");
+let embedding = Arc::new(
+    OpenAIEmbeddingFunction::new_with_model(api_key, "text-embedding-3-small")
+        .expect("failed to create OpenAI embedding function"),
+);
+// --8<-- [end:create_embedding_function]
+
 // --8<-- [start:manual_query_embeddings]
 use std::{iter::once, sync::Arc};
 

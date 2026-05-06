@@ -7,12 +7,19 @@ icon: "bars"
 
 import {
     PyOpenaiEmbeddings,
+    PyCreateEmbeddingFunction,
     PyManualQuerySearch,
     PyEmbeddingFunction,
+    PyRegisterDevice,
+    PyRegisterSecret,
     TsOpenaiEmbeddings,
+    TsCreateEmbeddingFunction,
     TsManualQuerySearch,
     TsEmbeddingFunction,
+    TsRegisterModelFallback,
+    TsRegisterSecret,
     RsOpenaiEmbeddings,
+    RsCreateEmbeddingFunction,
     RsManualQuerySearch,
     RsEmbeddingFunction,
 } from '/snippets/embedding.mdx';
@@ -50,22 +57,75 @@ while Rust examples typically compute query embeddings explicitly before vector 
 
 ### Using an embedding function
 
-In the Python SDK, the `.create()` method accepts several arguments to configure embedding function behavior. `max_retries` is a special argument that applies to all providers.
+Create an embedding function before you attach it to table or schema metadata. Python and TypeScript fetch
+provider implementations from the embedding registry, while Rust constructs the provider embedding function
+directly and registers it on the connection before using it in an `EmbeddingDefinition`.
 
-| Argument | Type | Description |
-|---|---|---|
-| `name` | `str` | The name of the model to use (e.g., `text-embedding-3-small`). |
-| `max_retries` | `int` | The maximum number of times to retry on a failed API request. Defaults to 7. |
+<CodeGroup>
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyCreateEmbeddingFunction}
+    </CodeBlock>
 
-Other arguments are provider-specific. Common arguments include the following:
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsCreateEmbeddingFunction}
+    </CodeBlock>
 
-| Argument | Type | Description |
-| --- | --- | --- |
-| `batch_size` | `int` | The number of inputs to process in a single batch. Provider-specific. |
-| `api_key` | `str` | The API key for the embedding provider. Can also be set via environment variables. |
-| `device` | `str` | The device to run the model on (e.g., "cpu", "cuda"). Defaults to automatic detection. |
+    <CodeBlock filename="Rust" language="rust" icon="rust">
+    {RsCreateEmbeddingFunction}
+    </CodeBlock>
+</CodeGroup>
+
+Provider configuration is SDK-specific, so copy the option names from the provider page for the SDK you use.
+For example, the OpenAI model is selected with `name` in Python, `model` in TypeScript, and the model argument
+to `OpenAIEmbeddingFunction::new_with_model` in Rust.
+
+| Concept | Python | TypeScript | Rust |
+| --- | --- | --- | --- |
+| Model | `name="text-embedding-3-small"` | `{ model: "text-embedding-3-small" }` | `new_with_model(api_key, "text-embedding-3-small")` |
+| Retry count | `max_retries=7` | Provider/client-specific | Provider/client-specific |
+| API key | `api_key="..."`, environment variables, or `$var:` | `apiKey: "..."`, environment variables, or `$var:` | Constructor argument or environment variable |
+| Device | Provider-specific, for example `device="cuda"` | Provider-specific | Provider-specific |
+
+For reusable runtime configuration, the registry also supports `$var:` placeholders in embedding-function config.
+This is useful for provider secrets and environment-specific settings in Python and TypeScript.
+
+- Python uses `registry.set_var(...)`.
+- TypeScript uses `registry.setVar(...)`.
+- You can provide a fallback with `$var:name:default`.
+- Sensitive values such as API keys should be passed through registry variables instead of hardcoding them in config.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyRegisterSecret}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsRegisterSecret}
+    </CodeBlock>
+</CodeGroup>
+
+For non-sensitive settings such as inference device selection, you can also use a default fallback:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="python" icon="python">
+    {PyRegisterDevice}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsRegisterModelFallback}
+    </CodeBlock>
+</CodeGroup>
 
 Find the full list of arguments for each provider in the [integrations](/integrations/embedding) section.
+
+## Multiple embedding columns
+
+A single table can include more than one embedding definition when you want to store multiple semantic views
+of the same data, or generate embeddings from different source columns. In practice, each embedding definition
+maps one source column to one vector column, and the table schema can contain multiple such pairs.
+
+The exact setup differs by SDK, but the underlying pattern is the same: define a distinct source/vector pair
+for each embedding function you want applied during ingest.
 
 ## Embedding model providers
 
@@ -94,16 +154,41 @@ You can find all supported embedding models in the [integrations](/integrations/
 ## Embeddings in LanceDB Enterprise
 <Badge color="red">Enterprise</Badge>
 
-Currently, the embedding registry in LanceDB Enterprise supports automatic generation of embeddings during data ingestion,
-generated on the client side (and stored on the remote table). We don't yet support automatic query-time
-embedding generation when sending queries, though this is planned for a future release.
+In LanceDB Enterprise, embedding generation during data ingestion is client-side and the resulting vectors are
+stored on the remote table.
 
-<Note>
-The same manual query-embedding flow shown above in OSS applies to LanceDB Enterprise connections.
-</Note>
+<Info>
+The Enterprise server does not currently generate embeddings from query text on its own. Any automatic
+query-time embedding happens on the client side.
+</Info>
 
-For search, you can manually generate the embeddings at query time using the same embedding function that
-was used during ingestion, and pass the embeddings to the search function.
+### How string queries are interpreted
+
+For the Python remote client, `table.search("hello")` can take two different paths:
+
+- If the selected vector column has embedding metadata
+  (i.e., the table schema stores the source-column, vector-column, and
+  embedding-function mapping created from fields like `SourceField()` and
+  `VectorField()` during table creation), then the embeddings are computed in the Python client process.
+  The client uses the same local LanceDB embedding registry used by OSS tables to
+  reconstruct the embedding function from schema metadata, compute the query vector in
+  the client process, and send that vector to Enterprise for search.
+  ```python
+  result = table.search("hello").limit(1).to_list()
+  # The Python client computes the query embedding locally, then sends a vector search.
+  ```
+- If the table does not have embedding metadata for that search, `table.search("hello")` in `auto` mode is
+  treated as an FTS query instead.
+  ```python
+  result = table.search("hello").limit(5).to_list()
+  # In auto mode this is treated as an FTS query, not a vector query.
+  ```
+
+If you want explicit vector or hybrid behavior and the client cannot resolve an embedding function from the
+table metadata, generate the query embedding yourself and pass the vector directly.
+
+The manual query-embedding flow below works across Enterprise SDKs and is an explicit path you can use when you
+want full control over query-time behavior.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="python" icon="python">

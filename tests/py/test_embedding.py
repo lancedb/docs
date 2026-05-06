@@ -12,6 +12,17 @@ import pytest
 
 
 @pytest.mark.skip(reason="OpenAI is not available in the test environment")
+def test_create_embedding_function():
+    # --8<-- [start:create_embedding_function]
+    func = get_registry().get("openai").create(
+        name="text-embedding-3-small",
+        max_retries=7,
+    )
+    # --8<-- [end:create_embedding_function]
+    assert func is not None
+
+
+@pytest.mark.skip(reason="OpenAI is not available in the test environment")
 def test_embeddings_openai():
     # --8<-- [start:openai_embeddings]
     db = lancedb.connect("/tmp/db")

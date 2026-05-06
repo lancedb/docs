@@ -5,11 +5,17 @@ description: "Quickstart guide for generating and working with embeddings."
 icon: "rocket"
 ---
 
-import { PyImports, TsImports, PyOpenaiEmbeddings, TsOpenaiEmbeddings } from '/snippets/embedding.mdx';
+import {
+    TsQuickstartConnect,
+    TsQuickstartCreateTable,
+    TsQuickstartImports,
+    TsQuickstartInitModel,
+    TsQuickstartQuery,
+    TsQuickstartSchema,
+} from '/snippets/sentence-transformers.mdx';
 
 LanceDB will automatically vectorize the data both at ingestion and query time. All you need to do is specify which model to use.
-
-We support popular embedding models like OpenAI, Hugging Face, Sentence Transformers, CLIP, and more.
+Popular embedding models like OpenAI, Hugging Face, Sentence Transformers, CLIP, and more, are supported.
 
 ## Step 1: Import Required Libraries
 
@@ -21,12 +27,17 @@ import lancedb
 from lancedb.pydantic import LanceModel, Vector
 from lancedb.embeddings import get_registry
 ```
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsQuickstartImports}
+    </CodeBlock>
 </CodeGroup>
 
 - `lancedb`: The main database connection and operations
 - `LanceModel`: Pydantic model for defining table schemas
 - `Vector`: Field type for storing vector embeddings
 - `get_registry()`: Access to the embedding function registry. It has all the supported as well as custom embedding functions registered by the user
+- TypeScript uses `lancedb.embedding.getRegistry()` and `lancedb.embedding.LanceSchema()` for the same registry/schema workflow
 
 ## Step 2: Connect to LanceDB
 
@@ -37,6 +48,10 @@ Establish a connection to your LanceDB OSS directory or Enterprise cluster:
 # Enter your LanceDB connection URI for OSS or Enterprise here
 db = lancedb.connect(...)
 ```
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsQuickstartConnect}
+    </CodeBlock>
 </CodeGroup>
 
 ## Step 3: Initialize the Embedding Function
@@ -47,9 +62,15 @@ Choose and configure your embedding model:
 ```python Python icon="python"
 model = get_registry().get("sentence-transformers").create(name="BAAI/bge-small-en-v1.5", )
 ```
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsQuickstartInitModel}
+    </CodeBlock>
 </CodeGroup>
 
-This creates a Sentence Transformers embedding function using the BGE model. You can:
+This creates an embedding function from the local embedding registry. The Python snippet uses the
+`sentence-transformers` provider with the BGE model; the TypeScript snippet uses the Transformers-backed
+`huggingface` provider. You can:
 - Change `"sentence-transformers"` to other providers like `"openai"`, `"cohere"`, etc.
 - Modify the model name for different embedding models
 - Set `device="cuda"` for GPU acceleration if available
@@ -64,11 +85,16 @@ class Words(LanceModel):
     text: str = model.SourceField()  
     vector: Vector(model.ndims()) = model.VectorField()
 ```
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsQuickstartSchema}
+    </CodeBlock>
 </CodeGroup>
 
 - `SourceField()`: This field will be embedded
 - `VectorField()`: This stores the embeddings
 - `model.ndims()`: Sets vector dimensions for your model
+- In TypeScript, use `model.sourceField(...)` and `model.vectorField()` inside `LanceSchema(...)`
 
 ## Step 5: Create Table and Ingest Data
 
@@ -82,6 +108,10 @@ table.add([
     {"text": "goodbye world"}
 ])
 ```
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsQuickstartCreateTable}
+    </CodeBlock>
 </CodeGroup>
 
 The `table.add()` call automatically:
@@ -91,7 +121,10 @@ The `table.add()` call automatically:
 
 ## Step 6: Query with Automatic Embedding
 
-Note: On LanceDB Enterprise, automatic query embedding is not supported. You need to pass the embedding vector directly.
+Note: On LanceDB Enterprise, the server does not generate embeddings from query text. In the Python remote
+client, `table.search("greetings")` can still work when the table schema includes embedding metadata, because
+the client computes the query embedding before sending the vector search. If there is no embedding metadata for
+that search, `search("greetings")` in `auto` mode is treated as FTS instead.
 
 Search your data using natural language queries:
 
@@ -101,36 +134,13 @@ query = "greetings"
 actual = table.search(query).limit(1).to_pydantic(Words)[0]
 print(actual.text)
 ```
+
+    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
+    {TsQuickstartQuery}
+    </CodeBlock>
 </CodeGroup>
 
 The search process:
 1. Automatically converts your query text to embeddings
 2. Finds the most similar vectors in your table
 3. Returns the matching documents
-
-
-## Examples
-
-LanceDB currently supports the via SDKs in [Python, Typescript and Rust](/api-reference/).
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="python" icon="python">
-    {PyImports}
-    </CodeBlock>
-
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsImports}
-    </CodeBlock>
-</CodeGroup>
-
-Below are some examples of generating and querying embeddings when using the embedding registry. 
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="python" icon="python">
-    {PyOpenaiEmbeddings}
-    </CodeBlock>
-
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsOpenaiEmbeddings}
-    </CodeBlock>
-</CodeGroup>

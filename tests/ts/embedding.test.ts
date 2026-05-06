@@ -12,6 +12,15 @@ import { withTempDirectory } from "./util.ts";
 
 const openAiTest = process.env.OPENAI_API_KEY == null ? test.skip : test;
 
+openAiTest("create embedding function", () => {
+  // --8<-- [start:create_embedding_function]
+  const func = getRegistry().get("openai")!.create({
+    model: "text-embedding-3-small",
+  });
+  // --8<-- [end:create_embedding_function]
+  expect(func).toBeDefined();
+});
+
 openAiTest("openai embeddings", async () => {
   await withTempDirectory(async (databaseDir) => {
     // --8<-- [start:openai_embeddings]
@@ -136,4 +145,16 @@ test("embedding function api_key", async () => {
     apiKey: "$var:api_key",
   });
   // --8<-- [end:register_secret]
+});
+
+openAiTest("embedding function variable fallback", () => {
+  // --8<-- [start:register_model_fallback]
+  const registry = getRegistry();
+  registry.setVar("openai_model", "text-embedding-3-large");
+
+  const func = registry.get("openai")!.create({
+    model: "$var:openai_model:text-embedding-3-small",
+  });
+  // --8<-- [end:register_model_fallback]
+  expect(func).toBeDefined();
 });
