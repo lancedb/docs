@@ -63,7 +63,7 @@ Then select the area manifests for this run using the deterministic area selecto
    - `uv run python scripts/run_audit.py complete --run-id <run_id>`
    - Completion publishes the pending directory to `artifacts/runs/<run_id>` and updates `artifacts/latest_run.json`.
    - Only completed runs with `report.md` should appear under `artifacts/runs/`.
-11. Return a concise markdown summary suitable for the Codex inbox item.
+11. Return a concise markdown summary suitable for the inbox item.
 
 ## Manifest maintenance rules
 

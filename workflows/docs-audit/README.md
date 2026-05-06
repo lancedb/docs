@@ -11,7 +11,7 @@ The goal is to find what is missing from the docs, especially conceptual and imp
 This is a research workflow, not a production service. The design favors:
 
 - compact deterministic preprocessing
-- page-scoped LLM work inside the Codex app
+- page-scoped LLM work by the running agent
 - saved local artifacts for inspection and reuse
 - simple extension through manifests
 
@@ -20,7 +20,7 @@ This is a research workflow, not a production service. The design favors:
 This workspace does not:
 
 - clone or vendor source code from the watched repos
-- attempt to enforce a hard token quota in Codex
+- attempt to enforce a hard token quota in the agent runtime
 - produce doc fixes automatically
 - behave like a production CI system
 
@@ -48,19 +48,19 @@ Each weekly run follows the same sequence:
    - then include rotating extra pages for broader coverage
    - if no pages changed, the rotating extra pages become the selected pages
    - the rotation walks through the pages in manifest order and advances as rotating pages are added
-7. Use Codex LLM passes on the selected page bundles to extract:
+7. Use page-scoped LLM passes on the selected page bundles to extract:
    - code claims
    - doc claims
    - candidate gaps and final markdown observations
 8. Save artifacts under a timestamped run directory.
 9. Mark the run complete and update state.
-10. Surface the final markdown report through a Codex inbox item.
+10. Surface the final markdown report through an inbox item.
 
 ## Workspace Layout
 
 - `config.toml`: repo paths, enabled areas, selection rules, and output paths
 - `manifests/`: docs-area manifests
-- `prompts/`: reusable Codex prompt templates
+- `prompts/`: reusable agent prompt templates
 - `scripts/`: deterministic extraction, refresh, selection, and state utilities
 - `state/`: lightweight run state and rotation cursor
 - `artifacts/`: per-run evidence bundles, LLM outputs, and reports
@@ -85,7 +85,7 @@ The deterministic layer intentionally keeps evidence compact so the LLM does not
 
 ## LLM-Assisted Layer
 
-The semantic layer runs inside Codex through the automation prompt. For each selected page bundle, the LLM should:
+The semantic layer runs through the automation prompt. For each selected page bundle, the LLM should:
 
 1. infer normalized code claims from the evidence bundle
 2. infer normalized doc claims from the docs bundle
@@ -343,7 +343,7 @@ The runner is designed so new docs areas should generally require a new manifest
 
 ## Weekly Automation
 
-The weekly Codex automation should use this workspace as its cwd and follow `prompts/weekly_automation.md`.
+The weekly automation should use this workspace as its cwd and follow `prompts/weekly_automation.md`.
 
 The automation should:
 
