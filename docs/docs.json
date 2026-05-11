@@ -275,7 +275,6 @@
               {
                 "group": "AI Platforms & Frameworks",
                 "pages": [
-                  "integrations/ai/huggingface",
                   "integrations/ai/agno",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
@@ -283,6 +282,13 @@
                   "integrations/ai/kiln",
                   "integrations/ai/prompttools",
                   "integrations/ai/synthetic-data-kit"
+                ]
+              },
+              {
+                "group": "Hugging Face Hub",
+                "pages": [
+                  "huggingface/overview",
+                  "huggingface/datasets"
                 ]
               }
             ]
@@ -414,6 +420,10 @@
     {
       "source": "/enterprise/performance",
       "destination": "/enterprise/benchmarks"
+    },
+    {
+      "source": "/integrations/ai/huggingface",
+      "destination": "/huggingface/overview"
     }
   ]
 }

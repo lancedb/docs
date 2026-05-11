@@ -1,0 +1,179 @@
+---
+title: "Datasets"
+sidebarTitle: "Datasets"
+description: "Browse Lance-format datasets ready to query on the Hugging Face Hub."
+---
+
+The [`lance-format`](https://huggingface.co/lance-format) organization on Hugging Face publishes a growing
+catalog of multimodal datasets in Lance format. Each one bundles the raw data (images, audio, video, or text),
+pre-computed embeddings, and on-disk vector / full-text indices as first-class columns in the same dataset —
+so vector search, full-text search, and filtered scans work directly via `hf://` URIs without downloading.
+
+This is powered under the hood by the [Lance format's native Hugging Face integration](https://lance.org/integrations/huggingface/)
+(via the [`pylance`](https://pypi.org/project/pylance/) library). LanceDB sits on top of Lance and gives you a
+convenient table-style interface to query these datasets straight from the Hub:
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/<dataset-name>/data")
+tbl = db.open_table("train")
+
+# Vector search, full-text search, or filtered scans — directly on the Hub
+results = tbl.search(query).limit(10).to_list()
+```
+
+Click any card below to view a dataset on the Hub. For a complete walkthrough,
+see the [Hugging Face Hub overview](/huggingface/overview).
+
+## Image Classification
+
+<CardGroup cols={2}>
+  <Card title="MNIST" href="https://huggingface.co/datasets/lance-format/mnist-lance">
+    `lance-format/mnist-lance` — 70,000 28×28 grayscale handwritten digits. The classic image-classification benchmark.
+  </Card>
+  <Card title="CIFAR-10" href="https://huggingface.co/datasets/lance-format/cifar10-lance">
+    `lance-format/cifar10-lance` — 60,000 32×32 RGB images across 10 everyday object classes.
+  </Card>
+  <Card title="Fashion-MNIST" href="https://huggingface.co/datasets/lance-format/fashion-mnist-lance">
+    `lance-format/fashion-mnist-lance` — 70,000 28×28 grayscale clothing images across 10 categories. A harder drop-in replacement for MNIST.
+  </Card>
+  <Card title="Food-101" href="https://huggingface.co/datasets/lance-format/food101-lance">
+    `lance-format/food101-lance` — 101,000 food photographs across 101 dish classes. Fine-grained image classification.
+  </Card>
+  <Card title="Oxford-IIIT Pet" href="https://huggingface.co/datasets/lance-format/oxford-pets-lance">
+    `lance-format/oxford-pets-lance` — 7,390 cat and dog photos across 37 breeds, with an `is_dog` filter column.
+  </Card>
+  <Card title="Stanford Cars" href="https://huggingface.co/datasets/lance-format/stanford-cars-lance">
+    `lance-format/stanford-cars-lance` — 8,144 images across 196 fine-grained car make / model / year classes, with BLIP captions.
+  </Card>
+  <Card title="ImageNet-1k Validation" href="https://huggingface.co/datasets/lance-format/imagenet-1k-val-lance">
+    `lance-format/imagenet-1k-val-lance` — The canonical 50,000-image ILSVRC2012 validation split. Research use only.
+  </Card>
+  <Card title="EuroSAT" href="https://huggingface.co/datasets/lance-format/eurosat-lance">
+    `lance-format/eurosat-lance` — 27,000 Sentinel-2 satellite tiles across 10 land-cover classes. The canonical remote-sensing classification benchmark.
+  </Card>
+</CardGroup>
+
+## Object Detection & Segmentation
+
+<CardGroup cols={2}>
+  <Card title="COCO 2017 Detection" href="https://huggingface.co/datasets/lance-format/coco-detection-2017-lance">
+    `lance-format/coco-detection-2017-lance` — 123,287 images with per-image bounding boxes and category labels across 80 classes.
+  </Card>
+  <Card title="Pascal VOC 2012 Segmentation" href="https://huggingface.co/datasets/lance-format/pascal-voc-2012-segmentation-lance">
+    `lance-format/pascal-voc-2012-segmentation-lance` — 2,913 image / mask pairs across 20 semantic classes. Small-scale semantic-segmentation benchmark.
+  </Card>
+  <Card title="ADE20K" href="https://huggingface.co/datasets/lance-format/ade20k-lance">
+    `lance-format/ade20k-lance` — 27,574 scene images with semantic and instance segmentation maps, scene labels, and per-object metadata.
+  </Card>
+  <Card title="KITTI 2D Detection" href="https://huggingface.co/datasets/lance-format/kitti-2d-detection-lance">
+    `lance-format/kitti-2d-detection-lance` — 7,481 driving-scene images with 2D + 3D bounding-box annotations. The canonical autonomous-driving benchmark.
+  </Card>
+</CardGroup>
+
+## Image Retrieval
+
+<CardGroup cols={2}>
+  <Card title="COCO Captions 2017" href="https://huggingface.co/datasets/lance-format/coco-captions-2017-lance">
+    `lance-format/coco-captions-2017-lance` — Each row is one image paired with 5–7 human-written captions. The standard image-captioning corpus.
+  </Card>
+  <Card title="Flickr30k" href="https://huggingface.co/datasets/lance-format/flickr30k-lance">
+    `lance-format/flickr30k-lance` — 31,783 images each paired with 5 human-written captions.
+  </Card>
+  <Card title="LAION-1M" href="https://huggingface.co/datasets/lance-format/laion-1m">
+    `lance-format/laion-1m` — ~1 million image–caption pairs from the LAION-5B corpus with rich metadata (URL, similarity, NSFW flags).
+  </Card>
+</CardGroup>
+
+## Visual Question Answering
+
+<CardGroup cols={2}>
+  <Card title="ChartQA" href="https://huggingface.co/datasets/lance-format/chartqa-lance">
+    `lance-format/chartqa-lance` — 2,500 VQA test questions over scientific and business charts that combine logical and visual reasoning.
+  </Card>
+  <Card title="DocVQA" href="https://huggingface.co/datasets/lance-format/docvqa-lance">
+    `lance-format/docvqa-lance` — ~10.5K VQA pairs over document images: forms, receipts, scans, and multi-page reports.
+  </Card>
+  <Card title="TextVQA" href="https://huggingface.co/datasets/lance-format/textvqa-lance">
+    `lance-format/textvqa-lance` — 39,602 VQA pairs where every answer requires reading text inside the image. Includes per-image OCR tokens.
+  </Card>
+  <Card title="VQAv2" href="https://huggingface.co/datasets/lance-format/vqav2-lance">
+    `lance-format/vqav2-lance` — 214,354 (image, question, 10 answers) triples over COCO images. The standard VQA benchmark.
+  </Card>
+  <Card title="GQA testdev-balanced" href="https://huggingface.co/datasets/lance-format/gqa-testdev-balanced-lance">
+    `lance-format/gqa-testdev-balanced-lance` — 12,578 compositional VQA questions over 398 scene-graph-grounded images, with reasoning-program tags.
+  </Card>
+</CardGroup>
+
+## Text QA
+
+<CardGroup cols={2}>
+  <Card title="SQuAD v2" href="https://huggingface.co/datasets/lance-format/squad-v2-lance">
+    `lance-format/squad-v2-lance` — 142,192 Wikipedia-grounded questions including unanswerable "is impossible" examples. Stanford's reading-comprehension benchmark.
+  </Card>
+  <Card title="TriviaQA" href="https://huggingface.co/datasets/lance-format/trivia-qa-lance">
+    `lance-format/trivia-qa-lance` — 156,328 trivia questions paired with canonical answers and all accepted answer aliases.
+  </Card>
+  <Card title="HotpotQA distractor" href="https://huggingface.co/datasets/lance-format/hotpotqa-distractor-lance">
+    `lance-format/hotpotqa-distractor-lance` — 97,852 multi-hop QA examples where each answer requires combining facts from two Wikipedia paragraphs.
+  </Card>
+  <Card title="Natural Questions Validation" href="https://huggingface.co/datasets/lance-format/natural-questions-val-lance">
+    `lance-format/natural-questions-val-lance` — 7,830 real Google search queries paired with the full Wikipedia article each answer lives in.
+  </Card>
+  <Card title="MS MARCO v2.1" href="https://huggingface.co/datasets/lance-format/ms-marco-v2.1-lance">
+    `lance-format/ms-marco-v2.1-lance` — ~910K real Bing user queries, each with 10 candidate passages and human-written reference answers.
+  </Card>
+</CardGroup>
+
+## Text Corpora
+
+<CardGroup cols={2}>
+  <Card title="FineWeb-Edu" href="https://huggingface.co/datasets/lance-format/fineweb-edu">
+    `lance-format/fineweb-edu` — A multi-million-passage educational web corpus with cleaned text and rich metadata, designed for retrieval-heavy workloads.
+  </Card>
+</CardGroup>
+
+## Speech
+
+<CardGroup cols={2}>
+  <Card title="LibriSpeech clean" href="https://huggingface.co/datasets/lance-format/librispeech-clean-lance">
+    `lance-format/librispeech-clean-lance` — ~34K English audiobook utterances (FLAC) with reference transcripts. The standard ASR benchmark.
+  </Card>
+</CardGroup>
+
+## Video
+
+<CardGroup cols={2}>
+  <Card title="OpenVid-1M" href="https://huggingface.co/datasets/lance-format/openvid-lance">
+    `lance-format/openvid-lance` — ~938K high-quality short videos with captions and per-clip aesthetic, motion, and camera-motion scores.
+  </Card>
+</CardGroup>
+
+## Robotics
+
+<CardGroup cols={2}>
+  <Card title="LeRobot PushT" href="https://huggingface.co/datasets/lance-format/lerobot-pusht-lance">
+    `lance-format/lerobot-pusht-lance` — The canonical PushT benchmark from the Diffusion Policy paper, published as three Lance tables (`frames`, `episodes`, `videos`).
+  </Card>
+  <Card title="LeRobot X-VLA Soft-Fold" href="https://huggingface.co/datasets/lance-format/lerobot-xvla-soft-fold">
+    `lance-format/lerobot-xvla-soft-fold` — 1,542 episodes / 2.85M frames at 20 FPS across 3 camera streams, with aligned robot state and action vectors.
+  </Card>
+</CardGroup>
+
+## Share your own dataset
+
+Got a multimodal dataset you want to publish? Convert it to Lance and push it to the Hub!
+Anyone who opens it gets vector search, full-text search, and filtered scans on the data out of the box,
+without recreating the embeddings or indexes on their end.
+
+<Card
+  title="Upload Lance datasets to the Hugging Face Hub"
+  icon="upload"
+  href="https://www.lancedb.com/blog/upload-lance-datasets-to-hf-hub"
+>
+A step-by-step walkthrough on the LanceDB blog covering CLI setup, packaging your dataset, pushing to your namespace, and writing a dataset card.
+</Card>
+
+Or browse the [latest trending Lance datasets](https://huggingface.co/datasets?format=format:lance&sort=trending) on Hugging Face.
+
