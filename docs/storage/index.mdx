@@ -36,7 +36,7 @@ LanceDB separates storage and compute and writes immutable fragments, making it 
 <Note>
 **Concurrent writers on S3**
 
-Plain S3 lacks atomic writes, so multiple writers against the same table need an external commit coordinator. LanceDB ships a DynamoDB-backed coordinator behind the `s3+ddb://` URI scheme — see [DynamoDB commit store for concurrent writes](/storage/configuration#dynamodb-commit-store-for-concurrent-writes). Bucket-level [server-side encryption with KMS](/storage/configuration#server-side-encryption-with-kms) and [S3 Express One Zone](/storage/configuration#s3-express) are also supported on this tier.
+S3 and S3 Express now support atomic writes natively, so LanceDB handles concurrent writers against the same table out-of-the-box — no external commit coordinator is required. Bucket-level [server-side encryption with KMS](/storage/configuration#server-side-encryption-with-kms) and [S3 Express One Zone](/storage/configuration#s3-express) are also supported on this tier.
 </Note>
 
 ### 2. File storage (EFS / GCS Filestore / Azure File)

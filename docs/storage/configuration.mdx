@@ -12,8 +12,6 @@ import {
     PyStorageConnectS3,
     PyStorageConnectTimeout,
     PyStorageGcsServiceAccount,
-    PyStorageS3Ddb,
-    PyStorageS3DdbLocal,
     PyStorageS3Express,
     PyStorageS3Minio,
     PyStorageS3SseKms,
@@ -26,8 +24,6 @@ import {
     TsStorageConnectS3,
     TsStorageConnectTimeout,
     TsStorageGcsServiceAccount,
-    TsStorageS3Ddb,
-    TsStorageS3DdbLocal,
     TsStorageS3Express,
     TsStorageS3Minio,
     TsStorageS3SseKms,
@@ -219,34 +215,6 @@ If the endpoint is `http://` (common in local development), also set `ALLOW_HTTP
 </CodeGroup>
 
 Consult AWS networking requirements for S3 Express before enabling.
-
-### DynamoDB commit store for concurrent writes
-
-S3 lacks atomic writes. To enable safe concurrent writers, use DynamoDB as a commit store by switching to the `s3+ddb` scheme and specifying the table name.
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageS3Ddb}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageS3Ddb}
-    </CodeBlock>
-</CodeGroup>
-
-Create the DynamoDB table with hash key `base_uri` (string) and range key `version` (number). Small provisioned throughput (for example `ReadCapacityUnits=1`, `WriteCapacityUnits=1`) is sufficient for coordination.
-
-The IAM principal that runs LanceDB needs `dynamodb:GetItem`, `dynamodb:PutItem`, and `dynamodb:DescribeTable` on the commit table, in addition to the usual S3 actions on the data bucket.
-
-To point at a non-AWS endpoint (for example LocalStack during local development), set `dynamodb_endpoint` alongside the regular S3 options:
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageS3DdbLocal}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageS3DdbLocal}
-    </CodeBlock>
-</CodeGroup>
 
 <Tip>
 **Clean up failed multipart uploads**
