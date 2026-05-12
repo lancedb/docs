@@ -8,6 +8,7 @@ import {
     PyVectorIndexConfigureIvf as VectorIndexConfigureIvf,
     PyVectorIndexSetup as VectorIndexSetup,
     PyVectorIndexBuildIvf as VectorIndexBuildIvf,
+    PyVectorIndexAsyncConfig as VectorIndexAsyncConfig,
     PyVectorIndexQueryIvf as VectorIndexQueryIvf,
     PyVectorIndexBuildHnsw as VectorIndexBuildHnsw,
     PyVectorIndexQueryHnsw as VectorIndexQueryHnsw,
@@ -135,6 +136,28 @@ Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` 
     {VectorIndexBuildIvf}
     </CodeBlock>
 </CodeGroup>
+
+### Async API and Config Objects
+
+With asynchronous Python connections, create vector indexes with `await table.create_index("vector", config=...)`. The `config` object carries the same index choices you configure in the synchronous API, such as distance metric, partition count, and quantization settings:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexAsyncConfig}
+    </CodeBlock>
+</CodeGroup>
+
+Use these Python config classes for the index types shown on this page:
+
+| Index type | Python config class |
+| :--- | :--- |
+| `IVF_FLAT` | `IvfFlat` |
+| `IVF_PQ` | `IvfPq` |
+| `IVF_RQ` | `IvfRq` |
+| `IVF_SQ` | `IvfSq` |
+| `IVF_HNSW_FLAT` | `IvfHnswFlat` |
+| `IVF_HNSW_PQ` | `IvfHnswPq` |
+| `IVF_HNSW_SQ` | `IvfHnswSq` |
 
 ### 3. Query the IVF Index
 

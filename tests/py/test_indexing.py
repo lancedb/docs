@@ -69,6 +69,40 @@ def test_vector_index_build_ivf(tmp_db):
     assert table.list_indices()
 
 
+@pytest.mark.asyncio
+async def test_vector_index_async_config(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    # --8<-- [start:vector_index_async_config]
+    import lancedb
+    import numpy as np
+    from lancedb.index import IvfPq
+
+    async def main():
+        data = [
+            {"id": i, "vector": np.random.random(8).astype(np.float32).tolist()}
+            for i in range(512)
+        ]
+
+        db = await lancedb.connect_async("ex_lancedb")
+        table = await db.create_table(
+            "vector_index_async", data=data, mode="overwrite"
+        )
+
+        await table.create_index(
+            "vector",
+            config=IvfPq(
+                distance_type="cosine",
+                num_partitions=16,
+                num_sub_vectors=4,
+            ),
+        )
+        return await table.list_indices()
+    # --8<-- [end:vector_index_async_config]
+
+    assert await main()
+
+
 def test_vector_index_query_ivf(tmp_db):
     dim = 1536
     data = [

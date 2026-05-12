@@ -32,6 +32,8 @@ export const PyScalarIndexUuidWait = "index_name = \"id_idx\"\ntable.create_scal
 
 export const PyScalarIndexWait = "index_name = \"label_idx\"\ntable.wait_for_index([index_name])\n";
 
+export const PyVectorIndexAsyncConfig = "import lancedb\nimport numpy as np\nfrom lancedb.index import IvfPq\n\nasync def main():\n    data = [\n        {\"id\": i, \"vector\": np.random.random(8).astype(np.float32).tolist()}\n        for i in range(512)\n    ]\n\n    db = await lancedb.connect_async(\"ex_lancedb\")\n    table = await db.create_table(\n        \"vector_index_async\", data=data, mode=\"overwrite\"\n    )\n\n    await table.create_index(\n        \"vector\",\n        config=IvfPq(\n            distance_type=\"cosine\",\n            num_partitions=16,\n            num_sub_vectors=4,\n        ),\n    )\n    return await table.list_indices()\n";
+
 export const PyVectorIndexBinaryAddData = "table.add(data)\n";
 
 export const PyVectorIndexBinaryBuildIndex = "table.create_index(\n    metric=\"hamming\",\n    vector_column_name=\"vector\",\n    index_type=\"IVF_FLAT\",\n)\n";

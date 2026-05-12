@@ -104,6 +104,7 @@ kind = "public_query_tests"
 applies_to = ["overview", "vector-search", "full-text-search", "hybrid-search", "filtering", "multivector-search", "optimize-queries"]
 paths = [
   "python/python/tests/docs/test_search.py",
+  "python/python/tests/test_fts.py",
   "python/python/tests/test_hybrid_query.py",
   "python/python/tests/docs/test_multivector.py",
   "python/python/tests/test_query.py",

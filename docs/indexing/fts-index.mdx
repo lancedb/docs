@@ -55,7 +55,7 @@ The `create_fts_index` method is not available on `AsyncTable`. Use `create_inde
 | Parameter | Type | Default | Description |
 |:----------|:-----|:--------|:------------|
 | `with_position` | bool | `False` | Store token positions (required for phrase queries) |
-| `base_tokenizer` | str | `"simple"` | Text splitting method (`simple`, `whitespace`, or `raw`) |
+| `base_tokenizer` | str | `"simple"` | Text splitting method (`simple`, `whitespace`, `raw`, `ngram`, `jieba/*`, or `lindera/*`) |
 | `language` | str | `"English"` | Language for stemming/stop words |
 | `max_token_length` | int | `40` | Maximum token size; longer tokens are omitted |
 | `lower_case` | bool | `True` | Lowercase tokens |
@@ -63,8 +63,8 @@ The `create_fts_index` method is not available on `AsyncTable`. Use `create_inde
 | `remove_stop_words` | bool | `True` | Drop common stop words |
 | `ascii_folding` | bool | `True` | Normalize accented characters |
 | `custom_stop_words` | list[str] | `None` | Extra stop words to drop in addition to the language defaults. Requires `remove_stop_words=True`. |
-| `min_ngram_length` | int | `3` | Minimum n-gram length. Applies only when `base_tokenizer="ngram"`. |
-| `max_ngram_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
+| `ngram_min_length` | int | `3` | Minimum n-gram length. Applies only when `base_tokenizer="ngram"`. |
+| `ngram_max_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `prefix_only` | bool | `False` | Index only prefix n-grams rather than all substrings. Applies only when `base_tokenizer="ngram"`. |
 
 <Note title="Key parameters">
@@ -72,6 +72,8 @@ The `create_fts_index` method is not available on `AsyncTable`. Use `create_inde
 - Disabling `with_position` reduces index size but disables phrase queries.
 - `ascii_folding` helps with international text (e.g., “café” → “cafe”).
 </Note>
+
+Model-backed tokenizers such as `jieba/default` and `lindera/ipadic` require tokenizer model files in Lance's language model home. Lance looks under the default platform data directory for `lance/language_models`, or you can set `LANCE_LANGUAGE_MODEL_HOME` to point to another model root. For example, `jieba/default` is resolved under `<model-home>/jieba/default/...`.
 
 ### Phrase Query Configuration
 
@@ -81,4 +83,3 @@ Enable phrase queries by setting:
 |:----------|:---------------|:--------|
 | `with_position` | `True` | Track token positions for phrase matching |
 | `remove_stop_words` | `False` | Preserve stop words for exact phrase matching |
-

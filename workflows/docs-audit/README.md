@@ -162,6 +162,8 @@ uv run python scripts/run_audit.py complete --run-id <run_id>
 Completion publishes the directory to `artifacts/runs/<run_id>/`. Directories under `artifacts/runs/`
 are completed audit artifacts and should contain `report.md`.
 
+Run multiple area `prepare` commands sequentially. The intended workflow is one prepared area at a time.
+
 To clean up old generated run artifacts, use:
 
 ```bash
