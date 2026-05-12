@@ -40,6 +40,7 @@ Then select the area manifests for this run using the deterministic area selecto
    - Keep the manifest compact. Do not add files just because they mention the topic; add them only if they are likely to expose user-visible behavior the docs may be missing.
    - If the manifest changes, save the updated `manifests/<area>.toml` before preparing the run.
 4. Run the deterministic prepare step for each selected area.
+   - Run prepare commands sequentially, one area at a time. Do not parallelize `prepare`.
    - Repos were already refreshed by `select-areas`, so skip `--refresh` here:
      - `uv run python scripts/run_audit.py prepare --area <area>`
 5. Read the JSON summary printed by each `prepare` command and locate each pending run directory.

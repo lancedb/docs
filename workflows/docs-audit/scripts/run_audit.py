@@ -123,7 +123,7 @@ def sha256_file(path: Path) -> str:
 
 
 def utc_run_id() -> str:
-    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
 
 
 def read_text(path: Path) -> str:
@@ -300,10 +300,13 @@ def load_state(path: Path) -> dict[str, Any]:
 
 
 def parse_run_id_timestamp(run_id: str) -> datetime | None:
-    try:
-        return datetime.strptime(run_id, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None
+    timestamp_part = run_id.split("-", 1)[0]
+    for fmt in ("%Y%m%dT%H%M%S.%fZ", "%Y%m%dT%H%M%SZ"):
+        try:
+            return datetime.strptime(timestamp_part, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 def run_dir_timestamp(run_dir: Path) -> datetime:
@@ -591,6 +594,12 @@ def prepare(args: argparse.Namespace) -> int:
     rotation_index = int(area_state.get("rotation_index", 0))
     run_id = utc_run_id()
     run_dir = pending_runs_dir(config) / run_id
+    try:
+        run_dir.mkdir(parents=True, exist_ok=False)
+    except FileExistsError as exc:
+        raise SystemExit(
+            f"Pending run directory already exists for generated run id {run_id}; rerun prepare."
+        ) from exc
     page_dir = run_dir / "page_bundles"
     llm_dir = run_dir / "llm_outputs"
     ensure_dir(page_dir)

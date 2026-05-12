@@ -91,6 +91,19 @@ paths = [
 extract_keywords = ["create_index", "wait_for_index", "index_stats", "drop_index", "prewarm_index", "optimize", "fast_search", "bypass_vector_index"]
 
 [[sources]]
+id = "lancedb-python-index-api"
+repo = "lancedb"
+kind = "python_public_api"
+applies_to = ["vector-index", "scalar-index", "fts-index", "quantization"]
+paths = [
+  "python/python/lancedb/index.py",
+  "python/python/lancedb/table.py",
+  "python/python/tests/test_fts.py",
+  "python/python/tests/test_index.py",
+]
+extract_keywords = ["FTS", "base_tokenizer", "language", "stem", "ascii_folding", "ngram", "jieba", "lindera", "with_position", "HNSW", "IvfRq", "Bitmap", "LabelList"]
+
+[[sources]]
 id = "docs-snippets-tests"
 repo = "docs"
 kind = "snippets_and_tests"
@@ -111,7 +124,7 @@ kind = "enterprise_surface"
 applies_to = ["overview", "vector-index", "scalar-index", "fts-index", "reindexing", "gpu-indexing"]
 paths = [
   "src/rust/phalanx/src/rest/table/create_index.rs",
-  "src/dash/src/components/tables/components/TableIndexTabs.tsx",
+  "src/dash-common/src/components/tables/components/TableIndexTabs.tsx",
   "helm/lancedb/values.yaml",
   "src/lancedb_integtest/tests/test_table_lifecycle.py",
 ]

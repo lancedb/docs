@@ -16,6 +16,7 @@ This workspace orchestrates a docs-gap audit across external local repos. It doe
 - Keep the deterministic layer deterministic: refresh, extract, fingerprint, select, and update state.
 - Keep semantic reasoning page-scoped and artifact-backed.
 - Reports must describe only what is missing from the docs.
+- Run `prepare` commands sequentially; do not parallelize area preparation.
 - When adding a new docs area, prefer a new manifest over changes to the core runner.
 - Keep evidence compact and user-facing where possible.
 - Preserve the distinction between deterministic outputs (`page_bundles`, metadata, state) and LLM outputs (`llm_outputs`, final report).
