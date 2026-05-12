@@ -1,0 +1,125 @@
+---
+title: "Food-101"
+sidebarTitle: "Food-101"
+description: "Lance-formatted version of Food-101 — 101,000 food photographs across 101 classes — sourced from ethz/food101. Inline JPEG bytes + CLIP image embeddings + IVF_PQ."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/food101-lance"
+>
+Source dataset card and downloadable files for `lance-format/food101-lance`.
+</Card>
+
+Lance-formatted version of [Food-101](https://www.kaggle.com/datasets/dansbecker/food-101) — 101,000 food photographs across 101 classes — sourced from [`ethz/food101`](https://huggingface.co/datasets/ethz/food101). Inline JPEG bytes + CLIP image embeddings + IVF_PQ.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train.lance` | 75,750 |
+| `validation.lance` | 25,250 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `label` | `int32` | Class id (0-100) |
+| `label_name` | `string` | One of 101 dish names (`apple_pie`, `baby_back_ribs`, …) |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` embedding (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — `metric=cosine`
+- `BTREE` on `label`
+- `BITMAP` on `label_name`
+
+## Quick start
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/food101-lance/data/validation.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/food101-lance/data")
+tbl = db.open_table("validation")
+print(f"LanceDB table opened with {len(tbl)} images")
+```
+
+## Filter by class
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/food101-lance/data/validation.lance")
+sushi = ds.scanner(filter="label_name = 'sushi'", columns=["id"], limit=5).to_table()
+```
+
+### Filter by class with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/food101-lance/data")
+tbl = db.open_table("validation")
+sushi = tbl.search().where("label_name = 'sushi'").select(["id"]).limit(5).to_list()
+```
+
+## Visual similarity search
+
+```python
+import lance, pyarrow as pa
+ds = lance.dataset("hf://datasets/lance-format/food101-lance/data/validation.lance")
+emb_field = ds.schema.field("image_emb")
+ref = ds.take([0], columns=["image_emb", "label_name"]).to_pylist()[0]
+query = pa.array([ref["image_emb"]], type=emb_field.type)
+neighbors = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
+    columns=["id", "label_name"],
+).to_table().to_pylist()
+```
+
+### LanceDB visual similarity search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/food101-lance/data")
+tbl = db.open_table("validation")
+
+ref = tbl.search().limit(1).select(["image_emb", "label_name"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding)
+    .metric("cosine")
+    .select(["id", "label_name"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Source & license
+
+Converted from [`ethz/food101`](https://huggingface.co/datasets/ethz/food101). The Food-101 dataset is by Bossard et al. (ETH Zurich) — see the [original dataset page](https://data.vision.ee.ethz.ch/cvl/datasets_extra/food-101/) for licensing details.
+
+## Citation
+
+```
+@inproceedings{bossard2014food,
+  title={Food-101 -- Mining Discriminative Components with Random Forests},
+  author={Bossard, Lukas and Guillaumin, Matthieu and Van Gool, Luc},
+  booktitle={European Conference on Computer Vision (ECCV)},
+  year={2014}
+}
+```

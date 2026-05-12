@@ -1,0 +1,202 @@
+---
+title: "COCO 2017 Detection"
+sidebarTitle: "COCO 2017 Detection"
+description: "Lance-formatted version of the COCO 2017 object detection benchmark — sourced from detection-datasets/coco — with 123,287 images and the full per-image list of bounding boxes, category labels, and CLIP image embeddings, all stored inline."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/coco-detection-2017-lance"
+>
+Source dataset card and downloadable files for `lance-format/coco-detection-2017-lance`.
+</Card>
+
+Lance-formatted version of the [COCO 2017 object detection benchmark](https://cocodataset.org/) — sourced from [`detection-datasets/coco`](https://huggingface.co/datasets/detection-datasets/coco) — with **123,287 images** and the full per-image list of bounding boxes, category labels, and CLIP image embeddings, all stored inline.
+
+## Why this version?
+
+Object detection datasets typically split images, annotations, and embeddings across multiple files (often three different formats: JPEG, JSON, NumPy). Lance keeps all of it in one tabular dataset:
+
+- one row per image,
+- the JPEG bytes, the bounding box list, the category labels, and the CLIP image embedding all live as columns on the same row,
+- `IVF_PQ` on the embedding column lets you do visual similarity search without leaving the dataset, and `LABEL_LIST` on `categories_present` lets you filter to "images containing a dog and a frisbee" in milliseconds.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train.lance` | 117,000+ |
+| `val.lance`   | 4,950+ |
+
+(Counts come from the `detection-datasets/coco` redistribution; box counts: ~860k train / ~37k val.)
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `image_id` | `int64` | COCO image id |
+| `width`, `height` | `int32` | Image dimensions in pixels |
+| `bboxes` | `list<list<float32, 4>>` | Each box is `[x_min, y_min, x_max, y_max]` in absolute pixel coords |
+| `categories` | `list<int32>` | COCO 80-class id (0-79) |
+| `category_names` | `list<string>` | Human-readable class name per object (e.g. `person`, `dog`, …) |
+| `areas` | `list<float32>` | Bounding-box area (pixels²) |
+| `num_objects` | `int32` | Number of annotated objects in the image |
+| `categories_present` | `list<string>` | Deduped class names — feeds the `LABEL_LIST` index for fast filtering |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — `metric=cosine`
+- `BTREE` on `image_id`, `num_objects`
+- `LABEL_LIST` on `categories_present` — supports `array_has_any` / `array_has_all` predicates
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/coco-detection-2017-lance/data/val.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/coco-detection-2017-lance/data")
+tbl = db.open_table("val")
+print(f"LanceDB table opened with {len(tbl)} images")
+```
+
+> **Tip — for production use, download locally first.**
+> ```bash
+> hf download lance-format/coco-detection-2017-lance --repo-type dataset --local-dir ./coco-detection-2017-lance
+> ```
+
+## Read one annotated image
+
+```python
+import io
+import lance
+from PIL import Image, ImageDraw
+
+ds = lance.dataset("hf://datasets/lance-format/coco-detection-2017-lance/data/val.lance")
+row = ds.take([0], columns=["image", "bboxes", "category_names", "width", "height"]).to_pylist()[0]
+
+img = Image.open(io.BytesIO(row["image"])).convert("RGB")
+draw = ImageDraw.Draw(img)
+for (x1, y1, x2, y2), name in zip(row["bboxes"], row["category_names"]):
+    draw.rectangle([x1, y1, x2, y2], outline="red", width=3)
+    draw.text((x1 + 4, y1 + 4), name, fill="red")
+img.save("annotated.jpg")
+```
+
+## Filter by classes (LABEL_LIST index)
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/coco-detection-2017-lance/data/val.lance")
+
+# Images that contain BOTH a person and a frisbee.
+rows = ds.scanner(
+    filter="array_has_all(categories_present, ['person', 'frisbee'])",
+    columns=["image_id", "category_names"],
+    limit=10,
+).to_table().to_pylist()
+
+# Images with at least 5 objects of any class.
+busy = ds.scanner(
+    filter="num_objects >= 5",
+    columns=["image_id", "num_objects"],
+    limit=10,
+).to_table().to_pylist()
+```
+
+### Filter by classes with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/coco-detection-2017-lance/data")
+tbl = db.open_table("val")
+
+rows = (
+    tbl.search()
+    .where("array_has_all(categories_present, ['person', 'frisbee'])")
+    .select(["image_id", "category_names"])
+    .limit(10)
+    .to_list()
+)
+
+busy = (
+    tbl.search()
+    .where("num_objects >= 5")
+    .select(["image_id", "num_objects"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Visual similarity search
+
+```python
+import lance
+import pyarrow as pa
+
+ds = lance.dataset("hf://datasets/lance-format/coco-detection-2017-lance/data/val.lance")
+emb_field = ds.schema.field("image_emb")
+ref = ds.take([0], columns=["image_emb"]).to_pylist()[0]["image_emb"]
+query = pa.array([ref], type=emb_field.type)
+
+neighbors = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 5},
+    columns=["image_id", "category_names"],
+).to_table().to_pylist()
+```
+
+### LanceDB visual similarity search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/coco-detection-2017-lance/data")
+tbl = db.open_table("val")
+
+ref = tbl.search().limit(1).select(["image_emb"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding)
+    .metric("cosine")
+    .select(["image_id", "category_names"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Why Lance?
+
+- One dataset carries images + boxes + categories + areas + embeddings + indices — no JSON sidecars.
+- On-disk vector and label-list indices live next to the data, so filters and ANN search work on local copies and on the Hub.
+- Schema evolution: add columns (segmentation polygons, keypoints, panoptic ids, fresh embeddings) without rewriting the data.
+
+## Source & license
+
+Converted from [`detection-datasets/coco`](https://huggingface.co/datasets/detection-datasets/coco). COCO annotations are released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the underlying images are subject to Flickr terms of service. See the [COCO Terms of Use](https://cocodataset.org/#termsofuse) before redistribution.
+
+## Citation
+
+```
+@inproceedings{lin2014microsoft,
+  title={Microsoft COCO: Common objects in context},
+  author={Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and Hays, James and Perona, Pietro and Ramanan, Deva and Doll{\'a}r, Piotr and Zitnick, C Lawrence},
+  booktitle={European Conference on Computer Vision (ECCV)},
+  year={2014}
+}
+```

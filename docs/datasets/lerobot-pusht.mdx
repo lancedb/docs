@@ -1,0 +1,123 @@
+---
+title: "LeRobot PushT"
+sidebarTitle: "LeRobot PushT"
+description: "Lance-formatted version of lerobot/pusht — the canonical PushT benchmark from the Diffusion Policy paper — packaged using the same three-table layout as the existing lance-format/lerobot-xvla-soft-fold so consumers can flip between datasets without…"
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/lerobot-pusht-lance"
+>
+Source dataset card and downloadable files for `lance-format/lerobot-pusht-lance`.
+</Card>
+
+Lance-formatted version of [`lerobot/pusht`](https://huggingface.co/datasets/lerobot/pusht) — the canonical PushT benchmark from the [Diffusion Policy paper](https://diffusion-policy.cs.columbia.edu/) — packaged using the same three-table layout as the existing [`lance-format/lerobot-xvla-soft-fold`](https://huggingface.co/datasets/lance-format/lerobot-xvla-soft-fold) so consumers can flip between datasets without changing code.
+
+## Tables
+
+The dataset is published as three Lance tables under `data/`:
+
+| Table | Purpose |
+|---|---|
+| `frames.lance`   | One row per frame — observations, actions, episode index, task index. |
+| `videos.lance`   | One row per source MP4 — full per-camera video stored as an inline blob. |
+| `episodes.lance` | One row per episode — full timestamps + actions + per-camera video segment blobs. |
+
+Use `frames.lance` for low-level training (loss-per-timestep), `episodes.lance` when you need the full trajectory + matching video segments, and `videos.lance` when you want to pull entire raw videos by camera.
+
+## Quick start
+
+```python
+import lance
+
+frames    = lance.dataset("hf://datasets/lance-format/lerobot-pusht-lance/data/frames.lance")
+videos    = lance.dataset("hf://datasets/lance-format/lerobot-pusht-lance/data/videos.lance")
+episodes  = lance.dataset("hf://datasets/lance-format/lerobot-pusht-lance/data/episodes.lance")
+
+print("frames:",   frames.count_rows())
+print("videos:",   videos.count_rows())
+print("episodes:", episodes.count_rows())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries. Each `.lance` file in `data/` is a table — open by name.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/lerobot-pusht-lance/data")
+
+frames    = db.open_table("frames")
+videos    = db.open_table("videos")
+episodes  = db.open_table("episodes")
+
+print("frames:",   len(frames))
+print("videos:",   len(videos))
+print("episodes:", len(episodes))
+```
+
+### LanceDB query example
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/lerobot-pusht-lance/data")
+tbl = db.open_table("frames")
+
+# Browse a few frames from the first episode
+results = (
+    tbl.search()
+    .where("episode_index = 0")
+    .select(["episode_index", "frame_index", "timestamp"])
+    .limit(5)
+    .to_list()
+)
+for row in results:
+    print(row)
+```
+
+## Pull a video segment for one episode
+
+```python
+from pathlib import Path
+import lance
+
+episodes = lance.dataset("hf://datasets/lance-format/lerobot-pusht-lance/data/episodes.lance")
+row = episodes.take([0]).to_pylist()[0]
+
+# The episode row carries one ``<camera>_video_blob`` per camera angle.
+for col, value in row.items():
+    if col.endswith("_video_blob") and value:
+        Path(f"{col}.mp4").write_bytes(value)
+        print(f"saved {col}.mp4 ({len(value)/1e6:.1f} MB)")
+```
+
+## Why Lance?
+
+- One dataset bundles low-level frames + full-episode trajectories + raw video blobs — no scattered parquet shards or sidecar MP4 directories.
+- Inline video blobs use Lance's blob encoding so metadata scans never load the bytes; you fetch them on demand via `take_blobs`.
+- Schema evolution: add columns (alternate camera streams, language annotations, model predictions) without rewriting the data.
+
+## Source & license
+
+Converted from [`lerobot/pusht`](https://huggingface.co/datasets/lerobot/pusht) (LeRobot v3.0 dataset format). PushT is released under the Apache 2.0 license by the LeRobot project and the Diffusion Policy authors.
+
+## Citation
+
+```
+@misc{cadene2024lerobot,
+  title={LeRobot: State-of-the-art Machine Learning for Real-World Robotics in PyTorch},
+  author={R{\'e}mi Cadene and Simon Alibert and Alexander Soare and Quentin Gallou{\'e}dec and Adil Zouitine and Steven Palma and Pepijn Kooijmans and Michel Aractingi and Mustafa Shukor and Martino Russi and Francesco Capuano and Caroline Pascal and Jade Choghari and Jess Moss and Thomas Wolf},
+  year={2024},
+  url={https://github.com/huggingface/lerobot}
+}
+
+@inproceedings{chi2023diffusion,
+  title={Diffusion Policy: Visuomotor Policy Learning via Action Diffusion},
+  author={Chi, Cheng and Feng, Siyuan and Du, Yilun and Xu, Zhenjia and Cousineau, Eric and Burchfiel, Benjamin and Song, Shuran},
+  booktitle={Robotics: Science and Systems},
+  year={2023}
+}
+```

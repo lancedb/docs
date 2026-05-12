@@ -1,0 +1,147 @@
+---
+title: "DocVQA"
+sidebarTitle: "DocVQA"
+description: "Lance-formatted version of DocVQA — VQA over document images (industry / government scans, multi-page reports, forms, receipts) — sourced from lmms-lab/DocVQA (DocVQA config)."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/docvqa-lance"
+>
+Source dataset card and downloadable files for `lance-format/docvqa-lance`.
+</Card>
+
+Lance-formatted version of [DocVQA](https://www.docvqa.org/) — VQA over document images (industry / government scans, multi-page reports, forms, receipts) — sourced from [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA) (`DocVQA` config).
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `validation.lance` | 5,349 |
+| `test.lance`       | 5,188 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes (page image) |
+| `image_id` | `string?` | DocVQA `docId` (alias) |
+| `question_id` | `string?` | DocVQA `questionId` |
+| `question` | `string` | Natural-language question |
+| `answers` | `list<string>` | Reference answer span(s) |
+| `answer` | `string` | First reference answer (FTS target) |
+| `doc_id` | `string?` | DocVQA document id |
+| `ucsf_document_id` | `string?` | UCSF Industry Documents Library id |
+| `ucsf_document_page_no` | `string?` | Page number within the source document |
+| `data_split` | `string?` | Original split label from the source |
+| `question_types` | `list<string>` | DocVQA question-type tags (`form`, `figure`, `table`, …) |
+| `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
+| `question_emb` | `fixed_size_list<float32, 512>` | CLIP text embedding of the question |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` and `question_emb` — `metric=cosine`
+- `INVERTED` (FTS) on `question` and `answer`
+- `BTREE` on `image_id`, `question_id`, `doc_id`
+- `LABEL_LIST` on `question_types`
+
+## Quick start
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/docvqa-lance/data/validation.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+print(f"LanceDB table opened with {len(tbl)} document-question pairs")
+```
+
+### LanceDB vector search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+
+ref = tbl.search().limit(1).select(["question_emb", "question"]).to_list()[0]
+query_embedding = ref["question_emb"]
+
+results = (
+    tbl.search(query_embedding, vector_column_name="question_emb")
+    .metric("cosine")
+    .select(["question", "answer"])
+    .limit(5)
+    .to_list()
+)
+```
+
+### LanceDB full-text search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+
+results = (
+    tbl.search("invoice total")
+    .select(["question", "answer"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Filter by question type
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/docvqa-lance/data/validation.lance")
+forms = ds.scanner(
+    filter="array_has_any(question_types, ['form'])",
+    columns=["question", "answer"],
+    limit=5,
+).to_table()
+```
+
+### Filter with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+forms = (
+    tbl.search()
+    .where("array_has_any(question_types, ['form'])")
+    .select(["question", "answer"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Source & license
+
+Converted from [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA). DocVQA is released under the MIT license; the underlying documents come from the [UCSF Industry Documents Library](https://www.industrydocuments.ucsf.edu/) — review their access conditions before redistribution.
+
+## Citation
+
+```
+@inproceedings{mathew2021docvqa,
+  title={DocVQA: A Dataset for VQA on Document Images},
+  author={Mathew, Minesh and Karatzas, Dimosthenis and Jawahar, CV},
+  booktitle={Proceedings of the IEEE/CVF Winter Conference on Applications of Computer Vision (WACV)},
+  year={2021}
+}
+```

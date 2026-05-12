@@ -1,0 +1,246 @@
+---
+title: "FineWeb-Edu"
+sidebarTitle: "FineWeb-Edu"
+description: "FineWeb-edu dataset with over 1.5 billion rows. Each passage ships with cleaned text, metadata, and 384-dim text embeddings for retrieval-heavy workloads."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/fineweb-edu"
+>
+Source dataset card and downloadable files for `lance-format/fineweb-edu`.
+</Card>
+
+FineWeb-edu dataset with over 1.5 billion rows. Each passage ships with cleaned text, metadata, and 384-dim text embeddings for retrieval-heavy workloads.
+
+
+## Load via `datasets.load_dataset`
+
+```python
+import datasets
+
+hf_ds = datasets.load_dataset(
+    "lance-format/fineweb-edu",
+    split="train",
+    streaming=True,
+)
+# Take first three rows and print titles
+for row in hf_ds.take(3):
+    print(row["title"])
+```
+
+Use Lance's native connector when you need ANN search, FTS, or direct access to embeddings while still pointing to the copy hosted on Hugging Face:
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/fineweb-edu/data/train.lance")print(f"Total passages: {ds.count_rows():,}")
+```
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
+tbl = db.open_table("train")
+print(f"LanceDB table opened with {len(tbl)} passages")
+```
+
+
+
+> The dataset hosted on Hugging Face Hub does **not** currently have pre-built ANN (vector) or FTS (full-text search) indices.
+>
+
+> - For any search or similarity workloads, you should download the dataset locally and build indices yourself.
+>
+> ```bash
+> # Download once
+> huggingface-cli download lance-format/fineweb-edu --repo-type dataset --local-dir ./fineweb-edu
+>
+> # Then load locally and build indices
+> import lance
+> ds = lance.dataset("./fineweb-edu")
+> # ds.create_index(...)
+> ```
+>
+
+
+## Why Lance?
+
+- Optimized for AI workloads: Lance keeps multimodal data and vector search-ready storage in the same columnar format designed for accelerator-era retrieval (see [lance.org](https://lance.org)).
+- Images + embeddings + metadata travel as one tabular dataset.
+- On-disk, scalable ANN index means
+- Schema evolution lets you add new features/columns (moderation tags, embeddings, etc.) without rewriting the raw data.
+
+
+## Quick Start (Lance Python)
+
+```python
+import lance
+import pyarrow as pa
+
+lance_ds = lance.dataset("hf://datasets/lance-format/fineweb-edu/data/train.lance")
+
+# Browse titles & language without touching embeddings
+rows = lance_ds.scanner(
+    columns=["title", "language"],
+    limit=5
+).to_table().to_pylist()
+
+# Vector similarity from the on-dataset ANN index
+ref = lance_ds.take([0], columns=["text_embedding", "title"])
+query_vec = pa.array([ref.to_pylist()[0]["text_embedding"]],
+                     type=ref.schema.field("text_embedding").type)
+
+results = lance_ds.scanner(
+    nearest={
+        "column": "text_embedding",
+        "q": query_vec[0],
+        "k": 5,
+        "nprobes": 8,
+        "refine_factor": 20,
+    },
+    columns=["title", "language", "text"],
+).to_table().to_pylist()
+```
+
+> **Hugging Face Streaming Note**
+> - Streaming uses conservative ANN parameters (`nprobes`, `refine_factor`) to stay within HF rate limits.
+> - Prefer local copies (`huggingface-cli download lance-format/fineweb-edu --local-dir ./fineweb`) for heavy workloads, then point Lance at `./fineweb`.
+
+## Dataset Schema
+
+Common columns you'll find in this Lance dataset:
+- `text` – cleaned passage content.
+- `title` – page/article title when available.
+- `url` – canonical source URL.
+- `language` + `language_probability` – detector outputs for filtering.
+- Quality metadata from FineWeb-Edu (e.g., heuristic scores or length stats).
+- `text_embedding` – 384-dimension float32 vector for retrieval.
+
+## Usage Examples
+
+> **Search snippets for reference**
+> The vector/FTS examples below show the Lance APIs you’ll use once indexes are available. The hosted dataset doesn’t yet ship ANN/FTS indexes—download locally (or build indexes yourself) before running them. Pre-built indexes are coming soon.
+
+### 1. Sample documents without embeddings
+
+```python
+scanner = ds.scanner(
+    columns=["title", "language", "text"],
+    filter="language = 'en'",
+    limit=5,
+)
+for doc in scanner.to_table().to_pylist():
+    print(doc["title"], doc["language"])
+    print(doc["text"][:200], "...\n")
+```
+
+### 2. Vector search for semantically similar passages
+
+```python
+ref_doc = ds.take([123], columns=["text_embedding", "title", "text"]).to_pylist()[0]
+emb_type = ds.to_table(columns=["text_embedding"], limit=1).schema.field("text_embedding").type
+query = pa.array([ref_doc["text_embedding"]], type=emb_type)
+
+neighbors = ds.scanner(
+    nearest={
+        "column": "text_embedding",
+        "q": query[0],
+        "k": 6,
+        "nprobes": 8,
+        "refine_factor": 20,
+    },
+    columns=["title", "language", "text"],
+).to_table().to_pylist()[1:]
+```
+
+### LanceDB Vector Search
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
+tbl = db.open_table("train")
+
+# Get a passage to use as a query
+ref_passage = tbl.limit(1).offset(123).select(["text_embedding", "text"]).to_pandas().to_dict('records')[0]
+query_embedding = ref_passage["text_embedding"]
+
+results = tbl.search(query_embedding) \
+    .limit(5) \
+    .to_list()
+```
+
+### 3. Full-text search with Lance FTS
+
+```python
+hits = ds.scanner(
+    full_text_query="quantum computing",
+    columns=["title", "language", "text"],
+    limit=10,
+    fast_search=True,
+).to_table().to_pylist()
+```
+
+### LanceDB Full-Text Search
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
+tbl = db.open_table("train")
+
+results = tbl.search("quantum computing") \
+    .select(["title", "language", "text"]) \
+    .limit(10) \
+    .to_list()
+```
+
+
+See `fineweb_edu/example.py` on lance-huggingface repo for a complete walkthrough that combines HF streaming batches with Lance-powered retrieval.
+
+## Dataset Evolution
+
+Lance supports flexible schema and data evolution ([docs](https://lance.org/guide/data_evolution/?h=evol)). You can add/drop columns, backfill with SQL or Python, rename fields, or change data types without rewriting the whole dataset. In practice this lets you:
+- Introduce fresh metadata (moderation labels, embeddings, quality scores) as new signals become available.
+- Add new columns to existing datasets without re-exporting terabytes of video.
+- Adjust column names or shrink storage (e.g., cast embeddings to float16) while keeping previous snapshots queryable for reproducibility.
+
+```python
+import lance
+import pyarrow as pa
+import numpy as np
+
+# Assume ds is a local Lance dataset
+# ds = lance.dataset("./fineweb_edu_local")
+
+base = pa.table({"id": pa.array([1, 2, 3]), "text": pa.array(["A", "B", "C"])})
+dataset = lance.write_dataset(base, "fineweb_evolution", mode="overwrite")
+
+# 1. Add a schema-only column (data to be added later)
+dataset.add_columns(pa.field("subject", pa.string()))
+
+# 2. Add a column with data
+dataset.add_columns({"quality_bucket": "'unknown'"})
+
+# 3. Generate rich columns via Python batch UDFs
+@lance.batch_udf()
+def random_embedding(batch):
+    vecs = np.random.rand(batch.num_rows, 384).astype("float32")
+    return pa.RecordBatch.from_arrays(
+        [pa.FixedSizeListArray.from_arrays(vecs.ravel(), 384)],
+        names=["text_embedding"],
+    )
+
+dataset.add_columns(random_embedding)
+
+# 4. Bring in  annotations with merge
+labels = pa.table({"id": pa.array([1, 2, 3]), "label": pa.array(["math", "history", "science"])})
+dataset.merge(labels, "id")
+
+# 5. Rename or cast columns as needs change
+dataset.alter_columns({"path": "subject", "name": "topic"})
+dataset.alter_columns({"path": "text_embedding", "data_type": pa.list_(pa.float16(), 384)})
+```
+You can iterate on embeddings, quality tags, or moderation fields while keeping earlier dataset versions available for reproducible experiments.

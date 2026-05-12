@@ -6,7 +6,7 @@
   "theme": "mint",
   "name": "LanceDB",
   "banner": {
-    "content": "[Why Multimodal Data Needs a Better Lakehouse? — Download the Research Study](https://lancedb.com/download/)",
+    "content": "[Why Multimodal Data Needs a Better Lakehouse? \u2014 Download the Research Study](https://lancedb.com/download/)",
     "dismissible": true
   },
   "colors": {
@@ -276,19 +276,13 @@
                 "group": "AI Platforms & Frameworks",
                 "pages": [
                   "integrations/ai/agno",
+                  "integrations/ai/huggingface",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
                   "integrations/ai/genkit",
                   "integrations/ai/kiln",
                   "integrations/ai/prompttools",
                   "integrations/ai/synthetic-data-kit"
-                ]
-              },
-              {
-                "group": "Hugging Face Hub",
-                "pages": [
-                  "huggingface/overview",
-                  "huggingface/datasets"
                 ]
               }
             ]
@@ -332,6 +326,92 @@
             "group": "Demos",
             "pages": [
               "demos/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Datasets",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "datasets/index"
+            ]
+          },
+          {
+            "group": "Image Classification",
+            "pages": [
+              "datasets/mnist",
+              "datasets/cifar10",
+              "datasets/fashion-mnist",
+              "datasets/food101",
+              "datasets/oxford-pets",
+              "datasets/stanford-cars",
+              "datasets/imagenet-1k-val",
+              "datasets/eurosat"
+            ]
+          },
+          {
+            "group": "Object Detection & Segmentation",
+            "pages": [
+              "datasets/coco-detection-2017",
+              "datasets/pascal-voc-2012-segmentation",
+              "datasets/ade20k",
+              "datasets/kitti-2d-detection"
+            ]
+          },
+          {
+            "group": "Image Retrieval",
+            "pages": [
+              "datasets/coco-captions-2017",
+              "datasets/flickr30k",
+              "datasets/laion-1m"
+            ]
+          },
+          {
+            "group": "Visual Question Answering",
+            "pages": [
+              "datasets/chartqa",
+              "datasets/docvqa",
+              "datasets/textvqa",
+              "datasets/vqav2",
+              "datasets/gqa-testdev-balanced"
+            ]
+          },
+          {
+            "group": "Text QA",
+            "pages": [
+              "datasets/squad-v2",
+              "datasets/trivia-qa",
+              "datasets/hotpotqa-distractor",
+              "datasets/natural-questions-val",
+              "datasets/ms-marco-v2"
+            ]
+          },
+          {
+            "group": "Text Corpora",
+            "pages": [
+              "datasets/fineweb-edu"
+            ]
+          },
+          {
+            "group": "Speech",
+            "pages": [
+              "datasets/librispeech-clean"
+            ]
+          },
+          {
+            "group": "Video",
+            "pages": [
+              "datasets/openvid"
+            ]
+          },
+          {
+            "group": "Robotics",
+            "pages": [
+              "datasets/lerobot-pusht",
+              "datasets/lerobot-xvla-soft-fold"
             ]
           }
         ]
@@ -422,8 +502,12 @@
       "destination": "/enterprise/benchmarks"
     },
     {
-      "source": "/integrations/ai/huggingface",
-      "destination": "/huggingface/overview"
+      "source": "/huggingface/overview",
+      "destination": "/integrations/ai/huggingface"
+    },
+    {
+      "source": "/huggingface/datasets",
+      "destination": "/datasets"
     }
   ]
 }
