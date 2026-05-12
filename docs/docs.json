@@ -386,7 +386,7 @@
               "datasets/trivia-qa",
               "datasets/hotpotqa-distractor",
               "datasets/natural-questions-val",
-              "datasets/ms-marco-v2.1"
+              "datasets/ms-marco-v2"
             ]
           },
           {

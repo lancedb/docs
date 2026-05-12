@@ -50,7 +50,7 @@ categories:
       - { dir: triviaqa,          slug: trivia-qa,             hf: trivia-qa-lance,             title: "TriviaQA" }
       - { dir: hotpotqa,          slug: hotpotqa-distractor,   hf: hotpotqa-distractor-lance,   title: "HotpotQA distractor" }
       - { dir: natural_questions, slug: natural-questions-val, hf: natural-questions-val-lance, title: "Natural Questions Validation" }
-      - { dir: ms_marco,          slug: ms-marco-v2.1,         hf: ms-marco-v2.1-lance,         title: "MS MARCO v2.1" }
+      - { dir: ms_marco,          slug: ms-marco-v2,           hf: ms-marco-v2.1-lance,         title: "MS MARCO v2.1" }
 
   - name: "Text Corpora"
     datasets:
