@@ -1,0 +1,166 @@
+---
+title: "TriviaQA"
+sidebarTitle: "TriviaQA"
+description: "Lance-formatted version of TriviaQA (rc.nocontext config) — a question-answering dataset of trivia questions paired with answer aliases — with MiniLM sentence embeddings stored inline."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/trivia-qa-lance"
+>
+Source dataset card and downloadable files for `lance-format/trivia-qa-lance`.
+</Card>
+
+Lance-formatted version of [TriviaQA](https://nlp.cs.washington.edu/triviaqa/) (`rc.nocontext` config) — a question-answering dataset of trivia questions paired with answer aliases — with **MiniLM sentence embeddings** stored inline.
+
+## Why `rc.nocontext`?
+
+The full TriviaQA dataset bundles entire Wikipedia / web pages per question (`entity_pages`, `search_results`), which makes it tens of GB. The `rc.nocontext` slice keeps the question + answer + answer aliases in a compact form — ideal for closed-book QA, retrieval research, and as a search target.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train.lance`      | 138,384 |
+| `validation.lance` | 17,944 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `question_id` | `string` | TriviaQA question id (e.g. `tc_1`) |
+| `question` | `string` | The trivia question |
+| `question_source` | `string` | URL / source where the question came from |
+| `answer_value` | `string` | Canonical answer |
+| `answer_aliases` | `list<string>` | Other accepted phrasings (e.g. `["Sinclair Lewis", "Harry Sinclair Lewis"]`) |
+| `normalized_answer` | `string` | Lowercased / normalized form for exact-match scoring |
+| `answer_type` | `string` | TriviaQA entity type (e.g. `WikipediaEntity`, `FreebaseEntity`) |
+| `question_emb` | `fixed_size_list<float32, 384>` | MiniLM embedding of `question` (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `question_emb` — `metric=cosine`
+- `INVERTED` on `question`
+- `BTREE` on `question_id` and `answer_value`
+- `BITMAP` on `answer_type`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/trivia-qa-lance/data/train.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+tbl = db.open_table("train")
+print(f"LanceDB table opened with {len(tbl)} trivia questions")
+```
+
+## Semantic search over questions
+
+```python
+import lance
+import pyarrow as pa
+from sentence_transformers import SentenceTransformer
+
+encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
+q = encoder.encode(["who painted the sistine chapel ceiling"], normalize_embeddings=True)[0]
+
+ds = lance.dataset("hf://datasets/lance-format/trivia-qa-lance/data/train.lance")
+emb_field = ds.schema.field("question_emb")
+hits = ds.scanner(
+    nearest={"column": "question_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 5},
+    columns=["question", "answer_value", "answer_aliases"],
+).to_table().to_pylist()
+```
+
+### LanceDB semantic search
+
+```python
+import lancedb
+from sentence_transformers import SentenceTransformer
+
+encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
+q = encoder.encode(["who painted the sistine chapel ceiling"], normalize_embeddings=True)[0]
+
+db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+tbl = db.open_table("train")
+
+results = (
+    tbl.search(q.tolist(), vector_column_name="question_emb")
+    .metric("cosine")
+    .select(["question", "answer_value", "answer_aliases"])
+    .limit(5)
+    .to_list()
+)
+```
+
+### LanceDB full-text search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+tbl = db.open_table("train")
+
+results = (
+    tbl.search("sistine chapel")
+    .select(["question", "answer_value"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Filter by answer type
+
+```python
+ds = lance.dataset("hf://datasets/lance-format/trivia-qa-lance/data/train.lance")
+wiki = ds.scanner(filter="answer_type = 'WikipediaEntity'", columns=["question"], limit=5).to_table()
+```
+
+### Filter with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+tbl = db.open_table("train")
+wiki = (
+    tbl.search()
+    .where("answer_type = 'WikipediaEntity'")
+    .select(["question"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Why Lance?
+
+- One dataset carries questions + answers + aliases + embeddings + indices — no sidecar files.
+- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (alternate embeddings, generated answers, task labels) without rewriting the data.
+
+## Source & license
+
+Converted from [`mandarjoshi/trivia_qa`](https://huggingface.co/datasets/mandarjoshi/trivia_qa) (`rc.nocontext`). TriviaQA is released under the Apache 2.0 license.
+
+## Citation
+
+```
+@article{joshi2017triviaqa,
+  title={TriviaQA: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension},
+  author={Joshi, Mandar and Choi, Eunsol and Weld, Daniel S and Zettlemoyer, Luke},
+  journal={arXiv preprint arXiv:1705.03551},
+  year={2017}
+}
+```

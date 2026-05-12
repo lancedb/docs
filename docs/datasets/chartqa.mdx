@@ -1,0 +1,114 @@
+---
+title: "ChartQA"
+sidebarTitle: "ChartQA"
+description: "Lance-formatted version of ChartQA — VQA over scientific and business charts that combine logical and visual reasoning — sourced from lmms-lab/ChartQA."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/chartqa-lance"
+>
+Source dataset card and downloadable files for `lance-format/chartqa-lance`.
+</Card>
+
+Lance-formatted version of [ChartQA](https://github.com/vis-nlp/ChartQA) — VQA over scientific and business charts that combine logical and visual reasoning — sourced from [`lmms-lab/ChartQA`](https://huggingface.co/datasets/lmms-lab/ChartQA).
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `test.lance` | 2,500 |
+
+> The `lmms-lab/ChartQA` redistribution exposes test only. Train and validation live in the original release (https://github.com/vis-nlp/ChartQA); add them via `chartqa/dataprep.py --splits` once a parquet mirror is identified.
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index |
+| `image` | `large_binary` | Inline chart image bytes |
+| `image_id` / `question_id` | `string?` | (Source does not assign explicit ids — null for now) |
+| `question` | `string` | Natural-language question |
+| `answers` | `list<string>` | Reference answer (typically a single string) |
+| `answer` | `string` | First answer — used as canonical |
+| `type` | `string?` | Question type (`human` vs `augmented`) |
+| `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
+| `question_emb` | `fixed_size_list<float32, 512>` | CLIP text embedding of the question |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` and `question_emb` — `metric=cosine`
+- `INVERTED` (FTS) on `question` and `answer`
+- `BITMAP` on `type`
+
+## Quick start
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/chartqa-lance/data/test.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/chartqa-lance/data")
+tbl = db.open_table("test")
+print(f"LanceDB table opened with {len(tbl)} chart-question pairs")
+```
+
+### LanceDB vector search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/chartqa-lance/data")
+tbl = db.open_table("test")
+
+ref = tbl.search().limit(1).select(["question_emb", "question"]).to_list()[0]
+query_embedding = ref["question_emb"]
+
+results = (
+    tbl.search(query_embedding, vector_column_name="question_emb")
+    .metric("cosine")
+    .select(["question", "answer"])
+    .limit(5)
+    .to_list()
+)
+```
+
+### LanceDB full-text search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/chartqa-lance/data")
+tbl = db.open_table("test")
+
+results = (
+    tbl.search("percentage")
+    .select(["question", "answer"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Source & license
+
+Converted from [`lmms-lab/ChartQA`](https://huggingface.co/datasets/lmms-lab/ChartQA). The original ChartQA dataset is released under the GNU GPL-3.0 license by Masry et al.
+
+## Citation
+
+```
+@inproceedings{masry2022chartqa,
+  title={ChartQA: A Benchmark for Question Answering about Charts with Visual and Logical Reasoning},
+  author={Masry, Ahmed and Long, Do Xuan and Tan, Jia Qing and Joty, Shafiq and Hoque, Enamul},
+  booktitle={Findings of the Association for Computational Linguistics: ACL 2022},
+  year={2022}
+}
+```

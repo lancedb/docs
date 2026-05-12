@@ -1,0 +1,141 @@
+---
+title: "EuroSAT"
+sidebarTitle: "EuroSAT"
+description: "Lance-formatted version of EuroSAT — Sentinel-2 satellite imagery (RGB) covering 27,000 64×64 tiles across 10 land-cover classes, sourced from blanchon/EuroSAT_RGB."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/eurosat-lance"
+>
+Source dataset card and downloadable files for `lance-format/eurosat-lance`.
+</Card>
+
+Lance-formatted version of [EuroSAT](https://github.com/phelber/eurosat) — Sentinel-2 satellite imagery (RGB) covering **27,000 64×64 tiles** across 10 land-cover classes, sourced from [`blanchon/EuroSAT_RGB`](https://huggingface.co/datasets/blanchon/EuroSAT_RGB).
+
+This is the canonical "geo" tile-level classification benchmark, useful for remote sensing pre-training and small-tile retrieval research.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train.lance`      | 16,200 |
+| `validation.lance` | 5,400 |
+| `test.lance`       | 5,400 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes (64×64 RGB Sentinel-2) |
+| `label` | `int32` | Class id (0-9) |
+| `label_name` | `string` | `Annual_Crop`, `Forest`, `Herbaceous_Vegetation`, `Highway`, `Industrial_Buildings`, `Pasture`, `Permanent_Crop`, `Residential_Buildings`, `River`, `SeaLake` |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — `metric=cosine`
+- `BTREE` on `label`
+- `BITMAP` on `label_name`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/eurosat-lance/data/train.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
+tbl = db.open_table("train")
+print(f"LanceDB table opened with {len(tbl)} satellite tiles")
+```
+
+## Visual similarity search
+
+```python
+import lance
+import pyarrow as pa
+
+ds = lance.dataset("hf://datasets/lance-format/eurosat-lance/data/train.lance")
+emb_field = ds.schema.field("image_emb")
+ref = ds.take([0], columns=["image_emb", "label_name"]).to_pylist()[0]
+query = pa.array([ref["image_emb"]], type=emb_field.type)
+
+hits = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
+    columns=["id", "label_name"],
+).to_table().to_pylist()
+print(f"reference: {ref['label_name']}")
+for h in hits:
+    print(h)
+```
+
+### LanceDB visual similarity search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
+tbl = db.open_table("train")
+
+ref = tbl.search().limit(1).select(["image_emb", "label_name"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding)
+    .metric("cosine")
+    .select(["id", "label_name"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Filter by class
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/eurosat-lance/data/train.lance")
+rivers = ds.scanner(filter="label_name = 'River'", columns=["id"], limit=5).to_table()
+```
+
+### Filter by class with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
+tbl = db.open_table("train")
+rivers = tbl.search().where("label_name = 'River'").select(["id"]).limit(5).to_list()
+```
+
+## Why Lance?
+
+- One dataset for tiles + embeddings + indices — no sidecar TIF folder per class.
+- On-disk vector and FTS indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (multi-spectral channels, model predictions, fresh embeddings) without rewriting the data.
+
+## Source & license
+
+Converted from [`blanchon/EuroSAT_RGB`](https://huggingface.co/datasets/blanchon/EuroSAT_RGB). EuroSAT is released under the MIT license by Helber et al. The underlying Sentinel-2 imagery is © European Space Agency, made available under the [Copernicus open data policy](https://www.copernicus.eu/en/access-data/copyright-and-licences).
+
+## Citation
+
+```
+@inproceedings{helber2019eurosat,
+  title={EuroSAT: A novel dataset and deep learning benchmark for land use and land cover classification},
+  author={Helber, Patrick and Bischke, Benjamin and Dengel, Andreas and Borth, Damian},
+  journal={IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing},
+  year={2019}
+}
+```

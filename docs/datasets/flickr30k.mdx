@@ -1,0 +1,214 @@
+---
+title: "Flickr30k"
+sidebarTitle: "Flickr30k"
+description: "Lance-formatted version of Flickr30k (re-distributed via lmms-lab/flickr30k) — 31,783 images, each paired with 5 human-written captions, with CLIP image and text embeddings stored inline and pre-built ANN indices on both."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/flickr30k-lance"
+>
+Source dataset card and downloadable files for `lance-format/flickr30k-lance`.
+</Card>
+
+Lance-formatted version of [Flickr30k](https://shannon.cs.illinois.edu/DenotationGraph/) (re-distributed via [`lmms-lab/flickr30k`](https://huggingface.co/datasets/lmms-lab/flickr30k)) — **31,783 images, each paired with 5 human-written captions**, with CLIP image **and** text embeddings stored inline and pre-built ANN indices on both.
+
+## Key features
+
+- **Inline images** — full JPEG bytes per row.
+- **Pre-computed CLIP embeddings** for both image and caption text — `IVF_PQ` indices on both columns let you do cross-modal retrieval (image→caption or caption→image) without any model at query time.
+- **Full-text inverted index** on the canonical caption.
+- Self-contained: no sidecar files or external image downloads.
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `image_id` | `string` | Original Flickr image id |
+| `filename` | `string` | Original filename (e.g. `1000092795.jpg`) |
+| `captions` | `list<string>` | All 5 captions for the image |
+| `caption` | `string` | First caption — used as canonical text for FTS / quick browsing |
+| `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
+| `text_emb` | `fixed_size_list<float32, 512>` | CLIP text embedding of the canonical caption |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — `metric=cosine`
+- `IVF_PQ` on `text_emb` — `metric=cosine` (cross-modal retrieval works out of the box)
+- `INVERTED` on `caption`
+- `BTREE` on `image_id`
+
+## Splits
+
+A single `train.lance` table containing all 31,783 rows (the `lmms-lab/flickr30k` redistribution exposes them as a single split). The original train/val/test labels are not preserved in the source parquet.
+
+## Load with Lance
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/flickr30k-lance/data/train.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/flickr30k-lance/data")
+tbl = db.open_table("train")
+print(f"LanceDB table opened with {len(tbl)} image-caption pairs")
+```
+
+## Cross-modal text→image search
+
+```python
+import lance
+import pyarrow as pa
+import open_clip
+import torch
+
+# 1. Encode the query text once with the same CLIP model used at conversion.
+model, _, _ = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
+tokenizer = open_clip.get_tokenizer("ViT-B-32")
+model = model.eval().cuda().half()
+with torch.no_grad():
+    q = model.encode_text(tokenizer(["a man surfing at sunset"]).cuda())
+    q = (q / q.norm(dim=-1, keepdim=True)).float().cpu().numpy()[0]
+
+ds = lance.dataset("hf://datasets/lance-format/flickr30k-lance/data/train.lance")
+emb_field = ds.schema.field("image_emb")
+query = pa.array([q.tolist()], type=emb_field.type)
+
+# 2. Nearest-neighbour search against the image embedding index.
+hits = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 10, "nprobes": 16, "refine_factor": 30},
+    columns=["image_id", "caption"],
+).to_table().to_pylist()
+for h in hits:
+    print(h)
+```
+
+### LanceDB cross-modal text→image search
+
+```python
+import lancedb, open_clip, torch
+
+model, _, _ = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
+tokenizer = open_clip.get_tokenizer("ViT-B-32")
+model = model.eval().cuda().half()
+with torch.no_grad():
+    q = model.encode_text(tokenizer(["a man surfing at sunset"]).cuda())
+    q = (q / q.norm(dim=-1, keepdim=True)).float().cpu().numpy()[0]
+
+db = lancedb.connect("hf://datasets/lance-format/flickr30k-lance/data")
+tbl = db.open_table("train")
+
+results = (
+    tbl.search(q.tolist(), vector_column_name="image_emb")
+    .metric("cosine")
+    .select(["image_id", "caption"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Image→caption (image-to-text retrieval)
+
+```python
+ds = lance.dataset("hf://datasets/lance-format/flickr30k-lance/data/train.lance")
+ref = ds.take([0], columns=["image_emb", "caption"]).to_pylist()[0]
+emb_field = ds.schema.field("text_emb")
+query = pa.array([ref["image_emb"]], type=emb_field.type)
+neighbors = ds.scanner(
+    nearest={"column": "text_emb", "q": query[0], "k": 10},
+    columns=["caption"],
+).to_table().to_pylist()
+```
+
+### LanceDB image→caption search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/flickr30k-lance/data")
+tbl = db.open_table("train")
+
+ref = tbl.search().limit(1).select(["image_emb", "caption"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding, vector_column_name="text_emb")
+    .metric("cosine")
+    .select(["caption"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Full-text search on captions
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/flickr30k-lance/data/train.lance")
+hits = ds.scanner(
+    full_text_query="dog playing in the snow",
+    columns=["image_id", "caption"],
+    limit=10,
+).to_table().to_pylist()
+```
+
+### LanceDB full-text search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/flickr30k-lance/data")
+tbl = db.open_table("train")
+
+results = (
+    tbl.search("dog playing in the snow")
+    .select(["image_id", "caption"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Working with images
+
+```python
+from pathlib import Path
+import lance
+ds = lance.dataset("hf://datasets/lance-format/flickr30k-lance/data/train.lance")
+row = ds.take([0], columns=["image", "filename"]).to_pylist()[0]
+Path(row["filename"]).write_bytes(row["image"])
+```
+
+## Why Lance?
+
+- One dataset carries images + image embeddings + text embeddings + indices — no sidecar files.
+- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (new captions, alternate embeddings, moderation labels) without rewriting the data.
+
+## Source & license
+
+Converted from [`lmms-lab/flickr30k`](https://huggingface.co/datasets/lmms-lab/flickr30k), which is itself a parquet redistribution of the [original Flickr30k corpus](https://shannon.cs.illinois.edu/DenotationGraph/). Original images come from Flickr; review the Flickr30k licensing terms before redistribution.
+
+## Citation
+
+```
+@article{young2014image,
+  title={From image descriptions to visual denotations: New similarity metrics for semantic inference over event descriptions},
+  author={Young, Peter and Lai, Alice and Hodosh, Micah and Hockenmaier, Julia},
+  journal={Transactions of the Association for Computational Linguistics},
+  volume={2},
+  pages={67--78},
+  year={2014}
+}
+```

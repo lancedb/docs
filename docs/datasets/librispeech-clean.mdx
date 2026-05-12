@@ -1,0 +1,189 @@
+---
+title: "LibriSpeech clean"
+sidebarTitle: "LibriSpeech clean"
+description: "Lance-formatted version of the LibriSpeech ASR clean configuration (sourced from openslr/librispeech_asr). Audio is stored inline as FLAC bytes (no re-encoding); transcripts are sentence-embedded so semantic transcript search works out of the box."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/librispeech-clean-lance"
+>
+Source dataset card and downloadable files for `lance-format/librispeech-clean-lance`.
+</Card>
+
+Lance-formatted version of the LibriSpeech ASR `clean` configuration (sourced from [`openslr/librispeech_asr`](https://huggingface.co/datasets/openslr/librispeech_asr)). Audio is stored inline as FLAC bytes (no re-encoding); transcripts are sentence-embedded so semantic transcript search works out of the box.
+
+## Splits
+
+| Split | Lance file | Rows | Description |
+|-------|------------|------|-------------|
+| `dev_clean.lance`        | dev.clean         | 2,703 | Standard ASR validation set |
+| `test_clean.lance`       | test.clean        | 2,620 | Standard ASR test set |
+| `train_clean_100.lance`  | train.clean.100   | 28,539 | 100-hour clean training subset |
+
+> The 360-hour and 500-hour LibriSpeech subsets (`train.360`, `train.other.500`) are **not** bundled here. To extend the dataset, point `librispeech/dataprep.py` at additional splits.
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `string` | Utterance id (e.g. `1272-128104-0000`) |
+| `audio` | `large_binary` | Inline FLAC bytes (16 kHz mono) |
+| `sampling_rate` | `int32` | Always 16,000 |
+| `text` | `string` | Reference transcript |
+| `speaker_id` | `int64` | LibriVox speaker id |
+| `chapter_id` | `int64` | LibriVox chapter id |
+| `num_chars` | `int32` | Length of `text` in characters |
+| `text_emb` | `fixed_size_list<float32, 384>` | sentence-transformers `all-MiniLM-L6-v2` (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `text_emb` — `metric=cosine`
+- `INVERTED` (FTS) on `text`
+- `BTREE` on `id`, `speaker_id`, `chapter_id`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/test_clean.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries. Each `.lance` file in `data/` is a table — open by name (e.g., `test_clean`, `train_clean_100`).
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
+tbl = db.open_table("test_clean")
+print(f"LanceDB table opened with {len(tbl)} utterances")
+```
+
+## Read one utterance and play it
+
+```python
+from pathlib import Path
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/test_clean.lance")
+row = ds.take([0], columns=["id", "audio", "text", "speaker_id"]).to_pylist()[0]
+
+Path(f"{row['id']}.flac").write_bytes(row["audio"])
+print("speaker:", row["speaker_id"])
+print("transcript:", row["text"])
+```
+
+You can decode the FLAC bytes in-memory with `soundfile` and feed them straight into a model:
+
+```python
+import io
+import soundfile as sf
+
+samples, sr = sf.read(io.BytesIO(row["audio"]))
+print(samples.shape, sr)
+```
+
+## Semantic transcript retrieval
+
+```python
+import lance
+import pyarrow as pa
+from sentence_transformers import SentenceTransformer
+
+encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
+q = encoder.encode(["a person talking about astronomy"], normalize_embeddings=True)[0]
+
+ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/train_clean_100.lance")
+emb_field = ds.schema.field("text_emb")
+hits = ds.scanner(
+    nearest={"column": "text_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 5},
+    columns=["id", "speaker_id", "text"],
+).to_table().to_pylist()
+for h in hits:
+    print(h)
+```
+
+### LanceDB semantic transcript retrieval
+
+```python
+import lancedb
+from sentence_transformers import SentenceTransformer
+
+encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
+q = encoder.encode(["a person talking about astronomy"], normalize_embeddings=True)[0]
+
+db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
+tbl = db.open_table("train_clean_100")
+
+results = (
+    tbl.search(q.tolist(), vector_column_name="text_emb")
+    .metric("cosine")
+    .select(["id", "speaker_id", "text"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Full-text and per-speaker filtering
+
+```python
+ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/train_clean_100.lance")
+
+# Word search via the FTS index.
+hits = ds.scanner(full_text_query="universe stars", columns=["id", "text"], limit=10).to_table()
+
+# All utterances by a given speaker.
+sp = ds.scanner(filter="speaker_id = 1272", columns=["id", "chapter_id", "text"], limit=10).to_table()
+```
+
+### LanceDB full-text search and per-speaker filtering
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
+tbl = db.open_table("train_clean_100")
+
+# Word search via the FTS index.
+hits = (
+    tbl.search("universe stars")
+    .select(["id", "text"])
+    .limit(10)
+    .to_list()
+)
+
+# All utterances by a given speaker.
+sp = (
+    tbl.search()
+    .where("speaker_id = 1272")
+    .select(["id", "chapter_id", "text"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Why Lance?
+
+- One dataset for audio + transcripts + embeddings + indices — no parallel folder of FLAC files plus a transcript JSON.
+- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (alternate transcripts, speaker embeddings, model predictions) without rewriting the data.
+
+## Source & license
+
+Converted from [`openslr/librispeech_asr`](https://huggingface.co/datasets/openslr/librispeech_asr). LibriSpeech is released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and is built from the public-domain LibriVox audiobook corpus.
+
+## Citation
+
+```
+@inproceedings{panayotov2015librispeech,
+  title={LibriSpeech: An ASR corpus based on public domain audiobooks},
+  author={Panayotov, Vassil and Chen, Guoguo and Povey, Daniel and Khudanpur, Sanjeev},
+  booktitle={IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP)},
+  year={2015}
+}
+```

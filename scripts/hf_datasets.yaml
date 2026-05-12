@@ -1,0 +1,70 @@
+# Lance datasets on Hugging Face — sync config for `make hf-sync`.
+#
+# Each entry maps three things explicitly because directory names in
+# lance-format/lance-huggingface, the HF Hub repo slugs, and the URL slugs we
+# want under /datasets/ do not have a derivable relationship (e.g.
+# imagenet1k_val -> imagenet-1k-val-lance -> /datasets/imagenet-1k-val).
+#
+# Fields:
+#   dir   directory inside lance-format/lance-huggingface containing HF_DATASET_CARD.md
+#   slug  output filename and URL slug under /datasets/ (no .mdx extension)
+#   hf    HF Hub repo name under lance-format/ (drives the "View on Hugging Face" link)
+#   title human-readable display name; used for page title, sidebar, and landing-page card
+
+categories:
+  - name: "Image Classification"
+    datasets:
+      - { dir: mnist,          slug: mnist,           hf: mnist-lance,           title: "MNIST" }
+      - { dir: cifar10,        slug: cifar10,         hf: cifar10-lance,         title: "CIFAR-10" }
+      - { dir: fashion_mnist,  slug: fashion-mnist,   hf: fashion-mnist-lance,   title: "Fashion-MNIST" }
+      - { dir: food101,        slug: food101,         hf: food101-lance,         title: "Food-101" }
+      - { dir: oxford_pets,    slug: oxford-pets,     hf: oxford-pets-lance,     title: "Oxford-IIIT Pet" }
+      - { dir: stanford_cars,  slug: stanford-cars,   hf: stanford-cars-lance,   title: "Stanford Cars" }
+      - { dir: imagenet1k_val, slug: imagenet-1k-val, hf: imagenet-1k-val-lance, title: "ImageNet-1k Validation" }
+      - { dir: eurosat,        slug: eurosat,         hf: eurosat-lance,         title: "EuroSAT" }
+
+  - name: "Object Detection & Segmentation"
+    datasets:
+      - { dir: coco_detection_2017, slug: coco-detection-2017,          hf: coco-detection-2017-lance,          title: "COCO 2017 Detection" }
+      - { dir: pascal_voc_2012,     slug: pascal-voc-2012-segmentation, hf: pascal-voc-2012-segmentation-lance, title: "Pascal VOC 2012 Segmentation" }
+      - { dir: ade20k,              slug: ade20k,                       hf: ade20k-lance,                       title: "ADE20K" }
+      - { dir: kitti,               slug: kitti-2d-detection,           hf: kitti-2d-detection-lance,           title: "KITTI 2D Detection" }
+
+  - name: "Image Retrieval"
+    datasets:
+      - { dir: coco_captions_2017, slug: coco-captions-2017, hf: coco-captions-2017-lance, title: "COCO Captions 2017" }
+      - { dir: flickr30k,          slug: flickr30k,          hf: flickr30k-lance,          title: "Flickr30k" }
+      - { dir: laion-1M,           slug: laion-1m,           hf: laion-1m,                 title: "LAION-1M" }
+
+  - name: "Visual Question Answering"
+    datasets:
+      - { dir: chartqa, slug: chartqa,                hf: chartqa-lance,                title: "ChartQA" }
+      - { dir: docvqa,  slug: docvqa,                 hf: docvqa-lance,                 title: "DocVQA" }
+      - { dir: textvqa, slug: textvqa,                hf: textvqa-lance,                title: "TextVQA" }
+      - { dir: vqav2,   slug: vqav2,                  hf: vqav2-lance,                  title: "VQAv2" }
+      - { dir: gqa,     slug: gqa-testdev-balanced,   hf: gqa-testdev-balanced-lance,   title: "GQA testdev-balanced" }
+
+  - name: "Text QA"
+    datasets:
+      - { dir: squad_v2,          slug: squad-v2,              hf: squad-v2-lance,              title: "SQuAD v2" }
+      - { dir: triviaqa,          slug: trivia-qa,             hf: trivia-qa-lance,             title: "TriviaQA" }
+      - { dir: hotpotqa,          slug: hotpotqa-distractor,   hf: hotpotqa-distractor-lance,   title: "HotpotQA distractor" }
+      - { dir: natural_questions, slug: natural-questions-val, hf: natural-questions-val-lance, title: "Natural Questions Validation" }
+      - { dir: ms_marco,          slug: ms-marco-v2.1,         hf: ms-marco-v2.1-lance,         title: "MS MARCO v2.1" }
+
+  - name: "Text Corpora"
+    datasets:
+      - { dir: fineweb_edu, slug: fineweb-edu, hf: fineweb-edu, title: "FineWeb-Edu" }
+
+  - name: "Speech"
+    datasets:
+      - { dir: librispeech, slug: librispeech-clean, hf: librispeech-clean-lance, title: "LibriSpeech clean" }
+
+  - name: "Video"
+    datasets:
+      - { dir: openvid_hf, slug: openvid, hf: openvid-lance, title: "OpenVid-1M" }
+
+  - name: "Robotics"
+    datasets:
+      - { dir: lerobot/pusht,          slug: lerobot-pusht,          hf: lerobot-pusht-lance,    title: "LeRobot PushT" }
+      - { dir: lerobot/xvla-soft-fold, slug: lerobot-xvla-soft-fold, hf: lerobot-xvla-soft-fold, title: "LeRobot X-VLA Soft-Fold" }

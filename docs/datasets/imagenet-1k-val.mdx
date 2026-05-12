@@ -1,0 +1,163 @@
+---
+title: "ImageNet-1k Validation"
+sidebarTitle: "ImageNet-1k Validation"
+description: "A Lance-formatted version of the canonical 50,000-image ImageNet-1k validation split (also known as ILSVRC2012 val) sourced from benjamin-paine/imagenet-1k. All 50 k JPEGs are stored inline alongside CLIP embeddings and a pre-built IVF_PQ ANN index."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/imagenet-1k-val-lance"
+>
+Source dataset card and downloadable files for `lance-format/imagenet-1k-val-lance`.
+</Card>
+
+A Lance-formatted version of the **canonical 50,000-image ImageNet-1k validation split** (also known as ILSVRC2012 val) sourced from [`benjamin-paine/imagenet-1k`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k). All 50 k JPEGs are stored inline alongside CLIP embeddings and a pre-built `IVF_PQ` ANN index.
+
+> **Why only the validation split?** The 1.28 M ImageNet-1k train split is ~155 GB and is intentionally out of scope for this lance distribution. The val split is the canonical evaluation slice for image-classification benchmarks and is small enough (~6.7 GB raw, ~7 GB Lance) to ride entirely in inline storage with embeddings.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `validation.lance` | 50,000 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within the split (0-49,999) |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `label` | `int32` | Class id (0-999) |
+| `label_name` | `string` | First synonym of the synset, underscore-spaced (e.g. `golden_retriever`) |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k` embedding (cosine-normalized) |
+
+The full WordNet synset descriptions for each class are available in the dataset metadata under `lance:class_names` (comma-separated).
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — `metric=cosine`, `num_partitions=64`
+- `BTREE` on `label`
+- `BITMAP` on `label_name`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
+tbl = db.open_table("validation")
+print(f"LanceDB table opened with {len(tbl)} images")
+```
+
+> **Tip — for production use, download locally first** to avoid Hub rate limits:
+> ```bash
+> hf download lance-format/imagenet-1k-val-lance --repo-type dataset --local-dir ./imagenet-1k-val-lance
+> ```
+
+## Vector search example
+
+```python
+import lance
+import pyarrow as pa
+
+ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
+emb_field = ds.schema.field("image_emb")
+ref = ds.take([0], columns=["image_emb", "label_name"]).to_pylist()[0]
+query = pa.array([ref["image_emb"]], type=emb_field.type)
+
+neighbors = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
+    columns=["id", "label_name"],
+).to_table().to_pylist()
+print(f"reference: {ref['label_name']}")
+for n in neighbors:
+    print(n)
+```
+
+### LanceDB vector search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
+tbl = db.open_table("validation")
+
+ref = tbl.search().limit(1).select(["image_emb", "label_name"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding)
+    .metric("cosine")
+    .select(["id", "label_name"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Filter by class
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
+goldens = ds.scanner(filter="label_name = 'golden_retriever'", columns=["id"], limit=5).to_table()
+```
+
+### Filter by class with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
+tbl = db.open_table("validation")
+goldens = (
+    tbl.search()
+    .where("label_name = 'golden_retriever'")
+    .select(["id"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Working with images
+
+```python
+from pathlib import Path
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
+row = ds.take([0], columns=["image", "label_name"]).to_pylist()[0]
+Path(f"sample_{row['label_name']}.jpg").write_bytes(row["image"])
+```
+
+## Why Lance?
+
+- One dataset for images + embeddings + indices + metadata — no sidecar files.
+- On-disk vector and FTS indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (model predictions, fresh embeddings, robustness annotations) without rewriting the data.
+
+## Source & license
+
+Converted from [`benjamin-paine/imagenet-1k`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k), itself a redistribution of the [ILSVRC2012 ImageNet-1k validation split](https://image-net.org/challenges/LSVRC/2012/). All use is subject to the [ImageNet terms of access](https://image-net.org/download.php) — for **research use only**.
+
+## Citation
+
+```
+@inproceedings{deng2009imagenet,
+  title={ImageNet: A Large-Scale Hierarchical Image Database},
+  author={Deng, Jia and Dong, Wei and Socher, Richard and Li, Li-Jia and Li, Kai and Fei-Fei, Li},
+  booktitle={IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2009}
+}
+```

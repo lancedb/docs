@@ -1,0 +1,184 @@
+---
+title: "MS MARCO v2.1"
+sidebarTitle: "MS MARCO v2.1"
+description: "Lance-formatted version of MS MARCO v2.1 — Microsoft's machine reading comprehension benchmark — with MiniLM query embeddings stored inline alongside the candidate passages and human-written answers."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/ms-marco-v2.1-lance"
+>
+Source dataset card and downloadable files for `lance-format/ms-marco-v2.1-lance`.
+</Card>
+
+Lance-formatted version of [MS MARCO v2.1](https://huggingface.co/datasets/microsoft/ms_marco) — Microsoft's machine reading comprehension benchmark — with **MiniLM query embeddings** stored inline alongside the candidate passages and human-written answers.
+
+## Why this version?
+
+- **One self-contained Lance dataset** with ~900 k queries; each row is a query, the 10 candidate passages retrieved by Bing, the relevance flags, and the human-written reference answers.
+- **Pre-computed query embeddings** (`sentence-transformers/all-MiniLM-L6-v2`, 384-dim, L2-normalized) with an `IVF_PQ` index — semantic query lookup without re-embedding.
+- **Full-text inverted indices** on the query and the first selected passage.
+- Designed for both retrieval research (use the index) and RAG / answer eval (use the passage list + answers).
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train.lance`      | 808,731 |
+| `validation.lance` | 101,093 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `query_id` | `int64` | MS MARCO query id |
+| `query` | `string` | The user's natural-language query |
+| `query_type` | `string` | One of `DESCRIPTION`, `NUMERIC`, `ENTITY`, `LOCATION`, `PERSON` |
+| `answers` | `list<string>` | Human-written reference answers |
+| `well_formed_answers` | `list<string>` | Reference answers re-written as full sentences |
+| `passage_text` | `list<string>` | Up to 10 candidate passages |
+| `passage_url` | `list<string>` | Source URLs for each candidate |
+| `passage_is_selected` | `list<int8>` | `1` if Bing labelled the passage relevant |
+| `selected_passage` | `string?` | First relevant passage (null if none) |
+| `query_emb` | `fixed_size_list<float32, 384>` | MiniLM embedding of `query` (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `query_emb` — `metric=cosine`
+- `INVERTED` on `query` and `selected_passage`
+- `BTREE` on `query_id`
+- `BITMAP` on `query_type`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/validation.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+tbl = db.open_table("validation")
+print(f"LanceDB table opened with {len(tbl)} queries")
+```
+
+## Semantic query lookup
+
+```python
+import lance
+import pyarrow as pa
+from sentence_transformers import SentenceTransformer
+
+encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
+q = encoder.encode(["how to compute determinant of a 3x3 matrix"], normalize_embeddings=True)[0]
+
+ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/validation.lance")
+emb_field = ds.schema.field("query_emb")
+hits = ds.scanner(
+    nearest={"column": "query_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 5, "nprobes": 16, "refine_factor": 30},
+    columns=["query_id", "query", "selected_passage", "answers"],
+).to_table().to_pylist()
+for h in hits:
+    print(h["query"])
+    print("  selected:", (h.get("selected_passage") or "")[:120])
+```
+
+### LanceDB semantic query lookup
+
+```python
+import lancedb
+from sentence_transformers import SentenceTransformer
+
+encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
+q = encoder.encode(["how to compute determinant of a 3x3 matrix"], normalize_embeddings=True)[0]
+
+db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+tbl = db.open_table("validation")
+
+results = (
+    tbl.search(q.tolist(), vector_column_name="query_emb")
+    .metric("cosine")
+    .select(["query_id", "query", "selected_passage", "answers"])
+    .limit(5)
+    .to_list()
+)
+```
+
+### LanceDB full-text search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+tbl = db.open_table("validation")
+
+results = (
+    tbl.search("determinant matrix")
+    .select(["query", "selected_passage"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Get all candidate passages for a query
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/validation.lance")
+row = ds.scanner(filter="query_id = 1185869", columns=["query", "passage_text", "passage_is_selected"]).to_table().to_pylist()[0]
+for text, sel in zip(row["passage_text"], row["passage_is_selected"]):
+    print("[selected]" if sel else "[other]", text[:120])
+```
+
+## Filter by query_type
+
+```python
+ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/train.lance")
+numeric = ds.scanner(filter="query_type = 'NUMERIC'", columns=["query"], limit=5).to_table()
+```
+
+### Filter by query_type with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+tbl = db.open_table("train")
+numeric = (
+    tbl.search()
+    .where("query_type = 'NUMERIC'")
+    .select(["query"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Why Lance?
+
+- One dataset carries queries + passages + answers + embeddings + indices — no sidecar files.
+- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (alternate embeddings, generated answers, model predictions) without rewriting the data.
+
+## Source & license
+
+Converted from [`microsoft/ms_marco`](https://huggingface.co/datasets/microsoft/ms_marco) (`v2.1`). MS MARCO is released under the MIT license.
+
+## Citation
+
+```
+@article{nguyen2016ms,
+  title={MS MARCO: A Human Generated MAchine Reading COmprehension Dataset},
+  author={Nguyen, Tri and Rosenberg, Mir and Song, Xia and Gao, Jianfeng and Tiwary, Saurabh and Majumder, Rangan and Deng, Li},
+  journal={arXiv preprint arXiv:1611.09268},
+  year={2016}
+}
+```

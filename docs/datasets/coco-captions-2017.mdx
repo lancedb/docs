@@ -1,0 +1,167 @@
+---
+title: "COCO Captions 2017"
+sidebarTitle: "COCO Captions 2017"
+description: "Lance-formatted version of the COCO Captions 2017 corpus, redistributed via lmms-lab/COCO-Caption2017. Each row is one image with 5–7 human-written captions, CLIP image embedding, and CLIP text embedding of the canonical caption — all stored inline."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/coco-captions-2017-lance"
+>
+Source dataset card and downloadable files for `lance-format/coco-captions-2017-lance`.
+</Card>
+
+Lance-formatted version of the [COCO Captions 2017](https://cocodataset.org/) corpus, redistributed via [`lmms-lab/COCO-Caption2017`](https://huggingface.co/datasets/lmms-lab/COCO-Caption2017). Each row is one image with **5–7 human-written captions**, CLIP image embedding, and CLIP text embedding of the canonical caption — all stored inline.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `val.lance`  | 5,000 (canonical COCO 2017 val set) |
+| `test.lance` | 40,700 |
+
+> The 2017 train split (118 k images, ~18 GB of source JPEGs) is intentionally
+> not bundled here because the `lmms-lab/COCO-Caption2017` redistribution does
+> not include it. To extend with train, run `coco_captions_2017/dataprep.py`
+> against your local COCO 2017 train mirror.
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `image_id` | `string` | COCO image id |
+| `filename` | `string` | Original filename (e.g. `000000179765.jpg`) |
+| `captions` | `list<string>` | All 5–7 captions |
+| `caption` | `string` | First caption — used as canonical text for FTS |
+| `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
+| `text_emb` | `fixed_size_list<float32, 512>` | CLIP text embedding of the canonical caption |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` and `text_emb` — `metric=cosine`
+- `INVERTED` on `caption`
+- `BTREE` on `image_id`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/coco-captions-2017-lance/data/val.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/coco-captions-2017-lance/data")
+tbl = db.open_table("val")
+print(f"LanceDB table opened with {len(tbl)} image-caption pairs")
+```
+
+> **Tip — for production use, download locally first.**
+> ```bash
+> hf download lance-format/coco-captions-2017-lance --repo-type dataset --local-dir ./coco-captions-2017-lance
+> ```
+
+## Vector search examples
+
+Cross-modal text→image:
+
+```python
+import lance, open_clip, pyarrow as pa, torch
+
+model, _, _ = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
+tokenizer = open_clip.get_tokenizer("ViT-B-32")
+model = model.eval().cuda().half()
+with torch.no_grad():
+    q = model.encode_text(tokenizer(["a giraffe eating leaves"]).cuda())
+    q = (q / q.norm(dim=-1, keepdim=True)).float().cpu().numpy()[0]
+
+ds = lance.dataset("hf://datasets/lance-format/coco-captions-2017-lance/data/val.lance")
+emb_field = ds.schema.field("image_emb")
+hits = ds.scanner(
+    nearest={"column": "image_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 10},
+    columns=["image_id", "caption"],
+).to_table().to_pylist()
+```
+
+### LanceDB cross-modal text→image search
+
+```python
+import lancedb, open_clip, torch
+
+model, _, _ = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
+tokenizer = open_clip.get_tokenizer("ViT-B-32")
+model = model.eval().cuda().half()
+with torch.no_grad():
+    q = model.encode_text(tokenizer(["a giraffe eating leaves"]).cuda())
+    q = (q / q.norm(dim=-1, keepdim=True)).float().cpu().numpy()[0]
+
+db = lancedb.connect("hf://datasets/lance-format/coco-captions-2017-lance/data")
+tbl = db.open_table("val")
+
+results = (
+    tbl.search(q.tolist(), vector_column_name="image_emb")
+    .metric("cosine")
+    .select(["image_id", "caption"])
+    .limit(10)
+    .to_list()
+)
+```
+
+Full-text search:
+
+```python
+ds = lance.dataset("hf://datasets/lance-format/coco-captions-2017-lance/data/val.lance")
+hits = ds.scanner(
+    full_text_query="surfer riding a wave",
+    columns=["image_id", "caption"],
+    limit=10,
+).to_table().to_pylist()
+```
+
+### LanceDB full-text search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/coco-captions-2017-lance/data")
+tbl = db.open_table("val")
+
+results = (
+    tbl.search("surfer riding a wave")
+    .select(["image_id", "caption"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Why Lance?
+
+- One dataset carries images + image embeddings + text embeddings + indices — no sidecar files.
+- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (new captions, alternate embeddings, model predictions) without rewriting the data.
+
+## Source & license
+
+Converted from [`lmms-lab/COCO-Caption2017`](https://huggingface.co/datasets/lmms-lab/COCO-Caption2017). Original COCO 2017 annotations are released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the underlying images are subject to Flickr terms of service. Please review the [COCO Terms of Use](https://cocodataset.org/#termsofuse) before redistribution.
+
+## Citation
+
+```
+@inproceedings{lin2014microsoft,
+  title={Microsoft COCO: Common objects in context},
+  author={Lin, Tsung-Yi and Maire, Michael and Belongie, Serge and Hays, James and Perona, Pietro and Ramanan, Deva and Doll{\'a}r, Piotr and Zitnick, C Lawrence},
+  booktitle={European Conference on Computer Vision (ECCV)},
+  year={2014},
+}
+```

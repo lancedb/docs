@@ -1,0 +1,181 @@
+---
+title: "MNIST"
+sidebarTitle: "MNIST"
+description: "A Lance-formatted version of the classic MNIST handwritten-digit dataset with 70,000 28×28 grayscale digits stored inline alongside CLIP image embeddings and a pre-built ANN index."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/mnist-lance"
+>
+Source dataset card and downloadable files for `lance-format/mnist-lance`.
+</Card>
+
+A Lance-formatted version of the classic [MNIST handwritten-digit dataset](https://huggingface.co/datasets/ylecun/mnist) with **70,000 28×28 grayscale digits** stored inline alongside CLIP image embeddings and a pre-built ANN index.
+
+## Key features
+
+- All multimodal data (image bytes + embeddings) stored **inline** in the same Lance dataset — no sidecar files, no external image folders.
+- **Pre-computed CLIP embeddings** (OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k`, 512-dim, L2-normalized) shipped with an `IVF_PQ` index for instant similarity search.
+- **BTREE index on `label`** and **BITMAP index on `label_name`** for sub-millisecond filtering.
+- Standard train/test splits, ready to use with `lance.dataset(...)` or `datasets.load_dataset(...)`.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train` | 60,000 |
+| `test`  | 10,000 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within the split |
+| `image` | `large_binary` | Inline PNG bytes (28×28 grayscale) |
+| `label` | `int32` | Digit class id (0-9) |
+| `label_name` | `string` | Human-readable class (`"0".."9"`) |
+| `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — vector similarity search (`metric=cosine`)
+- `BTREE` on `label` — fast equality / range filters
+- `BITMAP` on `label_name` — fast filters on the 10 class names
+
+## Load with `datasets.load_dataset`
+
+```python
+import datasets
+
+hf_ds = datasets.load_dataset("lance-format/mnist-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["label"], row["label_name"])
+```
+
+## Load directly with Lance (recommended)
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+## Load with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+tbl = db.open_table("train")
+print(len(tbl))
+```
+
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/mnist-lance --repo-type dataset --local-dir ./mnist-lance
+> ```
+> Then `lance.dataset("./mnist-lance/data/train.lance")`.
+
+## Vector search example
+
+```python
+import lance
+import pyarrow as pa
+
+ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
+emb_field = ds.schema.field("image_emb")
+ref = ds.take([0], columns=["image_emb"]).to_pylist()[0]["image_emb"]
+query = pa.array([ref], type=emb_field.type)
+
+neighbors = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
+    columns=["id", "label", "label_name"],
+).to_table().to_pylist()
+print(neighbors)
+```
+
+### LanceDB vector search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+tbl = db.open_table("train")
+
+ref = tbl.search().limit(1).select(["image_emb"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding)
+    .metric("cosine")
+    .select(["id", "label", "label_name"])
+    .limit(5)
+    .to_list()
+)
+for row in results:
+    print(row["id"], row["label"], row["label_name"])
+```
+
+## Filter by class
+
+```python
+ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
+sevens = ds.scanner(filter="label = 7", columns=["id"], limit=10).to_table()
+print(sevens)
+```
+
+### Filter by class with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+tbl = db.open_table("train")
+sevens = (
+    tbl.search()
+    .where("label = 7")
+    .select(["id"])
+    .limit(10)
+    .to_list()
+)
+print(sevens)
+```
+
+## Working with images
+
+```python
+from pathlib import Path
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
+row = ds.take([0], columns=["image", "label"]).to_pylist()[0]
+Path("digit_0.png").write_bytes(row["image"])
+print("label =", row["label"])
+```
+
+Images are stored inline as PNG bytes; scanning columns like `label` does not pay the I/O cost of loading image bytes.
+
+## Why Lance?
+
+- One dataset for images + embeddings + indices + metadata — no sidecar files to manage.
+- On-disk vector and full-text indices live next to the data, so search works on both local copies and the Hub.
+- Schema evolution lets you add new columns (fresh embeddings, augmentations, model predictions) without rewriting the data ([docs](https://lance.org/guide/data_evolution/)).
+
+## Source & license
+
+Converted from [`ylecun/mnist`](https://huggingface.co/datasets/ylecun/mnist). MNIST is released under the MIT license. The original dataset is by Yann LeCun, Corinna Cortes, and Christopher J.C. Burges.
+
+## Citation
+
+```
+@article{lecun1998mnist,
+  title={The MNIST database of handwritten digits},
+  author={LeCun, Yann and Cortes, Corinna and Burges, CJ},
+  url={http://yann.lecun.com/exdb/mnist/},
+  year={1998}
+}
+```

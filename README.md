@@ -67,3 +67,45 @@ code that's been tested (per recent LanceDB releases) in the hands of users.
 > As far as possible, do not add code snippets manually inside triple-backticks! Write the tests for
 > the required language in `tests/*` directory, then generate the snippets programmatically via the Makefile
 > commands.
+
+## Sync Hugging Face dataset pages
+
+The `Datasets` tab is populated from [`lance-format/lance-huggingface`](https://github.com/lance-format/lance-huggingface),
+the master repository where each Lance dataset published under the [`lance-format`](https://huggingface.co/lance-format)
+Hugging Face organization has its own directory with an `HF_DATASET_CARD.md`. That same file is what gets pushed to
+the Hub as the dataset's `README.md` via the `hf` CLI, so the GitHub repo is the single source of truth for the
+content of every dataset card.
+
+To avoid maintaining the same content in two places, the per-dataset MDX pages under `docs/datasets/` are
+generated from those upstream cards via `scripts/sync_hf_datasets.py`. The script:
+
+1. Reads `scripts/hf_datasets.yaml`, which lists every dataset to publish and maps the upstream directory name,
+   the URL slug, the HF Hub repo, and the human-readable title.
+2. Fetches each `HF_DATASET_CARD.md` from `lance-format/lance-huggingface` on GitHub.
+3. Rewrites the frontmatter for Mintlify (sets `title`, `sidebarTitle`, `description`), strips the upstream H1,
+   injects a "View on Hugging Face" card at the top, and sanitizes known MDX hazards (bibtex citations outside
+   code fences, literal `<>` in prose).
+4. Writes `docs/datasets/<slug>.mdx`, regenerates the card grid in `docs/datasets/index.mdx` between the
+   `HF_SYNC:START` / `HF_SYNC:END` markers, and updates the `Datasets` tab in `docs/docs.json` to keep the
+   sidebar in sync.
+
+Run it from the repo root:
+
+```bash
+make hf-sync
+```
+
+### Adding a new dataset
+
+1. Author the new dataset's `HF_DATASET_CARD.md` upstream in `lance-format/lance-huggingface` (and push it to the
+   Hub as usual).
+2. Add a single line for the dataset under the appropriate category in `scripts/hf_datasets.yaml`. The four
+   fields (`dir`, `slug`, `hf`, `title`) are explicit because the GitHub directory name, the HF Hub repo slug,
+   and the desired URL slug don't follow a derivable convention.
+3. Run `make hf-sync`. The script will fetch the new card, generate `docs/datasets/<slug>.mdx`, refresh the
+   landing-page card grid, and add the new page to the `Datasets` tab in `docs/docs.json`.
+4. Preview locally with `mint dev` and commit the changes (the MDX page, the regenerated `index.mdx`, the
+   updated `docs.json`, and the new yaml entry).
+
+If you remove a dataset from the yaml, the next `make hf-sync` will delete its MDX file and drop the sidebar
+entry. The script hard-fails on any fetch error — partial regeneration would be worse than a clear error.

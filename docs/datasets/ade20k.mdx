@@ -1,0 +1,169 @@
+---
+title: "ADE20K"
+sidebarTitle: "ADE20K"
+description: "Lance-formatted version of the full ADE20K scene parsing benchmark (sourced from 1aurent/ADE20K) — 27,574 scene images with semantic and instance segmentation maps, scene labels, and per-object metadata, all stored inline."
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/ade20k-lance"
+>
+Source dataset card and downloadable files for `lance-format/ade20k-lance`.
+</Card>
+
+Lance-formatted version of the full [ADE20K scene parsing benchmark](https://groups.csail.mit.edu/vision/datasets/ADE20K/) (sourced from [`1aurent/ADE20K`](https://huggingface.co/datasets/1aurent/ADE20K)) — **27,574 scene images** with semantic and instance segmentation maps, scene labels, and per-object metadata, all stored inline.
+
+## Splits
+
+| Split | Rows |
+|-------|------|
+| `train.lance`      | 25,574 |
+| `validation.lance` | 2,000 |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `segmentation` | `large_binary` | Inline PNG bytes — semantic segmentation map (RGB encoding per ADE20K spec) |
+| `instance` | `large_binary?` | Inline PNG bytes — instance map; null if not provided |
+| `filename` | `string` | ADE20K relative filename |
+| `scene` | `list<string>` | Scene labels (e.g. `["bathroom"]`) |
+| `object_names` | `list<string>` | Names of all annotated objects (one entry per polygon) |
+| `objects_present` | `list<string>` | Deduped object names — feeds the `LABEL_LIST` index |
+| `num_objects` | `int32` | Number of annotated objects |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
+
+## Pre-built indices
+
+- `IVF_PQ` on `image_emb` — `metric=cosine`
+- `BTREE` on `num_objects`
+- `LABEL_LIST` on `objects_present` — supports `array_has_any` / `array_has_all`
+
+## Quick start
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/ade20k-lance/data/validation.lance")
+print(ds.count_rows(), ds.schema.names, ds.list_indices())
+```
+
+## Load with LanceDB
+
+These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ade20k-lance/data")
+tbl = db.open_table("validation")
+print(f"LanceDB table opened with {len(tbl)} scene images")
+```
+
+## Read an image with its segmentation
+
+```python
+import io
+import lance
+from PIL import Image
+
+ds = lance.dataset("hf://datasets/lance-format/ade20k-lance/data/validation.lance")
+row = ds.take([0], columns=["image", "segmentation", "scene", "objects_present"]).to_pylist()[0]
+
+Image.open(io.BytesIO(row["image"])).save("img.jpg")
+Image.open(io.BytesIO(row["segmentation"])).save("seg.png")
+print("scene:", row["scene"])
+print("objects:", row["objects_present"][:10])
+```
+
+## Filter by scene / objects
+
+```python
+import lance
+ds = lance.dataset("hf://datasets/lance-format/ade20k-lance/data/validation.lance")
+
+# Indoor scenes containing both a bed and a window.
+rows = ds.scanner(
+    filter="array_has_all(objects_present, ['bed', 'window'])",
+    columns=["filename", "scene"],
+    limit=10,
+).to_table().to_pylist()
+```
+
+### Filter with LanceDB
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ade20k-lance/data")
+tbl = db.open_table("validation")
+
+rows = (
+    tbl.search()
+    .where("array_has_all(objects_present, ['bed', 'window'])")
+    .select(["filename", "scene"])
+    .limit(10)
+    .to_list()
+)
+```
+
+## Visual similarity search
+
+```python
+import lance
+import pyarrow as pa
+
+ds = lance.dataset("hf://datasets/lance-format/ade20k-lance/data/validation.lance")
+emb_field = ds.schema.field("image_emb")
+ref = ds.take([0], columns=["image_emb"]).to_pylist()[0]["image_emb"]
+query = pa.array([ref], type=emb_field.type)
+
+neighbors = ds.scanner(
+    nearest={"column": "image_emb", "q": query[0], "k": 5},
+    columns=["filename", "scene"],
+).to_table().to_pylist()
+```
+
+### LanceDB visual similarity search
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ade20k-lance/data")
+tbl = db.open_table("validation")
+
+ref = tbl.search().limit(1).select(["image_emb"]).to_list()[0]
+query_embedding = ref["image_emb"]
+
+results = (
+    tbl.search(query_embedding)
+    .metric("cosine")
+    .select(["filename", "scene"])
+    .limit(5)
+    .to_list()
+)
+```
+
+## Why Lance?
+
+- One dataset for images + segmentation + instance + scene + objects + embeddings + indices — no folder of paired files.
+- On-disk vector and label-list indices live next to the data, so search works on local copies and on the Hub.
+- Schema evolution: add columns (panoptic ids, fresh embeddings, model predictions) without rewriting the data.
+
+## Source & license
+
+Converted from [`1aurent/ADE20K`](https://huggingface.co/datasets/1aurent/ADE20K). ADE20K is released under the [BSD 3-Clause license](https://github.com/CSAILVision/ADE20K/blob/main/LICENSE) by the MIT CSAIL Computer Vision group.
+
+## Citation
+
+```
+@inproceedings{zhou2017scene,
+  title={Scene Parsing through ADE20K Dataset},
+  author={Zhou, Bolei and Zhao, Hang and Puig, Xavier and Fidler, Sanja and Barriuso, Adela and Torralba, Antonio},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year={2017}
+}
+```
