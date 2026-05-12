@@ -181,6 +181,29 @@ The tokenizer is customizable, you can specify how the tokenizer splits the text
 - `ascii_folding`: true
 - `custom_stop_words`: `None` — pass a `list[str]` to drop additional words beyond the language defaults. Requires `remove_stop_words=True`.
 
+The Python API also supports tokenizer implementations that load language model files. Use `base_tokenizer="jieba/default"` for Jieba tokenization, which segments Chinese text into searchable word tokens when the text is written without spaces between words. Use `base_tokenizer="lindera/ipadic"` for Lindera IPADIC tokenization of Japanese text. The `language` parameter still controls stemming and stop-word removal; it is not the primary way to enable CJK tokenization.
+
+<CodeGroup>
+```python Python icon="python"
+table.create_fts_index(
+    "text",
+    base_tokenizer="jieba/default",
+    stem=False,
+    remove_stop_words=False,
+    ascii_folding=False,
+    replace=True,
+)
+```
+</CodeGroup>
+
+Model-backed tokenizers require tokenizer model files in Lance's language model home. Lance looks under the default platform data directory for `lance/language_models`, or you can set `LANCE_LANGUAGE_MODEL_HOME` to point to a different model root:
+
+```bash
+export LANCE_LANGUAGE_MODEL_HOME=/path/to/lance/language_models
+```
+
+For example, `jieba/default` is resolved under `<model-home>/jieba/default/...`, and `lindera/ipadic` is resolved under `<model-home>/lindera/ipadic/...`.
+
 For example, for language with accents, you can specify the tokenizer to use `ascii_folding` to remove accents, e.g. 'é' to 'e':
 
 <CodeGroup>
