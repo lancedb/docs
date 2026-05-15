@@ -1,7 +1,7 @@
 ---
 title: "ImageNet-1k Validation"
 sidebarTitle: "ImageNet-1k Validation"
-description: "A Lance-formatted version of the canonical 50,000-image ImageNet-1k validation split (also known as ILSVRC2012 val) sourced from benjamin-paine/imagenet-1k. All 50 k JPEGs are stored inline alongside CLIP embeddings and a pre-built IVF_PQ ANN index."
+description: "A Lance-formatted version of the canonical 50,000-image ImageNet-1k (ILSVRC2012) validation split, sourced from benjamin-paine/imagenet-1k. Each row is one image with its integer class id, a string class name, and a cosine-normalized OpenCLIP image…"
 ---
 
 <Card
@@ -12,81 +12,91 @@ description: "A Lance-formatted version of the canonical 50,000-image ImageNet-1
 Source dataset card and downloadable files for `lance-format/imagenet-1k-val-lance`.
 </Card>
 
-A Lance-formatted version of the **canonical 50,000-image ImageNet-1k validation split** (also known as ILSVRC2012 val) sourced from [`benjamin-paine/imagenet-1k`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k). All 50 k JPEGs are stored inline alongside CLIP embeddings and a pre-built `IVF_PQ` ANN index.
+A Lance-formatted version of the canonical 50,000-image ImageNet-1k (ILSVRC2012) validation split, sourced from [`benjamin-paine/imagenet-1k`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k). Each row is one image with its integer class id, a string class name, and a cosine-normalized OpenCLIP image embedding — all stored inline and available directly from the Hub at `hf://datasets/lance-format/imagenet-1k-val-lance/data`. The 1.28 M ImageNet-1k train split (~155 GB) is intentionally out of scope for this redistribution; the val split is the canonical evaluation slice for classification benchmarks and is small enough (~7 GB Lance) to ride entirely in inline storage alongside its embeddings.
 
-> **Why only the validation split?** The 1.28 M ImageNet-1k train split is ~155 GB and is intentionally out of scope for this lance distribution. The val split is the canonical evaluation slice for image-classification benchmarks and is small enough (~6.7 GB raw, ~7 GB Lance) to ride entirely in inline storage with embeddings.
+## Key features
+
+- **Inline JPEG bytes** in the `image` column — no per-class folders, no sidecar files.
+- **Pre-computed OpenCLIP image embeddings** (`image_emb`, ViT-B/32 trained on `laion2b_s34b_b79k`, 512-dim, cosine-normalized) with a bundled `IVF_PQ` index for similarity search.
+- **Both label representations** — integer `label` (0-999) and string `label_name` (first synonym of the WordNet synset, e.g. `golden_retriever`) — with scalar indices on both for fast class filters.
+- **One columnar dataset** — scan labels and embeddings cheaply, fetch image bytes only for the rows you actually need.
 
 ## Splits
 
-| Split | Rows |
-|-------|------|
-| `validation.lance` | 50,000 |
+A single split, shipped as `validation.lance` (50,000 rows).
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index within the split (0-49,999) |
+| `id` | `int64` | Row index within the split, 0-49,999 (natural join key) |
 | `image` | `large_binary` | Inline JPEG bytes |
 | `label` | `int32` | Class id (0-999) |
 | `label_name` | `string` | First synonym of the synset, underscore-spaced (e.g. `golden_retriever`) |
-| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k` embedding (cosine-normalized) |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k` image embedding (cosine-normalized) |
 
-The full WordNet synset descriptions for each class are available in the dataset metadata under `lance:class_names` (comma-separated).
+The full comma-separated WordNet synset descriptions for each class are stored in the dataset metadata under `lance:class_names`.
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` — `metric=cosine`, `num_partitions=64`
-- `BTREE` on `label`
-- `BITMAP` on `label_name`
+- `IVF_PQ` on `image_emb` — vector similarity search (cosine, `num_partitions=64`)
+- `BTREE` on `label` — fast equality / range filters by class id
+- `BITMAP` on `label_name` — fast set-membership filters by class name
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample without installing anything Lance-specific.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/imagenet-1k-val-lance", split="validation", streaming=True)
+for row in hf_ds.take(3):
+    print(row["label_name"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Train, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
 tbl = db.open_table("validation")
-print(f"LanceDB table opened with {len(tbl)} images")
+print(len(tbl))
 ```
 
-> **Tip — for production use, download locally first** to avoid Hub rate limits:
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
 > ```bash
 > hf download lance-format/imagenet-1k-val-lance --repo-type dataset --local-dir ./imagenet-1k-val-lance
 > ```
+> Then point Lance or LanceDB at `./imagenet-1k-val-lance/data`.
 
-## Vector search example
+## Search
 
-```python
-import lance
-import pyarrow as pa
-
-ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
-emb_field = ds.schema.field("image_emb")
-ref = ds.take([0], columns=["image_emb", "label_name"]).to_pylist()[0]
-query = pa.array([ref["image_emb"]], type=emb_field.type)
-
-neighbors = ds.scanner(
-    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
-    columns=["id", "label_name"],
-).to_table().to_pylist()
-print(f"reference: {ref['label_name']}")
-for n in neighbors:
-    print(n)
-```
-
-### LanceDB vector search
+The bundled `IVF_PQ` index on `image_emb` makes nearest-neighbor retrieval over the validation set a single call. In production you would encode a query image through the same OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k` model used at ingest (cosine-normalized) and pass the resulting 512-d vector to `tbl.search(...)`. The example below uses the embedding already stored in row 42 as a runnable stand-in, so the snippet works without any model loaded.
 
 ```python
 import lancedb
@@ -94,62 +104,162 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
 tbl = db.open_table("validation")
 
-ref = tbl.search().limit(1).select(["image_emb", "label_name"]).to_list()[0]
-query_embedding = ref["image_emb"]
+seed = (
+    tbl.search()
+    .select(["image_emb", "label_name"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
 
-results = (
-    tbl.search(query_embedding)
+hits = (
+    tbl.search(seed["image_emb"])
     .metric("cosine")
     .select(["id", "label_name"])
-    .limit(5)
+    .limit(10)
     .to_list()
 )
+print(f"reference class: {seed['label_name']}")
+for r in hits:
+    print(f"  id={r['id']:>6}  {r['label_name']}")
 ```
 
-## Filter by class
+Because the embeddings are cosine-normalized at ingest, `metric="cosine"` is the right choice and the first hit will typically be the seed image itself — a useful sanity check. Tune `nprobes` and `refine_factor` to trade recall against latency for your workload.
 
-```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
-goldens = ds.scanner(filter="label_name = 'golden_retriever'", columns=["id"], limit=5).to_table()
-```
+## Curate
 
-### Filter by class with LanceDB
+A typical curation pass for an ImageNet-style classification or robustness study narrows the validation set to a single class (or a synset prefix) and then materializes a small candidate set for inspection. Stacking the filter and the projection inside a single scan keeps the result small and explicit, and the bounded `.limit(200)` makes it cheap to inspect before committing the subset to anything downstream.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
 tbl = db.open_table("validation")
-goldens = (
+
+candidates = (
     tbl.search()
     .where("label_name = 'golden_retriever'")
-    .select(["id"])
-    .limit(5)
+    .select(["id", "label", "label_name"])
+    .limit(200)
     .to_list()
 )
+print(f"{len(candidates)} golden_retriever validation rows")
 ```
 
-## Working with images
+The `BITMAP` index on `label_name` resolves the predicate without scanning, and the `image` column is never read, so the network traffic for the candidate scan is dominated by the small metadata payload rather than JPEG bytes. The result is a plain list of dictionaries, ready to inspect, persist as a manifest of row ids, or feed into the Evolve and Train workflows below. To grab a family of related classes, replace the equality with a `LIKE` predicate such as `label_name LIKE 'tabby%'` or an `IN` set over a curated synset list.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a coarse `is_dog` flag over a curated set of canine synsets, which can then be used directly in later `where` clauses without re-listing the class set on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
 
 ```python
-from pathlib import Path
-import lance
+import lancedb
 
-ds = lance.dataset("hf://datasets/lance-format/imagenet-1k-val-lance/data/validation.lance")
-row = ds.take([0], columns=["image", "label_name"]).to_pylist()[0]
-Path(f"sample_{row['label_name']}.jpg").write_bytes(row["image"])
+db = lancedb.connect("./imagenet-1k-val-lance/data")  # local copy required for writes
+tbl = db.open_table("validation")
+
+tbl.add_columns({
+    "is_dog": "label_name IN ('golden_retriever', 'Labrador_retriever', 'beagle', 'pug', 'poodle')",
+})
 ```
 
-## Why Lance?
+If the values you want to attach already live in another table — per-class hypernyms from WordNet, ImageNet-A / ImageNet-R membership flags, model-prediction logs from an external eval run — merge them in by joining on `label_name`:
 
-- One dataset for images + embeddings + indices + metadata — no sidecar files.
-- On-disk vector and FTS indices live next to the data, so search works on local copies and on the Hub.
-- Schema evolution: add columns (model predictions, fresh embeddings, robustness annotations) without rewriting the data.
+```python
+import pyarrow as pa
+
+hypernyms = pa.table({
+    "label_name": pa.array(["golden_retriever", "tabby", "espresso"]),
+    "hypernym": pa.array(["dog", "cat", "beverage"]),
+})
+tbl.merge(hypernyms, on="label_name")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running an alternative vision backbone over the image bytes), Lance provides a batch-UDF API in the underlying library — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/) for that pattern.
+
+## Train
+
+Projection lets a training loop — or, more commonly for this split, an evaluation loop — read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. Columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
+tbl = db.open_table("validation")
+
+eval_ds = Permutation.identity(tbl).select_columns(["image", "label"])
+loader = DataLoader(eval_ds, batch_size=128, shuffle=False, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; image_emb stays on disk.
+    # decode the JPEG bytes, forward through your classifier, accumulate top-1 / top-5...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "label"]` to `select_columns(...)` on the next run skips JPEG decoding entirely and reads only the cached 512-d vectors, which is the right shape for training a linear probe or a lightweight classifier head on top of frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
+tbl = db.open_table("validation")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./imagenet-1k-val-lance/data")
+local_tbl = local_db.open_table("validation")
+local_tbl.tags.create("clip-vitb32-laion2b-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("validation", version="clip-vitb32-laion2b-v1")
+tbl_v5 = db.open_table("validation", version=5)
+```
+
+Pinning supports two workflows. An evaluation harness locked to `clip-vitb32-laion2b-v1` keeps reporting numbers against a fixed snapshot of labels and embeddings even as the dataset evolves in parallel; newly added columns or relabelings do not change what the tag resolves to. A research experiment pinned to the same tag can be rerun later against the exact same images, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training or evaluation loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/imagenet-1k-val-lance/data")
+remote_tbl = remote_db.open_table("validation")
+
+batches = (
+    remote_tbl.search()
+    .where("label_name IN ('golden_retriever', 'Labrador_retriever', 'beagle', 'pug', 'poodle')")
+    .select(["id", "image", "label", "label_name", "image_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./imagenet-dogs-subset")
+local_db.create_table("validation", batches)
+```
+
+The resulting `./imagenet-dogs-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/imagenet-1k-val-lance/data` for `./imagenet-dogs-subset`.
 
 ## Source & license
 
-Converted from [`benjamin-paine/imagenet-1k`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k), itself a redistribution of the [ILSVRC2012 ImageNet-1k validation split](https://image-net.org/challenges/LSVRC/2012/). All use is subject to the [ImageNet terms of access](https://image-net.org/download.php) — for **research use only**.
+Converted from [`benjamin-paine/imagenet-1k`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k), itself a redistribution of the [ILSVRC2012 ImageNet-1k validation split](https://image-net.org/challenges/LSVRC/2012/). All use is subject to the [ImageNet terms of access](https://image-net.org/download.php) — **for research use only**.
 
 ## Citation
 

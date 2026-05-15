@@ -1,7 +1,7 @@
 ---
 title: "LAION-1M"
 sidebarTitle: "LAION-1M"
-description: "A lance dataset of LAION image-text corpus (~1M rows) with inline JPEG bytes, CLIP embeddings (img_emb), and full metadata available directly from the Hub: hf://datasets/lance-format/laion-1m/data/train.lance."
+description: "A Lance-formatted slice of the LAION image-text corpus (~1M rows) with inline JPEG bytes, CLIP image embeddings (img_emb), full metadata, and a pre-built ANN index — all available directly from the Hub at…"
 ---
 
 <Card
@@ -12,199 +12,94 @@ description: "A lance dataset of LAION image-text corpus (~1M rows) with inline 
 Source dataset card and downloadable files for `lance-format/laion-1m`.
 </Card>
 
-A lance dataset of LAION image-text corpus (~1M rows) with inline JPEG bytes, CLIP embeddings (`img_emb`), and full metadata available directly from the Hub: `hf://datasets/lance-format/laion-1m/data/train.lance`.
+A Lance-formatted slice of the [LAION](https://laion.ai/blog/laion-5b/) image-text corpus (~1M rows) with inline JPEG bytes, CLIP image embeddings (`img_emb`), full metadata, and a pre-built ANN index — all available directly from the Hub at `hf://datasets/lance-format/laion-1m/data/train.lance`.
 
+## Key features
 
-## Key Features
+- **Inline JPEG bytes** in the `image` column — no sidecar files, no image folders.
+- **Pre-computed CLIP image embeddings** (`img_emb`, 768-dim) with a bundled `IVF_PQ` index for similarity search.
+- **Full LAION metadata** — captions, URLs, NSFW flags, EXIF, dimensions, similarity scores.
+- **One columnar dataset** — scan metadata cheaply, then fetch image bytes only for the rows you want.
 
-- **Images stored inline** – the `image` column is binary data, so sampling/exporting images never leaves Lance.
-- **Prebuilt ANN index** – `img_emb` ships with IVF_PQ for instant similarity search.
-- **Metadata rich** – captions, URLs, NSFW flags, EXIF, dimensions, similarity scores, etc.
-- **Lance&lt;&gt;HF integration** – access via `datasets` or connect with Lance for ANN search, image export, and any operation that needs the vector index or binary blobs.
+## Splits
+
+`train.lance`
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `key` | `int64` | Row key (natural join key for merges) |
+| `image` | `large_binary` | Inline JPEG bytes |
+| `image_path` | `string` | Original filename |
+| `caption` | `string` | Image caption |
+| `url` | `string` | Source URL |
+| `NSFW` | `int64` | 0 = safe, 1 = NSFW |
+| `LICENSE` | `string` | Per-row license tag |
+| `similarity` | `float64` | CLIP image–text cosine similarity |
+| `width`, `height` | `int64` | Image dimensions |
+| `original_width`, `original_height` | `int64` | Original dimensions before resize |
+| `exif`, `md5`, `status`, `error_message` | `string` | Provenance / metadata |
+| `img_emb` | `fixed_size_list<float32, 768>` | CLIP image embedding |
+
+## Pre-built indices
+
+- `IVF_PQ` on `img_emb` — vector similarity search (L2)
+
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
 
 ## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable if your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample without installing anything Lance-specific.
 
 ```python
 import datasets
 
-hf_ds = datasets.load_dataset(
-    "lance-format/laion-1m",
-    split="train",
-    streaming=True
-)
-# Take first three rows and print captions
+hf_ds = datasets.load_dataset("lance-format/laion-1m", split="train", streaming=True)
 for row in hf_ds.take(3):
     print(row["caption"])
 ```
 
+## Load with LanceDB
+
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, and Versioning examples below.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
+tbl = db.open_table("train")
+print(len(tbl))
+```
+
 ## Load with Lance
 
-Use Lance for ANN search, image export, and any operation that needs the vector index or binary blobs:
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
 
 ds = lance.dataset("hf://datasets/lance-format/laion-1m/data/train.lance")
-print(ds.count_rows())
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/laion-1m --repo-type dataset --local-dir ./laion-1m
+> ```
+> Then point Lance or LanceDB at `./laion-1m/data`.
 
-```python
-import lancedb
+## Search
 
-db = lancedb.connect("hf://datasets/lance-format/laion-subset/data")
-tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} image-text pairs")
-```
-
-> **⚠️ HuggingFace Streaming Note**
-> - Download the dataset locally (`huggingface-cli download lance-format/laion-1m --repo-type dataset --local-dir ./laion`) for heavy usage, then point Lance at `./laion` to use the IVF_PQ index.
-
-
-## Why Lance?
-
-- Optimized for AI workloads: Lance keeps multimodal data and vector search-ready storage in the same columnar format designed for accelerator-era retrieval (see [lance.org](https://lance.org)).
-- Images + embeddings + metadata travel as one tabular dataset.
-- On-disk, scalable ANN index
-- Schema evolution lets you add new features/columns (moderation tags, embeddings, etc.) without rewriting the raw data.
-
-## Quick Start (Lance)
-
-### Inspecting Existing Indices
-
-This dataset comes with a built in vector (IVF) index for image embeddings. You can inspect the prebuilt indices on the dataset:
-
-```python
-import lance
-
-dataset = lance.dataset("hf://datasets/lance-format/laion-1m/data/train.lance")
-
-# List all indices
-indices = dataset.list_indices()
-print(indices)
-```
-
-While this dataset comes with pre-built indices, you can also create your own custom indices if needed. For example:
-
-```python
-# ds is a local Lance dataset
-ds.create_index(
-    "img_emb",
-    index_type="IVF_PQ",
-    num_partitions=256,
-    num_sub_vectors=96,
-    replace=True,
-)
-```
-
-```python
-# ds is a local Lance dataset
-ds.create_fts_index("caption")
-```
-
-## Quick Start (Lance)
-
-```python
-import lance
-import pyarrow as pa
-
-lance_ds = lance.dataset("hf://datasets/lance-format/laion-1m/data/train.lance")
-
-# Vector search via img_emb IVF_PQ index
-emb_field = lance_ds.schema.field("img_emb")
-query = pa.array(list(range(768)), type=emb_field.type)
-
-neighbors = lance_ds.scanner(
-    nearest={
-        "column": emb_field.name,
-        "q": query[0],
-        "k": 6,
-        "nprobes": 16,
-        "refine_factor": 30,
-    },
-    columns=["caption", "url", "similarity"],
-).to_table().to_pylist()
-```
-
-## Storing & Retrieving Multimodal Data
-
-```python
-from pathlib import Path
-
-rows = lance_ds.take([0, 1], columns=["image", "caption"]).to_pylist()
-for idx, row in enumerate(rows):
-    Path("samples").mkdir(exist_ok=True)
-    with open(f"samples/{idx}.jpg", "wb") as f:
-        f.write(row["image"])
-```
-
-Images are stored inline as binary columns (regular Lance binary, not the special blob handle used in OpenVid). They behave like any other column—scan captions without touching `image`, then `take()` when you want the bytes.
-
-## Dataset Schema
-
-Core fields:
-- `image_path`, `image`
-- `caption`, `url`
-- `NSFW` (uppercase), `similarity`, `LICENSE`, `key`, `status`, `error_message`
-- `width`, `height`, `original_width`, `original_height`
-- `exif`, `md5`
-- `img_emb`
-
-
-## Usage Examples
-
-### 1. Browse metadata
-
-```python
-scanner = ds.scanner(columns=["caption", "url", "similarity"], limit=5)
-for row in scanner.to_table().to_pylist():
-    print(row)
-```
-
-### 2. Export images
-
-```python
-rows = ds.take(range(3), columns=["image", "caption"]).to_pylist()
-for i, row in enumerate(rows):
-    with open(f"sample_{i}.jpg", "wb") as f:
-        f.write(row["image"])
-```
-
-### 3. Vector similarity search
-
-```python
-emb_field = ds.schema.field("img_emb")
-ref = ds.take([123], columns=["img_emb"]).to_pylist()[0]
-query = pa.array([ref["img_emb"]], type=emb_field.type)
-
-neighbors = ds.scanner(
-    nearest={
-        "column": emb_field.name,
-        "q": query[0],
-        "k": 6,
-        "nprobes": 16,
-        "refine_factor": 30,
-    },
-    columns=["caption", "url", "similarity"],
-).to_table().to_pylist()
-```
-
-### LanceDB Vector Similarity Search
-
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
-query_embedding = list(range(768))
-
-results = tbl.search(query_embedding) \
-    .limit(5) \
-    .to_list()
-
-```
-
-### LanceDB Full-Text Search
+The bundled `IVF_PQ` index on `img_emb` makes approximate-nearest-neighbor search a single call. In production you would encode a user prompt or query image through CLIP at runtime and pass the resulting 768-d vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
 
 ```python
 import lancedb
@@ -212,61 +107,166 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
 tbl = db.open_table("train")
 
-results = tbl.search("dog running") \
-    .select(["caption", "url", "similarity"]) \
-    .limit(10) \
-    .to_list()
-```
-
-## Dataset Evolution
-
-Lance supports flexible schema and data evolution ([docs](https://lance.org/guide/data_evolution/)). You can add/drop columns, backfill with SQL or Python, rename fields, or change data types without rewriting the whole dataset. In practice this lets you:
-- Introduce fresh metadata (moderation labels, embeddings, quality scores) as new signals become available.
-- Add new columns to existing datasets without re-exporting terabytes of video.
-- Adjust column names or shrink storage (e.g., cast embeddings to float16) while keeping previous snapshots queryable for reproducibility.
-
-```python
-import lance
-import pyarrow as pa
-import numpy as np
-
-# Assumes you ran the export to Lance example above to store a local subset of the data
-# ds = lance.dataset("./laion_1m_local")
-
-# 1. Add a schema-only column (data to be added later)
-dataset.add_columns(pa.field("moderation_label", pa.string()))
-
-# 2. Add a column with data backfill using a SQL expression
-dataset.add_columns(
-    {
-        "moderation_label": "case WHEN \"NSFW\" > 0.5 THEN 'review' ELSE 'ok' END"
-    }
+query = (
+    tbl.search()
+    .select(["img_emb"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]["img_emb"]
 )
 
-# 3. Generate rich columns via Python batch UDFs
-@lance.batch_udf()
-def random_embedding(batch):
-    arr = np.random.rand(batch.num_rows, 128).astype("float32")
-    return pa.RecordBatch.from_arrays(
-        [pa.FixedSizeListArray.from_arrays(arr.ravel(), 128)],
-        names=["embedding"],
-    )
+hits = (
+    tbl.search(query)
+    .metric("L2")
+    .select(["caption", "url", "similarity"])
+    .limit(10)
+    .to_list()
+)
+for r in hits:
+    print(f"{r['similarity']:.3f} | {r['caption'][:80]}")
+```
 
-dataset.add_columns(random_embedding)
+Tune `metric`, `nprobes`, and `refine_factor` to trade recall against latency for your workload.
 
-# 4. Bring in offline annotations with merge
-labels = pa.table({
-    "id": pa.array([1, 2, 3]),
-    "label": pa.array(["horse", "rabbit", "cat"]),
+## Curate
+
+Building a focused subset usually means combining similarity with metadata filters. Lance evaluates both inside a single query, so the candidate set comes back already filtered. The example below finds images visually similar to a seed row and restricts the result to safe-rated, high-resolution rows in one call. The bounded `.limit(500)` keeps the output small enough to inspect or hand off.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
+tbl = db.open_table("train")
+
+seed = (
+    tbl.search()
+    .select(["img_emb", "caption"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+candidates = (
+    tbl.search(seed["img_emb"])
+    .where('"NSFW" = 0 AND similarity > 0.3 AND width >= 512', prefilter=True)
+    .select(["key", "url", "caption", "similarity"])
+    .limit(500)
+    .to_list()
+)
+print(f"{len(candidates)} candidates around: {seed['caption'][:60]}")
+```
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of row keys, or feed into the Evolve and Train workflows below.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a precomputed `aspect_ratio` and an `is_high_res` flag, either of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note**: Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full corpus.
+
+```python
+import lancedb
+
+db = lancedb.connect("./laion-1m/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "aspect_ratio": "CAST(width AS DOUBLE) / CAST(height AS DOUBLE)",
+    "is_high_res": "width >= 512 AND height >= 512",
 })
-dataset.merge(labels, "id")
-
-# 5. Rename or cast columns as needs change
-dataset.alter_columns({"path": "quality_bucket", "name": "quality_tier"})
-dataset.alter_columns({"path": "embedding", "data_type": pa.list_(pa.float16(), 128)})
 ```
 
-These operations are automatically versioned, so prior experiments can still point to earlier versions while the dataset keeps evolving.
+If the values you want to attach already live in another table (offline labels, classifier predictions, aesthetic scores), merge them in by joining on the `key` column:
+
+```python
+import pyarrow as pa
+
+labels = pa.table({
+    "key": pa.array([0, 1, 2]),
+    "aesthetic_score": pa.array([7.1, 6.4, 8.9]),
+})
+tbl.merge(labels, on="key")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running an embedding model over the image bytes), Lance provides a batch-UDF API in the underlying library — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/) for that pattern.
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetch, shuffling, and batching behave as in any PyTorch pipeline. Columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "caption"])
+loader = DataLoader(train_ds, batch_size=256, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; img_emb / img_emb_dinov3 stay on disk.
+    # decode the JPEG bytes, tokenize the captions, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["img_emb_dinov3", "caption"]` to `select_columns(...)` on the next run reads only those columns, with no data movement or shard reorganization.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./laion-1m/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("aesthetic-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="aesthetic-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `aesthetic-v1` keeps returning stable results while the dataset evolves in parallel; newly added columns or labels do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same data, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full corpus. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/laion-1m/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where('"NSFW" = 0 AND similarity > 0.35 AND width >= 512')
+    .select(["key", "image", "caption", "url", "img_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./laion-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting `./laion-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/laion-1m/data` for `./laion-subset`.
 
 ## Citation
 
@@ -281,4 +281,4 @@ These operations are automatically versioned, so prior experiments can still poi
 
 ## License
 
-Content inherits LAION’s original licensing and safety guidelines. Review [LAION policy](https://laion.ai/blog/laion-5b/) before downstream use.
+Content inherits LAION's original licensing and safety guidelines. Review [LAION policy](https://laion.ai/blog/laion-5b/) before downstream use.

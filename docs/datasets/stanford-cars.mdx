@@ -1,7 +1,7 @@
 ---
 title: "Stanford Cars"
 sidebarTitle: "Stanford Cars"
-description: "Lance-formatted version of the Stanford Cars dataset — 8,144 training images across 196 fine-grained car make/model/year classes — sourced from Multimodal-Fatima/StanfordCars_train."
+description: "A Lance-formatted version of the Stanford Cars fine-grained benchmark — 8,144 photographs across 196 make/model/year classes — sourced from Multimodal-Fatima/StanfordCars_train. Each row carries the inline JPEG bytes, the integer class id, a…"
 ---
 
 <Card
@@ -12,53 +12,91 @@ description: "Lance-formatted version of the Stanford Cars dataset — 8,144 tra
 Source dataset card and downloadable files for `lance-format/stanford-cars-lance`.
 </Card>
 
-Lance-formatted version of the [Stanford Cars dataset](https://web.archive.org/web/20210212183835/http://ai.stanford.edu/~jkrause/cars/car_dataset.html) — 8,144 training images across 196 fine-grained car make/model/year classes — sourced from [`Multimodal-Fatima/StanfordCars_train`](https://huggingface.co/datasets/Multimodal-Fatima/StanfordCars_train).
+A Lance-formatted version of the [Stanford Cars](https://web.archive.org/web/20210212183835/http://ai.stanford.edu/~jkrause/cars/car_dataset.html) fine-grained benchmark — 8,144 photographs across 196 make/model/year classes — sourced from [`Multimodal-Fatima/StanfordCars_train`](https://huggingface.co/datasets/Multimodal-Fatima/StanfordCars_train). Each row carries the inline JPEG bytes, the integer class id, a BLIP-generated caption inherited from the source mirror, and a cosine-normalized CLIP image embedding, all available directly from the Hub at `hf://datasets/lance-format/stanford-cars-lance/data`.
+
+## Key features
+
+- **Inline JPEG bytes** in the `image` column — no sidecar files, no image folders.
+- **Pre-computed CLIP image embeddings** (`image_emb`, OpenCLIP `ViT-B-32`, 512-dim, cosine-normalized) with a bundled `IVF_PQ` index for similarity search.
+- **BLIP captions in `blip_caption`** with a full-text index, so keyword search on visual descriptions composes with vector search in a single query.
+- **A bundled scalar index on `label`** makes class-based curation a cheap predicate rather than a full scan.
+
+## Splits
+
+| Split | Rows | Notes |
+|-------|------|-------|
+| `train.lance` | 8,144 | The source mirror redistributes a single split; the original Stanford Cars test split is not included here. |
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index |
-| `image` | `large_binary` | Inline JPEG bytes |
-| `label` | `int32` | Class id (0-195) |
+| `id` | `int64` | Row index within split (natural join key for merges) |
+| `image` | `large_binary` | Inline JPEG bytes (quality 92) |
+| `label` | `int32` | Class id (0–195), one per Make Model Year combination |
 | `blip_caption` | `string?` | BLIP-generated caption (beam=5) carried through from the source mirror |
-| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` embedding (cosine-normalized) |
+| `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` — `metric=cosine`
-- `INVERTED` (FTS) on `blip_caption`
-- `BTREE` on `label`
+- `IVF_PQ` on `image_emb` — vector similarity search (cosine)
+- `INVERTED` (FTS) on `blip_caption` — keyword and hybrid search
+- `BTREE` on `label` — fast lookup by class id
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample without installing anything Lance-specific.
 
 ```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/stanford-cars-lance/data/train.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+import datasets
+
+hf_ds = datasets.load_dataset("lance-format/stanford-cars-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["label"], row["blip_caption"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Train, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/stanford-cars-lance/data")
 tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} car images")
+print(len(tbl))
 ```
 
-## Caption-based filtering
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
+
 ds = lance.dataset("hf://datasets/lance-format/stanford-cars-lance/data/train.lance")
-hits = ds.scanner(full_text_query="red sports car", columns=["id", "blip_caption"], limit=10).to_table()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB full-text search
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/stanford-cars-lance --repo-type dataset --local-dir ./stanford-cars-lance
+> ```
+> Then point Lance or LanceDB at `./stanford-cars-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `image_emb` makes approximate-nearest-neighbor search a single call. In production you would encode a query photo through the same OpenCLIP `ViT-B-32` model used at ingest and pass the resulting 512-d vector to `tbl.search(...)`. The example below uses the embedding stored in row 0 as a runnable stand-in so the snippet works without any model loaded.
 
 ```python
 import lancedb
@@ -66,28 +104,45 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/stanford-cars-lance/data")
 tbl = db.open_table("train")
 
-results = (
-    tbl.search("red sports car")
-    .select(["id", "blip_caption"])
+seed = (
+    tbl.search()
+    .select(["image_emb", "blip_caption"])
+    .limit(1)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["image_emb"])
+    .metric("cosine")
+    .select(["id", "label", "blip_caption"])
     .limit(10)
     .to_list()
 )
+print("seed caption:", seed["blip_caption"])
+for r in hits:
+    print(f"  {r['id']:>6}  label={r['label']:>3}  {r['blip_caption'][:60]}")
 ```
 
-## Visual similarity search
+Tune `metric`, `nprobes`, and `refine_factor` to trade recall against latency for your workload.
+
+Because the dataset also ships an `INVERTED` index on `blip_caption`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query. LanceDB merges the two result lists and reranks them in a single call, which is useful when a phrase like "red convertible" must literally appear in the caption but you still want CLIP to do the heavy lifting on visual similarity.
 
 ```python
-import lance, pyarrow as pa
-ds = lance.dataset("hf://datasets/lance-format/stanford-cars-lance/data/train.lance")
-emb_field = ds.schema.field("image_emb")
-ref = ds.take([0], columns=["image_emb", "blip_caption"]).to_pylist()[0]
-neighbors = ds.scanner(
-    nearest={"column": "image_emb", "q": pa.array([ref["image_emb"]], type=emb_field.type)[0], "k": 5},
-    columns=["id", "blip_caption"],
-).to_table().to_pylist()
+hybrid_hits = (
+    tbl.search(query_type="hybrid")
+    .vector(seed["image_emb"])
+    .text("red convertible")
+    .select(["id", "label", "blip_caption"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"  {r['id']:>6}  label={r['label']:>3}  {r['blip_caption'][:60]}")
 ```
 
-### LanceDB visual similarity search
+## Curate
+
+A typical curation pass for a fine-grained classifier combines a class-based filter with a content filter on the caption. Stacking both inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(200)` makes it cheap to inspect before committing the subset to anything downstream. The `BTREE` on `label` and the `INVERTED` index on `blip_caption` make both predicates effectively free.
 
 ```python
 import lancedb
@@ -95,21 +150,134 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/stanford-cars-lance/data")
 tbl = db.open_table("train")
 
-ref = tbl.search().limit(1).select(["image_emb", "blip_caption"]).to_list()[0]
-query_embedding = ref["image_emb"]
-
-results = (
-    tbl.search(query_embedding)
-    .metric("cosine")
-    .select(["id", "blip_caption"])
-    .limit(5)
+candidates = (
+    tbl.search("convertible OR coupe")
+    .where("label IN (12, 47, 89)", prefilter=True)
+    .select(["id", "label", "blip_caption"])
+    .limit(200)
     .to_list()
 )
+print(f"{len(candidates)} candidates; first: {candidates[0]['blip_caption'][:80]}")
 ```
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `id`s, or feed into the Evolve and Train workflows below. The `image` column is never read, so the network traffic for a 200-row candidate scan is dominated by the small caption strings rather than JPEG bytes.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. Stanford Cars class strings often encode the model year as a trailing four-digit token in the caption; the example below uses a SQL regex to lift that year into its own column, and adds a flag for vintage cars. Either can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./stanford-cars-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "caption_year": "CAST(regexp_extract(blip_caption, '(\\d{4})', 1) AS INTEGER)",
+    "is_long_caption": "length(blip_caption) >= 80",
+})
+```
+
+If the values you want to attach already live in another table (offline labels, classifier predictions, the Make Model Year strings from the original Stanford metadata), merge them in by joining on `id`:
+
+```python
+import pyarrow as pa
+
+class_strings = pa.table({
+    "id": pa.array([0, 1, 2]),
+    "class_name": pa.array([
+        "AM General Hummer SUV 2000",
+        "Acura RL Sedan 2012",
+        "Acura TL Sedan 2012",
+    ]),
+})
+tbl.merge(class_strings, on="id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running a second captioner over the image bytes), Lance provides a batch-UDF API in the underlying library — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/) for that pattern.
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetch, shuffling, and batching behave as in any PyTorch pipeline. For a from-scratch fine-grained classifier, project the JPEG bytes and the integer label; for a linear probe on top of frozen CLIP features, swap the projection to the embedding column and skip JPEG decoding entirely.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/stanford-cars-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "label"])
+loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; image_emb and blip_caption stay on disk.
+    # decode the JPEG bytes, forward, cross-entropy against `label`...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "label"]` to `select_columns(...)` on the next run reads only the cached 512-d vectors and the label, which is the right shape for a linear probe or a lightweight reranker.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/stanford-cars-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./stanford-cars-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("clip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="clip-vitb32-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `clip-vitb32-v1` keeps returning stable results while the dataset evolves in parallel; newly added columns or captions do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same images and labels, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/stanford-cars-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search("convertible OR coupe")
+    .select(["id", "image", "label", "blip_caption", "image_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./stanford-cars-sports-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting `./stanford-cars-sports-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/stanford-cars-lance/data` for `./stanford-cars-sports-subset`.
 
 ## Source & license
 
-Converted from [`Multimodal-Fatima/StanfordCars_train`](https://huggingface.co/datasets/Multimodal-Fatima/StanfordCars_train), itself a parquet redistribution of the Stanford Cars test split. The original dataset license is for non-commercial research use; review the [Stanford Cars terms](https://github.com/jhoffman/stanford-cars) before redistribution.
+Converted from [`Multimodal-Fatima/StanfordCars_train`](https://huggingface.co/datasets/Multimodal-Fatima/StanfordCars_train), itself a redistribution of the Stanford Cars dataset. The original dataset license is for non-commercial research use; review the [Stanford Cars terms](https://github.com/jhoffman/stanford-cars) before redistribution.
 
 ## Citation
 

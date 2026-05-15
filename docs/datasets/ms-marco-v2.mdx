@@ -1,7 +1,7 @@
 ---
 title: "MS MARCO v2.1"
 sidebarTitle: "MS MARCO v2.1"
-description: "Lance-formatted version of MS MARCO v2.1 — Microsoft's machine reading comprehension benchmark — with MiniLM query embeddings stored inline alongside the candidate passages and human-written answers."
+description: "A Lance-formatted version of MS MARCO v2.1 — Microsoft's machine-reading-comprehension benchmark built from anonymized Bing query logs. Each row is one user query, the up-to-10 candidate passages Bing retrieved for it with relevance flags, and the…"
 ---
 
 <Card
@@ -12,20 +12,20 @@ description: "Lance-formatted version of MS MARCO v2.1 — Microsoft's machine r
 Source dataset card and downloadable files for `lance-format/ms-marco-v2.1-lance`.
 </Card>
 
-Lance-formatted version of [MS MARCO v2.1](https://huggingface.co/datasets/microsoft/ms_marco) — Microsoft's machine reading comprehension benchmark — with **MiniLM query embeddings** stored inline alongside the candidate passages and human-written answers.
+A Lance-formatted version of [MS MARCO v2.1](https://huggingface.co/datasets/microsoft/ms_marco) — Microsoft's machine-reading-comprehension benchmark built from anonymized Bing query logs. Each row is one user query, the up-to-10 candidate passages Bing retrieved for it with relevance flags, and the human-written reference answers, with MiniLM query embeddings stored inline and pre-built ANN/FTS indices, available directly from the Hub at `hf://datasets/lance-format/ms-marco-v2.1-lance/data`.
 
-## Why this version?
+## Key features
 
-- **One self-contained Lance dataset** with ~900 k queries; each row is a query, the 10 candidate passages retrieved by Bing, the relevance flags, and the human-written reference answers.
-- **Pre-computed query embeddings** (`sentence-transformers/all-MiniLM-L6-v2`, 384-dim, L2-normalized) with an `IVF_PQ` index — semantic query lookup without re-embedding.
-- **Full-text inverted indices** on the query and the first selected passage.
-- Designed for both retrieval research (use the index) and RAG / answer eval (use the passage list + answers).
+- **Self-contained passage-ranking rows** — each query carries up to 10 candidate passages in parallel `passage_text` / `passage_url` / `passage_is_selected` columns, alongside the human-written `answers` and `well_formed_answers`.
+- **First relevant passage promoted to its own field** in `selected_passage`, so RAG / answer-evaluation workflows can read the gold context without indexing into the parallel passage lists.
+- **Pre-computed 384-dim query embeddings** (`query_emb`, `sentence-transformers/all-MiniLM-L6-v2`, cosine-normalized) with a bundled `IVF_PQ` index for semantic query lookup.
+- **One columnar dataset** — scan query metadata cheaply, defer the heavy passage text reads to the rows that matter.
 
 ## Splits
 
 | Split | Rows |
 |-------|------|
-| `train.lance`      | 808,731 |
+| `train.lance` | 808,731 |
 | `validation.lance` | 101,093 |
 
 ## Schema
@@ -41,132 +41,256 @@ Lance-formatted version of [MS MARCO v2.1](https://huggingface.co/datasets/micro
 | `passage_url` | `list<string>` | Source URLs for each candidate |
 | `passage_is_selected` | `list<int8>` | `1` if Bing labelled the passage relevant |
 | `selected_passage` | `string?` | First relevant passage (null if none) |
-| `query_emb` | `fixed_size_list<float32, 384>` | MiniLM embedding of `query` (cosine-normalized) |
+| `query_emb` | `fixed_size_list<float32, 384>` | MiniLM query embedding |
 
 ## Pre-built indices
 
-- `IVF_PQ` on `query_emb` — `metric=cosine`
-- `INVERTED` on `query` and `selected_passage`
-- `BTREE` on `query_id`
-- `BITMAP` on `query_type`
+- `IVF_PQ` on `query_emb` — semantic query lookup (cosine)
+- `INVERTED` (FTS) on `query` and `selected_passage` — keyword and hybrid search
+- `BTREE` on `query_id` — stable lookup by identifier
+- `BITMAP` on `query_type` — cheap predicate evaluation for query class
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/validation.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/ms-marco-v2.1-lance", split="validation", streaming=True)
+for row in hf_ds.take(3):
+    print(row["query"], "->", row["answers"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. Each `.lance` file in `data/` is a table — open by name (`train`, `validation`). The same handle is used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
 tbl = db.open_table("validation")
-print(f"LanceDB table opened with {len(tbl)} queries")
+print(len(tbl))
 ```
 
-## Semantic query lookup
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, the list of pre-built indices.
 
 ```python
 import lance
-import pyarrow as pa
-from sentence_transformers import SentenceTransformer
-
-encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
-q = encoder.encode(["how to compute determinant of a 3x3 matrix"], normalize_embeddings=True)[0]
 
 ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/validation.lance")
-emb_field = ds.schema.field("query_emb")
-hits = ds.scanner(
-    nearest={"column": "query_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 5, "nprobes": 16, "refine_factor": 30},
-    columns=["query_id", "query", "selected_passage", "answers"],
-).to_table().to_pylist()
-for h in hits:
-    print(h["query"])
-    print("  selected:", (h.get("selected_passage") or "")[:120])
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB semantic query lookup
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/ms-marco-v2.1-lance --repo-type dataset --local-dir ./ms-marco-v2.1-lance
+> ```
+> Then point Lance or LanceDB at `./ms-marco-v2.1-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `query_emb` makes nearest-neighbour query lookup a single call. In production you would encode an incoming user query through the same 384-dim MiniLM encoder used at ingest and pass the resulting vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in so the snippet works without loading a model.
 
 ```python
 import lancedb
-from sentence_transformers import SentenceTransformer
-
-encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
-q = encoder.encode(["how to compute determinant of a 3x3 matrix"], normalize_embeddings=True)[0]
 
 db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
 tbl = db.open_table("validation")
 
-results = (
-    tbl.search(q.tolist(), vector_column_name="query_emb")
-    .metric("cosine")
-    .select(["query_id", "query", "selected_passage", "answers"])
-    .limit(5)
-    .to_list()
+seed = (
+    tbl.search()
+    .select(["query_emb", "query"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
 )
-```
 
-### LanceDB full-text search
-
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
-tbl = db.open_table("validation")
-
-results = (
-    tbl.search("determinant matrix")
-    .select(["query", "selected_passage"])
+hits = (
+    tbl.search(seed["query_emb"], vector_column_name="query_emb")
+    .metric("cosine")
+    .where("query_type = 'NUMERIC'", prefilter=True)
+    .select(["query_id", "query", "selected_passage", "answers"])
     .limit(10)
     .to_list()
 )
+for r in hits:
+    print(r["query"], "->", (r["selected_passage"] or "")[:120])
 ```
 
-## Get all candidate passages for a query
+The result set carries only the projected columns; the 384-d `query_emb` is never read on the result side, and the full `passage_text` list is left untouched, keeping the working set small even when the underlying scan touches every row of the validation split.
+
+Because the dataset also ships an `INVERTED` index on both `query` and `selected_passage`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query against the gold passage. LanceDB merges the two result lists and reranks them in a single call, which is useful when a phrase must literally appear in the relevant passage but the dense side still does most of the ranking.
 
 ```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/validation.lance")
-row = ds.scanner(filter="query_id = 1185869", columns=["query", "passage_text", "passage_is_selected"]).to_table().to_pylist()[0]
-for text, sel in zip(row["passage_text"], row["passage_is_selected"]):
-    print("[selected]" if sel else "[other]", text[:120])
+hybrid_hits = (
+    tbl.search(query_type="hybrid")
+    .vector(seed["query_emb"])
+    .text("determinant matrix")
+    .select(["query", "selected_passage", "answers"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(r["query"])
 ```
 
-## Filter by query_type
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency for your workload.
 
-```python
-ds = lance.dataset("hf://datasets/lance-format/ms-marco-v2.1-lance/data/train.lance")
-numeric = ds.scanner(filter="query_type = 'NUMERIC'", columns=["query"], limit=5).to_table()
-```
+## Curate
 
-### Filter by query_type with LanceDB
+A typical curation pass over MS MARCO starts by combining metadata filters with structural predicates over the parallel passage lists before any heavy text gets read. Lance evaluates the filter inside a single scan, so the candidate set comes back already filtered, and the bounded `.limit(1000)` keeps the output small enough to inspect. The example below assembles a set of numeric questions for which Bing labelled at least one passage relevant and the annotators produced a well-formed reference answer.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
 tbl = db.open_table("train")
-numeric = (
+
+candidates = (
     tbl.search()
-    .where("query_type = 'NUMERIC'")
-    .select(["query"])
-    .limit(5)
+    .where(
+        "query_type = 'NUMERIC' "
+        "AND selected_passage IS NOT NULL "
+        "AND array_length(well_formed_answers) > 0 "
+        "AND length(query) >= 30",
+        prefilter=True,
+    )
+    .select(["query_id", "query", "answers", "well_formed_answers"])
+    .limit(1000)
     .to_list()
 )
+print(f"{len(candidates)} candidates; first: {candidates[0]['query']}")
 ```
 
-## Why Lance?
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `query_id`s, or hand to the Evolve and Train sections below. Neither `passage_text` nor `query_emb` is read by this scan, so a 1000-row curation pass against the Hub moves only kilobytes of metadata.
 
-- One dataset carries queries + passages + answers + embeddings + indices — no sidecar files.
-- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
-- Schema evolution: add columns (alternate embeddings, generated answers, model predictions) without rewriting the data.
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a `query_length` column and a `num_selected` count over the parallel `passage_is_selected` list, either of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full corpus.
+
+```python
+import lancedb
+
+db = lancedb.connect("./ms-marco-v2.1-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "query_length": "length(query)",
+    "num_selected": "array_length(passage_is_selected)",
+    "has_well_formed": "array_length(well_formed_answers) > 0",
+})
+```
+
+If the values you want to attach already live in another table (cross-encoder reranker scores, generated-answer judgments, alternate embeddings from a stronger model), merge them in by joining on `query_id`:
+
+```python
+import pyarrow as pa
+
+reranker_scores = pa.table({
+    "query_id": pa.array([1185869, 9083, 524332], type=pa.int64()),
+    "reranker_top1_score": pa.array([0.91, 0.47, 0.83]),
+})
+tbl.merge(reranker_scores, on="query_id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running a different encoder over the query text), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For a reader-style QA model the natural projection is the query plus the gold passage and the answer; for a query-encoder retraining loop the precomputed embedding is enough on its own.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["query", "selected_passage", "answers"])
+loader = DataLoader(train_ds, batch_size=32, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; tokenize, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["query_emb", "passage_text", "passage_is_selected"]` to `select_columns(...)` on the next run reads only those columns, which is the right shape for training a passage reranker on cached query embeddings. Columns added in Evolve cost nothing per batch until they are explicitly projected.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./ms-marco-v2.1-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("numeric-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="numeric-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `numeric-v1` keeps returning stable passages while the dataset evolves in parallel — newly added reranker scores or labels do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same queries and passages, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full corpus. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/ms-marco-v2.1-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where(
+        "query_type = 'NUMERIC' "
+        "AND selected_passage IS NOT NULL "
+        "AND array_length(well_formed_answers) > 0"
+    )
+    .select(["query_id", "query", "query_type", "answers", "well_formed_answers", "selected_passage", "query_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./ms-marco-numeric")
+local_db.create_table("train", batches)
+```
+
+The resulting `./ms-marco-numeric` is a first-class LanceDB database. Every snippet in the Search, Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/ms-marco-v2.1-lance/data` for `./ms-marco-numeric`.
 
 ## Source & license
 

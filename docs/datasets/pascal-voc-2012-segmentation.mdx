@@ -1,7 +1,7 @@
 ---
 title: "Pascal VOC 2012 Segmentation"
 sidebarTitle: "Pascal VOC 2012 Segmentation"
-description: "A Lance-formatted version of the Pascal VOC 2012 semantic segmentation split (sourced from nateraw/pascal-voc-2012) — 2,913 image / mask pairs with CLIP image embeddings stored inline and a pre-built IVF_PQ ANN index."
+description: "A Lance-formatted version of the Pascal VOC 2012 semantic segmentation split, sourced from nateraw/pascal-voc-2012. Each row pairs an inline JPEG image with the per-pixel PNG segmentation mask and a cosine-normalized OpenCLIP ViT-B-32 image…"
 ---
 
 <Card
@@ -12,96 +12,93 @@ description: "A Lance-formatted version of the Pascal VOC 2012 semantic segmenta
 Source dataset card and downloadable files for `lance-format/pascal-voc-2012-segmentation-lance`.
 </Card>
 
-A Lance-formatted version of the [Pascal VOC 2012 semantic segmentation split](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/) (sourced from [`nateraw/pascal-voc-2012`](https://huggingface.co/datasets/nateraw/pascal-voc-2012)) — **2,913 image / mask pairs** with CLIP image embeddings stored inline and a pre-built `IVF_PQ` ANN index.
+A Lance-formatted version of the [Pascal VOC 2012 semantic segmentation split](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/), sourced from [`nateraw/pascal-voc-2012`](https://huggingface.co/datasets/nateraw/pascal-voc-2012). Each row pairs an inline JPEG image with the per-pixel PNG segmentation mask and a cosine-normalized OpenCLIP `ViT-B-32` image embedding, so a single columnar table carries both annotation modalities and the features needed to retrieve, curate, and train against them — all available directly from the Hub at `hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data`.
 
-## Why segmentation?
+## Key features
 
-VOC 2012 ships several tasks (classification, detection, segmentation, action). We focus on the **semantic segmentation** subset because every row carries a paired mask image and the dataset is small enough to convert quickly with full embeddings — useful as a smoke test or a small benchmark.
+- **Inline JPEG bytes and inline PNG mask bytes in the same row** — image and per-pixel segmentation travel together with no sidecar folders or mask lookups.
+- **Pre-computed CLIP image embeddings** (`image_emb`, 512-dim, cosine-normalized) with a bundled `IVF_PQ` index for visual similarity search.
+- **Standard VOC class encoding** — mask pixel values are class ids in `0..20` plus `255` for void, identical to the official VOC palette.
+- **One columnar dataset** — scan image-level metadata cheaply, then fetch image or mask bytes only for the rows you actually want.
+
+The 20 Pascal VOC foreground classes are: `aeroplane`, `bicycle`, `bird`, `boat`, `bottle`, `bus`, `car`, `cat`, `chair`, `cow`, `diningtable`, `dog`, `horse`, `motorbike`, `person`, `pottedplant`, `sheep`, `sofa`, `train`, `tvmonitor`.
 
 ## Splits
 
-| Split | Rows |
-|-------|------|
-| `train.lance`      | 1,464 |
-| `validation.lance` | 1,449 |
+| Split | Rows | Notes |
+|-------|------|-------|
+| `train.lance`      | 1,464 | Official VOC 2012 segmentation train |
+| `validation.lance` | 1,449 | Official VOC 2012 segmentation val |
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index within the split |
+| `id` | `int64` | Row index within the split (natural join key for merges) |
 | `image` | `large_binary` | Inline JPEG bytes |
 | `mask` | `large_binary` | Inline PNG bytes — class id per pixel (0=background, 1-20=VOC classes, 255=void) |
 | `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
-
-The 20 Pascal VOC classes are: `aeroplane`, `bicycle`, `bird`, `boat`, `bottle`, `bus`, `car`, `cat`, `chair`, `cow`, `diningtable`, `dog`, `horse`, `motorbike`, `person`, `pottedplant`, `sheep`, `sofa`, `train`, `tvmonitor`.
 
 ## Pre-built indices
 
 - `IVF_PQ` on `image_emb` — `metric=cosine`
 
-> Note: the small dataset size (≤1,464 rows per split) is below Lance's
-> default partition count, so the helper falls back to a smaller
-> `num_partitions` automatically. For higher recall, build the index with
-> `num_partitions=16` against a local copy.
+> Note: the small split sizes (≤1,464 rows) sit below Lance's default partition count, so the helper falls back to a smaller `num_partitions` automatically. For higher recall, rebuild the index with `num_partitions=16` against a local copy.
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data/train.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/pascal-voc-2012-segmentation-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["id"], len(row["image"]), len(row["mask"]))
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data")
 tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} image-mask pairs")
+print(len(tbl))
 ```
 
-## Working with images and masks
+## Load with Lance
 
-```python
-from pathlib import Path
-import lance
-from PIL import Image
-import io
-
-ds = lance.dataset("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data/train.lance")
-row = ds.take([0], columns=["image", "mask"]).to_pylist()[0]
-Path("img.jpg").write_bytes(row["image"])
-Path("mask.png").write_bytes(row["mask"])
-
-import numpy as np
-mask = np.array(Image.open(io.BytesIO(row["mask"])))
-print("classes present:", np.unique(mask).tolist())
-```
-
-## Vector search example
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
-import pyarrow as pa
 
 ds = lance.dataset("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data/train.lance")
-emb_field = ds.schema.field("image_emb")
-ref = ds.take([0], columns=["image_emb"]).to_pylist()[0]["image_emb"]
-query = pa.array([ref], type=emb_field.type)
-
-neighbors = ds.scanner(
-    nearest={"column": "image_emb", "q": query[0], "k": 5},
-    columns=["id"],
-).to_table().to_pylist()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB vector search
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/pascal-voc-2012-segmentation-lance --repo-type dataset --local-dir ./pascal-voc-2012-segmentation-lance
+> ```
+> Then point Lance or LanceDB at `./pascal-voc-2012-segmentation-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `image_emb` makes visual nearest-neighbour search a single call. In production you would encode a query image (or a class prototype) through OpenCLIP `ViT-B-32` at runtime and pass the resulting 512-d cosine-normalized vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
 
 ```python
 import lancedb
@@ -109,23 +106,167 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data")
 tbl = db.open_table("train")
 
-ref = tbl.search().limit(1).select(["image_emb"]).to_list()[0]
-query_embedding = ref["image_emb"]
+seed = (
+    tbl.search()
+    .select(["image_emb"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
 
-results = (
-    tbl.search(query_embedding)
+hits = (
+    tbl.search(seed["image_emb"])
     .metric("cosine")
     .select(["id"])
-    .limit(5)
+    .limit(10)
     .to_list()
 )
+for r in hits:
+    print(r["id"])
 ```
 
-## Why Lance?
+Because the embeddings are cosine-normalized, `metric="cosine"` is the natural choice and the first hit is typically the seed row itself — a useful sanity check before tuning `nprobes` and `refine_factor` for recall.
 
-- One dataset carries images + masks + embeddings + indices — no sidecar files.
-- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
-- Schema evolution: add columns (instance masks, alternate embeddings, model predictions) without rewriting the data.
+## Curate
+
+A typical curation pass for a segmentation workflow combines visual similarity with a structural filter on the row. Stacking both inside a single filtered scan keeps the candidate set small and explicit, and the bounded `.limit(200)` makes it cheap to inspect before committing to anything downstream. The snippet below seeds from row 42 and restricts the candidates to rows whose mask payload is non-trivially sized — a cheap proxy for masks that actually carry foreground annotation.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data")
+tbl = db.open_table("train")
+
+seed = (
+    tbl.search()
+    .select(["image_emb"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+candidates = (
+    tbl.search(seed["image_emb"])
+    .metric("cosine")
+    .where("octet_length(mask) > 2000", prefilter=True)
+    .select(["id"])
+    .limit(200)
+    .to_list()
+)
+print(f"{len(candidates)} candidates")
+```
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `id`s, or feed into the Evolve and Train workflows below. The `image` and `mask` columns are never read in the candidate scan, so the network traffic stays dominated by the embedding vectors rather than image or mask bytes.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds an `image_bytes` size and a `has_mask` flag, both of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./pascal-voc-2012-segmentation-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "image_bytes": "octet_length(image)",
+    "has_mask": "octet_length(mask) > 1024",
+})
+```
+
+For class-level statistics — for example, a per-row list of class ids present in the mask, or a per-class pixel count — the values cannot be derived in SQL because they require decoding the PNG. Compute them once in an external table and join in by `id`:
+
+```python
+import pyarrow as pa
+
+class_stats = pa.table({
+    "id": pa.array([0, 1, 2], type=pa.int64()),
+    "classes_present": pa.array([[15], [7, 15], [9]], type=pa.list_(pa.int8())),
+})
+tbl.merge(class_stats, on="id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require running a model over the image bytes (a second-pass embedding, an instance segmentation, a depth prediction), Lance also provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For a segmentation run, project the JPEG bytes and the PNG mask bytes together; everything else, including the CLIP embeddings, stays on disk until you opt in.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "mask"])
+loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; image_emb stays on disk.
+    # decode the JPEGs and PNGs, build (image, label) tensors, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb"]` to `select_columns(...)` on the next run skips JPEG and PNG decoding entirely and reads only the cached 512-d vectors, which is the right shape for training a lightweight linear probe over frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges class statistics, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./pascal-voc-2012-segmentation-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("voc2012-clip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="voc2012-clip-vitb32-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `voc2012-clip-vitb32-v1` keeps returning stable results while the dataset evolves in parallel — newly added class statistics or alternative embeddings do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same image/mask pairs, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("octet_length(mask) > 2000")
+    .select(["id", "image", "mask", "image_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./voc-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting `./voc-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/pascal-voc-2012-segmentation-lance/data` for `./voc-subset`.
 
 ## Source & license
 

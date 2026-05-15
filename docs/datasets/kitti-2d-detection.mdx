@@ -1,7 +1,7 @@
 ---
 title: "KITTI 2D Detection"
 sidebarTitle: "KITTI 2D Detection"
-description: "Lance-formatted version of the KITTI 2D Object Detection benchmark — 7,481 training images from the KITTI Vision Benchmark Suite with 2D bounding boxes plus the full 3D-box / observation-angle metadata. Sourced from nateraw/kitti so no manual…"
+description: "A Lance-formatted version of the KITTI 2D Object Detection benchmark, sourced from nateraw/kitti so no manual signup or download from cvlibs.net is required. Each row is a single driving frame with inline JPEG bytes, the full set of 2D and 3D…"
 ---
 
 <Card
@@ -12,35 +12,44 @@ description: "Lance-formatted version of the KITTI 2D Object Detection benchmark
 Source dataset card and downloadable files for `lance-format/kitti-2d-detection-lance`.
 </Card>
 
-Lance-formatted version of the [KITTI 2D Object Detection benchmark](https://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d) — 7,481 training images from the KITTI Vision Benchmark Suite with 2D bounding boxes plus the full 3D-box / observation-angle metadata. Sourced from [`nateraw/kitti`](https://huggingface.co/datasets/nateraw/kitti) so no manual signup or download from cvlibs.net is required.
+A Lance-formatted version of the [KITTI 2D Object Detection benchmark](https://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d), sourced from [`nateraw/kitti`](https://huggingface.co/datasets/nateraw/kitti) so no manual signup or download from cvlibs.net is required. Each row is a single driving frame with inline JPEG bytes, the full set of 2D and 3D object annotations stored as parallel per-object lists, plus a cosine-normalized OpenCLIP `ViT-B-32` image embedding — all available directly from the Hub at `hf://datasets/lance-format/kitti-2d-detection-lance/data`.
 
-KITTI is the canonical autonomous-driving 2D / 3D detection benchmark — useful for AV perception research, robust real-world benchmarking, and as a small-scale companion to nuScenes / Waymo.
+KITTI is the canonical autonomous-driving detection benchmark with 8 object classes drawn from real street scenes around Karlsruhe. It is widely used for AV perception research and serves as a small-scale companion to nuScenes and Waymo.
+
+## Key features
+
+- **Inline JPEG bytes** in the `image` column — no parallel `image_2/` and `label_2/` folders to keep in sync.
+- **Per-object 2D and 3D annotations on the same row** — bounding boxes, observation angles, 3D dimensions, locations, yaw, occlusion and truncation flags travel as parallel list columns of equal length.
+- **Pre-computed CLIP image embeddings** (`image_emb`, 512-dim, cosine-normalized) with a bundled `IVF_PQ` index for visual similarity over driving scenes.
+- **Scalar and label-list indices** on `num_objects` and `types_present` make per-class and crowdedness filters cheap on the Hub copy and locally.
 
 ## Splits
 
-| Split | Rows |
-|-------|------|
-| `train.lance` | 7,481 |
+| Split | Rows | Notes |
+|-------|------|-------|
+| `train.lance` | 7,481 | Official KITTI training set with labels |
 
-(The `test` split has no labels published, so we omit it. Add it back via `--splits train test` if you want the unlabeled images as well.)
+The KITTI `test` split has no public labels and is intentionally not bundled. Add it via `--splits train test` in `kitti/dataprep.py` if you want the unlabeled images for inference.
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index within split |
+| `id` | `int64` | Row index within split (natural join key for merges) |
 | `image` | `large_binary` | Inline JPEG bytes (re-encoded from the source PNG) |
 | `bboxes` | `list<list<float32, 4>>` | 2D box per object — `[left, top, right, bottom]` in pixel coords |
-| `alphas` | `list<float32>` | Observation angle (radians, KITTI convention) |
-| `dimensions` | `list<list<float32, 3>>` | 3D box `(h, w, l)` in metres |
-| `locations` | `list<list<float32, 3>>` | 3D centre `(x, y, z)` in camera coords (metres) |
-| `rotation_y` | `list<float32>` | Yaw angle in camera coords (radians) |
+| `alphas` | `list<float32>` | Observation angle per object (radians, KITTI convention) |
+| `dimensions` | `list<list<float32, 3>>` | 3D box `(h, w, l)` per object, in metres |
+| `locations` | `list<list<float32, 3>>` | 3D centre `(x, y, z)` per object in camera coords, in metres |
+| `rotation_y` | `list<float32>` | Yaw per object in camera coords (radians) |
 | `occluded` | `list<int8>` | KITTI occlusion flag (0=visible, 1=partly, 2=largely, 3=unknown) |
-| `truncated` | `list<float32>` | Truncation fraction (0.0-1.0) |
-| `types` | `list<string>` | Class name per object (e.g. `Car`, `Pedestrian`, `Cyclist`, `DontCare`) |
-| `num_objects` | `int32` | Number of annotated objects |
+| `truncated` | `list<float32>` | Truncation fraction per object (0.0-1.0) |
+| `types` | `list<string>` | Class name per object (`Car`, `Van`, `Truck`, `Pedestrian`, `Person_sitting`, `Cyclist`, `Tram`, `Misc`, `DontCare`) |
+| `num_objects` | `int32` | Number of annotated objects in the frame |
 | `types_present` | `list<string>` | Deduped class names — feeds the LABEL_LIST index |
 | `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
+
+All `list<...>` annotation columns on the same row are aligned — index `i` across `bboxes`, `alphas`, `dimensions`, `locations`, `rotation_y`, `occluded`, `truncated`, and `types` describes the same physical object.
 
 ## Pre-built indices
 
@@ -48,65 +57,60 @@ KITTI is the canonical autonomous-driving 2D / 3D detection benchmark — useful
 - `BTREE` on `num_objects`
 - `LABEL_LIST` on `types_present`
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/kitti-2d-detection-lance/data/train.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/kitti-2d-detection-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["id"], row["num_objects"], row["types_present"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/kitti-2d-detection-lance/data")
 tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} frames")
+print(len(tbl))
 ```
 
-## Read a frame with annotations
+## Load with Lance
 
-```python
-import io
-import lance
-from PIL import Image, ImageDraw
-
-ds = lance.dataset("hf://datasets/lance-format/kitti-2d-detection-lance/data/train.lance")
-row = ds.take([0], columns=["image", "bboxes", "types"]).to_pylist()[0]
-
-img = Image.open(io.BytesIO(row["image"])).convert("RGB")
-draw = ImageDraw.Draw(img)
-for (l, t, r, b), cls in zip(row["bboxes"], row["types"]):
-    if cls == "DontCare":
-        continue
-    draw.rectangle([l, t, r, b], outline="lime", width=2)
-    draw.text((l + 4, t + 2), cls, fill="lime")
-img.save("kitti.jpg")
-```
-
-## Filter by classes
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
+
 ds = lance.dataset("hf://datasets/lance-format/kitti-2d-detection-lance/data/train.lance")
-
-# Frames containing both a Car and a Cyclist (LABEL_LIST index makes this fast).
-both = ds.scanner(
-    filter="array_has_all(types_present, ['Car', 'Cyclist'])",
-    columns=["id", "types_present"],
-    limit=10,
-).to_table()
-
-# Frames with at least 10 objects (for crowded-scene experiments).
-crowded = ds.scanner(filter="num_objects >= 10", columns=["id"], limit=10).to_table()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### Filter by classes with LanceDB
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/kitti-2d-detection-lance --repo-type dataset --local-dir ./kitti-2d-detection-lance
+> ```
+> Then point Lance or LanceDB at `./kitti-2d-detection-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `image_emb` makes visual nearest-neighbour search over driving scenes a single call. In production you would encode a query frame (or a scene prototype) through OpenCLIP `ViT-B-32` at runtime and pass the resulting 512-d cosine-normalized vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
 
 ```python
 import lancedb
@@ -114,41 +118,136 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/kitti-2d-detection-lance/data")
 tbl = db.open_table("train")
 
-both = (
+seed = (
     tbl.search()
-    .where("array_has_all(types_present, ['Car', 'Cyclist'])")
-    .select(["id", "types_present"])
+    .select(["image_emb", "types_present"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["image_emb"])
+    .metric("cosine")
+    .select(["id", "num_objects", "types_present"])
     .limit(10)
     .to_list()
 )
+print("query scene types:", seed["types_present"])
+for r in hits:
+    print(f"  id={r['id']:>5}  n={r['num_objects']:>2}  {r['types_present']}")
+```
 
-crowded = (
+Because the embeddings are cosine-normalized, `metric="cosine"` is the natural choice and the first hit is typically the seed row itself. Visual neighbours tend to share scene-level structure (highway vs. urban intersection vs. parked-cars row) before they share class composition, which is what makes the cross between `image_emb` and the `types_present` / `num_objects` indices useful for the curation patterns below.
+
+## Curate
+
+KITTI's parallel per-object list columns make composition-based filters natural: pick scenes by which classes are present, by how many objects are in them, or by the occlusion profile of those objects. Lance evaluates these predicates inside a single filtered scan, and the bounded `.limit(...)` keeps the candidate set small and explicit. The first snippet below finds crowded scenes that contain at least one cyclist and one pedestrian — a useful slice for vulnerable-road-user studies.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/kitti-2d-detection-lance/data")
+tbl = db.open_table("train")
+
+vru = (
     tbl.search()
-    .where("num_objects >= 10")
-    .select(["id"])
-    .limit(10)
+    .where(
+        "array_has_all(types_present, ['Cyclist', 'Pedestrian']) AND num_objects >= 8",
+        prefilter=True,
+    )
+    .select(["id", "num_objects", "types_present"])
+    .limit(200)
+    .to_list()
+)
+print(f"{len(vru)} VRU-rich frames")
+```
+
+A second pass can combine a structural filter with visual similarity: take a crowded urban seed frame and look for visually similar frames whose object lists also contain cars. This is a one-shot retrieval against the `IVF_PQ` index, joined with the `LABEL_LIST` index on `types_present` inside a single query.
+
+```python
+seed = (
+    tbl.search()
+    .where("num_objects >= 10 AND array_contains(types_present, 'Car')", prefilter=True)
+    .select(["image_emb"])
+    .limit(1)
+    .to_list()[0]
+)
+
+similar_crowded = (
+    tbl.search(seed["image_emb"])
+    .metric("cosine")
+    .where("array_contains(types_present, 'Car')", prefilter=True)
+    .select(["id", "num_objects", "types_present"])
+    .limit(50)
     .to_list()
 )
 ```
 
-## Visual similarity search
+The results are plain lists of dictionaries, ready to inspect, persist as manifests of `id`s, or feed into the Evolve and Train workflows below. The annotation list columns and `image_emb` are read; the JPEG bytes are not touched until you ask for them.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds per-frame counts for the two most safety-relevant classes plus a `has_vru` flag, all of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
 
 ```python
-import lance
+import lancedb
+
+db = lancedb.connect("./kitti-2d-detection-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "num_cars": "array_length(array_filter(types, x -> x = 'Car'))",
+    "num_pedestrians": "array_length(array_filter(types, x -> x = 'Pedestrian'))",
+    "has_vru": "array_has_any(types_present, ['Pedestrian', 'Cyclist'])",
+})
+```
+
+If the values you want to attach already live in another table — detector predictions on the same frames, LIDAR-derived per-frame features, or human re-annotation — merge them in by joining on `id`:
+
+```python
 import pyarrow as pa
 
-ds = lance.dataset("hf://datasets/lance-format/kitti-2d-detection-lance/data/train.lance")
-emb_field = ds.schema.field("image_emb")
-ref = ds.take([0], columns=["image_emb"]).to_pylist()[0]["image_emb"]
-query = pa.array([ref], type=emb_field.type)
-
-neighbors = ds.scanner(
-    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
-    columns=["id", "types_present"],
-).to_table().to_pylist()
+predictions = pa.table({
+    "id": pa.array([0, 1, 2], type=pa.int64()),
+    "pred_num_cars": pa.array([3, 5, 0], type=pa.int32()),
+})
+tbl.merge(predictions, on="id")
 ```
 
-### LanceDB visual similarity search
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (running a fresh detector over the JPEG bytes, deriving alternative embeddings), Lance also provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For a 2D detector, project the JPEG bytes together with the per-object `bboxes` and `types` lists; everything else (3D annotations, CLIP embeddings) stays on disk until you opt in.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/kitti-2d-detection-lance/data")
+tbl = db.open_table("train")
+
+train_ds = (
+    Permutation.identity(tbl)
+    .select_columns(["image", "bboxes", "types"])
+)
+loader = DataLoader(train_ds, batch_size=8, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; 3D fields and image_emb stay on disk.
+    # decode the JPEGs, drop DontCare boxes, build target tensors, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "types_present"]` to `select_columns(...)` on the next run skips JPEG decoding entirely and reads only the cached 512-d vectors plus the deduped class list, which is the right shape for training a lightweight scene classifier or a linear probe on top of frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges predictions, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
 
 ```python
 import lancedb
@@ -156,23 +255,50 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/kitti-2d-detection-lance/data")
 tbl = db.open_table("train")
 
-ref = tbl.search().limit(1).select(["image_emb"]).to_list()[0]
-query_embedding = ref["image_emb"]
-
-results = (
-    tbl.search(query_embedding)
-    .metric("cosine")
-    .select(["id", "types_present"])
-    .limit(5)
-    .to_list()
-)
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
 ```
 
-## Why Lance?
+Once you have a local copy, tag a version for reproducibility:
 
-- One dataset for images + 2D + 3D annotations + embeddings + indices — no parallel `image_2/` and `label_2/` folders.
-- On-disk vector and label-list indices live next to the data, so search and class-based filtering work on local copies and on the Hub.
-- Schema evolution: add columns (LIDAR features, alternative embeddings, model predictions) without rewriting the data.
+```python
+local_db = lancedb.connect("./kitti-2d-detection-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("kitti-clip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="kitti-clip-vitb32-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A perception service locked to `kitti-clip-vitb32-v1` keeps returning stable retrieval results while the dataset evolves in parallel — newly added detector predictions or alternative embeddings do not change what the tag resolves to. A detection-training experiment pinned to the same tag can be rerun later against the exact same frames and annotations, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory. The filter below carves out a vulnerable-road-user training set — frames that contain at least one pedestrian or cyclist — and writes them to a local LanceDB database.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/kitti-2d-detection-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("array_has_any(types_present, ['Pedestrian', 'Cyclist'])")
+    .select(["id", "image", "bboxes", "types", "num_objects", "types_present", "image_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./kitti-vru-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting `./kitti-vru-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/kitti-2d-detection-lance/data` for `./kitti-vru-subset`.
 
 ## Source & license
 

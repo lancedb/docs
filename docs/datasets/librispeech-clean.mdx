@@ -1,7 +1,7 @@
 ---
 title: "LibriSpeech clean"
 sidebarTitle: "LibriSpeech clean"
-description: "Lance-formatted version of the LibriSpeech ASR clean configuration (sourced from openslr/librispeech_asr). Audio is stored inline as FLAC bytes (no re-encoding); transcripts are sentence-embedded so semantic transcript search works out of the box."
+description: "A Lance-formatted version of the LibriSpeech ASR clean configuration, sourced from openslr/librispeech_asr. Each row is one utterance with inline FLAC audio bytes, the reference transcript, a sentence-transformers embedding of that transcript, and…"
 ---
 
 <Card
@@ -12,17 +12,24 @@ description: "Lance-formatted version of the LibriSpeech ASR clean configuration
 Source dataset card and downloadable files for `lance-format/librispeech-clean-lance`.
 </Card>
 
-Lance-formatted version of the LibriSpeech ASR `clean` configuration (sourced from [`openslr/librispeech_asr`](https://huggingface.co/datasets/openslr/librispeech_asr)). Audio is stored inline as FLAC bytes (no re-encoding); transcripts are sentence-embedded so semantic transcript search works out of the box.
+A Lance-formatted version of the LibriSpeech ASR `clean` configuration, sourced from [`openslr/librispeech_asr`](https://huggingface.co/datasets/openslr/librispeech_asr). Each row is one utterance with inline FLAC audio bytes, the reference transcript, a sentence-transformers embedding of that transcript, and speaker/chapter metadata — all available directly from the Hub at `hf://datasets/lance-format/librispeech-clean-lance/data`.
+
+## Key features
+
+- **Inline FLAC bytes** in the `audio` column at 16 kHz mono, with no re-encoding from the upstream parquet.
+- **Sentence-transformers embedding of the transcript** in `text_emb` (`all-MiniLM-L6-v2`, 384-dim, cosine-normalized) with a bundled `IVF_PQ` index for semantic transcript search.
+- **Pre-built `INVERTED` FTS index on `text`** and `BTREE` indices on `id`, `speaker_id`, and `chapter_id` for keyword search and stable lookup by identifier.
+- **Per-utterance metadata** — `speaker_id`, `chapter_id`, `num_chars`, `sampling_rate` — that downstream filters can stack on.
 
 ## Splits
 
-| Split | Lance file | Rows | Description |
-|-------|------------|------|-------------|
-| `dev_clean.lance`        | dev.clean         | 2,703 | Standard ASR validation set |
-| `test_clean.lance`       | test.clean        | 2,620 | Standard ASR test set |
-| `train_clean_100.lance`  | train.clean.100   | 28,539 | 100-hour clean training subset |
+| Split | Source config | Rows | Description |
+|-------|---------------|------|-------------|
+| `dev_clean.lance`       | `dev.clean`       | 2,703  | Standard ASR validation set |
+| `test_clean.lance`      | `test.clean`      | 2,620  | Standard ASR test set |
+| `train_clean_100.lance` | `train.clean.100` | 28,539 | 100-hour clean training subset |
 
-> The 360-hour and 500-hour LibriSpeech subsets (`train.360`, `train.other.500`) are **not** bundled here. To extend the dataset, point `librispeech/dataprep.py` at additional splits.
+> The 360-hour and 500-hour LibriSpeech subsets (`train.360`, `train.other.500`) are not bundled here. To extend, point `librispeech/dataprep.py` at additional splits.
 
 ## Schema
 
@@ -39,109 +46,113 @@ Lance-formatted version of the LibriSpeech ASR `clean` configuration (sourced fr
 
 ## Pre-built indices
 
-- `IVF_PQ` on `text_emb` — `metric=cosine`
-- `INVERTED` (FTS) on `text`
-- `BTREE` on `id`, `speaker_id`, `chapter_id`
+- `IVF_PQ` on `text_emb` — semantic transcript search (cosine)
+- `INVERTED` (FTS) on `text` — keyword and hybrid search
+- `BTREE` on `id`, `speaker_id`, `chapter_id` — fast lookup by identifier
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/test_clean.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/librispeech-clean-lance", split="test_clean", streaming=True)
+for row in hf_ds.take(3):
+    print(row["id"], row["text"][:80])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries. Each `.lance` file in `data/` is a table — open by name (e.g., `test_clean`, `train_clean_100`).
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. Each `.lance` file in `data/` is a table — open by name (`dev_clean`, `test_clean`, `train_clean_100`). The same handle is used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
-tbl = db.open_table("test_clean")
-print(f"LanceDB table opened with {len(tbl)} utterances")
+tbl = db.open_table("train_clean_100")
+print(len(tbl))
 ```
 
-## Read one utterance and play it
+## Load with Lance
 
-```python
-from pathlib import Path
-import lance
-
-ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/test_clean.lance")
-row = ds.take([0], columns=["id", "audio", "text", "speaker_id"]).to_pylist()[0]
-
-Path(f"{row['id']}.flac").write_bytes(row["audio"])
-print("speaker:", row["speaker_id"])
-print("transcript:", row["text"])
-```
-
-You can decode the FLAC bytes in-memory with `soundfile` and feed them straight into a model:
-
-```python
-import io
-import soundfile as sf
-
-samples, sr = sf.read(io.BytesIO(row["audio"]))
-print(samples.shape, sr)
-```
-
-## Semantic transcript retrieval
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, the list of pre-built indices.
 
 ```python
 import lance
-import pyarrow as pa
-from sentence_transformers import SentenceTransformer
-
-encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
-q = encoder.encode(["a person talking about astronomy"], normalize_embeddings=True)[0]
 
 ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/train_clean_100.lance")
-emb_field = ds.schema.field("text_emb")
-hits = ds.scanner(
-    nearest={"column": "text_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 5},
-    columns=["id", "speaker_id", "text"],
-).to_table().to_pylist()
-for h in hits:
-    print(h)
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB semantic transcript retrieval
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access, ANN search, and audio decoding are far faster against a local copy:
+> ```bash
+> hf download lance-format/librispeech-clean-lance --repo-type dataset --local-dir ./librispeech-clean
+> ```
+> Then point Lance or LanceDB at `./librispeech-clean/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `text_emb` makes semantic transcript retrieval a single call. In production you would encode a query string through the same sentence-transformers model used at ingest (`all-MiniLM-L6-v2`, cosine-normalized), then pass the resulting 384-d vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
 
 ```python
 import lancedb
-from sentence_transformers import SentenceTransformer
-
-encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
-q = encoder.encode(["a person talking about astronomy"], normalize_embeddings=True)[0]
 
 db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
 tbl = db.open_table("train_clean_100")
 
-results = (
-    tbl.search(q.tolist(), vector_column_name="text_emb")
+seed = (
+    tbl.search()
+    .select(["text_emb", "text"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["text_emb"], vector_column_name="text_emb")
     .metric("cosine")
     .select(["id", "speaker_id", "text"])
-    .limit(5)
+    .limit(10)
     .to_list()
 )
+print("query transcript:", seed["text"][:80])
+for r in hits:
+    print(f"  {r['id']}  spk={r['speaker_id']}  {r['text'][:80]}")
 ```
 
-## Full-text and per-speaker filtering
+The `audio` blob is never touched. A top-10 semantic search moves a few kilobytes of transcript text rather than the FLAC bytes for every candidate.
+
+Because the dataset also ships an `INVERTED` index on `text`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query — useful when a name or domain term must literally appear in the transcript but you still want the semantic side to rank the rest.
 
 ```python
-ds = lance.dataset("hf://datasets/lance-format/librispeech-clean-lance/data/train_clean_100.lance")
-
-# Word search via the FTS index.
-hits = ds.scanner(full_text_query="universe stars", columns=["id", "text"], limit=10).to_table()
-
-# All utterances by a given speaker.
-sp = ds.scanner(filter="speaker_id = 1272", columns=["id", "chapter_id", "text"], limit=10).to_table()
+hybrid_hits = (
+    tbl.search(query_type="hybrid", vector_column_name="text_emb")
+    .vector(seed["text_emb"])
+    .text("astronomy")
+    .select(["id", "speaker_id", "text"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"  {r['id']}  spk={r['speaker_id']}  {r['text'][:80]}")
 ```
 
-### LanceDB full-text search and per-speaker filtering
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+Building a focused subset of utterances usually means combining content with structure — pick utterances by a single speaker, or above a minimum transcript length, or matching a topic. Stacking predicates inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(500)` makes it cheap to inspect.
 
 ```python
 import lancedb
@@ -149,29 +160,142 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
 tbl = db.open_table("train_clean_100")
 
-# Word search via the FTS index.
-hits = (
-    tbl.search("universe stars")
-    .select(["id", "text"])
-    .limit(10)
-    .to_list()
-)
-
-# All utterances by a given speaker.
-sp = (
+candidates = (
     tbl.search()
-    .where("speaker_id = 1272")
-    .select(["id", "chapter_id", "text"])
-    .limit(10)
+    .where("speaker_id = 1272 AND num_chars >= 60", prefilter=True)
+    .select(["id", "chapter_id", "num_chars", "text"])
+    .limit(500)
+    .with_row_id(True)
     .to_list()
 )
+print(f"{len(candidates)} utterances; first: {candidates[0]['text'][:80]}")
 ```
 
-## Why Lance?
+The scan never reads the `audio` column. Lance stores binary columns independently, so a metadata-only curation pass moves only the transcript text and scalar fields across the wire — even though the underlying table includes hours of inline FLAC audio.
 
-- One dataset for audio + transcripts + embeddings + indices — no parallel folder of FLAC files plus a transcript JSON.
-- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
-- Schema evolution: add columns (alternate transcripts, speaker embeddings, model predictions) without rewriting the data.
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a `is_long_utterance` flag and a coarse `length_bucket`, either of which can then be used directly in `where` clauses without re-evaluating the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need.
+
+```python
+import lancedb
+
+db = lancedb.connect("./librispeech-clean/data")  # local copy required for writes
+tbl = db.open_table("train_clean_100")
+
+tbl.add_columns({
+    "is_long_utterance": "num_chars >= 200",
+    "length_bucket": (
+        "CASE WHEN num_chars < 80 THEN 'short' "
+        "WHEN num_chars < 200 THEN 'medium' ELSE 'long' END"
+    ),
+})
+```
+
+If the values you want to attach already live in another table (alternate transcripts, speaker embeddings, model predictions), merge them in by joining on `id`:
+
+```python
+import pyarrow as pa
+
+predictions = pa.table({
+    "id": pa.array(["1272-128104-0000", "1272-128104-0001"]),
+    "wer": pa.array([0.04, 0.12]),
+})
+tbl.merge(predictions, on="id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. For column values that require a Python computation (e.g., running a speaker embedding model over the FLAC bytes), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+A common pattern for audio training is to pre-extract decoded features once into a derived LanceDB table — one row per training-ready window of log-mel frames or raw PCM samples — and train against that table with the regular projection-based dataloader. `take_blobs` is the mechanism that makes the extraction step tractable: each utterance's FLAC bytes are randomly addressable, so the pass can subset audio on demand and write decoded windows into a fresh table without an external file store. Other workflows project `audio` directly through `select_columns(...)` and decode at the batch boundary, or skip audio entirely and train on the cached transcript embeddings — the right shape is workload-specific. The actual training loop is the same `Permutation.identity(tbl).select_columns(...)` snippet in every case; only the source table and the column list change.
+
+Against a pre-extracted features table:
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("./librispeech-features")   # local table produced by the one-time extraction
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["log_mel", "text", "speaker_id"])
+loader = DataLoader(train_ds, batch_size=32, shuffle=True, num_workers=4)
+```
+
+Against the cached transcript embeddings on the source table (no audio decode):
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+src_db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
+src_tbl = src_db.open_table("train_clean_100")
+
+train_ds = Permutation.identity(src_tbl).select_columns(["text_emb", "speaker_id"])
+loader = DataLoader(train_ds, batch_size=256, shuffle=True, num_workers=4)
+```
+
+The inline `audio` storage and `take_blobs` still earn their place around the training process — listening back to an utterance in a notebook, sampling for human review, one-off evaluation against a held-out set, and the pre-extraction pass itself. Each of those reads a small, explicit set of blobs once. What the Train section above keeps off the per-batch hot path is exactly that raw-audio decode: paying it every step is what the pre-extracted features are designed to avoid.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
+tbl = db.open_table("train_clean_100")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./librispeech-clean/data")
+local_tbl = local_db.open_table("train_clean_100")
+local_tbl.tags.create("minilm-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train_clean_100", version="minilm-v1")
+tbl_v5 = db.open_table("train_clean_100", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `minilm-v1` keeps returning stable results while the dataset evolves in parallel. A training experiment pinned to the same tag can be rerun later against the exact same utterances, so changes in metrics reflect model changes rather than data drift.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training pipeline benefits from a local copy with fast random access to the FLAC bytes. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory — including the `audio` column, which streams through Arrow record batches rather than being assembled in a single buffer.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/librispeech-clean-lance/data")
+remote_tbl = remote_db.open_table("train_clean_100")
+
+batches = (
+    remote_tbl.search()
+    .where("speaker_id = 1272")
+    .select(["id", "audio", "sampling_rate", "text", "speaker_id", "chapter_id", "text_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./librispeech-speaker-1272")
+local_db.create_table("train", batches)
+```
+
+The resulting `./librispeech-speaker-1272` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/librispeech-clean-lance/data` for `./librispeech-speaker-1272`.
 
 ## Source & license
 
