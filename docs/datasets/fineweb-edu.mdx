@@ -1,7 +1,7 @@
 ---
 title: "FineWeb-Edu"
 sidebarTitle: "FineWeb-Edu"
-description: "FineWeb-edu dataset with over 1.5 billion rows. Each passage ships with cleaned text, metadata, and 384-dim text embeddings for retrieval-heavy workloads."
+description: "A Lance-formatted version of FineWeb-Edu — over 1.5 billion educational web passages with cleaned text, source metadata, language detection signals, and 384-dim text embeddings — available directly from the Hub at…"
 ---
 
 <Card
@@ -12,235 +12,307 @@ description: "FineWeb-edu dataset with over 1.5 billion rows. Each passage ships
 Source dataset card and downloadable files for `lance-format/fineweb-edu`.
 </Card>
 
-FineWeb-edu dataset with over 1.5 billion rows. Each passage ships with cleaned text, metadata, and 384-dim text embeddings for retrieval-heavy workloads.
+A Lance-formatted version of [FineWeb-Edu](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) — **over 1.5 billion educational web passages** with cleaned text, source metadata, language detection signals, and 384-dim text embeddings — available directly from the Hub at `hf://datasets/lance-format/fineweb-edu/data/train.lance`.
 
+## Key features
 
-## Load via `datasets.load_dataset`
+- **Cleaned passage text** in the `text` column with the source `url` and `title` carried alongside.
+- **Language detection signals** (`language`, `language_probability`) for filtered subsets.
+- **Pre-computed 384-dim text embeddings** in `text_embedding`, ready for ANN search once an index is built locally.
+- **One columnar dataset** — scan metadata cheaply, project just the columns each query needs, defer the heavy `text` and `text_embedding` reads to the rows that matter.
+
+> **No pre-built indices on the Hub copy yet.** At 1.5 B+ rows the on-disk indices are too large to ship comfortably alongside the data on the Hub. The Search, Curate, Evolve, and Train sections below describe the same APIs you'd use against a fully indexed dataset, but vector and full-text examples assume a local copy with `IVF_PQ` and `INVERTED` indices built once after download. See the Materialize-a-subset section at the end for a focused-subset workflow that makes indexing tractable.
+
+## Splits
+
+`train.lance`
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `text` | `string` | Cleaned passage body |
+| `title` | `string` | Page or article title when available |
+| `url` | `string` | Canonical source URL |
+| `language` | `string` | Detected language code (e.g., `en`) |
+| `language_probability` | `float32` | Confidence of the language detector |
+| `text_embedding` | `fixed_size_list<float32, 384>` | Passage embedding for retrieval |
+| *FineWeb-Edu quality metadata* | — | Heuristic scores and length statistics carried over from the upstream corpus |
+
+## Pre-built indices
+
+None bundled at present. Build the recommended indices on a local copy:
+
+```python
+import lancedb
+
+db = lancedb.connect("./fineweb-edu/data")
+tbl = db.open_table("train")
+
+tbl.create_index(
+    metric="cosine",
+    vector_column_name="text_embedding",
+    index_type="IVF_PQ",
+    num_partitions=2048,
+    num_sub_vectors=96,
+)
+tbl.create_fts_index("text", replace=True)
+```
+
+Both indices live next to the data, so subsequent queries against the same local path pick them up automatically.
+
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
 import datasets
 
-hf_ds = datasets.load_dataset(
-    "lance-format/fineweb-edu",
-    split="train",
-    streaming=True,
-)
-# Take first three rows and print titles
+hf_ds = datasets.load_dataset("lance-format/fineweb-edu", split="train", streaming=True)
 for row in hf_ds.take(3):
-    print(row["title"])
+    print(row["title"] or row["url"])
 ```
 
-Use Lance's native connector when you need ANN search, FTS, or direct access to embeddings while still pointing to the copy hosted on Hugging Face:
+## Load with LanceDB
 
-```python
-import lance
-
-ds = lance.dataset("hf://datasets/lance-format/fineweb-edu/data/train.lance")print(f"Total passages: {ds.count_rows():,}")
-```
-
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
 tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} passages")
+print(len(tbl))
 ```
 
+## Load with Lance
 
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, the list of pre-built indices.
 
-> The dataset hosted on Hugging Face Hub does **not** currently have pre-built ANN (vector) or FTS (full-text search) indices.
->
+```python
+import lance
 
-> - For any search or similarity workloads, you should download the dataset locally and build indices yourself.
->
+ds = lance.dataset("hf://datasets/lance-format/fineweb-edu/data/train.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but at 1.5 B+ rows random access and any kind of search are dramatically faster against a local copy, and ANN / FTS require local indices anyway:
 > ```bash
-> # Download once
-> huggingface-cli download lance-format/fineweb-edu --repo-type dataset --local-dir ./fineweb-edu
->
-> # Then load locally and build indices
-> import lance
-> ds = lance.dataset("./fineweb-edu")
-> # ds.create_index(...)
+> hf download lance-format/fineweb-edu --repo-type dataset --local-dir ./fineweb-edu
 > ```
->
+> Then point Lance or LanceDB at `./fineweb-edu/data`. For most workflows, the Materialize-a-subset section is a better starting point than downloading the full 1.5 B-row corpus.
 
+## Search
 
-## Why Lance?
-
-- Optimized for AI workloads: Lance keeps multimodal data and vector search-ready storage in the same columnar format designed for accelerator-era retrieval (see [lance.org](https://lance.org)).
-- Images + embeddings + metadata travel as one tabular dataset.
-- On-disk, scalable ANN index means
-- Schema evolution lets you add new features/columns (moderation tags, embeddings, etc.) without rewriting the raw data.
-
-
-## Quick Start (Lance Python)
+Once an `IVF_PQ` index exists on `text_embedding`, dense retrieval is a single call. In production you would encode a query string through the same 384-dim text encoder used at ingest and pass the resulting vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
 
 ```python
-import lance
-import pyarrow as pa
+import lancedb
 
-lance_ds = lance.dataset("hf://datasets/lance-format/fineweb-edu/data/train.lance")
+db = lancedb.connect("./fineweb-edu/data")  # local copy with the indices from the section above
+tbl = db.open_table("train")
 
-# Browse titles & language without touching embeddings
-rows = lance_ds.scanner(
-    columns=["title", "language"],
-    limit=5
-).to_table().to_pylist()
-
-# Vector similarity from the on-dataset ANN index
-ref = lance_ds.take([0], columns=["text_embedding", "title"])
-query_vec = pa.array([ref.to_pylist()[0]["text_embedding"]],
-                     type=ref.schema.field("text_embedding").type)
-
-results = lance_ds.scanner(
-    nearest={
-        "column": "text_embedding",
-        "q": query_vec[0],
-        "k": 5,
-        "nprobes": 8,
-        "refine_factor": 20,
-    },
-    columns=["title", "language", "text"],
-).to_table().to_pylist()
-```
-
-> **Hugging Face Streaming Note**
-> - Streaming uses conservative ANN parameters (`nprobes`, `refine_factor`) to stay within HF rate limits.
-> - Prefer local copies (`huggingface-cli download lance-format/fineweb-edu --local-dir ./fineweb`) for heavy workloads, then point Lance at `./fineweb`.
-
-## Dataset Schema
-
-Common columns you'll find in this Lance dataset:
-- `text` – cleaned passage content.
-- `title` – page/article title when available.
-- `url` – canonical source URL.
-- `language` + `language_probability` – detector outputs for filtering.
-- Quality metadata from FineWeb-Edu (e.g., heuristic scores or length stats).
-- `text_embedding` – 384-dimension float32 vector for retrieval.
-
-## Usage Examples
-
-> **Search snippets for reference**
-> The vector/FTS examples below show the Lance APIs you’ll use once indexes are available. The hosted dataset doesn’t yet ship ANN/FTS indexes—download locally (or build indexes yourself) before running them. Pre-built indexes are coming soon.
-
-### 1. Sample documents without embeddings
-
-```python
-scanner = ds.scanner(
-    columns=["title", "language", "text"],
-    filter="language = 'en'",
-    limit=5,
+seed = (
+    tbl.search()
+    .select(["text_embedding", "url"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
 )
-for doc in scanner.to_table().to_pylist():
-    print(doc["title"], doc["language"])
-    print(doc["text"][:200], "...\n")
+
+hits = (
+    tbl.search(seed["text_embedding"])
+    .metric("cosine")
+    .where("language = 'en' AND language_probability > 0.9", prefilter=True)
+    .select(["title", "url", "text"])
+    .limit(10)
+    .to_list()
+)
+for r in hits:
+    print(f"{r['url']}\n  {(r['title'] or '')[:80]}")
 ```
 
-### 2. Vector search for semantically similar passages
+The result set carries only the projected columns. The `text_embedding` vector is never read on the result side, and the `text` body is fetched only for the ten passages that actually came back, keeping the working set small even though the corpus is enormous.
+
+Because the recommended setup also builds an `INVERTED` index on `text`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query. LanceDB merges the two result lists and reranks them in a single call, which is useful when a phrase must literally appear in the passage but the dense side still does most of the ranking.
 
 ```python
-ref_doc = ds.take([123], columns=["text_embedding", "title", "text"]).to_pylist()[0]
-emb_type = ds.to_table(columns=["text_embedding"], limit=1).schema.field("text_embedding").type
-query = pa.array([ref_doc["text_embedding"]], type=emb_type)
-
-neighbors = ds.scanner(
-    nearest={
-        "column": "text_embedding",
-        "q": query[0],
-        "k": 6,
-        "nprobes": 8,
-        "refine_factor": 20,
-    },
-    columns=["title", "language", "text"],
-).to_table().to_pylist()[1:]
+hybrid_hits = (
+    tbl.search(query_type="hybrid")
+    .vector(seed["text_embedding"])
+    .text("quantum computing")
+    .where("language = 'en'", prefilter=True)
+    .select(["title", "url", "text"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"{r['url']}\n  {(r['title'] or '')[:80]}")
 ```
 
-### LanceDB Vector Search
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+A typical curation pass over a web corpus starts with a metadata filter — pick high-confidence English, drop short or low-quality fragments, restrict to a domain — before any text gets read. Stacking predicates inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(1000)` makes it cheap to inspect.
+
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
 tbl = db.open_table("train")
 
-# Get a passage to use as a query
-ref_passage = tbl.limit(1).offset(123).select(["text_embedding", "text"]).to_pandas().to_dict('records')[0]
-query_embedding = ref_passage["text_embedding"]
-
-results = tbl.search(query_embedding) \
-    .limit(5) \
-    .to_list()
-```
-
-### 3. Full-text search with Lance FTS
-
-```python
-hits = ds.scanner(
-    full_text_query="quantum computing",
-    columns=["title", "language", "text"],
-    limit=10,
-    fast_search=True,
-).to_table().to_pylist()
-```
-
-### LanceDB Full-Text Search
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
-tbl = db.open_table("train")
-
-results = tbl.search("quantum computing") \
-    .select(["title", "language", "text"]) \
-    .limit(10) \
-    .to_list()
-```
-
-
-See `fineweb_edu/example.py` on lance-huggingface repo for a complete walkthrough that combines HF streaming batches with Lance-powered retrieval.
-
-## Dataset Evolution
-
-Lance supports flexible schema and data evolution ([docs](https://lance.org/guide/data_evolution/?h=evol)). You can add/drop columns, backfill with SQL or Python, rename fields, or change data types without rewriting the whole dataset. In practice this lets you:
-- Introduce fresh metadata (moderation labels, embeddings, quality scores) as new signals become available.
-- Add new columns to existing datasets without re-exporting terabytes of video.
-- Adjust column names or shrink storage (e.g., cast embeddings to float16) while keeping previous snapshots queryable for reproducibility.
-
-```python
-import lance
-import pyarrow as pa
-import numpy as np
-
-# Assume ds is a local Lance dataset
-# ds = lance.dataset("./fineweb_edu_local")
-
-base = pa.table({"id": pa.array([1, 2, 3]), "text": pa.array(["A", "B", "C"])})
-dataset = lance.write_dataset(base, "fineweb_evolution", mode="overwrite")
-
-# 1. Add a schema-only column (data to be added later)
-dataset.add_columns(pa.field("subject", pa.string()))
-
-# 2. Add a column with data
-dataset.add_columns({"quality_bucket": "'unknown'"})
-
-# 3. Generate rich columns via Python batch UDFs
-@lance.batch_udf()
-def random_embedding(batch):
-    vecs = np.random.rand(batch.num_rows, 384).astype("float32")
-    return pa.RecordBatch.from_arrays(
-        [pa.FixedSizeListArray.from_arrays(vecs.ravel(), 384)],
-        names=["text_embedding"],
+candidates = (
+    tbl.search()
+    .where(
+        "language = 'en' "
+        "AND language_probability > 0.95 "
+        "AND length(text) >= 1000",
+        prefilter=True,
     )
-
-dataset.add_columns(random_embedding)
-
-# 4. Bring in  annotations with merge
-labels = pa.table({"id": pa.array([1, 2, 3]), "label": pa.array(["math", "history", "science"])})
-dataset.merge(labels, "id")
-
-# 5. Rename or cast columns as needs change
-dataset.alter_columns({"path": "subject", "name": "topic"})
-dataset.alter_columns({"path": "text_embedding", "data_type": pa.list_(pa.float16(), 384)})
+    .select(["url", "title", "language_probability"])
+    .limit(1000)
+    .to_list()
+)
+print(f"{len(candidates)} candidates; first url: {candidates[0]['url']}")
 ```
-You can iterate on embeddings, quality tags, or moderation fields while keeping earlier dataset versions available for reproducible experiments.
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of URLs, or hand to the Materialize-a-subset section below for export to a writable local copy. Neither the `text` body nor the `text_embedding` vector is read by this scan, so a 1000-row curation pass against the Hub moves only kilobytes of metadata even though the underlying table is in the billions.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a `text_length` and a `long_passage` flag, either of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull a larger slice first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./fineweb-edu/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "text_length": "length(text)",
+    "long_passage": "length(text) >= 1000",
+})
+```
+
+If the values you want to attach already live in another table (offline labels, topic classifications, alternate embeddings from a stronger model), merge them in by joining on `url`:
+
+```python
+import pyarrow as pa
+
+labels = pa.table({
+    "url": pa.array(["https://example.com/a", "https://example.com/b"]),
+    "topic": pa.array(["math", "history"]),
+})
+tbl.merge(labels, on="url")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running a different embedding model over the text), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For language-model pretraining the natural projection is just the `text` column; for a retrieval probe or a reranker on top of frozen features, project the precomputed embedding instead.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("./fineweb-edu/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["text"])
+loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=8)
+
+for batch in loader:
+    # batch carries only the projected columns; tokenize, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["text_embedding"]` to `select_columns(...)` on the next run reads only the 384-d vectors and skips the text body entirely, which is the right shape for training a lightweight retrieval head on cached embeddings. Columns added in Evolve cost nothing per batch until they are explicitly projected.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./fineweb-edu/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("english-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="english-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `english-v1` keeps returning stable results while the dataset evolves in parallel — newly added embeddings or labels do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same passages, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+At 1.5 B+ rows, very few workflows want the full corpus on local disk. The practical entry point is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory. The result is a writable LanceDB database scoped to the rows that actually matter for the downstream task, sized to index and iterate cheaply.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/fineweb-edu/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where(
+        "language = 'en' "
+        "AND language_probability > 0.95 "
+        "AND length(text) >= 1000"
+    )
+    .select(["url", "title", "text", "language", "language_probability", "text_embedding"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./fineweb-edu-en")
+local_db.create_table("train", batches)
+```
+
+The resulting `./fineweb-edu-en` is a first-class LanceDB database. Build the recommended indices on it once (the same `create_index` / `create_fts_index` calls shown in the Pre-built indices section, pointed at the local path), and every snippet in the Search, Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/fineweb-edu/data` for `./fineweb-edu-en`.
+
+## Source & license
+
+Converted from [`HuggingFaceFW/fineweb-edu`](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu). FineWeb-Edu is distributed under [ODC-BY 1.0](https://opendatacommons.org/licenses/by/1-0/); individual document content remains subject to the rights of the original publishers. Review the [upstream dataset card](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu) before downstream use.
+
+## Citation
+
+```
+@misc{lozhkov2024finewebedu,
+  title  = {FineWeb-Edu: the Finest Collection of Educational Content the Web Has to Offer},
+  author = {Lozhkov, Anton and Ben Allal, Loubna and von Werra, Leandro and Wolf, Thomas},
+  year   = {2024},
+  url    = {https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu}
+}
+```

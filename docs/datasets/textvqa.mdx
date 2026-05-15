@@ -1,7 +1,7 @@
 ---
 title: "TextVQA"
 sidebarTitle: "TextVQA"
-description: "Lance-formatted version of TextVQA — VQA where the question requires reading text in the image — sourced from lmms-lab/textvqa."
+description: "A Lance-formatted version of TextVQA — visual question answering where the question requires reading text in the image (street signs, product labels, screen captures) — sourced from lmms-lab/textvqa. Each row carries the image bytes, the question…"
 ---
 
 <Card
@@ -12,16 +12,21 @@ description: "Lance-formatted version of TextVQA — VQA where the question requ
 Source dataset card and downloadable files for `lance-format/textvqa-lance`.
 </Card>
 
-Lance-formatted version of [TextVQA](https://textvqa.org/) — VQA where the question requires *reading* text in the image — sourced from [`lmms-lab/textvqa`](https://huggingface.co/datasets/lmms-lab/textvqa).
+A Lance-formatted version of [TextVQA](https://textvqa.org/) — visual question answering where the question requires *reading* text in the image (street signs, product labels, screen captures) — sourced from [`lmms-lab/textvqa`](https://huggingface.co/datasets/lmms-lab/textvqa). Each row carries the image bytes, the question, the 10 reference annotator answers, the OCR tokens detected by the source pre-processing, OpenImages-style scene tags, and paired CLIP image and question embeddings — all available directly from the Hub at `hf://datasets/lance-format/textvqa-lance/data`.
 
-Each row carries the image bytes, the question, the 10 reference answers, the OCR tokens detected by the dataset's pre-processing, and CLIP image + question embeddings.
+## Key features
+
+- **Inline JPEG bytes** in the `image` column — no sidecar files or image folders.
+- **Paired CLIP embeddings in the same row** — `image_emb` and `question_emb` (OpenCLIP ViT-B/32, 512-dim, cosine-normalized) — so cross-modal text→image retrieval is one indexed lookup.
+- **OCR tokens travel with the row** in `ocr_tokens`, which makes OCR-aware filtering and reranking a single SQL predicate alongside the visual and textual features.
+- **Pre-built ANN, FTS, and scalar indices** covering both embeddings, the question and canonical answer, and the source partition.
 
 ## Splits
 
 | Split | Rows |
 |-------|------|
 | `validation.lance` | 5,000 |
-| `train.lance`      | 34,602 |
+| `train.lance` | 34,602 |
 
 ## Schema
 
@@ -33,7 +38,7 @@ Each row carries the image bytes, the question, the 10 reference answers, the OC
 | `question_id` | `string?` | TextVQA question id |
 | `question` | `string` | The question text |
 | `answers` | `list<string>` | 10 annotator answers |
-| `answer` | `string` | First answer — used as canonical / FTS target |
+| `answer` | `string` | First annotator answer (used as canonical / FTS target) |
 | `ocr_tokens` | `list<string>` | OCR tokens detected on the image |
 | `image_classes` | `list<string>` | OpenImages-style scene tags from the source |
 | `set_name` | `string?` | Source partition (`train`, `val`) |
@@ -42,75 +47,65 @@ Each row carries the image bytes, the question, the 10 reference answers, the OC
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` and `question_emb` — `metric=cosine`
-- `INVERTED` (FTS) on `question` and `answer`
-- `BTREE` on `image_id`, `question_id`, `set_name`
+- `IVF_PQ` on `image_emb` — image-side vector search (cosine)
+- `IVF_PQ` on `question_emb` — question-side vector search (cosine)
+- `INVERTED` (FTS) on `question` and `answer` — keyword and hybrid search
+- `BTREE` on `image_id`, `question_id`, `set_name` — fast lookup by id and partition
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/textvqa-lance/data/validation.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+import datasets
+
+hf_ds = datasets.load_dataset("lance-format/textvqa-lance", split="validation", streaming=True)
+for row in hf_ds.take(3):
+    print(row["question"], "->", row["answer"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
 tbl = db.open_table("validation")
-print(f"LanceDB table opened with {len(tbl)} image-question pairs")
+print(len(tbl))
 ```
 
-## Cross-modal text→image search
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
-import lance, pyarrow as pa, open_clip, torch
-
-model, _, _ = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
-tokenizer = open_clip.get_tokenizer("ViT-B-32")
-model = model.eval().cuda().half()
-with torch.no_grad():
-    q = model.encode_text(tokenizer(["what brand is on this billboard?"]).cuda())
-    q = (q / q.norm(dim=-1, keepdim=True)).float().cpu().numpy()[0]
+import lance
 
 ds = lance.dataset("hf://datasets/lance-format/textvqa-lance/data/validation.lance")
-emb_field = ds.schema.field("image_emb")
-hits = ds.scanner(
-    nearest={"column": "image_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 10},
-    columns=["question", "answer", "ocr_tokens"],
-).to_table().to_pylist()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB cross-modal text→image search
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/textvqa-lance --repo-type dataset --local-dir ./textvqa-lance
+> ```
+> Then point Lance or LanceDB at `./textvqa-lance/data`.
 
-```python
-import lancedb, open_clip, torch
+## Search
 
-model, _, _ = open_clip.create_model_and_transforms("ViT-B-32", pretrained="laion2b_s34b_b79k")
-tokenizer = open_clip.get_tokenizer("ViT-B-32")
-model = model.eval().cuda().half()
-with torch.no_grad():
-    q = model.encode_text(tokenizer(["what brand is on this billboard?"]).cuda())
-    q = (q / q.norm(dim=-1, keepdim=True)).float().cpu().numpy()[0]
-
-db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
-tbl = db.open_table("validation")
-
-results = (
-    tbl.search(q.tolist(), vector_column_name="image_emb")
-    .metric("cosine")
-    .select(["question", "answer", "ocr_tokens"])
-    .limit(10)
-    .to_list()
-)
-```
-
-### LanceDB full-text search
+The bundled `IVF_PQ` index on `image_emb` makes cross-modal text→image retrieval a single call: encode a question with the same OpenCLIP model used at ingest (ViT-B/32 `laion2b_s34b_b79k`, cosine-normalized), then pass the resulting 512-d vector to `tbl.search(...)` and target `image_emb`. The example below uses the `question_emb` already stored in row 42 as a runnable stand-in for "the CLIP encoding of a question", so the snippet works without any model loaded.
 
 ```python
 import lancedb
@@ -118,19 +113,183 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
 tbl = db.open_table("validation")
 
-results = (
-    tbl.search("brand name")
-    .select(["question", "answer"])
+seed = (
+    tbl.search()
+    .select(["question_emb", "question", "answer"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["question_emb"], vector_column_name="image_emb")
+    .metric("cosine")
+    .select(["image_id", "question", "answer", "ocr_tokens"])
     .limit(10)
     .to_list()
 )
+print("query question:", seed["question"], "->", seed["answer"])
+for r in hits:
+    print(f"  {r['image_id']:>14}  {r['question'][:60]}  ocr={r['ocr_tokens'][:5]}")
 ```
 
-## Why Lance?
+Because the CLIP embeddings are cosine-normalized, cosine is the right metric and the first hit will often be the source row itself. Swap `vector_column_name="image_emb"` for `question_emb` to find paraphrased questions instead of visually similar images.
 
-- One dataset for images + questions + answers + OCR + dual embeddings + indices — no JSON/feature folders.
-- Cross-modal search and OCR-text filtering work on the same dataset on the Hub.
-- Schema evolution: add columns (alternate OCR systems, model predictions) without rewriting the data.
+Because the dataset also ships an `INVERTED` index on `question` and `answer`, the same query can be issued as a hybrid search that combines the dense vector with a literal keyword match. This is particularly useful for TextVQA, where a brand name or sign content like "stop" must literally appear in the question (or eventually, the answer) while CLIP handles the visual side.
+
+```python
+hybrid_hits = (
+    tbl.search(query_type="hybrid", vector_column_name="image_emb")
+    .vector(seed["question_emb"])
+    .text("brand name")
+    .select(["image_id", "question", "answer", "ocr_tokens"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"  {r['image_id']:>14}  {r['question'][:60]}  -> {r['answer']}")
+```
+
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+Curation passes for TextVQA usually combine an OCR-driven structural filter (does this image actually contain a meaningful amount of detected text?) with a content predicate on the question or the canonical answer, so the candidate set is both visually interesting and topically focused. Stacking both inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(500)` makes it cheap to inspect before committing the subset to anything downstream.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
+tbl = db.open_table("validation")
+
+candidates = (
+    tbl.search()
+    .where(
+        "array_length(ocr_tokens) >= 5 AND question LIKE '%brand%' AND length(answer) > 0",
+        prefilter=True,
+    )
+    .select(["question_id", "image_id", "question", "answer", "ocr_tokens"])
+    .limit(500)
+    .to_list()
+)
+print(f"{len(candidates)} candidates; first: {candidates[0]['question']} -> {candidates[0]['answer']}")
+```
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `question_id`s, or feed into the Evolve and Train workflows below. The `image` column is never read, so the network traffic for a 500-row candidate scan is dominated by question, answer, and OCR-token strings rather than JPEG bytes.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds an `ocr_token_count`, an `is_yes_no_question` flag, and an `answer_length` integer, any of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./textvqa-lance/data")  # local copy required for writes
+tbl = db.open_table("validation")
+
+tbl.add_columns({
+    "ocr_token_count": "array_length(ocr_tokens)",
+    "is_yes_no_question": "lower(answer) IN ('yes', 'no')",
+    "answer_length": "length(answer)",
+    "question_length": "length(question)",
+})
+```
+
+If the values you want to attach already live in another table (a stronger OCR system's tokens, a model's predicted answer, an annotator-disagreement score), merge them in by joining on `question_id`:
+
+```python
+import pyarrow as pa
+
+predictions = pa.table({
+    "question_id": pa.array(["34602", "34603"]),
+    "model_answer": pa.array(["pepsi", "exit"]),
+    "model_confidence": pa.array([0.88, 0.72]),
+})
+tbl.merge(predictions, on="question_id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running an alternate OCR engine over the image bytes), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For a TextVQA fine-tune that needs OCR conditioning, project the JPEG bytes, the question, the OCR tokens, and the canonical answer; columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "question", "ocr_tokens", "answer"])
+loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; decode the JPEG bytes,
+    # tokenize the question and OCR tokens, forward through the VLM,
+    # compute the loss against `answer`...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "question_emb", "answer"]` to `select_columns(...)` on the next run skips JPEG decoding entirely and reads only the cached 512-d vectors, which is the right shape for training a lightweight reranker or a linear probe on top of frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
+tbl = db.open_table("validation")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./textvqa-lance/data")
+local_tbl = local_db.open_table("validation")
+local_tbl.tags.create("openclip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("validation", version="openclip-vitb32-v1")
+tbl_v5 = db.open_table("validation", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `openclip-vitb32-v1` keeps returning stable results while the dataset evolves in parallel — newly added OCR systems or model predictions do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same images, questions, and OCR tokens, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/textvqa-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("array_length(ocr_tokens) >= 5")
+    .select(["question_id", "image_id", "image", "question", "answer", "ocr_tokens", "image_emb", "question_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./textvqa-ocr-rich")
+local_db.create_table("train", batches)
+```
+
+The resulting `./textvqa-ocr-rich` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/textvqa-lance/data` for `./textvqa-ocr-rich`.
 
 ## Source & license
 

@@ -1,7 +1,7 @@
 ---
 title: "MNIST"
 sidebarTitle: "MNIST"
-description: "A Lance-formatted version of the classic MNIST handwritten-digit dataset with 70,000 28×28 grayscale digits stored inline alongside CLIP image embeddings and a pre-built ANN index."
+description: "A Lance-formatted version of the classic MNIST handwritten-digit dataset covering 70,000 28×28 grayscale digits across ten balanced classes. Each row carries inline PNG bytes, the digit label, the human-readable class name, and a cosine-normalized…"
 ---
 
 <Card
@@ -12,39 +12,50 @@ description: "A Lance-formatted version of the classic MNIST handwritten-digit d
 Source dataset card and downloadable files for `lance-format/mnist-lance`.
 </Card>
 
-A Lance-formatted version of the classic [MNIST handwritten-digit dataset](https://huggingface.co/datasets/ylecun/mnist) with **70,000 28×28 grayscale digits** stored inline alongside CLIP image embeddings and a pre-built ANN index.
+A Lance-formatted version of the classic [MNIST handwritten-digit dataset](https://huggingface.co/datasets/ylecun/mnist) covering 70,000 28×28 grayscale digits across ten balanced classes. Each row carries inline PNG bytes, the digit label, the human-readable class name, and a cosine-normalized CLIP image embedding, all backed by a bundled `IVF_PQ` vector index plus scalar indices on the label columns and available directly from the Hub at `hf://datasets/lance-format/mnist-lance/data`.
 
 ## Key features
 
-- All multimodal data (image bytes + embeddings) stored **inline** in the same Lance dataset — no sidecar files, no external image folders.
-- **Pre-computed CLIP embeddings** (OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k`, 512-dim, L2-normalized) shipped with an `IVF_PQ` index for instant similarity search.
-- **BTREE index on `label`** and **BITMAP index on `label_name`** for sub-millisecond filtering.
-- Standard train/test splits, ready to use with `lance.dataset(...)` or `datasets.load_dataset(...)`.
+- **Inline PNG bytes** in the `image` column — no sidecar files, no image folders.
+- **Pre-computed CLIP image embeddings** (OpenCLIP `ViT-B-32` / `laion2b_s34b_b79k`, 512-dim, cosine-normalized) with a bundled `IVF_PQ` index.
+- **Scalar indices on both label columns** — `BTREE` on `label` and `BITMAP` on `label_name` — so digit filters and digit-conditioned search are constant-time lookups.
+- **One columnar dataset** — scan labels cheaply, then fetch image bytes only for the rows you want.
 
 ## Splits
 
 | Split | Rows |
 |-------|------|
-| `train` | 60,000 |
-| `test`  | 10,000 |
+| `train.lance` | 60,000 |
+| `test.lance`  | 10,000 |
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index within the split |
+| `id` | `int64` | Row index within the split (natural join key for merges) |
 | `image` | `large_binary` | Inline PNG bytes (28×28 grayscale) |
-| `label` | `int32` | Digit class id (0-9) |
-| `label_name` | `string` | Human-readable class (`"0".."9"`) |
+| `label` | `int32` | Digit class id (0–9) |
+| `label_name` | `string` | Human-readable class (`"0"`..`"9"`) |
 | `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` — vector similarity search (`metric=cosine`)
-- `BTREE` on `label` — fast equality / range filters
-- `BITMAP` on `label_name` — fast filters on the 10 class names
+- `IVF_PQ` on `image_emb` — vector similarity search (cosine)
+- `BTREE` on `label` — fast equality and range filters on the digit id
+- `BITMAP` on `label_name` — fast filters across the ten class names
+
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
 
 ## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable if your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample without installing anything Lance-specific.
 
 ```python
 import datasets
@@ -54,17 +65,9 @@ for row in hf_ds.take(3):
     print(row["label"], row["label_name"])
 ```
 
-## Load directly with Lance (recommended)
-
-```python
-import lance
-
-ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
-print(ds.count_rows(), ds.schema.names)
-print(ds.list_indices())
-```
-
 ## Load with LanceDB
+
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Train, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
@@ -74,31 +77,27 @@ tbl = db.open_table("train")
 print(len(tbl))
 ```
 
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
 > **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
 > ```bash
 > hf download lance-format/mnist-lance --repo-type dataset --local-dir ./mnist-lance
 > ```
-> Then `lance.dataset("./mnist-lance/data/train.lance")`.
+> Then point Lance or LanceDB at `./mnist-lance/data`.
 
-## Vector search example
+## Search
 
-```python
-import lance
-import pyarrow as pa
-
-ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
-emb_field = ds.schema.field("image_emb")
-ref = ds.take([0], columns=["image_emb"]).to_pylist()[0]["image_emb"]
-query = pa.array([ref], type=emb_field.type)
-
-neighbors = ds.scanner(
-    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
-    columns=["id", "label", "label_name"],
-).to_table().to_pylist()
-print(neighbors)
-```
-
-### LanceDB vector search
+The bundled `IVF_PQ` index on `image_emb` turns nearest-neighbor lookup on the 512-d CLIP space into a single call. In production you would encode a query digit through OpenCLIP `ViT-B-32` at runtime and pass the resulting vector to `tbl.search(...)`. The example below uses the embedding already stored in row 42 as a runnable stand-in so the snippet works without any model loaded.
 
 ```python
 import lancedb
@@ -106,64 +105,160 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
 tbl = db.open_table("train")
 
-ref = tbl.search().limit(1).select(["image_emb"]).to_list()[0]
-query_embedding = ref["image_emb"]
+seed = (
+    tbl.search()
+    .select(["image_emb", "label"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
 
-results = (
-    tbl.search(query_embedding)
+hits = (
+    tbl.search(seed["image_emb"])
     .metric("cosine")
     .select(["id", "label", "label_name"])
-    .limit(5)
-    .to_list()
-)
-for row in results:
-    print(row["id"], row["label"], row["label_name"])
-```
-
-## Filter by class
-
-```python
-ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
-sevens = ds.scanner(filter="label = 7", columns=["id"], limit=10).to_table()
-print(sevens)
-```
-
-### Filter by class with LanceDB
-
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
-tbl = db.open_table("train")
-sevens = (
-    tbl.search()
-    .where("label = 7")
-    .select(["id"])
     .limit(10)
     .to_list()
 )
-print(sevens)
+print("query digit:", seed["label"])
+for r in hits:
+    print(f"  id={r['id']:>5}  label={r['label']}")
 ```
 
-## Working with images
+Because the embeddings are cosine-normalized and MNIST digits cluster tightly in CLIP space, near-neighbors of a seed image are dominated by the seed's own digit class — a useful sanity check before swapping in a real query encoder. Tune `metric`, `nprobes`, and `refine_factor` to trade recall against latency.
+
+## Curate
+
+A typical curation pass for a digit-classification workflow narrows the table to a single digit (or a small set of confusable digits like 4/9 or 3/8) before sampling. Because both label columns are indexed, the filter resolves without scanning the embedding or image bytes; the bounded `.limit(500)` keeps the output small enough to inspect or hand off as a manifest of row ids.
 
 ```python
-from pathlib import Path
-import lance
+import lancedb
 
-ds = lance.dataset("hf://datasets/lance-format/mnist-lance/data/train.lance")
-row = ds.take([0], columns=["image", "label"]).to_pylist()[0]
-Path("digit_0.png").write_bytes(row["image"])
-print("label =", row["label"])
+db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+tbl = db.open_table("train")
+
+candidates = (
+    tbl.search()
+    .where("label IN (4, 9)", prefilter=True)
+    .select(["id", "label", "label_name"])
+    .limit(500)
+    .to_list()
+)
+print(f"{len(candidates)} 4/9 candidates")
 ```
 
-Images are stored inline as PNG bytes; scanning columns like `label` does not pay the I/O cost of loading image bytes.
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `id`s, or feed into the Evolve and Train workflows below. The `image` and `image_emb` columns are never read, so the network traffic for a 500-row candidate scan is dominated by the tiny label payload.
 
-## Why Lance?
+## Evolve
 
-- One dataset for images + embeddings + indices + metadata — no sidecar files to manage.
-- On-disk vector and full-text indices live next to the data, so search works on both local copies and the Hub.
-- Schema evolution lets you add new columns (fresh embeddings, augmentations, model predictions) without rewriting the data ([docs](https://lance.org/guide/data_evolution/)).
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds an `is_target_class` flag for binary one-vs-rest experiments and an `is_curvy_digit` flag that groups digits with curved strokes, either of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full corpus first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./mnist-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "is_target_class": "label = 7",
+    "is_curvy_digit": "label IN (0, 3, 6, 8, 9)",
+})
+```
+
+If the values you want to attach already live in another table (offline labels from a stronger model, classifier predictions, per-row confidence scores), merge them in by joining on the `id` column:
+
+```python
+import pyarrow as pa
+
+predictions = pa.table({
+    "id": pa.array([0, 1, 2], type=pa.int64()),
+    "pred_label": pa.array([5, 0, 4], type=pa.int32()),
+    "pred_conf": pa.array([0.97, 0.88, 0.82]),
+})
+tbl.merge(predictions, on="id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running a second image encoder over the inline PNG bytes), Lance provides a batch-UDF API in the underlying library — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/) for that pattern.
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetch, shuffling, and batching behave as in any PyTorch pipeline. Columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "label"])
+loader = DataLoader(train_ds, batch_size=256, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; image_emb stays on disk.
+    # decode the PNG bytes, normalize to [0, 1], forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "label"]` to `select_columns(...)` on the next run skips PNG decoding entirely and reads only the cached 512-d vectors, which is the right shape for training a linear probe or a lightweight reranker on top of frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./mnist-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("clip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="clip-vitb32-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `clip-vitb32-v1` keeps returning stable results while the dataset evolves in parallel; newly added prediction columns or relabelings do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same digits and labels, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/mnist-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("label IN (4, 9)")
+    .select(["id", "image", "label", "label_name", "image_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./mnist-4-vs-9")
+local_db.create_table("train", batches)
+```
+
+The resulting `./mnist-4-vs-9` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/mnist-lance/data` for `./mnist-4-vs-9`.
 
 ## Source & license
 

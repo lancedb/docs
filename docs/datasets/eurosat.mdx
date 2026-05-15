@@ -1,7 +1,7 @@
 ---
 title: "EuroSAT"
 sidebarTitle: "EuroSAT"
-description: "Lance-formatted version of EuroSAT — Sentinel-2 satellite imagery (RGB) covering 27,000 64×64 tiles across 10 land-cover classes, sourced from blanchon/EuroSAT_RGB."
+description: "A Lance-formatted version of EuroSAT, the canonical Sentinel-2 RGB land-cover benchmark, sourced from blanchon/EuroSAT_RGB. Each row is a single 64×64 RGB tile with its integer class id, the human-readable class name, and a cosine-normalized…"
 ---
 
 <Card
@@ -12,76 +12,93 @@ description: "Lance-formatted version of EuroSAT — Sentinel-2 satellite imager
 Source dataset card and downloadable files for `lance-format/eurosat-lance`.
 </Card>
 
-Lance-formatted version of [EuroSAT](https://github.com/phelber/eurosat) — Sentinel-2 satellite imagery (RGB) covering **27,000 64×64 tiles** across 10 land-cover classes, sourced from [`blanchon/EuroSAT_RGB`](https://huggingface.co/datasets/blanchon/EuroSAT_RGB).
+A Lance-formatted version of [EuroSAT](https://github.com/phelber/eurosat), the canonical Sentinel-2 RGB land-cover benchmark, sourced from [`blanchon/EuroSAT_RGB`](https://huggingface.co/datasets/blanchon/EuroSAT_RGB). Each row is a single 64×64 RGB tile with its integer class id, the human-readable class name, and a cosine-normalized OpenCLIP image embedding — all stored inline and available directly from the Hub at `hf://datasets/lance-format/eurosat-lance/data`.
 
-This is the canonical "geo" tile-level classification benchmark, useful for remote sensing pre-training and small-tile retrieval research.
+## Key features
+
+- **Inline JPEG bytes** in the `image` column — no sidecar TIF folders, no per-class subdirectories.
+- **Pre-computed OpenCLIP image embeddings** (`image_emb`, ViT-B/32, 512-dim, cosine-normalized) with a bundled `IVF_PQ` index for similarity search.
+- **Both label representations** — integer `label` (0-9) and string `label_name` — with scalar indices on both for fast class filters.
+- **One columnar dataset** — scan labels and embeddings cheaply, fetch tile bytes only for the rows you actually need.
 
 ## Splits
 
-| Split | Rows |
-|-------|------|
-| `train.lance`      | 16,200 |
-| `validation.lance` | 5,400 |
-| `test.lance`       | 5,400 |
+| Split | Rows | Notes |
+|-------|------|-------|
+| `train.lance`      | 16,200 | Training split |
+| `validation.lance` | 5,400  | Validation split |
+| `test.lance`       | 5,400  | Held-out test split |
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index within split |
-| `image` | `large_binary` | Inline JPEG bytes (64×64 RGB Sentinel-2) |
+| `id` | `int64` | Row index within the split (natural join key) |
+| `image` | `large_binary` | Inline JPEG bytes (64×64 RGB Sentinel-2 tile) |
 | `label` | `int32` | Class id (0-9) |
-| `label_name` | `string` | `Annual_Crop`, `Forest`, `Herbaceous_Vegetation`, `Highway`, `Industrial_Buildings`, `Pasture`, `Permanent_Crop`, `Residential_Buildings`, `River`, `SeaLake` |
+| `label_name` | `string` | One of `Annual_Crop`, `Forest`, `Herbaceous_Vegetation`, `Highway`, `Industrial_Buildings`, `Pasture`, `Permanent_Crop`, `Residential_Buildings`, `River`, `SeaLake` |
 | `image_emb` | `fixed_size_list<float32, 512>` | OpenCLIP `ViT-B-32` image embedding (cosine-normalized) |
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` — `metric=cosine`
-- `BTREE` on `label`
-- `BITMAP` on `label_name`
+- `IVF_PQ` on `image_emb` — vector similarity search (cosine)
+- `BTREE` on `label` — fast equality / range filters by class id
+- `BITMAP` on `label_name` — fast set-membership filters by class name
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample without installing anything Lance-specific.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/eurosat-lance/data/train.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/eurosat-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["label_name"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Train, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
 tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} satellite tiles")
+print(len(tbl))
 ```
 
-## Visual similarity search
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect or operate on dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
-import pyarrow as pa
 
 ds = lance.dataset("hf://datasets/lance-format/eurosat-lance/data/train.lance")
-emb_field = ds.schema.field("image_emb")
-ref = ds.take([0], columns=["image_emb", "label_name"]).to_pylist()[0]
-query = pa.array([ref["image_emb"]], type=emb_field.type)
-
-hits = ds.scanner(
-    nearest={"column": "image_emb", "q": query[0], "k": 5, "nprobes": 16, "refine_factor": 30},
-    columns=["id", "label_name"],
-).to_table().to_pylist()
-print(f"reference: {ref['label_name']}")
-for h in hits:
-    print(h)
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB visual similarity search
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/eurosat-lance --repo-type dataset --local-dir ./eurosat-lance
+> ```
+> Then point Lance or LanceDB at `./eurosat-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `image_emb` makes visually-similar-tile retrieval a single call. In production you would encode a query tile through the same OpenCLIP `ViT-B-32` model used at ingest (cosine-normalized) and pass the resulting 512-d vector to `tbl.search(...)`. The example below uses the embedding already stored in row 42 as a runnable stand-in, so the snippet works without any model loaded.
 
 ```python
 import lancedb
@@ -89,41 +106,166 @@ import lancedb
 db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
 tbl = db.open_table("train")
 
-ref = tbl.search().limit(1).select(["image_emb", "label_name"]).to_list()[0]
-query_embedding = ref["image_emb"]
+seed = (
+    tbl.search()
+    .select(["image_emb", "label_name"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
 
-results = (
-    tbl.search(query_embedding)
+hits = (
+    tbl.search(seed["image_emb"])
     .metric("cosine")
     .select(["id", "label_name"])
-    .limit(5)
+    .limit(10)
     .to_list()
 )
+print(f"reference tile class: {seed['label_name']}")
+for r in hits:
+    print(f"  id={r['id']:>6}  {r['label_name']}")
 ```
 
-## Filter by class
+Because the embeddings are cosine-normalized at ingest, `metric="cosine")` is the right choice and the first hit will typically be the seed tile itself — a useful sanity check. Tune `nprobes` and `refine_factor` to trade recall against latency for your workload.
 
-```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/eurosat-lance/data/train.lance")
-rivers = ds.scanner(filter="label_name = 'River'", columns=["id"], limit=5).to_table()
-```
+## Curate
 
-### Filter by class with LanceDB
+A typical curation pass for a land-cover classification or retrieval study narrows the dataset to a single class and then retrieves the visually closest tiles to a seed. Lance evaluates the vector search and the metadata filter inside a single query, so the candidate set comes back already filtered. The example below pulls the 500 forest tiles most similar to a chosen seed; the bounded `.limit(500)` keeps the output small enough to inspect or hand off.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
 tbl = db.open_table("train")
-rivers = tbl.search().where("label_name = 'River'").select(["id"]).limit(5).to_list()
+
+seed = (
+    tbl.search()
+    .select(["image_emb"])
+    .limit(1)
+    .offset(0)
+    .to_list()[0]
+)
+
+candidates = (
+    tbl.search(seed["image_emb"])
+    .where("label_name = 'Forest'", prefilter=True)
+    .select(["id", "label", "label_name"])
+    .limit(500)
+    .to_list()
+)
+print(f"{len(candidates)} Forest candidates")
 ```
 
-## Why Lance?
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of row ids, or feed into the Evolve and Train workflows below. The `image` column is never read, so the network traffic for a 500-row candidate scan is dominated by the small metadata payload rather than JPEG bytes.
 
-- One dataset for tiles + embeddings + indices — no sidecar TIF folder per class.
-- On-disk vector and FTS indices live next to the data, so search works on local copies and on the Hub.
-- Schema evolution: add columns (multi-spectral channels, model predictions, fresh embeddings) without rewriting the data.
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a coarse `is_urban` flag that captures whether a tile belongs to one of the built-environment classes, useful as a direct predicate in later `where` clauses without re-evaluating the class set on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full corpus first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./eurosat-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "is_urban": "label_name IN ('Highway', 'Industrial_Buildings', 'Residential_Buildings')",
+})
+```
+
+If the values you want to attach already live in another table (a coarse climate label per class, an external aesthetic score, model predictions from a separate eval), merge them in by joining on `label_name`:
+
+```python
+import pyarrow as pa
+
+climate = pa.table({
+    "label_name": pa.array(["Forest", "Pasture", "SeaLake", "River"]),
+    "climate_zone": pa.array(["temperate", "temperate", "marine", "freshwater"]),
+})
+tbl.merge(climate, on="label_name")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running an alternative remote-sensing model over the tile bytes), Lance provides a batch-UDF API in the underlying library — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/) for that pattern.
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. Columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "label"])
+loader = DataLoader(train_ds, batch_size=128, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; image_emb stays on disk.
+    # decode the JPEG bytes, forward through a CNN or ViT, cross-entropy loss...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "label"]` to `select_columns(...)` on the next run skips JPEG decoding entirely and reads only the cached 512-d vectors, which is the right shape for training a linear probe or a lightweight classifier head on top of frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./eurosat-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("clip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="clip-vitb32-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `clip-vitb32-v1` keeps returning stable results while the dataset evolves in parallel; newly added columns or labels do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same tiles, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/eurosat-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("label_name IN ('Forest', 'River', 'SeaLake')")
+    .select(["id", "image", "label", "label_name", "image_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./eurosat-natural-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting `./eurosat-natural-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/eurosat-lance/data` for `./eurosat-natural-subset`.
 
 ## Source & license
 

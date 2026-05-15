@@ -1,7 +1,7 @@
 ---
 title: "DocVQA"
 sidebarTitle: "DocVQA"
-description: "Lance-formatted version of DocVQA — VQA over document images (industry / government scans, multi-page reports, forms, receipts) — sourced from lmms-lab/DocVQA (DocVQA config)."
+description: "A Lance-formatted version of DocVQA, a benchmark for visual question answering over document images such as industry and government scans, multi-page reports, forms, and receipts, redistributed via lmms-lab/DocVQA (DocVQA config). Each row carries…"
 ---
 
 <Card
@@ -12,26 +12,33 @@ description: "Lance-formatted version of DocVQA — VQA over document images (in
 Source dataset card and downloadable files for `lance-format/docvqa-lance`.
 </Card>
 
-Lance-formatted version of [DocVQA](https://www.docvqa.org/) — VQA over document images (industry / government scans, multi-page reports, forms, receipts) — sourced from [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA) (`DocVQA` config).
+A Lance-formatted version of [DocVQA](https://www.docvqa.org/), a benchmark for visual question answering over document images such as industry and government scans, multi-page reports, forms, and receipts, redistributed via [`lmms-lab/DocVQA`](https://huggingface.co/datasets/lmms-lab/DocVQA) (`DocVQA` config). Each row carries the page image as inline JPEG bytes, the question and reference answer span(s), the original DocVQA question-type tags, UCSF Industry Documents Library provenance, and paired CLIP embeddings for the image and the question — all available directly from the Hub at `hf://datasets/lance-format/docvqa-lance/data`.
+
+## Key features
+
+- **Inline page image bytes** in the `image` column — no sidecar files, no document folders.
+- **Paired CLIP embeddings in the same row** — `image_emb` and `question_emb` (ViT-B/32, 512-dim, cosine-normalized) — so visual and textual retrieval are one indexed lookup.
+- **All reference answer spans preserved in `answers`** alongside a canonical `answer` string used for full-text search.
+- **Pre-built ANN, FTS, scalar, and label-list indices** covering both embedding columns, the question and answer text, the document ids, and the `question_types` tag list.
 
 ## Splits
 
-| Split | Rows |
-|-------|------|
-| `validation.lance` | 5,349 |
-| `test.lance`       | 5,188 |
+| Split | Rows | Notes |
+|-------|------|-------|
+| `validation.lance` | 5,349 | Canonical DocVQA validation set |
+| `test.lance`       | 5,188 | Public test slice from `lmms-lab/DocVQA` |
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index within split |
+| `id` | `int64` | Row index within split (natural join key) |
 | `image` | `large_binary` | Inline JPEG bytes (page image) |
-| `image_id` | `string?` | DocVQA `docId` (alias) |
+| `image_id` | `string?` | DocVQA `docId` (alias of `doc_id`) |
 | `question_id` | `string?` | DocVQA `questionId` |
 | `question` | `string` | Natural-language question |
 | `answers` | `list<string>` | Reference answer span(s) |
-| `answer` | `string` | First reference answer (FTS target) |
+| `answer` | `string` | First reference answer — canonical, used for FTS |
 | `doc_id` | `string?` | DocVQA document id |
 | `ucsf_document_id` | `string?` | UCSF Industry Documents Library id |
 | `ucsf_document_page_no` | `string?` | Page number within the source document |
@@ -42,94 +49,246 @@ Lance-formatted version of [DocVQA](https://www.docvqa.org/) — VQA over docume
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` and `question_emb` — `metric=cosine`
-- `INVERTED` (FTS) on `question` and `answer`
-- `BTREE` on `image_id`, `question_id`, `doc_id`
-- `LABEL_LIST` on `question_types`
+- `IVF_PQ` on `image_emb` — image-side vector search (cosine)
+- `IVF_PQ` on `question_emb` — text-side vector search (cosine)
+- `INVERTED` (FTS) on `question` and `answer` — keyword and hybrid search
+- `BTREE` on `image_id`, `question_id`, `doc_id` — fast lookup by document or question id
+- `LABEL_LIST` on `question_types` — set-membership filtering over question-type tags
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/docvqa-lance/data/validation.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+import datasets
+
+hf_ds = datasets.load_dataset("lance-format/docvqa-lance", split="validation", streaming=True)
+for row in hf_ds.take(3):
+    print(row["question"], "->", row["answer"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Train, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
 tbl = db.open_table("validation")
-print(f"LanceDB table opened with {len(tbl)} document-question pairs")
+print(len(tbl))
 ```
 
-### LanceDB vector search
+## Load with Lance
 
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
-tbl = db.open_table("validation")
-
-ref = tbl.search().limit(1).select(["question_emb", "question"]).to_list()[0]
-query_embedding = ref["question_emb"]
-
-results = (
-    tbl.search(query_embedding, vector_column_name="question_emb")
-    .metric("cosine")
-    .select(["question", "answer"])
-    .limit(5)
-    .to_list()
-)
-```
-
-### LanceDB full-text search
-
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
-tbl = db.open_table("validation")
-
-results = (
-    tbl.search("invoice total")
-    .select(["question", "answer"])
-    .limit(10)
-    .to_list()
-)
-```
-
-## Filter by question type
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
+
 ds = lance.dataset("hf://datasets/lance-format/docvqa-lance/data/validation.lance")
-forms = ds.scanner(
-    filter="array_has_any(question_types, ['form'])",
-    columns=["question", "answer"],
-    limit=5,
-).to_table()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### Filter with LanceDB
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/docvqa-lance --repo-type dataset --local-dir ./docvqa-lance
+> ```
+> Then point Lance or LanceDB at `./docvqa-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `question_emb` makes question-to-question retrieval a single call: encode a query with the same CLIP model used at ingest (ViT-B/32, cosine-normalized) and pass the resulting 512-d vector to `tbl.search(...)`. The example below uses the `question_emb` already stored in row 42 as a runnable stand-in, so the snippet works without any model loaded.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
 tbl = db.open_table("validation")
-forms = (
+
+seed = (
     tbl.search()
-    .where("array_has_any(question_types, ['form'])")
-    .select(["question", "answer"])
-    .limit(5)
+    .select(["question_emb", "question"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["question_emb"], vector_column_name="question_emb")
+    .metric("cosine")
+    .select(["question_id", "question", "answer", "question_types"])
+    .limit(10)
     .to_list()
 )
+print("query:", seed["question"])
+for r in hits:
+    print(f"  {r['question_id']:>8}  {r['question'][:60]}  ->  {r['answer']}")
 ```
+
+Swap `vector_column_name="question_emb"` for `image_emb` to retrieve pages whose visual layout is similar to a given embedding — useful when you want to find other forms or invoices that look like a seed page.
+
+Because the dataset also ships an `INVERTED` index on `question` and `answer`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query. LanceDB merges the two result lists and reranks them in a single call, which is useful when a phrase like "invoice total" or "date of birth" must literally appear in the question but you still want CLIP to do the heavy lifting on semantic similarity.
+
+```python
+hybrid_hits = (
+    tbl.search(query_type="hybrid", vector_column_name="question_emb")
+    .vector(seed["question_emb"])
+    .text("invoice total")
+    .select(["question_id", "question", "answer"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"  {r['question_id']:>8}  {r['question'][:60]}  ->  {r['answer']}")
+```
+
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+A typical curation pass for a document-VQA workflow combines a content filter on the question with a structural filter on the question-type tags. Stacking both inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(500)` makes it cheap to inspect before committing the subset to anything downstream. The example below collects form-style questions that mention a date, which is a common slice for evaluating form-understanding behaviour.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+
+candidates = (
+    tbl.search("date")
+    .where("array_has_any(question_types, ['form'])", prefilter=True)
+    .select(["question_id", "doc_id", "question", "answer", "question_types"])
+    .limit(500)
+    .to_list()
+)
+print(f"{len(candidates)} candidates; first: {candidates[0]['question'][:80]}")
+```
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `question_id`s, or feed into the Evolve and Train workflows below. The `image` column is never read, so the network traffic for a 500-row candidate scan is dominated by question and answer text rather than page JPEGs.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds `answer_length`, an `is_form_question` flag, and a `has_table` flag, any of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./docvqa-lance/data")  # local copy required for writes
+tbl = db.open_table("validation")
+
+tbl.add_columns({
+    "answer_length": "length(answer)",
+    "is_form_question": "array_has_any(question_types, ['form'])",
+    "has_table": "array_has_any(question_types, ['table/list'])",
+})
+```
+
+If the values you want to attach already live in another table (OCR-extracted page text, model predictions, layout-detector outputs), merge them in by joining on `question_id`:
+
+```python
+import pyarrow as pa
+
+predictions = pa.table({
+    "question_id": pa.array(["49153", "49154", "49155"]),
+    "pred_answer": pa.array(["$1,234.56", "John Doe", "2018-04-12"]),
+    "is_correct": pa.array([True, True, False]),
+})
+tbl.merge(predictions, on="question_id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running OCR or a layout model over the page bytes), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For fine-tuning a document-VLM, project the page bytes plus the question and answer; columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "question", "answer"])
+loader = DataLoader(train_ds, batch_size=16, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; decode the JPEG bytes,
+    # tokenize the question/answer pair, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "question_emb", "answer"]` to `select_columns(...)` on the next run skips JPEG decoding entirely and reads only the cached 512-d vectors, which is the right shape for training a lightweight answer-classifier or a linear probe on top of frozen features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges predictions, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+tbl = db.open_table("validation")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./docvqa-lance/data")
+local_tbl = local_db.open_table("validation")
+local_tbl.tags.create("eval-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("validation", version="eval-v1")
+tbl_v5 = db.open_table("validation", version=5)
+```
+
+Pinning supports two workflows. An evaluation harness locked to `eval-v1` keeps producing comparable scores while the dataset evolves in parallel — newly added prediction columns or labels do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same pages and questions, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/docvqa-lance/data")
+remote_tbl = remote_db.open_table("validation")
+
+batches = (
+    remote_tbl.search("date")
+    .where("array_has_any(question_types, ['form'])")
+    .select(["id", "image", "question_id", "doc_id", "question", "answer",
+             "question_types", "image_emb", "question_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./docvqa-forms-subset")
+local_db.create_table("validation", batches)
+```
+
+The resulting `./docvqa-forms-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/docvqa-lance/data` for `./docvqa-forms-subset`.
 
 ## Source & license
 

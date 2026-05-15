@@ -1,7 +1,7 @@
 ---
 title: "GQA testdev-balanced"
 sidebarTitle: "GQA testdev-balanced"
-description: "Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined with the matching 398 images — sourced from lmms-lab/GQA."
+description: "A Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined against the matching 398 images — sourced from lmms-lab/GQA. The original redistribution ships instructions and images as separate…"
 ---
 
 <Card
@@ -12,9 +12,14 @@ description: "Lance-formatted version of the canonical GQA testdev_balanced slic
 Source dataset card and downloadable files for `lance-format/gqa-testdev-balanced-lance`.
 </Card>
 
-Lance-formatted version of the canonical GQA `testdev_balanced` slice — 12,578 compositional VQA questions joined with the matching 398 images — sourced from [`lmms-lab/GQA`](https://huggingface.co/datasets/lmms-lab/GQA).
+A Lance-formatted version of the canonical GQA `testdev_balanced` slice — 12,578 compositional VQA questions joined against the matching 398 images — sourced from [`lmms-lab/GQA`](https://huggingface.co/datasets/lmms-lab/GQA). The original redistribution ships instructions and images as separate parquet configs; here they are pre-joined on `image_id`, so each row carries the question text, the short answer, the GQA reasoning-program tags, paired CLIP image and question embeddings, and the inline JPEG bytes — all available directly from the Hub at `hf://datasets/lance-format/gqa-testdev-balanced-lance/data`.
 
-`lmms-lab/GQA` exposes instructions and images as **separate parquet configs**; this Lance dataset joins them on `imageId`, so each row has the question, the answer, the GQA reasoning-program tags, *and* the image bytes inline.
+## Key features
+
+- **Inline JPEG bytes** in the `image` column, duplicated across rows that share an `image_id` so each Q/A row is self-contained.
+- **Paired CLIP embeddings in the same row** — `image_emb` and `question_emb` (512-dim, cosine-normalized) — for cross-modal retrieval as one indexed lookup.
+- **Compositional reasoning metadata** — `structural`, `semantic`, and `detailed` question-type tags plus the `semantic_str` reasoning program.
+- **Pre-built ANN, FTS, scalar, and bitmap indices** covering both embeddings, the question and short answer, the reasoning-type tags, and the image/question ids.
 
 ## Splits
 
@@ -22,120 +27,273 @@ Lance-formatted version of the canonical GQA `testdev_balanced` slice — 12,578
 |-------|------|----------------|
 | `testdev.lance` | 12,578 | 398 |
 
-> Train (`train_balanced_instructions` × `train_balanced_images`, ~943k Q's × 72k images, ~10 GB images) and val splits are not bundled by default — pass `--instr-config`/`--images-config` to `gqa/dataprep.py` to extend.
+The train_balanced (~943 k Q's × 72 k images) and val_balanced splits are not bundled by default; pass `--instr-config` / `--images-config` to `gqa/dataprep.py` to extend.
 
 ## Schema
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | `int64` | Row index |
-| `image` | `large_binary` | Inline JPEG bytes (image is duplicated across rows that share an `image_id`) |
+| `id` | `int64` | Row index within split |
+| `image` | `large_binary` | Inline JPEG bytes (duplicated across rows that share an `image_id`) |
 | `image_id` | `string` | GQA scene-graph image id |
 | `question_id` | `string` | GQA question id |
 | `question` | `string` | Compositional natural-language question |
 | `answers` | `list<string>` | One-element list (the GQA short answer) |
-| `answer` | `string` | Same short answer (canonical / FTS target) |
-| `full_answer` | `string?` | Full sentence answer |
+| `answer` | `string` | Canonical short answer (used for FTS) |
+| `full_answer` | `string?` | Full-sentence answer |
 | `structural` | `string?` | One of `verify`, `query`, `compare`, `choose`, `logical` |
 | `semantic` | `string?` | One of `attr`, `cat`, `global`, `obj`, `rel` |
 | `detailed` | `string?` | Fine-grained type (e.g. `weatherVerifyC`) |
 | `is_balanced` | `bool` | GQA balanced subset flag |
-| `group_global` / `group_local` | `string?` | GQA reasoning-group ids |
+| `group_global`, `group_local` | `string?` | GQA reasoning-group ids |
 | `semantic_str` | `string?` | Compact description of the reasoning program |
 | `image_emb` | `fixed_size_list<float32, 512>` | CLIP image embedding (cosine-normalized) |
 | `question_emb` | `fixed_size_list<float32, 512>` | CLIP text embedding of the question |
 
 ## Pre-built indices
 
-- `IVF_PQ` on `image_emb` and `question_emb` — `metric=cosine`
-- `INVERTED` (FTS) on `question` and `answer`
-- `BITMAP` on `structural`, `semantic`, `detailed`
-- `BTREE` on `image_id`, `question_id`
+- `IVF_PQ` on `image_emb` — image-side vector search (cosine)
+- `IVF_PQ` on `question_emb` — question-side vector search (cosine)
+- `INVERTED` (FTS) on `question` and `answer` — keyword and hybrid search
+- `BITMAP` on `structural`, `semantic`, `detailed` — fast categorical filters on the reasoning program
+- `BTREE` on `image_id`, `question_id` — fast lookup by GQA id
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
-ds = lance.dataset("hf://datasets/lance-format/gqa-testdev-balanced-lance/data/testdev.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+import datasets
+
+hf_ds = datasets.load_dataset("lance-format/gqa-testdev-balanced-lance", split="testdev", streaming=True)
+for row in hf_ds.take(3):
+    print(row["question"], "->", row["answer"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
 tbl = db.open_table("testdev")
-print(f"LanceDB table opened with {len(tbl)} image-question pairs")
+print(len(tbl))
 ```
 
-### LanceDB vector search
+## Load with Lance
 
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
-tbl = db.open_table("testdev")
-
-ref = tbl.search().limit(1).select(["question_emb", "question"]).to_list()[0]
-query_embedding = ref["question_emb"]
-
-results = (
-    tbl.search(query_embedding, vector_column_name="question_emb")
-    .metric("cosine")
-    .select(["question", "answer"])
-    .limit(5)
-    .to_list()
-)
-```
-
-### LanceDB full-text search
-
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
-tbl = db.open_table("testdev")
-
-results = (
-    tbl.search("color of the car")
-    .select(["question", "answer"])
-    .limit(10)
-    .to_list()
-)
-```
-
-## Filter by reasoning type
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, and the list of pre-built indices.
 
 ```python
 import lance
+
 ds = lance.dataset("hf://datasets/lance-format/gqa-testdev-balanced-lance/data/testdev.lance")
-verify_qs = ds.scanner(filter="structural = 'verify'", columns=["question", "answer"], limit=5).to_table()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### Filter with LanceDB
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/gqa-testdev-balanced-lance --repo-type dataset --local-dir ./gqa-testdev-balanced-lance
+> ```
+> Then point Lance or LanceDB at `./gqa-testdev-balanced-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `image_emb` makes cross-modal text→image retrieval a single call: encode a question with the same CLIP model used at ingest (ViT-B/32, cosine-normalized), then pass the resulting 512-d vector to `tbl.search(...)` and target `image_emb`. The example below uses the `question_emb` already stored in row 42 as a runnable stand-in for "the CLIP encoding of a question", so the snippet works without any model loaded.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
 tbl = db.open_table("testdev")
-verify_qs = (
+
+seed = (
     tbl.search()
-    .where("structural = 'verify'")
-    .select(["question", "answer"])
-    .limit(5)
+    .select(["question_emb", "question", "answer"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["question_emb"], vector_column_name="image_emb")
+    .metric("cosine")
+    .select(["image_id", "question", "answer", "structural"])
+    .limit(10)
     .to_list()
 )
+print("query question:", seed["question"], "->", seed["answer"])
+for r in hits:
+    print(f"  {r['image_id']:>12}  [{r['structural']}]  {r['question'][:70]}")
 ```
 
-## Why Lance?
+Because the CLIP embeddings are cosine-normalized, cosine is the right metric and the first hit will often be the source row itself — a useful sanity check. Swap `vector_column_name="image_emb"` for `question_emb` to find paraphrased or topically related questions instead.
 
-- One dataset for the joined image + question + answer + reasoning-program metadata + dual embeddings + indices — no instructions/images parquet split to keep in sync.
-- Schema evolution: add columns (alternate scene graphs, model predictions) without rewriting the data.
+The dataset also ships an `INVERTED` index on `question` and `answer`, so the same query can be issued as a hybrid search that combines the dense vector with a literal keyword match. This is useful when a noun like "umbrella" must appear in the question text but you still want CLIP to handle visual similarity over the candidate set.
+
+```python
+hybrid_hits = (
+    tbl.search(query_type="hybrid", vector_column_name="image_emb")
+    .vector(seed["question_emb"])
+    .text("umbrella")
+    .select(["image_id", "question", "answer"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"  {r['image_id']:>12}  {r['question'][:70]}  -> {r['answer']}")
+```
+
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+A typical curation pass for a compositional-reasoning study combines a predicate on the question text (or the GQA short answer) with a structural filter on the reasoning program, so the candidate set is both topically and structurally consistent. Stacking both inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(500)` makes it cheap to inspect before committing the subset to anything downstream.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
+tbl = db.open_table("testdev")
+
+candidates = (
+    tbl.search()
+    .where(
+        "structural = 'verify' AND answer IN ('yes', 'no') AND question LIKE 'Is %'",
+        prefilter=True,
+    )
+    .select(["question_id", "image_id", "question", "answer", "semantic"])
+    .limit(500)
+    .to_list()
+)
+print(f"{len(candidates)} verify-style yes/no candidates; first: {candidates[0]['question']}")
+```
+
+The result is a plain list of dictionaries, ready to inspect, persist as a manifest of `question_id`s, or feed into the Evolve and Train workflows below. The `image` column is never read, so the network traffic for a 500-row candidate scan is dominated by the question and answer strings rather than JPEG bytes.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds an `is_binary_answer` flag and a `question_length` integer, either of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full split first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./gqa-testdev-balanced-lance/data")  # local copy required for writes
+tbl = db.open_table("testdev")
+
+tbl.add_columns({
+    "is_binary_answer": "answer IN ('yes', 'no')",
+    "question_length": "length(question)",
+    "answer_length": "length(answer)",
+})
+```
+
+If the values you want to attach already live in another table (offline labels, scene-graph features, or per-question predictions from an external model), merge them in by joining on `question_id`:
+
+```python
+import pyarrow as pa
+
+predictions = pa.table({
+    "question_id": pa.array(["20240268", "20240269"]),
+    "model_answer": pa.array(["yes", "left"]),
+    "model_confidence": pa.array([0.91, 0.62]),
+})
+tbl.merge(predictions, on="question_id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation, Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For a VQA fine-tune, project the JPEG bytes, the question, and the short answer; columns added in the Evolve section above cost nothing per batch until they are explicitly projected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
+tbl = db.open_table("testdev")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "question", "answer"])
+loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; decode the JPEG bytes,
+    # tokenize the question, forward through the VLM, compute the loss...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["image_emb", "question_emb", "answer"]` to `select_columns(...)` on the next run skips JPEG decoding entirely and reads only the cached 512-d vectors, which is the right shape for a lightweight reasoning probe over frozen CLIP features.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
+tbl = db.open_table("testdev")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./gqa-testdev-balanced-lance/data")
+local_tbl = local_db.open_table("testdev")
+local_tbl.tags.create("clip-vitb32-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("testdev", version="clip-vitb32-v1")
+tbl_v5 = db.open_table("testdev", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `clip-vitb32-v1` keeps returning stable results while the dataset evolves in parallel — newly added model predictions or reasoning annotations do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same images and questions, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full split. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/gqa-testdev-balanced-lance/data")
+remote_tbl = remote_db.open_table("testdev")
+
+batches = (
+    remote_tbl.search()
+    .where("structural = 'verify' AND answer IN ('yes', 'no')")
+    .select(["question_id", "image_id", "image", "question", "answer", "image_emb", "question_emb"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./gqa-yesno-subset")
+local_db.create_table("testdev", batches)
+```
+
+The resulting `./gqa-yesno-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/gqa-testdev-balanced-lance/data` for `./gqa-yesno-subset`.
 
 ## Source & license
 

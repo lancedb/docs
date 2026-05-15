@@ -32,28 +32,28 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="MNIST" href="/datasets/mnist">
-    `lance-format/mnist-lance` — A Lance-formatted version of the classic MNIST handwritten-digit dataset with 70,000 28×28 grayscale digits stored inline alongside CLIP image embeddings and a pre-built ANN index.
+    `lance-format/mnist-lance` — A Lance-formatted version of the classic MNIST handwritten-digit dataset covering 70,000 28×28 grayscale digits across ten balanced classes. Each row carries inline PNG bytes, the digit label, the human-readable class name, and a cosine-normalized…
   </Card>
   <Card title="CIFAR-10" href="/datasets/cifar10">
-    `lance-format/cifar10-lance` — A Lance-formatted version of CIFAR-10 with 60,000 32×32 RGB images across 10 classes, stored inline with CLIP embeddings and a pre-built IVF_PQ ANN index.
+    `lance-format/cifar10-lance` — A Lance-formatted version of CIFAR-10 covering 60,000 32×32 RGB images across ten balanced object classes. Each row carries inline PNG bytes, the integer label, the human-readable class name, and a cosine-normalized CLIP image embedding, all backed…
   </Card>
   <Card title="Fashion-MNIST" href="/datasets/fashion-mnist">
-    `lance-format/fashion-mnist-lance` — A Lance-formatted version of Fashion-MNIST with 70,000 28×28 grayscale clothing images stored inline alongside CLIP embeddings and a pre-built IVF_PQ ANN index.
+    `lance-format/fashion-mnist-lance` — A Lance-formatted version of Fashion-MNIST covering 70,000 28×28 grayscale clothing images across ten balanced apparel classes. Each row carries inline PNG bytes, the integer label, the human-readable class name, and a cosine-normalized CLIP image…
   </Card>
   <Card title="Food-101" href="/datasets/food101">
-    `lance-format/food101-lance` — Lance-formatted version of Food-101 — 101,000 food photographs across 101 classes — sourced from ethz/food101. Inline JPEG bytes + CLIP image embeddings + IVF_PQ.
+    `lance-format/food101-lance` — A Lance-formatted version of Food-101, the fine-grained dish-classification benchmark of 101,000 photos spread evenly across 101 dish classes, sourced from ethz/food101. Each row carries the inline JPEG bytes, the integer label, the human-readable…
   </Card>
   <Card title="Oxford-IIIT Pet" href="/datasets/oxford-pets">
-    `lance-format/oxford-pets-lance` — Lance-formatted version of the Oxford-IIIT Pet dataset — 7,390 cat & dog photos across 37 breeds — sourced from pcuenq/oxford-pets.
+    `lance-format/oxford-pets-lance` — A Lance-formatted version of the Oxford-IIIT Pet dataset — 7,390 cat and dog photos across 37 breeds — sourced from pcuenq/oxford-pets. Each row carries the inline JPEG bytes, the breed name, a species flag distinguishing cats from dogs, and a…
   </Card>
   <Card title="Stanford Cars" href="/datasets/stanford-cars">
-    `lance-format/stanford-cars-lance` — Lance-formatted version of the Stanford Cars dataset — 8,144 training images across 196 fine-grained car make/model/year classes — sourced from Multimodal-Fatima/StanfordCars_train.
+    `lance-format/stanford-cars-lance` — A Lance-formatted version of the Stanford Cars fine-grained benchmark — 8,144 photographs across 196 make/model/year classes — sourced from Multimodal-Fatima/StanfordCars_train. Each row carries the inline JPEG bytes, the integer class id, a…
   </Card>
   <Card title="ImageNet-1k Validation" href="/datasets/imagenet-1k-val">
-    `lance-format/imagenet-1k-val-lance` — A Lance-formatted version of the canonical 50,000-image ImageNet-1k validation split (also known as ILSVRC2012 val) sourced from benjamin-paine/imagenet-1k. All 50 k JPEGs are stored inline alongside CLIP embeddings and a pre-built IVF_PQ ANN index.
+    `lance-format/imagenet-1k-val-lance` — A Lance-formatted version of the canonical 50,000-image ImageNet-1k (ILSVRC2012) validation split, sourced from benjamin-paine/imagenet-1k. Each row is one image with its integer class id, a string class name, and a cosine-normalized OpenCLIP image…
   </Card>
   <Card title="EuroSAT" href="/datasets/eurosat">
-    `lance-format/eurosat-lance` — Lance-formatted version of EuroSAT — Sentinel-2 satellite imagery (RGB) covering 27,000 64×64 tiles across 10 land-cover classes, sourced from blanchon/EuroSAT_RGB.
+    `lance-format/eurosat-lance` — A Lance-formatted version of EuroSAT, the canonical Sentinel-2 RGB land-cover benchmark, sourced from blanchon/EuroSAT_RGB. Each row is a single 64×64 RGB tile with its integer class id, the human-readable class name, and a cosine-normalized…
   </Card>
 </CardGroup>
 
@@ -61,16 +61,16 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="COCO 2017 Detection" href="/datasets/coco-detection-2017">
-    `lance-format/coco-detection-2017-lance` — Lance-formatted version of the COCO 2017 object detection benchmark — sourced from detection-datasets/coco — with 123,287 images and the full per-image list of bounding boxes, category labels, and CLIP image embeddings, all stored inline.
+    `lance-format/coco-detection-2017-lance` — A Lance-formatted version of the COCO 2017 object detection benchmark, sourced from detection-datasets/coco. Each row is one image with its inline JPEG bytes, the full per-image list of bounding boxes, COCO 80-class category ids and names…
   </Card>
   <Card title="Pascal VOC 2012 Segmentation" href="/datasets/pascal-voc-2012-segmentation">
-    `lance-format/pascal-voc-2012-segmentation-lance` — A Lance-formatted version of the Pascal VOC 2012 semantic segmentation split (sourced from nateraw/pascal-voc-2012) — 2,913 image / mask pairs with CLIP image embeddings stored inline and a pre-built IVF_PQ ANN index.
+    `lance-format/pascal-voc-2012-segmentation-lance` — A Lance-formatted version of the Pascal VOC 2012 semantic segmentation split, sourced from nateraw/pascal-voc-2012. Each row pairs an inline JPEG image with the per-pixel PNG segmentation mask and a cosine-normalized OpenCLIP ViT-B-32 image…
   </Card>
   <Card title="ADE20K" href="/datasets/ade20k">
-    `lance-format/ade20k-lance` — Lance-formatted version of the full ADE20K scene parsing benchmark (sourced from 1aurent/ADE20K) — 27,574 scene images with semantic and instance segmentation maps, scene labels, and per-object metadata, all stored inline.
+    `lance-format/ade20k-lance` — A Lance-formatted version of the full ADE20K scene parsing benchmark, sourced from 1aurent/ADE20K. Each row is one scene image with its inline JPEG bytes, a per-pixel semantic segmentation map encoded as PNG bytes, an optional instance map, scene…
   </Card>
   <Card title="KITTI 2D Detection" href="/datasets/kitti-2d-detection">
-    `lance-format/kitti-2d-detection-lance` — Lance-formatted version of the KITTI 2D Object Detection benchmark — 7,481 training images from the KITTI Vision Benchmark Suite with 2D bounding boxes plus the full 3D-box / observation-angle metadata. Sourced from nateraw/kitti so no manual…
+    `lance-format/kitti-2d-detection-lance` — A Lance-formatted version of the KITTI 2D Object Detection benchmark, sourced from nateraw/kitti so no manual signup or download from cvlibs.net is required. Each row is a single driving frame with inline JPEG bytes, the full set of 2D and 3D…
   </Card>
 </CardGroup>
 
@@ -78,13 +78,13 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="COCO Captions 2017" href="/datasets/coco-captions-2017">
-    `lance-format/coco-captions-2017-lance` — Lance-formatted version of the COCO Captions 2017 corpus, redistributed via lmms-lab/COCO-Caption2017. Each row is one image with 5–7 human-written captions, CLIP image embedding, and CLIP text embedding of the canonical caption — all stored inline.
+    `lance-format/coco-captions-2017-lance` — A Lance-formatted version of the COCO Captions 2017 corpus, redistributed via lmms-lab/COCO-Caption2017. Each row is one image with 5–7 human-written captions, a cosine-normalized CLIP image embedding, and a cosine-normalized CLIP text embedding of…
   </Card>
   <Card title="Flickr30k" href="/datasets/flickr30k">
-    `lance-format/flickr30k-lance` — Lance-formatted version of Flickr30k (re-distributed via lmms-lab/flickr30k) — 31,783 images, each paired with 5 human-written captions, with CLIP image and text embeddings stored inline and pre-built ANN indices on both.
+    `lance-format/flickr30k-lance` — A Lance-formatted version of Flickr30k, redistributed via lmms-lab/flickr30k. Each row is one image with 5 human-written captions, a cosine-normalized CLIP image embedding, and a cosine-normalized CLIP text embedding of the canonical caption — all…
   </Card>
   <Card title="LAION-1M" href="/datasets/laion-1m">
-    `lance-format/laion-1m` — A lance dataset of LAION image-text corpus (~1M rows) with inline JPEG bytes, CLIP embeddings (img_emb), and full metadata available directly from the Hub: hf://datasets/lance-format/laion-1m/data/train.lance.
+    `lance-format/laion-1m` — A Lance-formatted slice of the LAION image-text corpus (~1M rows) with inline JPEG bytes, CLIP image embeddings (img_emb), full metadata, and a pre-built ANN index — all available directly from the Hub at…
   </Card>
 </CardGroup>
 
@@ -92,19 +92,19 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="ChartQA" href="/datasets/chartqa">
-    `lance-format/chartqa-lance` — Lance-formatted version of ChartQA — VQA over scientific and business charts that combine logical and visual reasoning — sourced from lmms-lab/ChartQA.
+    `lance-format/chartqa-lance` — A Lance-formatted version of ChartQA, a benchmark for question answering over scientific and business charts that demands a mix of logical and visual reasoning, redistributed via lmms-lab/ChartQA. Each row carries the chart image as inline JPEG…
   </Card>
   <Card title="DocVQA" href="/datasets/docvqa">
-    `lance-format/docvqa-lance` — Lance-formatted version of DocVQA — VQA over document images (industry / government scans, multi-page reports, forms, receipts) — sourced from lmms-lab/DocVQA (DocVQA config).
+    `lance-format/docvqa-lance` — A Lance-formatted version of DocVQA, a benchmark for visual question answering over document images such as industry and government scans, multi-page reports, forms, and receipts, redistributed via lmms-lab/DocVQA (DocVQA config). Each row carries…
   </Card>
   <Card title="TextVQA" href="/datasets/textvqa">
-    `lance-format/textvqa-lance` — Lance-formatted version of TextVQA — VQA where the question requires reading text in the image — sourced from lmms-lab/textvqa.
+    `lance-format/textvqa-lance` — A Lance-formatted version of TextVQA — visual question answering where the question requires reading text in the image (street signs, product labels, screen captures) — sourced from lmms-lab/textvqa. Each row carries the image bytes, the question…
   </Card>
   <Card title="VQAv2" href="/datasets/vqav2">
-    `lance-format/vqav2-lance` — Lance-formatted version of VQAv2 — Visual Question Answering on COCO images, sourced from lmms-lab/VQAv2. Each row is a (image, question, 10 answers) triple with two CLIP embeddings (image + question text) so the same dataset supports both visual…
+    `lance-format/vqav2-lance` — A Lance-formatted version of VQAv2 — open-ended visual question answering on COCO images — sourced from lmms-lab/VQAv2. Each row is one (image, question, 10 annotator answers) triple with paired CLIP image and question embeddings drawn from the…
   </Card>
   <Card title="GQA testdev-balanced" href="/datasets/gqa-testdev-balanced">
-    `lance-format/gqa-testdev-balanced-lance` — Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined with the matching 398 images — sourced from lmms-lab/GQA.
+    `lance-format/gqa-testdev-balanced-lance` — A Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined against the matching 398 images — sourced from lmms-lab/GQA. The original redistribution ships instructions and images as separate…
   </Card>
 </CardGroup>
 
@@ -112,19 +112,19 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="SQuAD v2" href="/datasets/squad-v2">
-    `lance-format/squad-v2-lance` — Lance-formatted version of SQuAD v2 — Stanford Question Answering Dataset, version 2 — with MiniLM sentence embeddings stored inline alongside the questions, contexts, and answers.
+    `lance-format/squad-v2-lance` — A Lance-formatted version of SQuAD v2 — the Stanford Question Answering Dataset with both answerable and deliberately unanswerable questions over Wikipedia passages — with MiniLM question embeddings stored inline and ready for retrieval at…
   </Card>
   <Card title="TriviaQA" href="/datasets/trivia-qa">
-    `lance-format/trivia-qa-lance` — Lance-formatted version of TriviaQA (rc.nocontext config) — a question-answering dataset of trivia questions paired with answer aliases — with MiniLM sentence embeddings stored inline.
+    `lance-format/trivia-qa-lance` — A Lance-formatted version of TriviaQA (rc.nocontext config) — a large reading-comprehension dataset of trivia questions paired with a canonical answer, accepted aliases, and entity-type metadata — with MiniLM question embeddings stored inline and…
   </Card>
   <Card title="HotpotQA distractor" href="/datasets/hotpotqa-distractor">
-    `lance-format/hotpotqa-distractor-lance` — Lance-formatted version of HotpotQA — multi-hop reading-comprehension questions where each answer requires combining facts from two Wikipedia paragraphs — using the distractor config (10 candidate paragraphs per question, including gold + 8…
+    `lance-format/hotpotqa-distractor-lance` — A Lance-formatted version of HotpotQA using the distractor config — multi-hop reading-comprehension questions where each answer requires combining facts from two Wikipedia paragraphs, with 10 candidate paragraphs per question (gold + 8…
   </Card>
   <Card title="Natural Questions Validation" href="/datasets/natural-questions-val">
-    `lance-format/natural-questions-val-lance` — Lance-formatted version of the Natural Questions validation split — 7,830 real Google search queries with their full Wikipedia articles and 1–5 annotator labels per question. Sourced from google-research-datasets/natural_questions.
+    `lance-format/natural-questions-val-lance` — A Lance-formatted version of the Natural Questions validation split — 7,830 real Google search queries paired with the full Wikipedia article a human used to answer them, plus 1–5 annotator labels per question. MiniLM question embeddings are stored…
   </Card>
   <Card title="MS MARCO v2.1" href="/datasets/ms-marco-v2">
-    `lance-format/ms-marco-v2.1-lance` — Lance-formatted version of MS MARCO v2.1 — Microsoft's machine reading comprehension benchmark — with MiniLM query embeddings stored inline alongside the candidate passages and human-written answers.
+    `lance-format/ms-marco-v2.1-lance` — A Lance-formatted version of MS MARCO v2.1 — Microsoft's machine-reading-comprehension benchmark built from anonymized Bing query logs. Each row is one user query, the up-to-10 candidate passages Bing retrieved for it with relevance flags, and the…
   </Card>
 </CardGroup>
 
@@ -132,7 +132,7 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="FineWeb-Edu" href="/datasets/fineweb-edu">
-    `lance-format/fineweb-edu` — FineWeb-edu dataset with over 1.5 billion rows. Each passage ships with cleaned text, metadata, and 384-dim text embeddings for retrieval-heavy workloads.
+    `lance-format/fineweb-edu` — A Lance-formatted version of FineWeb-Edu — over 1.5 billion educational web passages with cleaned text, source metadata, language detection signals, and 384-dim text embeddings — available directly from the Hub at…
   </Card>
 </CardGroup>
 
@@ -140,7 +140,7 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="LibriSpeech clean" href="/datasets/librispeech-clean">
-    `lance-format/librispeech-clean-lance` — Lance-formatted version of the LibriSpeech ASR clean configuration (sourced from openslr/librispeech_asr). Audio is stored inline as FLAC bytes (no re-encoding); transcripts are sentence-embedded so semantic transcript search works out of the box.
+    `lance-format/librispeech-clean-lance` — A Lance-formatted version of the LibriSpeech ASR clean configuration, sourced from openslr/librispeech_asr. Each row is one utterance with inline FLAC audio bytes, the reference transcript, a sentence-transformers embedding of that transcript, and…
   </Card>
 </CardGroup>
 
@@ -148,7 +148,7 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="OpenVid-1M" href="/datasets/openvid">
-    `lance-format/openvid-lance` — Lance format version of the OpenVid dataset with 937,957 high-quality videos stored with inline video blobs, embeddings, and rich metadata.
+    `lance-format/openvid-lance` — A Lance-formatted version of the OpenVid-1M corpus — 937,957 high-quality clips with inline MP4 bytes, 1024-dim video embeddings, captions, and rich per-clip quality signals — available directly from the Hub at…
   </Card>
 </CardGroup>
 
@@ -156,10 +156,10 @@ integration itself, see the [Hugging Face Hub integration page](/integrations/ai
 
 <CardGroup cols={2}>
   <Card title="LeRobot PushT" href="/datasets/lerobot-pusht">
-    `lance-format/lerobot-pusht-lance` — Lance-formatted version of lerobot/pusht — the canonical PushT benchmark from the Diffusion Policy paper — packaged using the same three-table layout as the existing lance-format/lerobot-xvla-soft-fold so consumers can flip between datasets without…
+    `lance-format/lerobot-pusht-lance` — A Lance-formatted version of lerobot/pusht — the canonical PushT benchmark from the Diffusion Policy paper — packaged using the same three-table layout as lance-format/lerobot-xvla-soft-fold so consumers can flip between datasets without changing…
   </Card>
   <Card title="LeRobot X-VLA Soft-Fold" href="/datasets/lerobot-xvla-soft-fold">
-    `lance-format/lerobot-xvla-soft-fold` — This dataset was created using LeRobot.
+    `lance-format/lerobot-xvla-soft-fold` — A Lance-formatted version of lerobot/xvla-soft-fold — a multi-camera robotics dataset from the X-VLA project — packaged as three Lance tables for efficient frame-level training, episode-level trajectory loading, and direct access to the original…
   </Card>
 </CardGroup>
 

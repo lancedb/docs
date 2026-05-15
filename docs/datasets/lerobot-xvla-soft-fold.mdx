@@ -1,7 +1,7 @@
 ---
 title: "LeRobot X-VLA Soft-Fold"
 sidebarTitle: "LeRobot X-VLA Soft-Fold"
-description: "This dataset was created using LeRobot."
+description: "A Lance-formatted version of lerobot/xvla-soft-fold — a multi-camera robotics dataset from the X-VLA project — packaged as three Lance tables for efficient frame-level training, episode-level trajectory loading, and direct access to the original…"
 ---
 
 <Card
@@ -12,265 +12,342 @@ description: "This dataset was created using LeRobot."
 Source dataset card and downloadable files for `lance-format/lerobot-xvla-soft-fold`.
 </Card>
 
-This dataset was created using [LeRobot](https://github.com/huggingface/lerobot).
+A Lance-formatted version of [`lerobot/xvla-soft-fold`](https://huggingface.co/datasets/lerobot/xvla-soft-fold) — a multi-camera robotics dataset from the [X-VLA](https://thu-air-dream.github.io/X-VLA/) project — packaged as three Lance tables for efficient frame-level training, episode-level trajectory loading, and direct access to the original encoded videos. Available directly from the Hub at `hf://datasets/lance-format/lerobot-xvla-soft-fold/data`.
 
-## Dataset Description
+- **1,542 episodes**
+- **2,852,512 frames** at **20 FPS**
+- **3 camera streams per episode** — `cam_high`, `cam_left_wrist`, `cam_right_wrist`
+- **Robot state and action vectors** aligned to frame timestamps
 
-  **Repository:** [X-VLA](https://thu-air-dream.github.io/X-VLA/)
+## Key features
 
-  **License:** Apache 2.0
+- **Three-table layout** — `frames`, `episodes`, `videos` — so frame-level training, episode-level trajectory work, and raw video access live side-by-side without scattered parquet shards or sidecar MP4 directories.
+- **Per-camera inline MP4 segments** in `episodes.lance`, with `from_timestamp` / `to_timestamp` bounds per camera and per episode, surfaced as lazy `BlobFile` handles via `take_blobs` so metadata scans never read the bytes.
+- **Frame-level observations and actions** in `frames.lance` with stable `episode_index`, `frame_index`, and `index` columns for joining or temporal iteration.
+- **Source MP4 provenance** in `videos.lance` (`relative_path`, `filename`, `file_size_bytes`, `sha256`) alongside the raw bytes, for integrity checks or custom decode pipelines.
 
-  **Paper:** *Zheng et al., 2025, “X-VLA: Soft-Prompted Transformer as Scalable Cross-Embodiment Vision-Language-Action Model”* ([arXiv:2510.10274](https://arxiv.org/pdf/2510.10274))
+## Tables
 
+| Table | Rows | Purpose |
+|---|---|---|
+| `frames.lance`   | 2,852,512 | Per-frame observations, actions, episode/task indices |
+| `episodes.lance` | 1,542     | Full per-episode trajectories plus per-camera MP4 segment blobs and timestamp bounds |
+| `videos.lance`   | 104       | Raw source MP4 files (one row per source MP4) with file-level provenance |
 
-## What this dataset contains
+Use `frames.lance` for low-level training (loss-per-timestep, state-conditioned policies). Use `episodes.lance` when you need the full trajectory and the matching per-camera video segments together. Use `videos.lance` when you want direct access to the original encoded video files.
 
-This is the Lance-format version of [lerobot/xvla-soft-fold](https://huggingface.co/datasets/lerobot/xvla-soft-fold), designed for efficient frame-level sampling and sequential episode loading.
+## Schemas
 
-- `1,542` episodes
-- `2,852,512` frames
-- `20` FPS
-- 3 camera streams per episode (`cam_high`, `cam_left_wrist`, `cam_right_wrist`)
-- robot state vectors and action vectors aligned to frame timestamps
+### `frames.lance`
 
-## Dataset structure
+| Column | Type | Notes |
+|---|---|---|
+| `observation_state` | `list<float32>` | Robot state vector for that frame |
+| `action` | `list<float32>` | Action vector for that frame |
+| `time_stamp` | `float` | Original source timestamp field |
+| `timestamp` | `float` | Canonical frame timestamp (seconds) |
+| `frame_index` | `int64` | Frame index within episode |
+| `episode_index` | `int64` | Parent episode id |
+| `index` | `int64` | Global frame index |
+| `task_index` | `int64` | Task id |
 
-The dataset is organized under `data/` with three Lance tables:
+### `episodes.lance`
 
-### Frames table
+| Column | Type | Notes |
+|---|---|---|
+| `episode_index` | `int64` | Episode id |
+| `task_index` | `int64` | Task id |
+| `fps` | `int32` | Frame rate of the episode video segments |
+| `timestamps` | `list<float32>` | Per-frame timestamps |
+| `actions` | `list<list<float32>>` | Per-frame action vectors |
+| `observation_state` | `list<list<float32>>` | Per-frame robot state vectors |
+| `observation_images_cam_high_video_blob` | `large_binary` (blob-encoded) | Inline MP4 segment for `cam_high` |
+| `observation_images_cam_high_from_timestamp` | `float64` | `cam_high` segment start time |
+| `observation_images_cam_high_to_timestamp` | `float64` | `cam_high` segment end time |
+| `observation_images_cam_left_wrist_video_blob` | `large_binary` (blob-encoded) | Inline MP4 segment for `cam_left_wrist` |
+| `observation_images_cam_left_wrist_from_timestamp` | `float64` | `cam_left_wrist` segment start time |
+| `observation_images_cam_left_wrist_to_timestamp` | `float64` | `cam_left_wrist` segment end time |
+| `observation_images_cam_right_wrist_video_blob` | `large_binary` (blob-encoded) | Inline MP4 segment for `cam_right_wrist` |
+| `observation_images_cam_right_wrist_from_timestamp` | `float64` | `cam_right_wrist` segment start time |
+| `observation_images_cam_right_wrist_to_timestamp` | `float64` | `cam_right_wrist` segment end time |
 
-This is the main table for model training and analytics at frame granularity. Each row is one frame with aligned state/action metadata and indexing fields so you can filter by episode, iterate temporally, or build sampled batches directly.
+### `videos.lance`
 
-Schema:
-- `observation_state` (`list<float>`): robot state vector for that frame.
-- `action` (`list<float>`): action vector for that frame.
-- `time_stamp` (`float`): original source timestamp field.
-- `timestamp` (`float`): canonical frame timestamp.
-- `frame_index` (`int64`): frame index within episode.
-- `episode_index` (`int64`): parent episode id.
-- `index` (`int64`): global frame index.
-- `task_index` (`int64`): task id.
+| Column | Type | Notes |
+|---|---|---|
+| `camera_angle` | `string` | Camera key (e.g. `cam_high`) |
+| `chunk_index`, `file_index` | `int32` | IDs parsed from the source path |
+| `relative_path`, `filename` | `string` | Provenance |
+| `file_size_bytes` | `int64` | Source MP4 size |
+| `sha256` | `string` | SHA256 of the MP4 bytes |
+| `video_blob` | `large_binary` (blob-encoded) | Raw source MP4 bytes |
 
-### Episodes table
+## Pre-built indices
 
-This table is optimized for sequence-aware loading. Each row represents one complete episode and stores per-episode arrays (`timestamps`, `actions`, `observation_state`) plus per-camera video blobs and timestamp ranges. Use this table when you need contiguous windows, trajectory-level batching, or synchronized decoding from episode-level video chunks.
+None bundled. Build indices on a local copy if a workload calls for them — e.g., a `BTREE` on `frames.episode_index` for fast per-episode lookup, or a vector index after attaching observation embeddings via Evolve.
 
-Schema:
-- `episode_index` (`int64`, required): episode id.
-- `task_index` (`int64`, required): task id.
-- `fps` (`int32`, required): frame rate.
-- `timestamps` (`list<float>`): per-frame timestamps for the episode.
-- `actions` (`list<list<float>>`): per-frame action vectors.
-- `observation_state` (`list<list<float>>`): per-frame robot state vectors.
-- `observation_images_cam_high_video_blob` (`large_binary` blob): encoded video segment for `cam_high`.
-- `observation_images_cam_high_from_timestamp` (`double`): segment start time for `cam_high`.
-- `observation_images_cam_high_to_timestamp` (`double`): segment end time for `cam_high`.
-- `observation_images_cam_left_wrist_video_blob` (`large_binary` blob): encoded video segment for `cam_left_wrist`.
-- `observation_images_cam_left_wrist_from_timestamp` (`double`): segment start time for `cam_left_wrist`.
-- `observation_images_cam_left_wrist_to_timestamp` (`double`): segment end time for `cam_left_wrist`.
-- `observation_images_cam_right_wrist_video_blob` (`large_binary` blob): encoded video segment for `cam_right_wrist`.
-- `observation_images_cam_right_wrist_from_timestamp` (`double`): segment start time for `cam_right_wrist`.
-- `observation_images_cam_right_wrist_to_timestamp` (`double`): segment end time for `cam_right_wrist`.
+## Why Lance?
 
-### Videos table
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
 
-This table stores raw MP4 payloads from the source and file-level provenance metadata. It is useful when you want direct access to original encoded video assets, integrity checks (`sha256`), or custom decoding pipelines that operate on the original video files themselves, rather than episode/frame abstractions.
+## Load with `datasets.load_dataset`
 
-Schema:
-- `camera_angle` (`string`, required): camera key.
-- `chunk_index` (`int32`): chunk id parsed from path.
-- `file_index` (`int32`): file id parsed from path.
-- `relative_path` (`string`, required): original relative path in dataset.
-- `filename` (`string`, required): MP4 filename.
-- `file_size_bytes` (`int64`, required): file size.
-- `sha256` (`string`, required): SHA256 digest.
-- `video_blob` (`large_binary`, required blob): raw MP4 bytes.
-
-## Usage
-
-In the following sections, we'll show how to work with the dataset in Lance or LanceDB.
-
-### Read with Lance
-
-```python
-import lance
-
-root_path = "hf://datasets/lance-format/lerobot-xvla-soft-fold/data"
-frames_table_name = "frames.lance"
-episodes_table_name = "episodes.lance"
-videos_table_name = "videos.lance"
-
-ds = lance.dataset(f"{root_path}/{frames_table_name}")
-print(ds.count_rows())
-
-ds = lance.dataset(f"{root_path}/{episodes_table_name}")
-print(ds.count_rows())
-
-ds = lance.dataset(f"{root_path}/{videos_table_name}")
-print(ds.count_rows())
-
-# 2852512
-# 1542
-# 104
-```
-
-### Inspect a few frames
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample. Each Lance table is a separate `datasets` config.
 
 ```python
-import lance
+import datasets
 
-root_path = "hf://datasets/lance-format/lerobot-xvla-soft-fold/data"
-frames_table_name = "frames.lance"
-
-frames = lance.dataset(f"{root_path}/{frames_table_name}")
-print(f"There are {frames.count_rows()} frames in total")
-
-# pip install polars
-res = frames.scanner(
-    columns=["episode_index", "frame_index", "timestamp"],
-    limit=2,
-).to_table()
-print(res)
-
-# Returns
-# There are 2852512 frames in total
-# pyarrow.Table
-# episode_index: int64
-# frame_index: int64
-# timestamp: float
-# ----
-# episode_index: [[0,0]]
-# frame_index: [[0,1]]
-# timestamp: [[0,0.05]]
+hf_ds = datasets.load_dataset("lance-format/lerobot-xvla-soft-fold", split="frames", streaming=True)
+for row in hf_ds.take(3):
+    print(row["episode_index"], row["frame_index"], row["action"])
 ```
 
-### Retrieving and saving video blobs
+## Load with LanceDB
 
-```py
-from pathlib import Path
-import lance
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. Each `.lance` file in `data/` is a table — open by name. The same handles are used by the Search, Curate, Evolve, Train, Versioning, and Materialize-a-subset sections below.
 
-root_path = "hf://datasets/lance-format/lerobot-xvla-soft-fold/data"
-episodes_table_name = "episodes.lance"
-ds = lance.dataset(f"{root_path}/{episodes_table_name}")
-
-out = Path("video_blobs")
-out.mkdir(exist_ok=True)
-
-# Retrieve first two videos from the episodes table
-for offset in range(0, 2):
-    row = (
-        ds.scanner(
-            columns=["episode_index", "observation_images_cam_high_video_blob"],
-            blob_handling="all_binary",
-            limit=2,
-            offset=offset,
-        )
-        .to_table()
-        .to_pylist()[0]
-    )
-    # Write the video blob to a file
-    (out / f"episode_{row['episode_index']}.mp4").write_bytes(
-        row["observation_images_cam_high_video_blob"]
-    )
-```
-This outputs the retrieved blobs as MP4 files in a local directory.
-
-### Random seek on subsets of video
-
-The snippet shown below reads one episode’s video blob directly from HF Hub via Lance, computes a tiny time window inside that episode, opens the blob as a stream (without downloading full data into a local file), seeks to the start timestamp, and prints the blob size plus the exact seek positions in seconds and stream PTS units.
-
-```py
-import av
-import lance
-
-DATASET_URI = "hf://datasets/lance-format/lerobot-xvla-soft-fold/data/episodes.lance"
-EPISODE_INDEX = 30
-START_OFFSET_S = 1.0
-WINDOW_S = 0.5
-
-ds = lance.dataset(DATASET_URI)
-row = ds.scanner(
-    columns=[
-        "episode_index",
-        "observation_images_cam_high_from_timestamp",
-        "observation_images_cam_high_to_timestamp",
-        "_rowid",
-    ],
-    with_row_id=True,
-    filter=f"episode_index = {EPISODE_INDEX}",
-    limit=1,
-).to_table().to_pylist()[0]
-
-start_s = row["observation_images_cam_high_from_timestamp"] + START_OFFSET_S
-end_s = min(
-    start_s + WINDOW_S,
-    row["observation_images_cam_high_to_timestamp"],
-)
-
-blob = ds.take_blobs("observation_images_cam_high_video_blob", ids=[row["_rowid"]])[0]
-with av.open(blob) as container:
-    stream = container.streams.video[0]
-    stream.codec_context.skip_frame = "NONKEY"
-
-    start_pts = int(start_s / stream.time_base)
-    end_pts = int(end_s / stream.time_base)
-    container.seek(start_pts, stream=stream)
-
-    print(f"episode_index={row['episode_index']}")
-    print(f"blob_size_bytes={blob.size()}")
-    print(f"seek_start_seconds={start_s:.3f}")
-    print(f"seek_end_seconds={end_s:.3f}")
-    print(f"seek_start_pts={start_pts}")
-    print(f"seek_end_pts={end_pts}")
-
-blob.close()
-```
-
-### LanceDB search
-
-LanceDB users can also interface with the Lance dataset on the Hub. The key step is to
-connect to the dataset repo and open the relevant table.
-
-```py
+```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/lerobot-xvla-soft-fold/data")
-tbl = db.open_table("episodes")
 
-# Search without any parameters
-results = (
-    tbl.search()
-    .select(
-        [
-            "episode_index",
-            "observation_images_cam_high_from_timestamp",
-            "observation_images_cam_high_to_timestamp",
-        ]
-    )
-    .limit(3)
-    .to_list()
-)
-
-for result in results:
-    print(
-        f"{result['episode_index']} | {result['observation_images_cam_high_from_timestamp']} | {result['observation_images_cam_high_to_timestamp']}"
-    )
-
-# Returns:
-# 0 | 0.0 | 122.95
-# 1 | 122.95 | 230.65
-# 2 | 230.65 | 340.0
+frames    = db.open_table("frames")
+episodes  = db.open_table("episodes")
+videos    = db.open_table("videos")
+print(len(frames), len(episodes), len(videos))
 ```
 
-### Download
+## Load with Lance
 
-If you need to make modifications to the data or work with the raw files directly, you can do a 
-full download of the dataset locally.
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, the list of pre-built indices — or when you need the blob-level `take_blobs` entry point that streams MP4 bytes lazily from inline storage.
 
-> **⚠️ Large dataset download**
-> The full dataset is >50GB in size, so ensure you have sufficient disk space available.
+```python
+import lance
 
-```bash
-uv run hf download lance-format/lerobot-xvla-soft-fold --repo-type dataset --local-dir .
+ds = lance.dataset("hf://datasets/lance-format/lerobot-xvla-soft-fold/data/frames.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access to video segments and any kind of indexed search are dramatically faster against a local copy. The full dataset is **>50 GB**, so ensure you have sufficient disk space:
+> ```bash
+> hf download lance-format/lerobot-xvla-soft-fold --repo-type dataset --local-dir ./lerobot-xvla-soft-fold
+> ```
+> Then point Lance or LanceDB at `./lerobot-xvla-soft-fold/data`. For most workflows, the Materialize-a-subset section at the end of this card is a better starting point than downloading the full corpus.
+
+## Search
+
+This dataset does not ship a vector index out of the box — observation states are low-dimensional and most robotics workflows look up by index rather than by similarity. The bundled identifier columns (`episode_index`, `task_index`, `frame_index`) make exact lookups a single filtered scan. The example below pulls the first few frames of episode 30 from the frames table.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/lerobot-xvla-soft-fold/data")
+frames = db.open_table("frames")
+
+slice_ = (
+    frames.search()
+    .where("episode_index = 30 AND frame_index < 10", prefilter=True)
+    .select(["episode_index", "frame_index", "timestamp", "action", "observation_state"])
+    .limit(10)
+    .to_list()
+)
+for r in slice_:
+    print(r["frame_index"], r["timestamp"], r["action"])
+```
+
+For similarity-style search across states or actions, attach an embedding column via Evolve and build an `IVF_PQ` index on it. For visual similarity over rendered frames, the pre-extracted-frames pattern in Train below produces a table that can carry a learned image embedding alongside the pixels.
+
+## Curate
+
+A typical curation pass for a robotics workflow starts with an episode-level filter — pick episodes with a particular task, length, or initial condition — and then either iterates frames or pulls the matching video segments. Stacking predicates inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(...)` makes it cheap to inspect.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/lerobot-xvla-soft-fold/data")
+episodes = db.open_table("episodes")
+
+ep_rows = (
+    episodes.search()
+    .where("task_index = 0 AND fps = 20", prefilter=True)
+    .select([
+        "episode_index",
+        "observation_images_cam_high_from_timestamp",
+        "observation_images_cam_high_to_timestamp",
+    ])
+    .limit(20)
+    .with_row_id(True)
+    .to_list()
+)
+print(f"{len(ep_rows)} episodes selected")
+for r in ep_rows[:3]:
+    print(
+        f"  ep {r['episode_index']}  "
+        f"{r['observation_images_cam_high_from_timestamp']:.2f}s → "
+        f"{r['observation_images_cam_high_to_timestamp']:.2f}s"
+    )
+```
+
+Neither this scan nor any of the per-camera segment columns are read. The MP4 segments live in the blob-encoded `_video_blob` columns and stay on disk until something explicitly asks for them — which makes "find me the right episodes" a metadata-only operation against a multi-million-frame corpus.
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds an `episode_duration` column to the episodes table from the existing `cam_high` timestamp bounds.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need.
+
+```python
+import lancedb
+
+db = lancedb.connect("./lerobot-xvla-soft-fold/data")  # local copy required for writes
+episodes = db.open_table("episodes")
+
+episodes.add_columns({
+    "episode_duration_s": (
+        "observation_images_cam_high_to_timestamp - "
+        "observation_images_cam_high_from_timestamp"
+    ),
+    "is_long_episode": (
+        "(observation_images_cam_high_to_timestamp - "
+        " observation_images_cam_high_from_timestamp) > 120.0"
+    ),
+})
+```
+
+If the values you want to attach already live in another table (offline reward labels, classifier predictions, learned observation embeddings), merge them in by joining on the appropriate key — `index` for frames or `episode_index` for episodes:
+
+```python
+import pyarrow as pa
+
+ep_labels = pa.table({
+    "episode_index": pa.array([0, 1, 2]),
+    "outcome": pa.array(["success", "partial", "success"]),
+})
+episodes.merge(ep_labels, on="episode_index")
+```
+
+The original columns and the inline video blobs are untouched, so existing code that does not reference the new columns continues to work unchanged. For column values that require a Python computation (e.g., running a visual encoder over the decoded video frames), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+A common pattern for vision-language-action training is to pre-extract decoded frame pixels once into a derived LanceDB table — one row per frame, with the per-frame `action` and `observation_state` already joined in, and one column per camera holding the decoded image — and train against that table with the regular projection-based dataloader. `take_blobs` is the mechanism that makes the extraction step tractable: each episode's per-camera MP4 segment is randomly addressable in `episodes.lance` (the `*_from_timestamp` / `*_to_timestamp` columns give the segment bounds), so the pass can subset bytes on demand and write decoded frames into a fresh table without an external file store. Other workflows project the `*_video_blob` columns from `episodes.lance` directly and decode at the batch boundary, or skip pixels entirely and train a state-only policy on `frames.lance` — the right shape is workload-specific. The actual training loop is the same `Permutation.identity(tbl).select_columns(...)` snippet in every case; only the source table and the column list change.
+
+For a state-only policy, the frames table is already in the right shape — no pre-extraction needed:
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/lerobot-xvla-soft-fold/data")
+frames = db.open_table("frames")
+
+train_ds = Permutation.identity(frames).select_columns(["observation_state", "action"])
+loader = DataLoader(train_ds, batch_size=256, shuffle=True, num_workers=4)
+```
+
+For a vision-language-action policy, train against a pre-extracted frames-with-pixels table that joins each frame's three decoded camera images to its `action` and `observation_state`. Picking the cameras the model actually conditions on is then a column projection — `cam_high` alone, all three, or any subset:
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("./lerobot-xvla-frames")   # local table produced by the one-time extraction
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(
+    ["cam_high", "cam_left_wrist", "cam_right_wrist", "observation_state", "action"]
+)
+loader = DataLoader(train_ds, batch_size=32, shuffle=True, num_workers=4)
+```
+
+The inline `_video_blob` storage and `take_blobs` still earn their place outside of the training loop — visualizing an episode in a notebook, sampling for human review, one-off evaluation, and the pre-extraction step itself — but they are not the dataloader.
+
+## Versioning
+
+Every mutation to a Lance table, whether it adds a column, merges labels, or builds an index, commits a new version. Each of `frames`, `episodes`, and `videos` is versioned independently, so a column added to `frames` does not bump the version of `episodes`. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/lerobot-xvla-soft-fold/data")
+frames = db.open_table("frames")
+
+print("frames version:", frames.version)
+print("history:", frames.list_versions())
+print("tags:", frames.tags.list())
+```
+
+Once you have a local copy, tag the table for reproducibility:
+
+```python
+local_db = lancedb.connect("./lerobot-xvla-soft-fold/data")
+local_frames = local_db.open_table("frames")
+local_frames.tags.create("xvla-v1", local_frames.version)
+```
+
+Reopen by tag or by version number against either the Hub copy or a local one:
+
+```python
+frames_v1 = db.open_table("frames", version="xvla-v1")
+frames_v5 = db.open_table("frames", version=5)
+```
+
+Pinning supports two workflows. A policy locked to `xvla-v1` keeps reproducing the same behavior while the dataset evolves in parallel. A training experiment pinned to the same tag can be rerun later against the exact same frames and segments, so changes in metrics reflect model changes rather than data drift.
+
+## Materialize a subset
+
+At >50 GB across three tables and millions of frames, few workflows want the full corpus on local disk. The practical entry point is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory — including the per-camera `_video_blob` columns on `episodes.lance`, which stream through Arrow record batches rather than being assembled in a single buffer.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/lerobot-xvla-soft-fold/data")
+remote_episodes = remote_db.open_table("episodes")
+
+batches = (
+    remote_episodes.search()
+    .where("task_index = 0 AND episode_index < 50")
+    .select([
+        "episode_index", "task_index", "fps", "timestamps", "actions", "observation_state",
+        "observation_images_cam_high_video_blob",
+        "observation_images_cam_high_from_timestamp",
+        "observation_images_cam_high_to_timestamp",
+    ])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./xvla-task0-subset")
+local_db.create_table("episodes", batches)
+```
+
+The resulting `./xvla-task0-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/lerobot-xvla-soft-fold/data` for `./xvla-task0-subset`. The same pattern applies to `frames` and `videos` — narrow each table to the rows your workload needs, and the resulting database stays small enough to index and iterate cheaply.
+
+## Source & license
+
+Converted from [`lerobot/xvla-soft-fold`](https://huggingface.co/datasets/lerobot/xvla-soft-fold) (LeRobot v3.0 dataset format), originally released as part of the [X-VLA](https://thu-air-dream.github.io/X-VLA/) project. Apache 2.0.
+
+## Citation
+
+```
+@article{zheng2025xvla,
+  title={X-VLA: Soft-Prompted Transformer as Scalable Cross-Embodiment Vision-Language-Action Model},
+  author={Zheng and others},
+  journal={arXiv preprint arXiv:2510.10274},
+  year={2025}
+}
+
+@misc{cadene2024lerobot,
+  title={LeRobot: State-of-the-art Machine Learning for Real-World Robotics in PyTorch},
+  author={R{\'e}mi Cadene and Simon Alibert and Alexander Soare and Quentin Gallou{\'e}dec and Adil Zouitine and Steven Palma and Pepijn Kooijmans and Michel Aractingi and Mustafa Shukor and Martino Russi and Francesco Capuano and Caroline Pascal and Jade Choghari and Jess Moss and Thomas Wolf},
+  year={2024},
+  url={https://github.com/huggingface/lerobot}
+}
 ```

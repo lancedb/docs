@@ -1,7 +1,7 @@
 ---
 title: "TriviaQA"
 sidebarTitle: "TriviaQA"
-description: "Lance-formatted version of TriviaQA (rc.nocontext config) — a question-answering dataset of trivia questions paired with answer aliases — with MiniLM sentence embeddings stored inline."
+description: "A Lance-formatted version of TriviaQA (rc.nocontext config) — a large reading-comprehension dataset of trivia questions paired with a canonical answer, accepted aliases, and entity-type metadata — with MiniLM question embeddings stored inline and…"
 ---
 
 <Card
@@ -12,11 +12,14 @@ description: "Lance-formatted version of TriviaQA (rc.nocontext config) — a qu
 Source dataset card and downloadable files for `lance-format/trivia-qa-lance`.
 </Card>
 
-Lance-formatted version of [TriviaQA](https://nlp.cs.washington.edu/triviaqa/) (`rc.nocontext` config) — a question-answering dataset of trivia questions paired with answer aliases — with **MiniLM sentence embeddings** stored inline.
+A Lance-formatted version of [TriviaQA](https://nlp.cs.washington.edu/triviaqa/) (`rc.nocontext` config) — a large reading-comprehension dataset of trivia questions paired with a canonical answer, accepted aliases, and entity-type metadata — with MiniLM question embeddings stored inline and ready for retrieval at `hf://datasets/lance-format/trivia-qa-lance/data`. The `rc.nocontext` slice is the standard reading-comprehension form without the multi-gigabyte `entity_pages` / `search_results` payloads, which keeps the dataset compact while preserving everything needed for closed-book QA, retrieval research, and as a search target.
 
-## Why `rc.nocontext`?
+## Key features
 
-The full TriviaQA dataset bundles entire Wikipedia / web pages per question (`entity_pages`, `search_results`), which makes it tens of GB. The `rc.nocontext` slice keeps the question + answer + answer aliases in a compact form — ideal for closed-book QA, retrieval research, and as a search target.
+- **138k+ trivia questions** with a canonical `answer_value`, normalized form for exact-match scoring, and a list of accepted `answer_aliases`.
+- **Pre-computed 384-dim question embeddings** (`question_emb`, `sentence-transformers/all-MiniLM-L6-v2`, cosine-normalized) with a bundled `IVF_PQ` index for semantic question retrieval.
+- **Full-text inverted index** on `question` for keyword search and hybrid retrieval.
+- **One columnar dataset** carrying questions, canonical answers, aliases, types, and embeddings together — project only the columns each query needs.
 
 ## Splits
 
@@ -29,9 +32,9 @@ The full TriviaQA dataset bundles entire Wikipedia / web pages per question (`en
 
 | Column | Type | Notes |
 |---|---|---|
-| `question_id` | `string` | TriviaQA question id (e.g. `tc_1`) |
+| `question_id` | `string` | TriviaQA question id (e.g. `tc_1`); natural join key for merges |
 | `question` | `string` | The trivia question |
-| `question_source` | `string` | URL / source where the question came from |
+| `question_source` | `string` | URL or source the question came from |
 | `answer_value` | `string` | Canonical answer |
 | `answer_aliases` | `list<string>` | Other accepted phrasings (e.g. `["Sinclair Lewis", "Harry Sinclair Lewis"]`) |
 | `normalized_answer` | `string` | Lowercased / normalized form for exact-match scoring |
@@ -40,119 +43,253 @@ The full TriviaQA dataset bundles entire Wikipedia / web pages per question (`en
 
 ## Pre-built indices
 
-- `IVF_PQ` on `question_emb` — `metric=cosine`
-- `INVERTED` on `question`
-- `BTREE` on `question_id` and `answer_value`
-- `BITMAP` on `answer_type`
+- `IVF_PQ` on `question_emb` — `metric=cosine`, vector similarity search
+- `INVERTED` on `question` — full-text search
+- `BTREE` on `question_id` and `answer_value` — point lookups and prefix scans
+- `BITMAP` on `answer_type` — fast filtering by entity type
 
-## Quick start
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you want a quick streaming sample.
 
 ```python
-import lance
+import datasets
 
-ds = lance.dataset("hf://datasets/lance-format/trivia-qa-lance/data/train.lance")
-print(ds.count_rows(), ds.schema.names, ds.list_indices())
+hf_ds = datasets.load_dataset("lance-format/trivia-qa-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["question"], "->", row["answer_value"])
 ```
 
 ## Load with LanceDB
 
-These tables can also be consumed by [LanceDB](https://lancedb.github.io/lancedb/), the multimodal lakehouse and embedded search library built on top of Lance, for simplified vector search and other queries.
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
 tbl = db.open_table("train")
-print(f"LanceDB table opened with {len(tbl)} trivia questions")
+print(len(tbl))
 ```
 
-## Semantic search over questions
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, the list of pre-built indices.
 
 ```python
 import lance
-import pyarrow as pa
-from sentence_transformers import SentenceTransformer
-
-encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
-q = encoder.encode(["who painted the sistine chapel ceiling"], normalize_embeddings=True)[0]
 
 ds = lance.dataset("hf://datasets/lance-format/trivia-qa-lance/data/train.lance")
-emb_field = ds.schema.field("question_emb")
-hits = ds.scanner(
-    nearest={"column": "question_emb", "q": pa.array([q.tolist()], type=emb_field.type)[0], "k": 5},
-    columns=["question", "answer_value", "answer_aliases"],
-).to_table().to_pylist()
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
 ```
 
-### LanceDB semantic search
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access and ANN search are far faster against a local copy:
+> ```bash
+> hf download lance-format/trivia-qa-lance --repo-type dataset --local-dir ./trivia-qa-lance
+> ```
+> Then point Lance or LanceDB at `./trivia-qa-lance/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `question_emb` turns semantic retrieval over trivia questions into a single call. In production you would encode an incoming question through the same MiniLM encoder used at ingest and pass the resulting 384-dim vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
 
 ```python
 import lancedb
-from sentence_transformers import SentenceTransformer
-
-encoder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cuda")
-q = encoder.encode(["who painted the sistine chapel ceiling"], normalize_embeddings=True)[0]
 
 db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
 tbl = db.open_table("train")
 
-results = (
-    tbl.search(q.tolist(), vector_column_name="question_emb")
-    .metric("cosine")
-    .select(["question", "answer_value", "answer_aliases"])
-    .limit(5)
-    .to_list()
+seed = (
+    tbl.search()
+    .select(["question_emb", "question"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
 )
-```
 
-### LanceDB full-text search
-
-```python
-import lancedb
-
-db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
-tbl = db.open_table("train")
-
-results = (
-    tbl.search("sistine chapel")
-    .select(["question", "answer_value"])
+hits = (
+    tbl.search(seed["question_emb"], vector_column_name="question_emb")
+    .metric("cosine")
+    .select(["question_id", "question", "answer_value", "answer_aliases"])
     .limit(10)
     .to_list()
 )
+for r in hits:
+    print(f"{r['answer_value']:30s} | {r['question'][:80]}")
 ```
 
-## Filter by answer type
+Because the recommended setup also builds an `INVERTED` index on `question`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query. LanceDB merges and reranks the two result lists in a single call, which is useful when a specific named entity must literally appear in the question but the dense side should still drive ranking.
 
 ```python
-ds = lance.dataset("hf://datasets/lance-format/trivia-qa-lance/data/train.lance")
-wiki = ds.scanner(filter="answer_type = 'WikipediaEntity'", columns=["question"], limit=5).to_table()
+hybrid_hits = (
+    tbl.search(query_type="hybrid")
+    .vector(seed["question_emb"])
+    .text("sistine chapel")
+    .select(["question_id", "question", "answer_value", "answer_aliases"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"{r['answer_value']:30s} | {r['question'][:80]}")
 ```
 
-### Filter with LanceDB
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+TriviaQA's `answer_type` column — backed by a `BITMAP` index — makes it cheap to slice the dataset by entity category, and the question text itself is a useful predicate for filtering out very short or unusually long items. Stacking predicates inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(1000)` makes it easy to inspect or hand off.
 
 ```python
 import lancedb
 
 db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
 tbl = db.open_table("train")
-wiki = (
+
+candidates = (
     tbl.search()
-    .where("answer_type = 'WikipediaEntity'")
-    .select(["question"])
-    .limit(5)
+    .where(
+        "answer_type = 'WikipediaEntity' "
+        "AND length(question) BETWEEN 60 AND 300",
+        prefilter=True,
+    )
+    .select(["question_id", "question", "answer_value", "answer_aliases"])
+    .limit(1000)
     .to_list()
 )
+print(f"{len(candidates)} candidates; first answer: {candidates[0]['answer_value']}")
 ```
 
-## Why Lance?
+Neither the `question_emb` vector nor the unused alias fields drive this scan, so a 1000-row curation pass against the Hub moves only the projected text columns. The result is a plain list of dictionaries, ready to inspect, persist as a manifest of question ids, or hand to the Materialize-a-subset section below for export to a writable local copy.
 
-- One dataset carries questions + answers + aliases + embeddings + indices — no sidecar files.
-- On-disk vector and full-text indices live next to the data, so search works on local copies and on the Hub.
-- Schema evolution: add columns (alternate embeddings, generated answers, task labels) without rewriting the data.
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a `question_length`, a `num_aliases` count, and a `has_aliases` flag — any of which can then be used directly in `where` clauses without recomputing the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full corpus.
+
+```python
+import lancedb
+
+db = lancedb.connect("./trivia-qa-lance/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "question_length": "length(question)",
+    "num_aliases": "array_length(answer_aliases)",
+    "has_aliases": "array_length(answer_aliases) > 0",
+})
+```
+
+If the values you want to attach already live in another table (offline reader-model predictions, alternate embeddings, retrieval scores from a different system), merge them in by joining on `question_id`:
+
+```python
+import pyarrow as pa
+
+scores = pa.table({
+    "question_id": pa.array(["tc_1", "tc_2"]),
+    "retriever_score": pa.array([0.88, 0.31]),
+})
+tbl.merge(scores, on="question_id")
+```
+
+The original columns and indices are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running a different embedding model over the questions), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+Projection lets a training loop read only the columns each step actually needs. LanceDB tables expose this through `Permutation.identity(tbl).select_columns([...])`, which plugs straight into the standard `torch.utils.data.DataLoader` so prefetching, shuffling, and batching behave as in any PyTorch pipeline. For a closed-book QA model the natural projection is the question, the canonical answer, and the alias list (the aliases serve as additional supervision targets during loss computation or evaluation); for a retriever or reranker on top of frozen features, project the precomputed embedding instead.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(
+    ["question", "answer_value", "answer_aliases"]
+)
+loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # batch carries only the projected columns; question_emb stays on disk.
+    # tokenize question and answer, forward, backward...
+    ...
+```
+
+Switching feature sets is a configuration change: passing `["question_emb", "answer_value"]` to `select_columns(...)` on the next run reads only the 384-d vectors and the canonical answer string, which is the right shape for training a retrieval head or reranker on cached embeddings. Columns added in Evolve cost nothing per batch until they are explicitly projected.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./trivia-qa-lance/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("baseline-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="baseline-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `baseline-v1` keeps returning stable results while the dataset evolves in parallel — newly added scores or alternate embeddings do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same questions and answers, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access. Both can be served by a subset of the dataset rather than the full corpus. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/trivia-qa-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("answer_type = 'WikipediaEntity' AND length(question) >= 60")
+    .select(
+        ["question_id", "question", "answer_value", "answer_aliases",
+         "normalized_answer", "answer_type", "question_emb"]
+    )
+    .to_batches()
+)
+
+local_db = lancedb.connect("./trivia-qa-wiki")
+local_db.create_table("train", batches)
+```
+
+The resulting `./trivia-qa-wiki` is a first-class LanceDB database. Every snippet in the Search, Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/trivia-qa-lance/data` for `./trivia-qa-wiki`.
 
 ## Source & license
 
-Converted from [`mandarjoshi/trivia_qa`](https://huggingface.co/datasets/mandarjoshi/trivia_qa) (`rc.nocontext`). TriviaQA is released under the Apache 2.0 license.
+Converted from [`mandarjoshi/trivia_qa`](https://huggingface.co/datasets/mandarjoshi/trivia_qa) (`rc.nocontext` config). TriviaQA is released under the Apache 2.0 license.
 
 ## Citation
 
