@@ -9,6 +9,8 @@ keywords: ["namespace", "create_table", "open_table", "list_tables", "catalog"]
 import {
     PyNamespaceTableOps,
     PyNamespaceAdminOps,
+    TsNamespaceTableOps,
+    TsNamespaceAdminOps,
     RsNamespaceAdminOps,
     RsNamespaceTableOps,
 } from '/snippets/connection.mdx';
@@ -46,6 +48,10 @@ The SDK methods expose the namespace path in the idiom of each language:
     {PyNamespaceTableOps}
     </CodeBlock>
 
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsNamespaceTableOps}
+    </CodeBlock>
+
     <CodeBlock filename="Rust" language="Rust" icon="rust">
     {RsNamespaceTableOps}
     </CodeBlock>
@@ -57,19 +63,14 @@ An empty namespace (`[]`), which is the default, means "root namespace", and the
 the `data/` directory under the specified root path.
 </Note>
 
-In TypeScript, namespace-scoped table operations are available on `Connection` even though namespace
-lifecycle operations are not exposed there. These calls use the same namespace path array:
-
-- Create a table: `await db.createTable("user", rows, ["prod", "search"], { mode: "create" })`
-- List tables: `await db.tableNames(["prod", "search"])`
-- Drop a table: `await db.dropTable("user", ["prod", "search"])`
-
 ## Namespace management APIs
 
 You can open/create/drop tables inside a namespace path (like `["prod", "search"]`).
-The Python and Rust SDKs expose namespace lifecycle operations directly.
+All three SDKs expose namespace lifecycle operations directly.
 In Python, use `lancedb.connect_namespace(...)` when calling namespace lifecycle methods such as
 `create_namespace`, `list_namespaces`, `describe_namespace`, and `drop_namespace`.
+In TypeScript, use `lancedb.connectNamespace(...)` and call `createNamespace`, `listNamespaces`,
+`describeNamespace`, and `dropNamespace` on the returned `Connection`.
 In Rust, use `lancedb::connect_namespace(...)` and call `create_namespace`, `list_namespaces`,
 and `drop_namespace`.
 
@@ -78,23 +79,21 @@ and `drop_namespace`.
     {PyNamespaceAdminOps}
     </CodeBlock>
 
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsNamespaceAdminOps}
+    </CodeBlock>
+
     <CodeBlock filename="Rust" language="Rust" icon="rust">
     {RsNamespaceAdminOps}
     </CodeBlock>
 </CodeGroup>
 
-<Note>
-In TypeScript, namespace lifecycle operations such as creating, listing, describing, and dropping
-namespaces are not currently exposed on `Connection`. Use a namespace-aware admin surface, such as
-[REST](/api-reference/rest/index), when you need to manage namespace lifecycle from TypeScript.
-</Note>
-
 Namespace creation and deletion have modes that control what happens when the target already exists,
 doesn't exist, or contains data:
 
 - Create mode: `create` fails if the namespace already exists, `exist_ok` keeps the existing namespace, and `overwrite` replaces it.
-- Drop mode: `FAIL` reports an error when the namespace doesn't exist, and `SKIP` treats a missing namespace as a successful no-op.
-- Drop behavior: `RESTRICT` keeps non-empty namespaces from being dropped, and `CASCADE` drops child namespaces and tables first.
+- Drop mode: `fail` reports an error when the namespace doesn't exist, and `skip` treats a missing namespace as a successful no-op.
+- Drop behavior: `restrict` keeps non-empty namespaces from being dropped, and `cascade` drops child namespaces and tables first.
 
 Namespace path components can't be empty. Each component can contain only letters, numbers,
 underscores, hyphens, and periods.

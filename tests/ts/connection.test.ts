@@ -67,4 +67,64 @@ async function connectObjectStorageExample() {
 }
 // --8<-- [end:connect_object_storage]
 
-void [uri, apiKey, region, connectObjectStorageExample, connectEnterpriseQuickstart];
+async function namespaceTableOpsExample() {
+  // --8<-- [start:namespace_table_ops]
+  const db = await lancedb.connectNamespace("dir", { root: "./local_lancedb" });
+
+  // Create namespace tree: prod/search and prod/recommendations
+  await db.createNamespace(["prod"], { mode: "exist_ok" });
+  await db.createNamespace(["prod", "search"], { mode: "exist_ok" });
+  await db.createNamespace(["prod", "recommendations"], { mode: "exist_ok" });
+
+  await db.createTable(
+    "user",
+    [{ id: 1, vector: [0.1, 0.2], name: "alice" }],
+    ["prod", "search"],
+    { mode: "create" }, // use "overwrite" only if you want to replace existing table
+  );
+
+  await db.createTable(
+    "user",
+    [{ id: 2, vector: [0.3, 0.4], name: "bob" }],
+    ["prod", "recommendations"],
+    { mode: "create" },
+  );
+
+  // Verify
+  console.log((await db.listNamespaces()).namespaces); // ["prod"]
+  console.log((await db.listNamespaces(["prod"])).namespaces); // ["recommendations", "search"]
+  console.log(await db.tableNames(["prod", "search"])); // ["user"]
+  console.log(await db.tableNames(["prod", "recommendations"])); // ["user"]
+  // --8<-- [end:namespace_table_ops]
+}
+
+async function namespaceAdminOpsExample() {
+  // --8<-- [start:namespace_admin_ops]
+  const db = await lancedb.connectNamespace("dir", { root: "./local_lancedb" });
+  const namespace = ["prod", "search"];
+
+  await db.createNamespace(["prod"]);
+  await db.createNamespace(["prod", "search"]);
+
+  const childNamespaces = (await db.listNamespaces(["prod"])).namespaces;
+  console.log(`Child namespaces under ${JSON.stringify(namespace)}:`, childNamespaces);
+  // Child namespaces under ["prod","search"]: [ 'search' ]
+
+  const metadata = await db.describeNamespace(["prod", "search"]);
+  console.log(`Metadata for namespace ${JSON.stringify(namespace)}:`, metadata);
+
+  await db.dropNamespace(["prod", "search"], { mode: "skip" });
+  await db.dropNamespace(["prod"], { mode: "skip" });
+  // --8<-- [end:namespace_admin_ops]
+  return { childNamespaces, metadata };
+}
+
+void [
+  uri,
+  apiKey,
+  region,
+  connectObjectStorageExample,
+  connectEnterpriseQuickstart,
+  namespaceTableOpsExample,
+  namespaceAdminOpsExample,
+];
