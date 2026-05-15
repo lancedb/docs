@@ -53,6 +53,7 @@ directory:
 
 As a user of LanceDB OSS, you might never notice namespaces at first, because LanceDB exposes the single-level hierarchy shown above, with the data stored in the `data/` directory, where the root namespace is implicit. Connecting to this namespace is as simple as connecting to the catalog root:
 
+<CodeGroup>
 ```python Python icon="python"
 import lancedb
 
@@ -60,10 +61,26 @@ import lancedb
 db = lancedb.connect("./local_lancedb")
 ```
 
+```typescript TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+
+// Connect to the directory namespace root
+const db = await lancedb.connect("./local_lancedb");
+```
+
+```rust Rust icon="rust"
+use lancedb::connect;
+
+// Connect to the directory namespace root
+let db = connect("./local_lancedb").execute().await?;
+```
+</CodeGroup>
+
 This creates the default namespace directory (`data/`) under the specified root path.
 
 You can also explicitly connect to a namespace using `lancedb.connect_namespace(...)` with the directory namespace implementation:
 
+<CodeGroup>
 ```python Python icon="python"
 import lancedb
 
@@ -78,6 +95,47 @@ table = db.create_table(table_name, data=data, mode="create")
 print(f"Created table: {table.name}")
 # Created table: user
 ```
+
+```typescript TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+
+// Local namespace-backed catalog root (DirectoryNamespace)
+// See https://lance.org/format/namespace/dir/catalog-spec/
+const db = await lancedb.connectNamespace("dir", { root: "./local_lancedb" });
+
+const table = await db.createTable(
+  "user",
+  [{ id: 1, vector: [0.1, 0.2], name: "alice" }],
+  { mode: "create" },
+);
+console.log(`Created table: ${table.name}`);
+// Created table: user
+```
+
+```rust Rust icon="rust"
+use std::collections::HashMap;
+use std::sync::Arc;
+use arrow_schema::{DataType, Field, Schema};
+
+// Local namespace-backed catalog root (DirectoryNamespace)
+// See https://lance.org/format/namespace/dir/catalog-spec/
+let mut properties = HashMap::new();
+properties.insert("root".to_string(), "./local_lancedb".to_string());
+let db = lancedb::connect_namespace("dir", properties)
+    .execute()
+    .await?;
+
+let schema = Arc::new(Schema::new(vec![
+    Field::new("id", DataType::Int64, false),
+]));
+let table = db
+    .create_empty_table("user", schema)
+    .execute()
+    .await?;
+println!("Created table: {}", table.name());
+// Created table: user
+```
+</CodeGroup>
 
 <Info>
 - For simple use cases in LanceDB OSS, you don't need to go too deep into namespaces.
@@ -98,6 +156,7 @@ LanceDB Enterprise REST requests use the `x-api-key` header for API-key authenti
 that route multiple databases through the same endpoint can also use headers such as
 `x-lancedb-database` or `x-lancedb-database-prefix` for database context.
 
+<CodeGroup>
 ```python Python icon="python"
 import os
 import lancedb
@@ -114,6 +173,46 @@ db = lancedb.connect_namespace(
     },
 )
 ```
+
+```typescript TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+
+// Remote namespace-backed catalog root (RestNamespace)
+// See https://lance.org/format/namespace/rest/catalog-spec/
+const db = await lancedb.connectNamespace("rest", {
+  uri: "https://<your_catalog>.internal.<your_org>.com",
+  headers: {
+    "x-api-key": process.env.API_KEY ?? "",
+    // or:
+    // Authorization: `Bearer ${process.env.REST_AUTH_TOKEN}`,
+  },
+});
+```
+
+```rust Rust icon="rust"
+use std::collections::HashMap;
+
+// Remote namespace-backed catalog root (RestNamespace)
+// See https://lance.org/format/namespace/rest/catalog-spec/
+let mut properties = HashMap::new();
+properties.insert(
+    "uri".to_string(),
+    "https://<your_catalog>.internal.<your_org>.com".to_string(),
+);
+properties.insert(
+    "headers.x-api-key".to_string(),
+    std::env::var("API_KEY")?,
+);
+// or:
+// properties.insert(
+//     "headers.Authorization".to_string(),
+//     format!("Bearer {}", std::env::var("REST_AUTH_TOKEN")?),
+// );
+let db = lancedb::connect_namespace("rest", properties)
+    .execute()
+    .await?;
+```
+</CodeGroup>
 [LanceDB Enterprise](/enterprise) operates a REST namespace server on top of the Lance format, so any REST client that can speak the REST namespace API
 contract can be used to interact with it. For authentication examples in LanceDB Enterprise, visit
 the [Namespaces in SDKs](/namespaces/usage#namespaces-in-lancedb-enterprise) page. 
