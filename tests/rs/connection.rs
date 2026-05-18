@@ -19,19 +19,8 @@ async fn main() {
     connect_example(uri.to_str().unwrap()).await;
 
     // Keep the enterprise snippet in this file, but don't run it in CI.
-    let _ = connect_enterprise_config();
     let _ = connect_enterprise_quickstart_config();
     let _ = connect_object_storage_config();
-}
-
-fn connect_enterprise_config() -> (String, String, String) {
-    // --8<-- [start:connect_enterprise]
-    let uri = "db://your-database-uri";
-    let api_key = "your-api-key";
-    let region = "us-east-1";
-    // --8<-- [end:connect_enterprise]
-
-    (uri.to_string(), api_key.to_string(), region.to_string())
 }
 
 fn connect_enterprise_quickstart_config() -> (String, String, String, String) {

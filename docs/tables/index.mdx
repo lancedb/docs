@@ -6,7 +6,7 @@ icon: "table"
 keywords: ["create table", "polars", "pandas", "pyarrow", "dataframe", "nested data"]
 ---
 
-import { PyConnect, PyConnectEnterprise, TsConnect, TsConnectEnterprise, RsConnect, RsConnectEnterprise } from '/snippets/connection.mdx';
+import { PyConnect, PyConnectEnterpriseQuickstart, TsConnect, TsConnectEnterpriseQuickstart, RsConnect, RsConnectEnterpriseQuickstart } from '/snippets/connection.mdx';
 import {
     PyBasicImports,
     PyDataLoad,
@@ -183,15 +183,18 @@ that points to where your data is stored, and you're ready to go.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="python">
-    {PyConnectEnterprise}
+    { "import lancedb\n\n" }
+    {PyConnectEnterpriseQuickstart}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsConnectEnterprise}
+    { "import * as lancedb from \"@lancedb/lancedb\";\n\n" }
+    {TsConnectEnterpriseQuickstart}
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsConnectEnterprise}
+    { "use lancedb::connect;\n\n" }
+    {RsConnectEnterpriseQuickstart}
     </CodeBlock>
 </CodeGroup >
 

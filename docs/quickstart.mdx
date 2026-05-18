@@ -7,15 +7,14 @@ icon: rocket
 import {
     PyConnect,
     PyConnectAsync,
-    PyConnectEnterprise,
-    PyConnectEnterpriseAsync,
+    PyConnectEnterpriseQuickstart,
     PyConnectObjectStorage,
     PyConnectObjectStorageAsync,
     RsConnect,
-    RsConnectEnterprise,
+    RsConnectEnterpriseQuickstart,
     RsConnectObjectStorage,
     TsConnect,
-    TsConnectEnterprise,
+    TsConnectEnterpriseQuickstart,
     TsConnectObjectStorage,
 } from '/snippets/connection.mdx';
 import {
@@ -113,29 +112,39 @@ For credentials, endpoints, and provider-specific options, see
 
 ### Connect to LanceDB Enterprise
 
-If you're using LanceDB Enterprise, you can connect using a `db://` URI,
-along with any necessary credentials. Simply replace the local path with a remote `uri`
-that points to where your data is stored, and you're ready to go.
+If you're using LanceDB Enterprise, you can connect using a `db://` URI along
+with the API key, region, and cluster endpoint you received from the LanceDB
+team. Pass the cluster endpoint via `host_override` so the client routes
+requests to your deployment.
 
 <CodeGroup >
-    <CodeBlock filename="Python (sync)" language="Python" icon="python">
-    {PyConnectEnterprise}
-    </CodeBlock>
-
-    <CodeBlock filename="Python (async)" language="Python" icon="python">
-    {PyConnectEnterpriseAsync}
+    <CodeBlock filename="Python" language="Python" icon="python">
+    { "import lancedb\n\n" }
+    {PyConnectEnterpriseQuickstart}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsConnectEnterprise}
+    { "import * as lancedb from \"@lancedb/lancedb\";\n\n" }
+    {TsConnectEnterpriseQuickstart}
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsConnectEnterprise}
+    { "use lancedb::connect;\n\n" }
+    {RsConnectEnterpriseQuickstart}
     </CodeBlock>
 </CodeGroup >
 
-To learn more about LanceDB Enterprise, see the [Enterprise documentation](/enterprise).
+<Note>
+`host_override` is the full URL of your cluster endpoint, including the scheme
+(`https://`) and a port if your deployment listens on a non-default one
+(e.g. `https://your-enterprise-endpoint.com:443`). If you don't know the
+endpoint, [contact the LanceDB team](mailto:contact@lancedb.com).
+</Note>
+
+For a walkthrough on how to use LanceDB Enterprise (including `RemoteTable`
+semantics), see its [quickstart](/enterprise/quickstart). To learn
+more about LanceDB Enterprise overall, see the
+[Enterprise documentation](/enterprise).
 
 ## 3. Obtain data and ingest into LanceDB
 
