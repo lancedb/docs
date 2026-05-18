@@ -164,6 +164,106 @@ def test_embedding_huggingface_usage() -> None:
     # --8<-- [end:embedding_huggingface_usage]
 
 
+def test_frameworks_lerobot_lancedb_usage() -> None:
+    require_flag("RUN_LEROBOT_LANCEDB_SNIPPETS")
+
+    # --8<-- [start:frameworks_lerobot_lancedb_image_dataset]
+    from lerobot_lancedb import LeRobotLanceDataset
+
+    dataset = LeRobotLanceDataset(
+        repo_id="your-org/your-lerobot-lance-images",
+        delta_timestamps={
+            "observation.images.front": [-0.2, -0.1, 0.0],
+        },
+        return_uint8=True,
+    )
+
+    sample = dataset[0]
+    print(sample["observation.state"].shape)
+    print(sample["action"].shape)
+    # --8<-- [end:frameworks_lerobot_lancedb_image_dataset]
+
+    # --8<-- [start:frameworks_lerobot_lancedb_video_dataset]
+    from lerobot_lancedb import LeRobotLanceVideoDataset
+
+    video_dataset = LeRobotLanceVideoDataset(
+        repo_id="lance-format/lerobot-pusht-lance",
+        delta_timestamps={
+            "observation.images.image": [-0.2, -0.1, 0.0],
+        },
+        return_uint8=True,
+    )
+
+    video_sample = video_dataset[0]
+    print(video_sample["observation.images.image"].shape)
+    # --8<-- [end:frameworks_lerobot_lancedb_video_dataset]
+
+    # --8<-- [start:frameworks_lerobot_open_lance_tables]
+    import lancedb
+
+    db = lancedb.connect("hf://datasets/lance-format/lerobot-pusht-lance/data")
+    frames = db.open_table("frames")
+    episodes = db.open_table("episodes")
+    videos = db.open_table("videos")
+
+    print(len(frames), len(episodes), len(videos))
+    print(frames.schema)
+    # --8<-- [end:frameworks_lerobot_open_lance_tables]
+
+    # --8<-- [start:frameworks_lerobot_filter_frames]
+    frame_rows = (
+        frames.search()
+        .where("episode_index = 0 AND frame_index < 10", prefilter=True)
+        .select(["episode_index", "frame_index", "timestamp", "action"])
+        .limit(10)
+        .to_list()
+    )
+
+    for row in frame_rows:
+        print(row["episode_index"], row["frame_index"], row["timestamp"])
+    # --8<-- [end:frameworks_lerobot_filter_frames]
+
+
+def test_frameworks_stable_worldmodel_usage() -> None:
+    require_flag("RUN_STABLE_WORLDMODEL_SNIPPETS")
+
+    # --8<-- [start:frameworks_stable_worldmodel_collect_lance]
+    import stable_worldmodel as swm
+
+    world = swm.World("swm/PushT-v1", num_envs=8)
+    world.set_policy(your_expert_policy)
+    world.collect("data/pusht_demo.lance", episodes=100, seed=0)
+    # --8<-- [end:frameworks_stable_worldmodel_collect_lance]
+
+    # --8<-- [start:frameworks_stable_worldmodel_load_lance]
+    dataset = swm.data.load_dataset("data/pusht_demo.lance", num_steps=16)
+
+    batch = dataset[0]
+    print(batch.keys())
+    # --8<-- [end:frameworks_stable_worldmodel_load_lance]
+
+    # --8<-- [start:frameworks_stable_worldmodel_convert]
+    swm.data.convert(
+        "data/pusht_demo.lance",
+        "data/pusht_video",
+        dest_format="video",
+        fps=30,
+    )
+    # --8<-- [end:frameworks_stable_worldmodel_convert]
+
+    # --8<-- [start:frameworks_stable_worldmodel_evaluate]
+    from stable_worldmodel.policy import PlanConfig, WorldModelPolicy
+    from stable_worldmodel.solver import CEMSolver
+
+    solver = CEMSolver(model=world_model, num_samples=300)
+    policy = WorldModelPolicy(solver=solver, config=PlanConfig(horizon=10))
+
+    world.set_policy(policy)
+    results = world.evaluate(episodes=50)
+    print(f"Success Rate: {results['success_rate']:.1f}%")
+    # --8<-- [end:frameworks_stable_worldmodel_evaluate]
+
+
 def test_embedding_ibm_usage() -> None:
     require_flag("RUN_IBM_WATSONX_SNIPPETS")
 

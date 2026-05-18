@@ -417,6 +417,23 @@
         ]
       },
       {
+        "tab": "Use Cases",
+        "groups": [
+          {
+            "group": "Robotics",
+            "pages": [
+              "integrations/lerobotdataset"
+            ]
+          },
+          {
+            "group": "World Models",
+            "pages": [
+              "integrations/stable-worldmodel"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {
