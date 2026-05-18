@@ -26,10 +26,10 @@ jobs:
       - name: Copy lance-namespace REST API spec
         run: |
           set -euo pipefail
-          test -s lance-namespace/docs/src/rest.yaml
+          test -s lance-namespace/docs/src/spec.yaml
           tmp="$(mktemp)"
           # Normalize to a trailing newline so git diff doesn't fail on "No newline at end of file".
-          awk '1' lance-namespace/docs/src/rest.yaml > "$tmp"
+          awk '1' lance-namespace/docs/src/spec.yaml > "$tmp"
           mv "$tmp" docs/api-reference/rest/openapi.yml
 
       - name: Create pull request
