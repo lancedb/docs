@@ -26,6 +26,7 @@ import {
     PyCreateTableFromIterator as CreateTableFromIterator,
     TsCreateTableFromIterator as TsCreateTableFromIterator,
     RsCreateTableFromIterator as RsCreateTableFromIterator,
+    TsAddProgress,
     PyOpenExistingTable as OpenExistingTable,
     TsOpenExistingTable as TsOpenExistingTable,
     RsOpenExistingTable as RsOpenExistingTable,
@@ -322,6 +323,37 @@ total size upfront. A `parallelism` parameter to control this manually is planne
 but not yet exposed in Python or TypeScript
 ([tracking issue](https://github.com/lancedb/lancedb/issues/3173)).
 </Note>
+
+#### Tracking ingestion progress
+<Badge color="green">TypeScript Only</Badge>
+
+For long-running writes, pass a `progress` callback to `table.add()` to surface
+per-batch progress in your UI, logs, or metrics pipeline. The callback fires
+once per batch written and once more with `done: true` when the write completes.
+
+Each invocation receives a `WriteProgress` object:
+
+| Field | Description |
+|:------|:------------|
+| `outputRows` | Rows written so far. |
+| `outputBytes` | Bytes written so far. |
+| `totalRows` | Expected total rows when the input source reports one. Always set on the final callback. |
+| `elapsedSeconds` | Wall-clock seconds since the write started. |
+| `activeTasks` | Parallel write tasks currently in flight. |
+| `totalTasks` | Total parallel write tasks (the write parallelism). |
+| `done` | `true` only for the final callback. |
+
+<CodeGroup>
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsAddProgress}
+    </CodeBlock>
+</CodeGroup>
+
+A few things to know before you wire this up:
+
+- Non-blocking: if your callback is slow, intermediate updates may be dropped so the write doesn't stall. The final `done: true` callback is always delivered.
+- Errors swallowed: anything your callback throws is logged with `console.warn` and won't abort the write, so keep the callback side-effect-only and don't rely on it for control flow.
+- Row totals: `totalRows` is only populated when the input source can report it up front (for example, a materialized `arrow.Table`). For streaming sources it stays `undefined` until the final callback, where it falls back to the actual rows written.
 
 ## Create empty table
 You can create an empty table for scenarios where you want to add data to the table later.

@@ -122,6 +122,8 @@ export const PyVersioningTags = "# Create a tag pointing at a specific version\n
 
 export const PyVersioningUpdateData = "table.update(where=\"author='Richard'\", values={\"author\": \"Richard Daniel Sanchez\"})\nrows_after_update = table.count_rows(\"author = 'Richard Daniel Sanchez'\")\nprint(f\"Rows updated to Richard Daniel Sanchez: {rows_after_update}\")\n";
 
+export const TsAddProgress = "// Track ingestion progress as batches are written.\nawait table.add(moreData, {\n  progress: (p) => {\n    const total = p.totalRows ?? \"?\";\n    console.log(\n      `wrote ${p.outputRows}/${total} rows ` +\n        `(${p.outputBytes} bytes, ${p.elapsedSeconds.toFixed(1)}s, ` +\n        `${p.activeTasks}/${p.totalTasks} tasks active)` +\n        (p.done ? \" \\u2014 done\" : \"\"),\n    );\n  },\n});\n";
+
 export const TsAddColumnsCalculated = "// Add a discounted price column (10% discount)\nawait schemaAddTable.addColumns([\n  {\n    name: \"discounted_price\",\n    valueSql: \"cast((price * 0.9) as float)\",\n  },\n]);\n";
 
 export const TsAddColumnsDefaultValues = "// Add a stock status column with default value\nawait schemaAddTable.addColumns([\n  {\n    name: \"in_stock\",\n    valueSql: \"cast(true as boolean)\",\n  },\n]);\n";
