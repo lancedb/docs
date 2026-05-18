@@ -20,12 +20,6 @@ test("connect to a local database", async () => {
   });
 });
 
-// --8<-- [start:connect_enterprise]
-const uri = "db://your-database-uri";
-const apiKey = "your-api-key";
-const region = "us-east-1";
-// --8<-- [end:connect_enterprise]
-
 async function connectEnterpriseQuickstart() {
   // --8<-- [start:connect_enterprise_quickstart]
   const uri = "db://your-database-uri";
@@ -120,9 +114,6 @@ async function namespaceAdminOpsExample() {
 }
 
 void [
-  uri,
-  apiKey,
-  region,
   connectObjectStorageExample,
   connectEnterpriseQuickstart,
   namespaceTableOpsExample,
