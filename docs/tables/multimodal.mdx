@@ -194,6 +194,46 @@ For more advanced usage, including random access and file-like reading of blobs,
 Lance format's [blob API documentation](https://lance.org/guide/blob/).
 </Card>
 
+### 3. Convert blob tables to pandas
+
+When you call `to_pandas()` on a local LanceDB table that contains Blob API columns, the `blob_mode` argument controls how those columns materialize. This is available in the Python SDK on local tables; remote tables raise `NotImplementedError`.
+
+`blob_mode` accepts:
+
+- `"lazy"` (default): returns blob columns as standard PyArrow binary values. Use this when you want existing behavior and don't need to inspect blob metadata.
+- `"bytes"`: eagerly materializes each blob as `bytes`. Use this when you need the raw payload in the DataFrame, for example to decode an image or audio clip in-process.
+- `"descriptions"`: returns blob descriptors (offsets, sizes, and positions) instead of the data itself. Use this when you want to plan I/O without paying the cost of loading every blob.
+
+Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas conversion, so you can also pass options like `split_blocks` or `self_destruct`:
+
+```python
+import lancedb
+
+tbl = lancedb.connect("data/sample-lancedb").open_table("videos")
+
+# Default: blob columns come back as PyArrow-style binary
+df = tbl.to_pandas()
+
+# Materialize blob bytes eagerly
+df_bytes = tbl.to_pandas(blob_mode="bytes")
+
+# Return descriptors instead of payloads
+df_desc = tbl.to_pandas(blob_mode="descriptions")
+
+# Forward extra kwargs to PyArrow's to_pandas
+df_typed = tbl.to_pandas(split_blocks=True, self_destruct=True)
+```
+
+Query builders accept the same PyArrow `to_pandas` kwargs, but not `blob_mode`. They materialize Arrow results first, apply LanceDB-specific `flatten` and `timeout` handling, and then forward the remaining kwargs:
+
+```python
+df = (
+    tbl.search(query_vector)
+    .limit(10)
+    .to_pandas(split_blocks=True, self_destruct=True)
+)
+```
+
 ## Other modalities
 
 The `pa.binary()` and `pa.large_binary()` types are universal. You can use this same pattern for other types of multimodal data:
