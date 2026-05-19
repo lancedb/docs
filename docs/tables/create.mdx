@@ -351,7 +351,7 @@ Each invocation receives a `WriteProgress` object:
 
 A few things to know before you wire this up:
 
-- Non-blocking: if your callback is slow, intermediate updates may be dropped so the write doesn't stall. The final `done: true` callback is always delivered.
+- Back-pressures the writer: callback invocations are serialized and run inline with each batch, so a slow callback will slow the write rather than drop updates. Every batch update is delivered, and the final `done: true` callback always fires (even on error or cancellation). Keep the callback cheap — offload heavy work to a queue you drain elsewhere.
 - Errors swallowed: anything your callback throws is logged with `console.warn` and won't abort the write, so keep the callback side-effect-only and don't rely on it for control flow.
 - Row totals: `totalRows` is only populated when the input source can report it up front (for example, a materialized `arrow.Table`). For streaming sources it stays `undefined` until the final callback, where it falls back to the actual rows written.
 
