@@ -213,7 +213,7 @@ Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas c
     {`import lancedb
 import pyarrow as pa
 
-# Create a filesystem-backed blob table
+# Create a filesystem-backed blob table.
 db = lancedb.connect("data/sample-lancedb")
 schema = pa.schema([
     pa.field("id", pa.int64()),
