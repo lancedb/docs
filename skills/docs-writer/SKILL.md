@@ -14,6 +14,16 @@ Code examples on docs pages are **not** written directly into MDX. They live ins
 3. **Snippets must be inside passing tests.** They're extracted from real pytest/vitest/cargo tests. If the test doesn't run, the example is wrong.
 4. **Cross-check every non-trivial API claim against the source repo.** If the user names a repo (e.g., *"check in the sophon repo"*, *"verify against lancedb"*), that repo is the source of truth — grep it, cite the file + line, and let the code override prior assumptions. See [Cross-checking docs against source repos](#cross-checking-docs-against-source-repos) for resolution rules.
 
+## Make it sound like a human
+
+LLM writing at times feels very formulaic, using very similar phrasing. The goal is to make the docs feel approachable and human, not like a dry manual that was written by a robot. Avoid repeating the same sentence structures, vary your word choice, and inject a bit of personality where appropriate. The content should be clear and accurate, but also engaging to read.
+
+Avoid the following extremely common patterns:
+- "It's not this, it's that."
+- "Paying the ___ tax" (e.g., "paying the import tax", "paying the setup tax") − the words "pay" and "tax" are heavily overused by AI
+- "LanceDB changes that" − the phrase "changes that" is a common AI crutch
+- "That matters" - state the consequence directly rather than using this overused phrase
+
 ## Pipeline at a glance
 
 ```
