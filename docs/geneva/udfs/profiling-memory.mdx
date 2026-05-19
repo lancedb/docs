@@ -1,0 +1,256 @@
+---
+title: Profiling Stateful UDF Memory
+sidebarTitle: Profiling Memory
+description: Find memory leaks and runaway peak usage in stateful UDFs with memray, before they cause worker OOMs in production.
+icon: chart-line
+---
+
+Stateful UDFs are the most common source of worker memory pressure in Geneva. Unlike scalar UDFs, a stateful UDF instance lives for the **entire lifetime of a Ray actor**, processing many batches in sequence. Anything your `setup()` allocates is held for the duration of the job, and anything `__call__` retains accumulates batch after batch — sometimes silently, until a worker OOMs partway through a large backfill.
+
+This page shows you how to profile a stateful UDF locally with [memray](https://github.com/bloomberg/memray), what to look for, and the common patterns that leak.
+
+<Tip>
+If your worker is being OOM-killed and you don't know why, **profile a single actor locally first**. A 5-minute memray run on your laptop is faster than another 45-minute distributed run that fails the same way.
+</Tip>
+
+## Why stateful UDFs leak
+
+A stateful UDF in Geneva is a class:
+
+```python
+@geneva.udf(data_type=pa.list_(pa.float32(), 512))
+class MyEmbedding:
+    def __init__(self):
+        self.model = None
+
+    def setup(self):
+        self.model = load_model()  # allocated once per actor
+
+    def __call__(self, text: str) -> list[float]:
+        if self.model is None:
+            self.setup()
+        return self.model.embed(text)
+```
+
+A few facts make memory behavior easy to get wrong:
+
+- **One instance per worker, many batches.** Geneva instantiates the class once per Ray actor. The same `self` processes every batch routed to that worker — potentially thousands.
+- **`setup()` runs once.** Whatever you allocate there stays in memory until the actor dies. That's intentional for things like ML models, but it's a footgun for "lazy" caches that grow.
+- **`self.<attr>` survives across calls.** Anything you attach to `self` inside `__call__` is retained for the rest of the actor's life.
+- **Workers don't restart between batches.** Unlike a serverless function, you don't get a fresh process per invocation. Memory accumulates linearly with batch count until the worker hits its memory cap.
+
+The result: a leak that looks tiny in unit tests (1 batch, 4 MiB) can blow up an 8-hour backfill (10 000 batches, 40 GiB).
+
+## When to profile
+
+Profile your UDF if **any** of these are true:
+
+- The UDF loads a model, builds an index, or otherwise allocates more than ~100 MiB in `setup()`.
+- The UDF maintains a cache, deduplication table, or running statistic in `self`.
+- A worker is being OOM-killed during backfill (look for `FatalWorkerOOMError`, see [Job troubleshooting](/geneva/jobs/troubleshooting)).
+- Worker RSS grows steadily during a backfill rather than staying flat after `setup()`.
+
+You do **not** need to profile pure functional UDFs (no `self` state) or UDFs that only ever read from `self` — those can't leak by construction.
+
+## Profiling a UDF with memray
+
+memray ships as a `dev` dependency in Geneva, so it's already in your environment if you installed with `uv sync`.
+
+The trick to profiling under Ray is that **workers run in separate processes**. Wrapping `pytest` with `memray run` only sees the driver, not the actors that actually run your UDF. The cleanest pattern is to have **the UDF instrument itself**, controlled by an environment variable that's only set when you want a profile.
+
+### Step 1 — add an opt-in tracker to your UDF
+
+```python
+import os, pathlib, uuid
+from typing import Any
+import memray
+import geneva
+import pyarrow as pa
+
+_MEMRAY_OUT_DIR_ENV = "MY_UDF_MEMRAY_OUT_DIR"
+
+
+@geneva.udf(data_type=pa.list_(pa.float32(), 512))
+class MyEmbedding:
+    def __init__(self):
+        self.model = None
+        self._tracker: Any = None  # memray.Tracker, when profiling is on
+
+    def setup(self):
+        # Open a memray tracker per worker process, if requested. Each
+        # worker writes its own .bin file so traces don't collide.
+        out_dir = os.environ.get(_MEMRAY_OUT_DIR_ENV)
+        if out_dir:
+            pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
+            bin_path = pathlib.Path(out_dir) / (
+                f"memray-{os.getpid()}-{uuid.uuid4().hex}.bin"
+            )
+            self._tracker = memray.Tracker(
+                str(bin_path), native_traces=False, follow_fork=False
+            )
+            self._tracker.__enter__()
+        self.model = load_model()
+
+    def __call__(self, text: str) -> list[float]:
+        if self.model is None:
+            self.setup()
+        return self.model.embed(text)
+```
+
+The tracker is a no-op when `MY_UDF_MEMRAY_OUT_DIR` isn't set, so leaving this code in your UDF is safe for production runs.
+
+### Step 2 — propagate the env var to Ray workers
+
+Ray workers don't inherit driver environment variables by default. When you start a local Ray cluster from Geneva, pass `extra_env` so the variable reaches each worker:
+
+```python
+from geneva.runners.ray._mgr import ray_cluster
+
+with ray_cluster(
+    local=True,
+    extra_env={"MY_UDF_MEMRAY_OUT_DIR": "/tmp/my-udf-profile"},
+):
+    table.backfill("embedding", concurrency=1)
+```
+
+<Tip>
+Set `concurrency=1` while profiling. One actor processing all batches sequentially produces a single clean trace; the default of 8 produces 8 noisier traces that you'd have to merge mentally.
+</Tip>
+
+### Step 3 — read the trace
+
+When backfill finishes, you'll have one (or more) `memray-<pid>-<uuid>.bin` files under `/tmp/my-udf-profile/`. Render and inspect them:
+
+```bash
+# Quick summary — peak heap, total allocations, what's leaked
+uv run -m memray summary /tmp/my-udf-profile/memray-*.bin
+
+# Interactive flamegraph in your browser
+uv run -m memray flamegraph /tmp/my-udf-profile/memray-*.bin
+open /tmp/my-udf-profile/memray-*.html
+
+# Top allocators by retained bytes
+uv run -m memray tree /tmp/my-udf-profile/memray-*.bin
+```
+
+## What the numbers mean
+
+memray reports two values you'll care about most:
+
+- **Peak heap** (`metadata.peak_memory`) — the high-water mark. This is what triggers OOMs. A peak well above your `setup()` allocations means a batch transiently doubles memory before freeing.
+- **Leaked allocations** (`get_leaked_allocation_records()`) — what was still allocated when the tracker ended. **This is not necessarily a bug** — your `setup()` model is "leaked" in this sense because it lives the actor's lifetime. The signal is *how much above expected baseline* is leaked.
+
+A healthy stateful UDF profile, after processing many batches, looks roughly like:
+
+```
+peak heap   ≈ setup() allocations + 1 batch of working memory
+leaked      ≈ setup() allocations  (i.e. nothing extra retained from __call__)
+```
+
+An **unhealthy** profile looks like:
+
+```
+peak heap   ≈ setup() + N × per-call allocation         ← grows with batch count
+leaked      ≈ setup() + N × per-call allocation         ← per-call state never freed
+```
+
+The flamegraph will show a thick stack frame anchored in `__call__` rising as you scroll through time — that's the leak.
+
+## Common leak patterns
+
+### 1. The growing cache
+
+```python
+class BadEmbedding:
+    def __init__(self):
+        self.cache: dict[str, list[float]] = {}
+
+    def __call__(self, text: str) -> list[float]:
+        if text not in self.cache:
+            self.cache[text] = self.model.embed(text)
+        return self.cache[text]
+```
+
+Looks harmless. Fine on a unit test with 10 inputs. **Catastrophic on a backfill of 10M rows**, where most inputs are unique and the cache grows to fill the worker.
+
+**Fix:** Use a bounded cache (`functools.lru_cache` with `maxsize`, or a manual size cap), or skip caching when you don't know the cardinality.
+
+```python
+from functools import lru_cache
+
+class GoodEmbedding:
+    def __init__(self):
+        self._embed = None
+
+    def setup(self):
+        model = load_model()
+        self._embed = lru_cache(maxsize=1024)(model.embed)
+
+    def __call__(self, text: str) -> list[float]:
+        if self._embed is None:
+            self.setup()
+        return self._embed(text)
+```
+
+### 2. Accumulating per-call buffers
+
+```python
+class BadAggregator:
+    def __init__(self):
+        self.history = []
+
+    def __call__(self, batch: pa.RecordBatch) -> pa.Array:
+        self.history.append(batch)  # holds every batch ever processed
+        ...
+```
+
+**Fix:** Don't hold references to inputs past the return of `__call__`. If you need rolling state, summarize into a small aggregate (counts, sums) instead of holding the raw batches.
+
+### 3. Closures capturing batch arrays
+
+```python
+class BadDeferred:
+    def __init__(self):
+        self.work_queue = []
+
+    def __call__(self, x: pa.Array) -> pa.Array:
+        # Lambda captures `x` by reference — the whole Array stays alive
+        self.work_queue.append(lambda: expensive(x))
+        ...
+```
+
+**Fix:** Extract only the small values you actually need into the closure, or execute the work eagerly.
+
+### 4. ML model state that grows
+
+Some ML libraries retain per-call state internally (KV caches, gradient buffers, autograd graphs). If you're using PyTorch:
+
+```python
+def __call__(self, text: str) -> list[float]:
+    with torch.inference_mode():            # <-- prevents autograd graph retention
+        return self.model.encode(text)
+```
+
+For Hugging Face pipelines, ensure you're in `eval()` mode and not accumulating gradients. For long-running stateful UDFs on GPUs, also see `torch.cuda.empty_cache()` between large batches.
+
+## A confidence check
+
+A useful "does my profiling actually work?" sanity check: temporarily introduce a deliberate leak and confirm memray catches it.
+
+```python
+def __call__(self, x):
+    scratch = bytearray(8 * 1024 * 1024)  # 8 MiB
+    self._scratches.append(scratch)        # <-- deliberate leak
+    return ...
+```
+
+If `memray summary` doesn't show leaked bytes growing roughly with batch count after this change, your tracker isn't actually attached (most often: the env var isn't reaching workers — re-check `extra_env`).
+
+Geneva's own test suite ships a reference implementation of this pattern in `src/stress_tests/_memray_probe.py` and `src/stress_tests/test_memray_stateful_udf.py`, plus a GitHub Actions workflow (`memray-stateful-udf-profile.yml`) that uploads the per-actor `.bin` and rendered flamegraph as a CI artifact. Feel free to copy that scaffolding for your own project's UDFs.
+
+## Related
+
+- [UDFs](/geneva/udfs/udfs) — defining stateful UDFs
+- [Job troubleshooting](/geneva/jobs/troubleshooting) — diagnosing OOMs and other worker errors
+- [Advanced configuration](/geneva/udfs/advanced-configuration) — admission control and resource limits
+- [memray documentation](https://bloomberg.github.io/memray/) — flamegraph, summary, and tree report formats
