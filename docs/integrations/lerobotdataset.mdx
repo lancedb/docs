@@ -15,7 +15,7 @@ import {
 
 [LeRobotDataset v3.0](https://huggingface.co/docs/lerobot/lerobot-dataset-v3) standardizes robot learning data across sensorimotor time series, actions, multi-camera video, and task metadata. Its v3 layout stores high-frequency tabular signals in Parquet, visual streams as MP4 shards, and metadata that reconstructs episode-level views from larger files.
 
-Lance is useful next to LeRobot when you want high-performance random access, lazy multimodal blob reads, and a single table interface for curation, search, and training data preparation. The `lerobot-lancedb` package provides Lance-backed `LeRobotDataset` subclasses, and LanceDB can also open Lance-formatted LeRobot datasets on the Hub directly through `hf://` URIs.
+Lance pairs well with LeRobot when you need high-performance random access, lazy multimodal blob reads, and a single table interface for curation, search, and training data preparation. The `lerobot-lancedb` package ships Lance-backed `LeRobotDataset` subclasses, and LanceDB can open Lance-formatted LeRobot datasets on the Hub directly through `hf://` URIs.
 
 ## Install
 
@@ -25,7 +25,7 @@ pip install lancedb lance lerobot-lancedb
 
 ## Use Lance-backed LeRobotDataset loaders
 
-Use `LeRobotLanceDataset` when your Lance-backed dataset stores decoded image observations. It is intended as a drop-in replacement for `LeRobotDataset`, so existing policy training code can keep using standard PyTorch dataset and dataloader patterns.
+`LeRobotLanceDataset` is useful when your Lance-backed dataset stores decoded image observations. It's a drop-in replacement for `LeRobotDataset`, so existing policy training code keeps working with the usual PyTorch dataset and dataloader patterns.
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLerobotLancedbImageDataset}
@@ -49,17 +49,17 @@ Lance-formatted LeRobot datasets published by `lance-format` expose each `.lance
   {PyFrameworksLerobotOpenLanceTables}
 </CodeBlock>
 
-This is useful when you want to inspect schemas, count rows, sample metadata, or build curation workflows before handing the selected data to a training loop.
+Opening the tables directly is handy for inspecting schemas, counting rows, sampling metadata, or building curation workflows before any data reaches the training loop.
 
 ## Filter a frame window
 
-Robotics workflows often need deterministic slices by `episode_index`, `frame_index`, or task metadata before any model training starts. LanceDB can filter those rows without reading video blobs.
+Most robotics workflows want a deterministic slice by `episode_index`, `frame_index`, or task metadata long before training begins. LanceDB filters those rows without touching the video blobs.
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLerobotFilterFrames}
 </CodeBlock>
 
-From there, you can materialize a smaller local LanceDB database, add derived columns, attach embeddings, or build vector and scalar indexes for faster repeated access.
+With the filtered set in hand, you can materialize a smaller local LanceDB database, add derived columns, attach embeddings, or build vector and scalar indexes for faster repeated access.
 
 ## Example Lance-formatted LeRobot datasets
 
