@@ -15,7 +15,7 @@ import {
 
 The LanceDB integration is built into Stable World Model's data format registry. Lance is the default backend for collected datasets, so a path ending in `.lance` gives you an append-friendly LanceDB table with episode-contiguous rows and fast indexed reads.
 
-That matters for world model research because the training loop repeatedly samples temporal windows from high-dimensional observations, actions, and rewards. Faster random access means more GPU time is spent training the model instead of waiting on the data loader.
+Random access speed is the bottleneck for world model training, since the loop repeatedly samples temporal windows from high-dimensional observations, actions, and rewards. The faster those windows arrive, the more GPU time goes into training rather than waiting on the data loader.
 
 ## Install
 
@@ -44,7 +44,7 @@ The dataset loader autodetects the Lance format from the path.
   {PyFrameworksStableWorldmodelLoadLance}
 </CodeBlock>
 
-This keeps model code focused on the world model objective while LanceDB handles the storage layout and read path.
+Your model code stays focused on the world model objective while LanceDB handles the storage layout and read path.
 
 ## Evaluate with model-predictive control
 
@@ -57,7 +57,7 @@ Replace `world_model` with the trained model object from your training loop.
 
 ## Convert between formats
 
-Stable World Model can also convert between registered dataset formats. For example, you can collect in Lance for fast training reads, then export to the video layout for compact inspection artifacts.
+Stable World Model can convert between registered dataset formats. A common workflow is to collect in Lance for fast training reads, then export to the video layout for compact inspection artifacts.
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksStableWorldmodelConvert}
@@ -81,7 +81,7 @@ The Stable World Model README reports the following PushT benchmark results from
 
 In that benchmark, local LanceDB reached about **3.4x** the no-cache throughput of local HDF5, while S3-backed LanceDB reached about **350x** the no-cache throughput of S3-backed HDF5. Even with cache enabled, S3-backed LanceDB was about **4.3x** faster than S3-backed HDF5.
 
-These numbers are reported by the Stable World Model project for its benchmark setup. Treat them as a reproducible directional baseline, not a universal guarantee for every environment, model, or storage configuration.
+These numbers come from the Stable World Model project's own benchmark setup, so they're best read as a reproducible directional baseline that may shift across environments, models, and storage configurations.
 
 ## Storage
 
@@ -93,7 +93,7 @@ The same README reports these local storage sizes for the benchmark dataset:
 | LanceDB | 13.31 GB |
 | Video | 496.29 MB |
 
-LanceDB used about **69% less local storage than HDF5** in the reported benchmark, while preserving a table interface that is designed for fast training reads and append-heavy dataset collection.
+LanceDB used about **69% less local storage than HDF5** in the reported benchmark, while preserving a table interface built for fast training reads and append-heavy collection.
 
 ## More resources
 
