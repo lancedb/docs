@@ -496,6 +496,59 @@ def test_fts_index_wait(tmp_db):
     assert table.list_indices()
 
 
+def test_fts_index_nested_field(tmp_db):
+    nested_schema = pa.struct([
+        pa.field("text", pa.string()),
+        pa.field("count", pa.int32()),
+    ])
+    schema = pa.schema([
+        pa.field("id", pa.int64()),
+        pa.field("payload", nested_schema),
+    ])
+    tmp_db.create_table(
+        "fts-index-nested",
+        pa.table(
+            {
+                "id": pa.array([1, 2], pa.int64()),
+                "payload": pa.array(
+                    [
+                        {"text": "Frodo was a happy puppy", "count": 1},
+                        {"text": "puppy runs through the meadow", "count": 2},
+                    ],
+                    type=nested_schema,
+                ),
+            },
+            schema=schema,
+        ),
+        mode="overwrite",
+    )
+
+    db = tmp_db
+    # --8<-- [start:fts_index_nested]
+    from lancedb.query import MatchQuery, PhraseQuery
+
+    table = db.open_table("fts-index-nested")
+
+    # Index a text leaf inside a struct column using a dotted path.
+    table.create_fts_index("payload.text", with_position=True)
+
+    # The same dotted path works in MatchQuery and PhraseQuery.
+    matches = (
+        table.search(MatchQuery("puppy", "payload.text")).limit(5).to_list()
+    )
+    phrases = (
+        table.search(PhraseQuery("puppy runs", "payload.text"))
+        .limit(5)
+        .to_list()
+    )
+    # --8<-- [end:fts_index_nested]
+
+    assert len(matches) > 0
+    assert all("puppy" in row["payload"]["text"] for row in matches)
+    assert len(phrases) > 0
+    assert all("puppy runs" in row["payload"]["text"] for row in phrases)
+
+
 @pytest.mark.asyncio
 async def test_fts_index_async(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
