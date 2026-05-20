@@ -156,6 +156,53 @@ leaked      ≈ setup() + N × per-call allocation         ← per-call state ne
 
 The flamegraph will show a thick stack frame anchored in `__call__` rising as you scroll through time — that's the leak.
 
+## Going deeper: RSS vs Arrow allocations
+
+memray gives you the *Python-side* allocation story. For real diagnosis of "where is the worker's memory actually going?", it pays to watch **process RSS** and **Arrow's own allocator** side-by-side — together they tell you which subsystem owns the bytes, often faster than reading a flamegraph.
+
+Drop this into your UDF (or anywhere on the worker) to log a snapshot:
+
+```python
+import resource, pyarrow as pa
+
+def log_memory(seq: int) -> None:
+    rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    # ru_maxrss is bytes on macOS, KiB on Linux:
+    import sys
+    if sys.platform != "darwin":
+        rss_bytes *= 1024
+    arrow_live = pa.total_allocated_bytes()
+    print(
+        f"seq={seq} "
+        f"rss_mb={rss_bytes // 1024**2} "
+        f"arrow_live_mb={arrow_live // 1024**2} "
+        f"gap_mb={(rss_bytes - arrow_live) // 1024**2}",
+        flush=True,
+    )
+```
+
+The three numbers answer different questions:
+
+- **`rss_mb`** — every byte the OS has handed this Python interpreter. Includes Python heap, Arrow, native libraries, and pages the C allocator (`glibc`/`jemalloc`) is holding even though Python freed them. This is what triggers cgroup OOM-kills.
+- **`arrow_live_mb`** — bytes currently held by *live PyArrow buffers* (`RecordBatch`, `Array`, `ChunkedArray`, etc.). Goes up when you create Arrow data, down when those references are dropped.
+- **`gap_mb` = rss − arrow_live** — "everything else." This is the Python heap (your own `self.cache`, model weights, dicts, lists), native libraries (PyTorch, ONNX), and allocator retention.
+
+### Diagnostic patterns
+
+Log the breakdown every few batches and the *shape of growth over time* tells you which subsystem to fix:
+
+| Pattern | Diagnosis | First thing to try |
+|---|---|---|
+| `rss` climbs slowly, `arrow_live` flat near zero, big growing `gap` | Allocator retention — Python freed it but `glibc` is keeping the pages | `ctypes.CDLL("libc.so.6").malloc_trim(0)` periodically (Linux only); or set `MALLOC_TRIM_THRESHOLD_=131072` |
+| `rss` climbs, `arrow_live` climbs in lockstep | Real Arrow leak — your code is holding `RecordBatch` / `Array` references | Find where you're appending batches to `self`, or where checkpoint / error payloads aren't being released |
+| `rss` spikes hugely on a few calls then settles, eventually one spike OOMs | Peak is too big, not a leak — a single call allocates more than the worker has | Shrink `batch_size`, `blob_read_buffer_size`, or split the work |
+| `rss` flat for hours then sudden cliff upward | One pathological row — usually one huge blob (a 4K-resolution image, a 50 MB PDF) | Find the offending row by ID; add a size check at the top of `__call__` |
+| `rss` rises during `setup()`, then flat for the whole run, `gap` constant | Healthy — that's your model loaded once per actor | Nothing to do |
+
+<Tip>
+The reference UDFs in Geneva's own integration test (`src/stress_tests/_memray_probe.py`) print exactly this breakdown every 32 calls. The workflow's stdout logs are a working example of the "clean" and "leaky" patterns — the leaky one shows the **lockstep with Python heap** signature (the second row above, but with `gap` climbing instead of `arrow_live` — because the leak is `bytearray`, not Arrow).
+</Tip>
+
 ## Common leak patterns
 
 ### 1. The growing cache
