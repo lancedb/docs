@@ -64,6 +64,77 @@ const results2 = await (
 
 Here you can see the same search but using `cosine` similarity instead of `l2` distance. The result focuses on vector direction rather than absolute distance, which works better for normalized embeddings.
 
+## Selecting the vector column
+
+If your table has exactly one vector column, you can omit the column name and LanceDB will pick it for you. This works for both top-level columns (such as `vector`) and vector fields nested inside a struct (such as `image.embedding`).
+
+When LanceDB can't infer a single column, it raises a `ValueError` (Python) or rejects the query (Node/Rust). Two cases trigger this:
+
+- No vector column: the schema has no `fixed_size_list` or `list` of floats.
+- Multiple candidates: more than one column matches the query's dimension. The error lists every candidate path so you can pick one explicitly.
+
+To disambiguate, pass the field path with dot notation. Wrap any segment that contains characters outside `[A-Za-z0-9_]` in backticks (for example, `` `image-meta`.`embedding.v1` ``).
+
+<CodeGroup>
+```python Python icon="python"
+import pyarrow as pa
+import lancedb
+
+db = lancedb.connect("./.lancedb")
+
+schema = pa.schema([
+    pa.field("id", pa.int32()),
+    pa.field(
+        "image",
+        pa.struct([pa.field("embedding", pa.list_(pa.float32(), 2))]),
+    ),
+])
+table = db.create_table(
+    "nested",
+    data=[{"id": 0, "image": {"embedding": [0.0, 1.0]}}],
+    schema=schema,
+)
+
+# Inferred: the only vector leaf is `image.embedding`.
+table.search([0.0, 1.0]).limit(1).to_list()
+
+# Explicit: required when more than one vector column matches.
+table.search([0.0, 1.0], vector_column_name="image.embedding").limit(1).to_list()
+```
+
+```ts TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+
+const db = await lancedb.connect("./.lancedb");
+const table = await db.openTable("nested");
+
+// Inferred: LanceDB finds the single nested vector leaf automatically.
+await table.query().nearestTo([0.0, 1.0]).limit(1).toArray();
+
+// Explicit: required when more than one vector column matches.
+await table
+  .query()
+  .nearestTo([0.0, 1.0])
+  .column("image.embedding")
+  .limit(1)
+  .toArray();
+```
+</CodeGroup>
+
+The same field-path syntax works when creating an index on a nested vector column:
+
+<CodeGroup>
+```python Python icon="python"
+table.create_index(vector_column_name="image.embedding")
+```
+
+```ts TypeScript icon="square-js"
+await table.createIndex("image.embedding", { name: "image_embedding_idx" });
+```
+</CodeGroup>
+
+When several columns share a name across structs (for example, `image.embedding` and `text.embedding`), LanceDB still picks the one whose dimension matches your query vector. If two candidates have the same dimension, you must pass the column name explicitly.
+
 ## Vector Search With ANN Index
 
 Instead of performing an exhaustive search on the entire database for each and every query, approximate nearest neighbour (ANN) algorithms use an index to narrow down the search space, which significantly reduces query latency. 

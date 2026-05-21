@@ -129,7 +129,7 @@ Connect to LanceDB and open the table you want to index.
 
 ### 2. Construct an IVF Index
 
-Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. You can switch `index_type` to `IVF_RQ`, `IVF_HNSW_SQ`, or `IVF_HNSW_FLAT` depending on your recall/latency/compression target.
+Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. For a vector field nested inside a struct, use dot notation (e.g. `image.embedding`); see [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full syntax. You can switch `index_type` to `IVF_RQ`, `IVF_HNSW_SQ`, or `IVF_HNSW_FLAT` depending on your recall/latency/compression target.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
