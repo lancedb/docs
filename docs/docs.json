@@ -161,6 +161,7 @@
                   "geneva/udfs/scalar-udtfs",
                   "geneva/udfs/batch-udtfs",
                   "geneva/udfs/error_handling",
+                  "geneva/udfs/profiling-memory",
                   "geneva/udfs/blobs"
                 ]
               },
