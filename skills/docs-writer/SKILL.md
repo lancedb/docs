@@ -18,6 +18,8 @@ Code examples on docs pages are **not** written directly into MDX. They live ins
 
 LLM writing at times feels very formulaic, using very similar phrasing. The goal is to make the docs feel approachable and human, not like a dry manual that was written by a robot. Avoid repeating the same sentence structures, vary your word choice, and inject a bit of personality where appropriate. The content should be clear and accurate, but also engaging to read.
 
+When closing audit findings, keep the fix as small as the reader's need allows. Fold related gaps into existing paragraphs, notes, or lists; avoid adding a new section for every missing edge case. Favor usage-critical guidance, prerequisites, and common failure modes over exhaustive parameter inventories. The docs should help users move confidently, not force them through implementation minutiae.
+
 Avoid the following extremely common patterns:
 - "It's not this, it's that."
 - "Paying the ___ tax" (e.g., "paying the import tax", "paying the setup tax") − the words "pay" and "tax" are heavily overused by AI
