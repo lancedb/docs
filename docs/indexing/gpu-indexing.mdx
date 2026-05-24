@@ -26,6 +26,8 @@ into a synchronous process by waiting until the index is built.
 
 </Info>
 
+`wait_for_index(...)` waits for the index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`. It can time out if the table is receiving continuous writes while the build is trying to catch up.
+
 ## Manual GPU indexing in LanceDB OSS
 
 You can use the Python SDK to manually create the `IVF_PQ` index on a GPU. You'll need
@@ -62,4 +64,3 @@ to enable GPU training on your device.
 
 If you encounter the error `AssertionError: Torch not compiled with CUDA enabled`,
 you need to [install PyTorch with CUDA support](https://pytorch.org/get-started/locally/).
-

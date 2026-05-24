@@ -57,6 +57,8 @@ If you are using LanceDB Enterprise, the `create_scalar_index` API returns immed
     </CodeBlock>
 </CodeGroup>
 
+`wait_for_index(...)` waits until the named scalar indexes exist and `index_stats(...)` reports `num_unindexed_rows == 0`. If a table is receiving steady writes, that fully indexed state may not stabilize before the timeout.
+
 ### 3. Update the Index
 
 Updating the table data (adding, deleting, or modifying records) requires that you also update the scalar index. This can be done by calling `optimize`, which will trigger an update to the existing scalar index.
@@ -139,4 +141,3 @@ LanceDB supports scalar indexes on UUID columns (stored as `FixedSizeBinary(16)`
     {ScalarIndexUuidUpsert}
     </CodeBlock>
 </CodeGroup>
-

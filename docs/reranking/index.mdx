@@ -14,6 +14,9 @@ with models from Cohere, Sentence-Transformers, and more.
 
 To use a reranker, you perform a search and then pass the results to the `rerank()` method.
 
+Note that `CohereReranker()` requires the `cohere` package and either
+`COHERE_API_KEY` in the environment or an `api_key` argument.
+
 <CodeGroup>
 ```python Python icon="python"
 import lancedb
@@ -41,6 +44,17 @@ LanceDB supports several rerankers out of the box. Here are a few examples:
 | `ColbertReranker`      | `colbert-ir/colbertv2.0`               |
 
 You can find more details about these and other rerankers in the [integrations](/integrations/reranking) section.
+
+Python also includes score-based rerankers such as `RRFReranker`, `LinearCombinationReranker`,
+and `MRRReranker`, plus provider rerankers for OpenAI, Jina, Voyage AI, Answer.AI, and Cohere.
+Provider rerankers usually need the provider package installed and either an API key argument or
+the provider-specific environment variable.
+
+Rerankers add `_relevance_score` and return rows ordered by descending relevance. Python rerankers
+accept `return_score="relevance"` or `return_score="all"` − use `"all"` when you want to keep the
+original vector distance or FTS score columns for debugging. Model-based rerankers read from
+`column="text"` by default, so either return that column in the search results or pass a different
+column.
 
 <Note>
 **SDK coverage differs across languages**

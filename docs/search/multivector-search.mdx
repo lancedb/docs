@@ -19,6 +19,8 @@ Each item in your dataset can have a column containing multiple vectors, which L
 Currently, only the `cosine` metric is supported for multivector search. The vector value type can be `float16`, `float32`, or `float64`.
 </Warning>
 
+Each query vector must match the inner vector dimension in the multivector column. This applies to both single-vector queries and multi-vector query matrices.
+
 ## Computing Similarity
 
 MaxSim (Maximum Similarity) is a key concept in late-interaction models that:

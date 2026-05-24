@@ -270,6 +270,12 @@ On a fresh table, the snippets in this guide produce this version sequence:
 
 Read-only and checkout operations shown here (`list_versions`/`listVersions`, `version`, `checkout`, `checkout_latest`/`checkoutLatest`) do not create new versions.
 
+The version metadata fields can differ by backend. Direct table-backed version listing exposes a
+timestamp, while namespace-backed listing may expose fields such as `manifest_path`,
+`manifest_size`, `e_tag`, and `timestamp_millis`. In deployments that use managed versioning,
+prefer the table version APIs exposed by LanceDB Enterprise or the namespace service instead of
+mixing in lower-level Lance file operations.
+
 <Note>
 **System Operations**
 

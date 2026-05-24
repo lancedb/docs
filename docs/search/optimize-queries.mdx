@@ -33,6 +33,11 @@ Executes the query and provides detailed runtime metrics, including:
 
 Together, these tools offer a comprehensive view of query performance, from planning to execution. Use `explain_plan` to verify your query structure and `analyze_plan` to measure and optimize actual performance.
 
+Metadata filters are prefiltered by default, which usually shows the filter pushed into the
+`LanceScan` or index scan. If you set `prefilter=False`, expect a separate `FilterExec` after
+search instead; that can be useful for some expensive filters, but it changes both latency and
+the number of rows available after filtering.
+
 ## Reading the Execution Plan
 
 To demonstrate query performance analysis, we'll use a table containing 1.2M rows sampled from the [Wikipedia dataset](https://huggingface.co/datasets/wikimedia/wikipedia). Initially, the table has no indices, allowing us to observe the impact of optimization.

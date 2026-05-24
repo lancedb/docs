@@ -244,6 +244,10 @@ text_query = "flower moon"
 
 Hybrid queries inherit the same builder API as vector and FTS queries, so the same knobs for filtering, distance bounds, and row identity apply. These compose with `.rerank(...)` and the explicit `.vector()` / `.text()` form shown above.
 
+<Info>
+Always set `.limit(...)` on production hybrid queries. Without an explicit cap, the query builder does not give you a useful top-k contract to tune, and it may materialize more rows than you intended before reranking.
+</Info>
+
 ### Returning row IDs
 
 Pass `with_row_id(True)` (Python) or `withRowId()` (TypeScript) to include the internal `_rowid` column in the results. This is useful for joining hybrid results back to a primary table, or for deduping across multiple queries:
