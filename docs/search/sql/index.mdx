@@ -41,6 +41,8 @@ you can use a wide variety of SQL syntax and functions to query your data.  For 
 information on the SQL syntax and functions supported by DataFusion, please refer to the
 [DataFusion documentation](https://datafusion.apache.org/user-guide/sql/index.html).
 
+The FlightSQL endpoint executes one SQL statement per request and is intended for queries. Use the LanceDB SDKs for DDL and table-management operations such as creating tables, adding columns, or building indexes.
+
 ### Setting Up the Client
 
 Establish a connection to your LanceDB Enterprise SQL endpoint using your preferred FlightSQL client:
@@ -152,4 +154,6 @@ for (const row of (await plan.collectToObjects()) as Array<{ plan_type: string; 
 ```
 </CodeGroup>
 
-The operators that show up in the SQL plan are the same ones documented on the [Optimize Query Performance](/search/optimize-queries) page (`LanceScan`, `ScalarIndexQuery`, `KNNVectorDistance`, `ANNIvfPartition`, and so on), so the same reasoning about index coverage and filter pushdown applies — just read the plan from a SQL client instead of a query builder.
+The operators that show up in the SQL plan are the same ones documented on the [Optimize Query Performance](/search/optimize-queries) page (`LanceScan`, `ScalarIndexQuery`, `KNNVectorDistance`, `ANNIvfPartition`, and so on), so the same reasoning about index coverage and filter pushdown applies - just read the plan from a SQL client instead of a query builder.
+
+For full-text search from SQL, use the dedicated [`fts()` table function](/search/sql/fts-sql). It takes two string-literal arguments: the table name and the JSON-encoded FTS query, which can include operator-style terms, OR, phrase, and fuzzy query forms.

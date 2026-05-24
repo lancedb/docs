@@ -262,7 +262,10 @@ initial testing).
 </CodeGroup >
 
 <Info>
-If you want to avoid overwriting an existing table, omit the overwrite mode.
+If you want to avoid overwriting an existing table, omit the overwrite mode. For append-only
+ingestion into a table that already exists, open the table and call `add(...)` instead of
+`create_table(...)`. For repeatable setup with `exist_ok` / `existOk`, see
+[Handle existing tables](/tables/create#handle-existing-tables).
 </Info>
 
 ### From Pandas DataFrames

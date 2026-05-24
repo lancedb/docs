@@ -53,6 +53,8 @@ You can call `create_index()` with different parameters to create a new index --
 Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
 </Note>
 
+Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
+
 ## Choose the Right Index
 
 Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
