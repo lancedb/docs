@@ -31,13 +31,13 @@ fine with eventual consistency. Stronger consistency is not free — the smaller
 often each read pays the cost of refreshing against object storage, which raises per-read latency and cost.
 
 This setting works for both local ([LanceTable](/tables-and-namespaces#understanding-tables)) and remote
-(LanceDB Cloud and <Badge color="red">Enterprise</Badge>) tables. It only affects read operations —
+tables. It only affects read operations —
 write operations are always consistent.
 
 <Callout color="blue">
 **Consistency in Remote Tables**
 
-For remote tables (LanceDB Cloud and <Badge color="red">Enterprise</Badge>), `read_consistency_interval` is also
+For remote tables, `read_consistency_interval` is also
 respected by the client. The interval is sent to the server as a freshness bound on each read:
 
 - **Unset (default)**: no freshness header is sent; reads use the server's cached view of the table.
