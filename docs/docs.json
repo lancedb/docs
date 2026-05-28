@@ -127,6 +127,10 @@
                 "group": "Reranking",
                 "pages": [
                   "reranking/index",
+                  "reranking/rrf",
+                  "reranking/linear_combination",
+                  "reranking/mrr",
+                  "reranking/cross_encoder",
                   "reranking/custom-reranker",
                   "reranking/eval"
                 ]
@@ -253,12 +257,8 @@
                   "integrations/reranking/answerdotai",
                   "integrations/reranking/cohere",
                   "integrations/reranking/colbert",
-                  "integrations/reranking/cross_encoder",
                   "integrations/reranking/jina",
-                  "integrations/reranking/linear_combination",
-                  "integrations/reranking/mrr",
                   "integrations/reranking/openai",
-                  "integrations/reranking/rrf",
                   "integrations/reranking/voyageai"
                 ]
               },
@@ -491,6 +491,22 @@
     }
   },
   "redirects": [
+    {
+      "source": "/integrations/reranking/rrf",
+      "destination": "reranking/rrf"
+    },
+    {
+      "source": "/integrations/reranking/linear_combination",
+      "destination": "reranking/linear_combination"
+    },
+    {
+      "source": "/integrations/reranking/mrr",
+      "destination": "reranking/mrr"
+    },
+    {
+      "source": "/integrations/reranking/cross_encoder",
+      "destination": "reranking/cross_encoder"
+    },
     {
       "source": "/integrations/platforms/:slug*",
       "destination": "integrations/data/:slug*"
