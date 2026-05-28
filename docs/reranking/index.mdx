@@ -6,49 +6,73 @@ icon: "sort-amount-down"
 keywords: ["re-ranking", "reranker", "rerank"]
 ---
 
+import { PyRerankingLinearCombinationUsage, PyRerankingRrfUsage, PyRerankingCohereUsage } from '/snippets/integrations.mdx';
+
 Reranking is the process of re-ordering search results to improve relevance, often using a
 different model than the one used for the initial search. LanceDB has built-in support for reranking
 with models from Cohere, Sentence-Transformers, and more.
 
 ### Quickstart
 
-To use a reranker, you perform a search and then pass the results to the `rerank()` method.
+To use a reranker, you run a search and pass the results to the `rerank()` method. The examples below
+move from the simplest, model-free rerankers to a model-based one. Each is a complete, runnable script.
 
-Note that `CohereReranker()` requires the `cohere` package and either
-`COHERE_API_KEY` in the environment or an `api_key` argument.
+**1. Linear combination (simplest).** `LinearCombinationReranker` normalizes the vector and full-text
+scores and blends them with a single `weight` (default `0.7`, favoring the vector score). It runs no
+model, and reranks [hybrid search](/search/hybrid-search) results.
 
 <CodeGroup>
-```python Python icon="python"
-import lancedb
-from lancedb.rerank import CohereReranker
-
-db = lancedb.connect("/tmp/lancedb")
-table = db.open_table("my_table")
-
-query = "what is the capital of france"
-
-# Search with reranking
-reranker = CohereReranker()
-reranked_results = table.search(query).limit(10).rerank(reranker=reranker).to_df()
-```
+  <CodeBlock filename="Python" language="Python" icon="python">
+    {PyRerankingLinearCombinationUsage}
+  </CodeBlock>
 </CodeGroup>
+
+**2. Reciprocal Rank Fusion.** `RRFReranker` fuses results by rank position instead of raw score, so it
+sidesteps having to make vector and full-text scores comparable. It loads no model either, and it's the
+default reranker for hybrid search.
+
+<CodeGroup>
+  <CodeBlock filename="Python" language="Python" icon="python">
+    {PyRerankingRrfUsage}
+  </CodeBlock>
+</CodeGroup>
+
+**3. Cohere (model-based).** For higher relevance, a model-based reranker scores each result against the
+query with a trained model. `CohereReranker` works with vector, full-text, or hybrid search, and needs
+the `cohere` package plus either `COHERE_API_KEY` in the environment or an `api_key` argument.
+
+<CodeGroup>
+  <CodeBlock filename="Python" language="Python" icon="python">
+    {PyRerankingCohereUsage}
+  </CodeBlock>
+</CodeGroup>
+
+Reach for the model-free rerankers (`LinearCombinationReranker`, `RRFReranker`) when cost and latency
+matter most; reach for a model-based one like `CohereReranker` or `CrossEncoderReranker` when you need
+higher relevance and can afford to score every query and document pair with a model.
 
 ### Supported Rerankers
 
-LanceDB supports several rerankers out of the box. Here are a few examples:
+LanceDB supports the following rerankers out of the box. The first three are score-based and run no
+model; the rest are model-based. See the [integrations](/integrations/reranking) section for the
+arguments and details of each.
 
-| Reranker               | Default Model                          |
-| ---------------------- | -------------------------------------- |
-| `CohereReranker`       | `rerank-english-v2.0`                  |
-| `CrossEncoderReranker` | `cross-encoder/ms-marco-MiniLM-L-6-v2` |
-| `ColbertReranker`      | `colbert-ir/colbertv2.0`               |
+| Reranker                    | Default model                          |
+| --------------------------- | -------------------------------------- |
+| `RRFReranker`               | None (reciprocal rank fusion)          |
+| `LinearCombinationReranker` | None (weighted score blend)            |
+| `MRRReranker`               | None (weighted reciprocal rank)        |
+| `CohereReranker`            | `rerank-english-v3.0`                  |
+| `CrossEncoderReranker`      | `cross-encoder/ms-marco-TinyBERT-L-6`  |
+| `ColbertReranker`           | `colbert-ir/colbertv2.0`               |
+| `AnswerdotaiRerankers`      | `answerdotai/answerai-colbert-small-v1`|
+| `JinaReranker`              | `jina-reranker-v2-base-multilingual`   |
+| `OpenaiReranker`            | `gpt-4-turbo-preview`                  |
+| `VoyageAIReranker`          | No default (model name required)       |
 
-You can find more details about these and other rerankers in the [integrations](/integrations/reranking) section.
-
-Python also includes score-based rerankers such as `RRFReranker`, `LinearCombinationReranker`,
-and `MRRReranker`, plus provider rerankers for OpenAI, Jina, Voyage AI, Answer.AI, and Cohere.
-Provider rerankers usually need the provider package installed and either an API key argument or
-the provider-specific environment variable.
+The model-based rerankers need their provider package installed, and the hosted ones
+(`CohereReranker`, `JinaReranker`, `OpenaiReranker`, `VoyageAIReranker`) also need an API key, passed
+as an `api_key` argument or set in the provider-specific environment variable.
 
 Rerankers add `_relevance_score` and return rows ordered by descending relevance. Python rerankers
 accept `return_score="relevance"` or `return_score="all"` − use `"all"` when you want to keep the
