@@ -23,7 +23,7 @@ Table optimization performs three maintenance operations:
 
 1. **Compaction**: merges small fragments into larger ones to improve read performance
 2. **Pruning/Cleanup**: removes files from versions older than a retention window (7 days by default)
-3. **Index update**: adds newly-ingested data to existing indexes
+3. **Index update**: adds newly-ingested data to existing vector, scalar, and FTS indexes
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -36,7 +36,7 @@ Table optimization performs three maintenance operations:
 LanceDB Enterprise support incremental reindexing through an automated background process. When new data is added to a table, the system automatically triggers a new index build. As the dataset grows, indexes are asynchronously updated in the background.
 
 - While indexes are being rebuilt, queries use brute force methods on unindexed rows, which may temporarily increase latency. To avoid this, set `fast_search=True` to search only indexed data.
-- Use `index_stats()` to view the number of unindexed rows. This will be zero when indexes are fully up-to-date.
+- Use `index_stats()` to view the number of unindexed rows. This will be zero when indexes are fully up-to-date. If you call `wait_for_index(...)`, it polls the same status and can time out while continuous writes keep adding unindexed rows.
 
 The benefit of using LanceDB Enterprise is that it automates the reindexing process
 and operates continuously in the background, minimizing the impact on latency under high loads.
@@ -56,5 +56,4 @@ If you need to reclaim space more aggressively in OSS, use a shorter retention w
     table.optimize(cleanup_older_than=timedelta(days=1))
     ```
 </CodeGroup>
-
 

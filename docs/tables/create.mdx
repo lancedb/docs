@@ -26,6 +26,7 @@ import {
     PyCreateTableFromIterator as CreateTableFromIterator,
     TsCreateTableFromIterator as TsCreateTableFromIterator,
     RsCreateTableFromIterator as RsCreateTableFromIterator,
+    TsAddProgress,
     PyOpenExistingTable as OpenExistingTable,
     TsOpenExistingTable as TsOpenExistingTable,
     RsOpenExistingTable as RsOpenExistingTable,
@@ -70,6 +71,8 @@ Depending on the SDK, LanceDB can ingest arrays of records, Arrow tables or reco
 
 You can provide a list of objects to create a table. The Python and TypeScript SDKs
 support lists/arrays of dictionaries, while the Rust SDK supports lists of structs.
+In Python, pass a list or other batch-like object; a single bare `dict` or single
+`LanceModel` is rejected.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -135,6 +138,11 @@ You can define a custom Arrow schema for the table. This is useful when you want
     {RsCreateTableCustomSchema}
     </CodeBlock>
 </CodeGroup>
+
+An explicit schema is also where you control nullability. If later writes omit a
+non-nullable column, or provide actual nulls for it, ingestion fails; nullable columns can be
+omitted or written with null values. Without an explicit schema, Python infers list-like vector
+values as fixed-size `float32` vector fields from the observed dimension.
 
 ### From an Arrow Table
 You can also create LanceDB tables directly from Arrow tables.
@@ -322,6 +330,37 @@ total size upfront. A `parallelism` parameter to control this manually is planne
 but not yet exposed in Python or TypeScript
 ([tracking issue](https://github.com/lancedb/lancedb/issues/3173)).
 </Note>
+
+#### Tracking ingestion progress
+<Badge color="green">TypeScript Only</Badge>
+
+For long-running writes, pass a `progress` callback to `table.add()` to surface
+per-batch progress in your UI, logs, or metrics pipeline. The callback fires
+once per batch written and once more with `done: true` when the write completes.
+
+Each invocation receives a `WriteProgress` object:
+
+| Field | Description |
+|:------|:------------|
+| `outputRows` | Rows written so far. |
+| `outputBytes` | Bytes written so far. |
+| `totalRows` | Expected total rows when the input source reports one. Always set on the final callback. |
+| `elapsedSeconds` | Wall-clock seconds since the write started. |
+| `activeTasks` | Parallel write tasks currently in flight. |
+| `totalTasks` | Total parallel write tasks (the write parallelism). |
+| `done` | `true` only for the final callback. |
+
+<CodeGroup>
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsAddProgress}
+    </CodeBlock>
+</CodeGroup>
+
+A few things to know before you wire this up:
+
+- Back-pressures the writer: callback invocations are serialized and run inline with each batch, so a slow callback will slow the write rather than drop updates. Every batch update is delivered, and the final `done: true` callback always fires (even on error or cancellation). Keep the callback cheap — offload heavy work to a queue you drain elsewhere.
+- Errors swallowed: anything your callback throws is logged with `console.warn` and won't abort the write, so keep the callback side-effect-only and don't rely on it for control flow.
+- Row totals: `totalRows` is only populated when the input source can report it up front (for example, a materialized `arrow.Table`). For streaming sources it stays `undefined` until the final callback, where it falls back to the actual rows written.
 
 ## Create empty table
 You can create an empty table for scenarios where you want to add data to the table later.

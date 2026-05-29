@@ -89,13 +89,3 @@ Please contact the LanceDB team for the comprehensive list of monitoring metrics
 LanceDB uses Prometheus for metrics collection and OpenTelemetry (OTel) to export such
 metrics with data enrichment. The LanceDB team will work with you to integrate the 
 monitoring metrics with your preferred dashboard.
-
-### Other
-
-#### How do I check the Lance version of my dataset?
-Upgrade to a recent pylance version (v0.18.0+), then use _LanceDataset.data_storage_version_
-
-```py
->>> lance.dataset("my_dataset").data_storage_version
-'2.0'
-```

@@ -31,6 +31,8 @@ import {
     PyBlobApiIngest as BlobApiIngest,
     TsBlobApiIngest as TsBlobApiIngest,
     RsBlobApiIngest as RsBlobApiIngest,
+    PyBlobApiToPandas as BlobApiToPandas,
+    PyQueryToPandasKwargs as QueryToPandasKwargs,
 } from '/snippets/multimodal.mdx';
 
 LanceDB handles multimodal data—images, audio, video, and PDF files—natively by storing the raw bytes in a binary column alongside your vectors and metadata. This approach simplifies your data infrastructure by keeping the raw assets and their embeddings in the same database, eliminating the need for separate object storage for many use cases.
@@ -193,6 +195,34 @@ You can then ingest data normally, and Lance will handle the optimized storage.
 For more advanced usage, including random access and file-like reading of blobs, see the
 Lance format's [blob API documentation](https://lance.org/guide/blob/).
 </Card>
+
+### 3. Convert blob tables to pandas
+
+When you call `to_pandas()` on a local LanceDB table that contains Blob API columns, the `blob_mode` argument controls how those columns materialize. This is available in the Python SDK on local tables; remote tables raise `NotImplementedError`.
+
+`blob_mode` accepts:
+
+- `"lazy"` (default): returns blob columns without eagerly materializing their payloads. Use this when you want existing behavior and don't need to inspect blob metadata. For namespace-managed tables and in-memory datasets, lazy mode falls back to the standard PyArrow `to_pandas()` path.
+- `"bytes"`: eagerly materializes each blob as `bytes`. Use this when you need the raw payload in the DataFrame, for example to decode an image or audio clip in-process.
+- `"descriptions"`: returns blob descriptors (offsets, sizes, and positions) instead of the data itself. Use this when you want to plan I/O without paying the cost of loading every blob.
+
+`"bytes"` and `"descriptions"` require a filesystem-backed Lance dataset; they are not supported on in-memory tables or namespace-managed tables.
+
+Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas conversion, so you can also pass options like `split_blocks` or `self_destruct`:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BlobApiToPandas}
+    </CodeBlock>
+</CodeGroup>
+
+Query builders accept the same PyArrow `to_pandas` kwargs, but not `blob_mode`. They materialize Arrow results first, apply LanceDB-specific `flatten` and `timeout` handling, and then forward the remaining kwargs:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {QueryToPandasKwargs}
+    </CodeBlock>
+</CodeGroup>
 
 ## Other modalities
 

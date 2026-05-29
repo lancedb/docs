@@ -42,11 +42,14 @@ If the source code disagrees with the gap report, trust the source and flag the 
 
 Edit the affected MDX pages directly. Keep the change scoped to the gap; don't sweep in unrelated improvements unless the user asked for them.
 
+Default to minimally invasive edits. The goal is to help readers use LanceDB correctly, not to reproduce every detail from the audit report. When several findings point at the same concept, fold them into one short paragraph, note, or existing list item instead of adding separate sections. Prefer practical usage guidance, prerequisites, and failure modes over exhaustive API inventory. Add a new section only when the surrounding page has no natural place for the information.
+
 For prose:
 
 - **Placement**: put new sections where readers will encounter the concept naturally, not in the next empty slot at the bottom of the page.
 - **Depth and tone**: match the heading depth and voice of surrounding sections.
 - **Cross-links**: link to related pages with anchor links when it helps the reader, without spraying too many links and making the prose look cluttered.
+- **Brevity**: make the smallest change that closes the gap for a working user. Avoid verbose caveat lists unless the caveat changes what the user should do.
 
 For code examples:
 
