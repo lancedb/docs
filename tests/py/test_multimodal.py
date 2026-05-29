@@ -120,3 +120,75 @@ def test_blob_api_definition(db_path_factory):
     tbl = db.create_table("videos", data=data, schema=schema)
     # --8<-- [end:blob_api_ingest]
     assert len(tbl) == 2
+
+
+def test_blob_api_to_pandas(db_path_factory):
+    db = lancedb.connect(db_path_factory("blob_to_pandas_db"))
+    schema = pa.schema([
+        pa.field("id", pa.int64()),
+        pa.field(
+            "video",
+            pa.large_binary(),
+            metadata={"lance-encoding:blob": "true"},
+        ),
+    ])
+    tbl = db.create_table(
+        "videos",
+        data=[
+            {"id": 1, "video": b"fake_video_bytes_1"},
+            {"id": 2, "video": b"fake_video_bytes_2"},
+        ],
+        schema=schema,
+        mode="overwrite",
+    )
+
+    # --8<-- [start:blob_api_to_pandas]
+    # Default: blob columns come back lazily
+    df_lazy = tbl.to_pandas()
+
+    # Materialize blob bytes eagerly
+    df_bytes = tbl.to_pandas(blob_mode="bytes")
+
+    # Return descriptors instead of payloads
+    df_desc = tbl.to_pandas(blob_mode="descriptions")
+
+    # Forward extra kwargs to PyArrow's to_pandas
+    df_typed = tbl.to_pandas(split_blocks=True, self_destruct=True)
+    # --8<-- [end:blob_api_to_pandas]
+
+    assert len(df_lazy) == 2
+    assert isinstance(df_bytes["video"].iloc[0], bytes)
+    assert df_bytes["video"].tolist() == [
+        b"fake_video_bytes_1",
+        b"fake_video_bytes_2",
+    ]
+    assert len(df_desc) == 2
+    assert len(df_typed) == 2
+
+
+def test_query_to_pandas_kwargs(db_path_factory):
+    db = lancedb.connect(db_path_factory("query_to_pandas_db"))
+    schema = pa.schema([
+        pa.field("id", pa.int64()),
+        pa.field("vector", pa.list_(pa.float32(), 128)),
+    ])
+    tbl = db.create_table(
+        "search_demo",
+        data=[
+            {"id": i, "vector": np.random.rand(128).astype(np.float32)}
+            for i in range(10)
+        ],
+        schema=schema,
+        mode="overwrite",
+    )
+    query_vector = np.random.rand(128).astype(np.float32)
+
+    # --8<-- [start:query_to_pandas_kwargs]
+    df = (
+        tbl.search(query_vector)
+        .limit(10)
+        .to_pandas(split_blocks=True, self_destruct=True)
+    )
+    # --8<-- [end:query_to_pandas_kwargs]
+
+    assert len(df) == 10

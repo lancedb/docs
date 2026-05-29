@@ -342,6 +342,7 @@ the filter condition after obtaining the nearest neighbors based on vector simil
 Use multivector search when your documents contain multiple embeddings and you need sophisticated matching between query and document vector pairs. The late interaction approach finds the most relevant combinations across all available embeddings and provides nuanced similarity scoring.
 
 Only `cosine` similarity is supported as the distance metric for multivector search operations.
+Every query vector must match the inner dimension of the multivector column; LanceDB rejects mismatched query dimensions rather than guessing how to reshape them.
 
 <CodeGroup>
 ```python Python icon="python"

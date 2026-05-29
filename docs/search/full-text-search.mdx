@@ -130,6 +130,8 @@ If you want to specify which columns to search use `fts_columns="text"`
 LanceDB automatically searches on the existing FTS index if the input to the search is of type `str`. If you provide a vector as input, LanceDB will search the ANN index instead.
 </Note>
 
+If a table has more than one FTS index, specify the indexed text column in the query. In Python you can use `fts_columns` or the query builder's `nearest_to_text(..., columns=...)`; in TypeScript, use `query().nearestToText(..., columns)`. The newer Lance-native FTS does not accept legacy Tantivy-only index parameters.
+
 ### Keeping the index up to date
 
 Rows you add after building an FTS index aren't part of the index until you optimize the table. Until then, queries fall back to a flat scan over the unindexed fragments to keep results complete, which slows them down as the unindexed tail grows. Call `table.optimize()` to fold new rows into the existing index — it's the same operation used for vector indexes:

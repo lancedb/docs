@@ -8,11 +8,12 @@ This workspace orchestrates a weekly documentation-gap audit across three local 
 
 The goal is to find what is missing from the docs, especially conceptual and imperative guidance that exists in code, tests, UI copy, request schemas, config comments, or integration scenarios but is not conveyed clearly in the public docs.
 
-This is a research workflow, not a production service. The design favors:
+This is a research workflow with a scheduled cloud runner. The design favors:
 
 - compact deterministic preprocessing
-- page-scoped LLM work by the running agent
+- page-scoped LLM work through the OpenAI API
 - saved local artifacts for inspection and reuse
+- durable storage of completed reports and parsed findings
 - simple extension through manifests
 
 ## Non-goals
@@ -22,7 +23,7 @@ This workspace does not:
 - clone or vendor source code from the watched repos
 - attempt to enforce a hard token quota in the agent runtime
 - produce doc fixes automatically
-- behave like a production CI system
+- automatically author or rewrite area manifests during scheduled runs
 
 ## Watched Repos
 
@@ -48,20 +49,24 @@ Each weekly run follows the same sequence:
    - then include rotating extra pages for broader coverage
    - if no pages changed, the rotating extra pages become the selected pages
    - the rotation walks through the pages in manifest order and advances as rotating pages are added
-7. Use page-scoped LLM passes on the selected page bundles to extract:
+7. Use OpenAI API-driven page-scoped LLM passes on the selected page bundles to extract:
    - code claims
    - doc claims
    - candidate gaps and final markdown observations
 8. Save artifacts under a timestamped run directory.
 9. Mark the run complete and update state.
-10. Surface the final markdown report through an inbox item.
+10. Parse the completed `report.md` into durable findings.
+11. Embed each public finding with OpenAI embeddings.
+12. Store the run and findings in LanceDB Enterprise under `db://docs-audit`.
+13. Surface a concise summary from the filtered public findings.
 
 ## Workspace Layout
 
 - `config.toml`: repo paths, enabled areas, selection rules, and output paths
 - `manifests/`: docs-area manifests
 - `prompts/`: reusable agent prompt templates
-- `scripts/`: deterministic extraction, refresh, selection, and state utilities
+- `docs_audit/`: deterministic runner, OpenAI helpers, report parser, and Enterprise storage code
+- `scripts/run_weekly_audit.py`: user-facing weekly audit entrypoint for local and EC2 cron runs
 - `state/`: lightweight run state and rotation cursor
 - `artifacts/`: per-run evidence bundles, LLM outputs, and reports
 - `README.md`: maintainer-oriented workflow and extension guide
@@ -85,7 +90,7 @@ The deterministic layer intentionally keeps evidence compact so the LLM does not
 
 ## LLM-Assisted Layer
 
-The semantic layer runs through the automation prompt. For each selected page bundle, the LLM should:
+The semantic layer runs through the OpenAI API. For each selected page bundle, the LLM should:
 
 1. infer normalized code claims from the evidence bundle
 2. infer normalized doc claims from the docs bundle
@@ -99,12 +104,16 @@ The saved artifacts should include:
 - candidate gaps
 - final markdown report
 
+The scheduled cloud workflow should use existing manifest files only. Manifest authoring and manifest
+maintenance are manual maintainer activities; they may use `skills/area-manifest-authoring/SKILL.md`,
+but the weekly cloud run should not edit manifests as part of normal execution.
+
 ## Running a Manual Audit
 
 From this workspace root:
 
 ```bash
-uv run python scripts/run_audit.py select-areas --refresh --advance
+uv run python -m docs_audit.deterministic_runner select-areas --refresh --advance
 ```
 
 This chooses a bounded list of enabled area manifests for the weekly run. The selector uses
@@ -113,7 +122,7 @@ weekly slots are filled by rotating through `enabled_areas`. Use the printed `se
 for the per-area `prepare` commands.
 
 ```bash
-uv run python scripts/run_audit.py prepare --area indexing
+uv run python -m docs_audit.deterministic_runner prepare --area indexing
 ```
 
 `--area` is the manifest name, not a hardcoded value in the script. The runner loads:
@@ -123,7 +132,7 @@ uv run python scripts/run_audit.py prepare --area indexing
 So `--area indexing` maps to `manifests/indexing.toml`. If you add `manifests/search.toml`, you would run:
 
 ```bash
-uv run python scripts/run_audit.py prepare --area search
+uv run python -m docs_audit.deterministic_runner prepare --area search
 ```
 
 This creates a pending run directory under `artifacts/pending/<run_id>/` and prints a JSON summary to stdout.
@@ -156,7 +165,7 @@ selected area through `[selection].rotation_extra_pages`.
 After the LLM phase writes the expected outputs into that pending run directory, complete the run with:
 
 ```bash
-uv run python scripts/run_audit.py complete --run-id <run_id>
+uv run python -m docs_audit.deterministic_runner complete --run-id <run_id>
 ```
 
 Completion publishes the directory to `artifacts/runs/<run_id>/`. Directories under `artifacts/runs/`
@@ -167,19 +176,19 @@ Run multiple area `prepare` commands sequentially. The intended workflow is one 
 To clean up old generated run artifacts, use:
 
 ```bash
-uv run python scripts/run_audit.py cleanup --days 30
+uv run python -m docs_audit.deterministic_runner cleanup --days 30
 ```
 
 The retention window is configurable with `--days`, and you can preview deletions without removing anything:
 
 ```bash
-uv run python scripts/run_audit.py cleanup --days 14 --dry-run
+uv run python -m docs_audit.deterministic_runner cleanup --days 14 --dry-run
 ```
 
 For manual testing of the fallback path, you can simulate an unrefreshable repo:
 
 ```bash
-uv run python scripts/run_audit.py prepare \
+uv run python -m docs_audit.deterministic_runner prepare \
   --area indexing \
   --refresh \
   --simulate-refresh-failure docs
@@ -324,7 +333,7 @@ A practical workflow:
 After adding a new manifest, run:
 
 ```bash
-uv run python scripts/run_audit.py prepare --area <new-area>
+uv run python -m docs_audit.deterministic_runner prepare --area <new-area>
 ```
 
 Then inspect:
@@ -345,25 +354,206 @@ The runner is designed so new docs areas should generally require a new manifest
 
 ## Weekly Automation
 
-The weekly automation should use this workspace as its cwd and follow `prompts/weekly_automation.md`.
+The weekly automation should use this workspace as its cwd and follow the deterministic selection and
+prepare/complete flow described above. In the cloud, the semantic pass is performed with OpenAI API
+credentials rather than a Codex Desktop agent.
 
 The automation should:
 
-- review each enabled area manifest before running the audit
-- use `skills/area-manifest-authoring/SKILL.md` to detect docs-page drift and newly relevant evidence files in the watched repos
-- update a manifest when the area boundary or source mapping has materially changed
-- run the deterministic prepare step
+- load the enabled area manifests as read-only workflow inputs
+- run `select-areas --refresh --advance`
+- run `prepare` sequentially for each selected area
 - inspect the generated selected page bundles
-- perform the page-scoped LLM passes
+- perform the page-scoped LLM passes through the OpenAI API
 - write outputs under the run directory
 - keep `report.md` limited to the missing-doc summary itself, not routine workflow or refresh-status narration
 - call the completion step
-- return a concise markdown summary for the inbox item
+- parse the completed `report.md` into finding records
+- filter out findings that should not be exposed to end users, including helm chart and enterprise deployment observations
+- write the completed run and public findings to LanceDB Enterprise
+- return a concise markdown summary from the stored public findings
+
+The cloud runner needs these secrets or environment variables:
+
+- `OPENAI_API_KEY`: used for page-level semantic passes and finding embeddings
+- `DOCS_AUDIT_OPENAI_MODEL`: chat/reasoning model for page-level audits; defaults to `gpt-5.5`
+- `DOCS_AUDIT_OPENAI_REASONING_EFFORT`: reasoning effort for page-level audits; defaults to `high`
+- `DOCS_AUDIT_EMBEDDING_MODEL`: embedding model for finding search vectors
+- `LANCEDB_API_KEY`: LanceDB Enterprise API key
+- `LANCEDB_HOST_OVERRIDE`: LanceDB Enterprise host URL
+- `LANCEDB_REGION`: LanceDB Enterprise region, usually `us-east-1`
+- `DOCS_AUDIT_DB_URI`: optional override for the Enterprise database URI; defaults to `db://docs-audit`
+
+Use GPT-5.5 with high reasoning for the page-audit semantic pass. The audit is intentionally
+judgment-heavy: the model has to compare compact evidence bundles against docs claims, avoid
+implementation summaries, and emit only missing public documentation observations. Embeddings are a
+separate step used only after `report.md` is complete and parsed.
+
+The LanceDB Enterprise connection should follow the same remote-only pattern used by neighboring
+internal tooling:
+
+```python
+lancedb.connect(
+    uri="db://docs-audit",
+    api_key=LANCEDB_API_KEY,
+    host_override=LANCEDB_HOST_OVERRIDE,
+    region=LANCEDB_REGION,
+)
+```
+
+## EC2 Cron Deployment
+
+An EC2 cron job is a suitable deployment target for this workflow. The instance should keep the
+watched repositories checked out side by side so the relative paths in `config.toml` continue to
+resolve:
+
+```text
+/opt/lancedb-docs-audit/
+  lancedb/
+  docs/
+    workflows/docs-audit/
+  sophon/
+```
+
+From the `docs` checkout, the docs-audit workspace still expects:
+
+- `../../../lancedb`
+- `../..`
+- `../../../sophon`
+
+If the EC2 checkout layout differs, update `workflows/docs-audit/config.toml` instead of adding
+path translation logic to the runner.
+
+Create a local environment file at `workflows/docs-audit/.env` on the instance. `.env` files are
+ignored by this repo and must not be committed:
+
+```bash
+OPENAI_API_KEY=...
+DOCS_AUDIT_OPENAI_MODEL=gpt-5.5
+DOCS_AUDIT_OPENAI_REASONING_EFFORT=high
+DOCS_AUDIT_EMBEDDING_MODEL=text-embedding-3-large
+
+LANCEDB_API_KEY=...
+LANCEDB_HOST_OVERRIDE=https://...
+LANCEDB_REGION=us-east-1
+DOCS_AUDIT_DB_URI=db://docs-audit
+```
+
+Cron should call a single cloud-runner entrypoint from the docs-audit workspace. Use a lock so a slow
+run cannot overlap the next scheduled run, and write logs outside the repo:
+
+```cron
+17 13 * * 1 cd /opt/lancedb-docs-audit/docs/workflows/docs-audit && flock -n /tmp/docs-audit.lock uv run python scripts/run_weekly_audit.py >> /var/log/docs-audit/weekly.log 2>&1
+```
+
+The cloud runner should:
+
+- load `workflows/docs-audit/.env` before reading configuration
+- use GPT-5.5 with high reasoning for page-level audit calls
+- use OpenAI embeddings only after `report.md` has been generated and parsed
+- write completed runs and findings to `db://docs-audit`
+- exit non-zero when refresh, OpenAI, parsing, or Enterprise writes fail
+
+The EC2 instance needs outbound network access to Git remotes, the OpenAI API, and the LanceDB
+Enterprise host. Prefer instance IAM or deploy keys for repository access, and keep OpenAI and
+LanceDB credentials in the local `.env` or the instance's secret-management layer.
+
+## Testing the Cloud Runner Locally
+
+Copy `workflows/docs-audit/.env.example` to `workflows/docs-audit/.env` and fill in the secrets.
+
+The runner has four practical modes:
+
+| Command | Selects areas | Calls GPT-5.5 | Calls embeddings | Writes LanceDB | Use for |
+| --- | --- | --- | --- | --- | --- |
+| `run_weekly_audit.py --ingest-run-dir artifacts/runs/<run_id> --skip-write` | No | No | No | No | Cheapest parser/report smoke test |
+| `run_weekly_audit.py --no-refresh --no-advance --skip-write` | Yes | Yes | No | No | Local report-generation test |
+| `run_weekly_audit.py --ingest-run-dir artifacts/runs/<run_id>` | No | No | Yes | Yes | Backfill/test Enterprise writes for one completed run |
+| `run_weekly_audit.py` | Yes | Yes | Yes | Yes | Real weekly EC2 cron run |
+
+Argument meanings:
+
+- `--ingest-run-dir`: bypasses weekly selection and report generation; parses an existing completed run.
+- `--skip-write`: skips finding embeddings and LanceDB Enterprise writes. It does not skip GPT-5.5 if the command is generating a new report.
+- `--no-refresh`: skips `git pull --ff-only` during weekly area selection.
+- `--no-advance`: prevents the area rotation cursor from moving, which makes local tests repeatable.
+
+To run the cloud workflow locally without refreshing repos or writing to LanceDB Enterprise:
+
+```bash
+cd workflows/docs-audit
+uv run python scripts/run_weekly_audit.py --no-refresh --no-advance --skip-write
+```
+
+This still calls the OpenAI page-audit model and writes a completed local run artifact, but it skips
+finding embeddings and Enterprise writes.
+
+To backfill or test parsing for an existing completed run without OpenAI or Enterprise calls:
+
+```bash
+cd workflows/docs-audit
+uv run python scripts/run_weekly_audit.py \
+  --ingest-run-dir artifacts/runs/<run_id> \
+  --skip-write
+```
+
+To test the Enterprise write path for an existing completed run, omit `--skip-write`. That path
+uses OpenAI embeddings and writes to `docs_audit_runs` and `docs_audit_findings`.
+
+## Enterprise Storage
+
+The durable audit output is the completed `report.md`. Intermediate files under `llm_outputs/` and
+`page_bundles/` are useful for inspection, but they are not the primary historical record.
+
+Store completed report data in two LanceDB Enterprise tables under `db://docs-audit`:
+
+### `docs_audit_runs`
+
+One row per completed run.
+
+| Column | Purpose |
+| --- | --- |
+| `run_id` | Primary run identifier |
+| `completed_at` | Run completion timestamp |
+| `areas` | Selected areas for the run |
+| `report_text` | Raw completed `report.md` text, stored once per run |
+| `report_path` | Original artifact path or cloud artifact URL |
+| `repo_shas` | Docs, LanceDB, and Sophon commit SHAs |
+| `selected_pages` | Pages audited in the run |
+| `changed_pages` | Pages whose evidence fingerprints changed |
+| `refresh` | Watched repo refresh metadata |
+| `metadata` | Extra run metadata |
+
+### `docs_audit_findings`
+
+One row per parsed missing-doc observation from the completed report.
+
+| Column | Purpose |
+| --- | --- |
+| `id` | Stable finding id, such as `{run_id}:{finding_index}` |
+| `run_id` | Link back to `docs_audit_runs` |
+| `completed_at` | Copied from the run for time filtering |
+| `area` | Docs audit area |
+| `page_id` | Manifest page id when it can be resolved |
+| `page_title` | Human-readable page or report heading |
+| `page_path` | Docs source path when it can be resolved |
+| `report_heading` | Heading from `report.md` |
+| `finding_index` | Finding order in the report |
+| `finding_text` | Parsed missing-doc observation |
+| `finding_hash` | Hash of normalized area, page, and finding text |
+| `visibility_class` | `public-doc-gap` or `excluded` |
+| `embedding_text` | Compact text sent to the OpenAI embeddings API |
+| `embedding` | Vector used for later semantic search |
+| `metadata` | Small finding-level extras |
+
+For reruns or backfills of the same `run_id`, delete existing rows for that `run_id` from both tables
+and replace them. Do not rewrite historical rows during routine weekly runs.
 
 ## Maintainer Notes
 
 - Keep reports focused on what is missing in the docs, not on implementation summaries or fix proposals.
 - Do not spend report tokens on routine success status such as clean repo refreshes.
 - Prefer evidence from doc comments, tested snippets, request schemas, UI copy, config comments, and integration tests over deep implementation internals.
-- If a new feature lands and the docs area should notice it, update the manifest first.
+- If a new feature lands and the docs area should notice it, update the manifest manually first.
+- The scheduled cloud workflow should not use `skills/area-manifest-authoring/SKILL.md`; maintainers can use that skill manually when adding or refreshing manifests.
 - If the semantic pass grows too expensive, reduce weekly selection breadth before shrinking evidence quality.

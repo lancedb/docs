@@ -53,6 +53,8 @@ You can call `create_index()` with different parameters to create a new index --
 Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
 </Note>
 
+Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
+
 ## Choose the Right Index
 
 Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
@@ -136,6 +138,31 @@ Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` 
     {VectorIndexBuildIvf}
     </CodeBlock>
 </CodeGroup>
+
+#### Indexing nested vector fields
+
+If your vector column lives inside a struct, pass its full dotted path as `vector_column_name`. The same path is used at query time and is what `list_indices()` reports under `columns`:
+
+```python
+# Schema: pa.struct([pa.field("embedding", pa.list_(pa.float32(), 2))])
+# stored under the `image` column.
+table.create_index(
+    vector_column_name="image.embedding",
+    num_partitions=1,
+    num_sub_vectors=1,
+    name="image_embedding_idx",
+)
+
+results = (
+    table.search([0.0, 1.0], vector_column_name="image.embedding")
+    .limit(1)
+    .to_list()
+)
+```
+
+<Note>
+Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `image.thumbnail.embedding`). The same convention applies to FTS and scalar indexes.
+</Note>
 
 ### Async API and Config Objects
 

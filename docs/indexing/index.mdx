@@ -39,6 +39,12 @@ LanceDB provides a comprehensive suite of indexing strategies for different data
 TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
 </Note>
 
+<Info>
+**Operational checks**
+
+For vector indexes, use the same distance metric when creating the index and searching it. After appends or other writes, use `optimize()` to fold new rows into existing indexes, then check `index_stats(...)` or `wait_for_index(...)` if you need to confirm the index has caught up. `wait_for_index(...)` waits until the named indexes exist and report `num_unindexed_rows == 0`; it can time out if writes keep adding unindexed rows.
+</Info>
+
 ### Quantization Types
 
 Vector indexes can use different quantization methods to compress vectors and improve search performance:
