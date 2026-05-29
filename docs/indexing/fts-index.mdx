@@ -87,3 +87,22 @@ Enable phrase queries by setting:
 |:----------|:---------------|:--------|
 | `with_position` | `True` | Track token positions for phrase matching |
 | `remove_stop_words` | `False` | Preserve stop words for exact phrase matching |
+
+## Indexing nested string fields
+
+You can build an FTS index on a string field inside a struct by passing its full dotted path, like `nested.text`. The same path is used when you query the index through `fts_columns`, and the indexed column is reported back as the full path from `list_indices()`.
+
+```python
+# Schema: pa.struct([pa.field("text", pa.string())]) stored under the `nested` column.
+table.create_fts_index("nested.text")
+
+results = (
+    table.search("puppy", query_type="fts", fts_columns="nested.text")
+    .limit(5)
+    .to_list()
+)
+```
+
+<Note>
+Use the canonical Lance path: dot-separate each struct field from root to leaf (for example, `metadata.author.name`). The same convention applies to scalar and vector indexes.
+</Note>

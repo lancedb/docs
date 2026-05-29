@@ -91,6 +91,22 @@ Scalar indexes can also speed up scans containing a vector search or full text s
     </CodeBlock>
 </CodeGroup>
 
+## Indexing nested fields
+
+Scalar indexes can target a scalar field inside a struct by passing its full dotted path. The path is preserved end to end: it's the value you pass to `create_scalar_index`, it's what `list_indices()` reports under `columns`, and it's the column reference you use in filter predicates.
+
+```python
+# Schema: pa.struct([pa.field("user_id", pa.int32())]) stored under the `metadata` column.
+table.create_scalar_index("metadata.user_id", name="metadata_user_id_idx")
+
+# The same dotted path works in WHERE clauses.
+table.search().where("metadata.user_id = 42").limit(1).to_list()
+```
+
+<Note>
+Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `metadata.author.name`). The same convention applies to FTS and vector indexes.
+</Note>
+
 ## Index UUID Columns
 
 LanceDB supports scalar indexes on UUID columns (stored as `FixedSizeBinary(16)`), enabling efficient lookups and filtering on UUID-based primary keys.
