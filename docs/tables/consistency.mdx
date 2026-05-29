@@ -19,7 +19,7 @@ import {
 
 You can set `read_consistency_interval` on the connection to control how often reads check for updates from other writers.
 
-There are three possible settings for `read_consistency_interval` when working with [LanceTable](/tables-and-namespaces#understanding-tables):
+There are three possible settings for `read_consistency_interval`:
 
 1. **Unset (default)**: no automatic cross-process refresh checks.
 2. **Zero seconds**: check for updates on every read (strongest freshness).
@@ -27,14 +27,34 @@ There are three possible settings for `read_consistency_interval` when working w
 
 The value you set depends on your application's consistency needs and performance requirements.
 For example, a real-time dashboard might require strong consistency, while a batch analytics job might be
-fine with eventual consistency.
+fine with eventual consistency. Stronger consistency is not free — the smaller the interval, the more
+often each read pays the cost of refreshing against object storage, which raises per-read latency and cost.
 
-<Callout color="red">
+This setting works for both local ([LanceTable](/tables-and-namespaces#understanding-tables)) and remote
+tables. It only affects read operations —
+write operations are always consistent.
+
+<Callout color="blue">
 **Consistency in Remote Tables**
 
-In LanceDB <Badge color="red">Enterprise</Badge> (where you use `RemoteTable`), consistency is deployment-configured
-(via a `weak_read_consistency_interval_seconds` parameter in the cluster setup), and is not an end-user setting in the SDK.
-You can still use `checkout_latest` / `checkoutLatest` for explicit manual refresh.
+For remote tables, `read_consistency_interval` is also
+respected by the client. The interval is sent to the server as a freshness bound on each read:
+
+- **Unset (default)**: no freshness header is sent; reads use the server's cached view of the table.
+- **Zero seconds**: every read asks the server for the latest committed version.
+- **Non-zero interval**: reads accept data at least as fresh as `now - interval`.
+
+In addition, after any write through the client (`add`, `update`, `delete`, `merge_insert`, `add_columns`,
+`alter_columns`, `drop_columns`), the next read on the same table automatically pins the minimum
+version so you read your own writes without extra configuration. `checkout`, `checkout_tag`,
+`checkout_latest`, and `restore` reset this state appropriately.
+
+Stronger consistency is not free — the smaller the interval, the more often each read pays the cost
+of refreshing against storage, which raises per-read latency and cost.
+
+In <Badge color="red">Enterprise</Badge> deployments, the server-side default freshness is still
+controlled by the cluster-level `weak_read_consistency_interval_seconds` parameter; the client setting
+tightens that bound on a per-connection basis.
 </Callout>
 
 ## Configure Consistency Parameters
