@@ -15,6 +15,7 @@ import {
     PyScalarIndexUuidTable as ScalarIndexUuidTable,
     PyScalarIndexUuidWait as ScalarIndexUuidWait,
     PyScalarIndexUuidUpsert as ScalarIndexUuidUpsert,
+    PyScalarIndexNestedFields as ScalarIndexNestedFields,
 } from '/snippets/indexing.mdx';
 
 Scalar indexes organize data by scalar attributes (e.g., numbers, categories) and enable fast filtering of vector data. They accelerate retrieval of scalar data associated with vectors, thus enhancing query performance.
@@ -154,51 +155,13 @@ LanceDB can tell the dot apart from the path separator: `` metadata.`user.id` ``
 `list_indices()` echoes the same canonical path back, so the column you pass in
 round-trips through index metadata regardless of nesting depth or escaping.
 
-```python Python icon="python"
-import pyarrow as pa
-from lancedb.index import BTree
-
-metadata_type = pa.struct(
-    [
-        pa.field("user_id", pa.int32()),
-        pa.field("user.id", pa.int32()),
-    ]
-)
-data = pa.Table.from_arrays(
-    [
-        pa.array([1, 2, 3], type=pa.int32()),
-        pa.array(
-            [
-                {"user_id": 10, "user.id": 100},
-                {"user_id": 20, "user.id": 200},
-                {"user_id": 30, "user.id": 300},
-            ],
-            type=metadata_type,
-        ),
-    ],
-    names=["user_id", "metadata"],
-)
-table = await db.create_table("nested_scalar_index", data)
-
-# Index a nested struct field.
-await table.create_index(
-    "metadata.user_id", config=BTree(), name="nested_user_id_idx"
-)
-
-# Escape literal dots inside a segment with backticks.
-await table.create_index(
-    "metadata.`user.id`", config=BTree(), name="escaped_user_id_idx"
-)
-
-# `columns` is returned as the canonical path you passed in.
-for index in await table.list_indices():
-    print(index.name, index.columns)
-# nested_user_id_idx  ['metadata.user_id']
-# escaped_user_id_idx ['metadata.`user.id`']
-```
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {ScalarIndexNestedFields}
+    </CodeBlock>
+</CodeGroup>
 
 <Note>
 Composite indexes that cover multiple columns aren't supported yet. Each
 `create_index` call must target a single (possibly nested) field path.
 </Note>
-
