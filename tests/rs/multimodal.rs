@@ -83,7 +83,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let image_reader = RecordBatchIterator::new(vec![Ok(image_batch)].into_iter(), schema.clone());
+    let image_reader: Box<dyn arrow_array::RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(image_batch)].into_iter(), schema.clone()));
     let table = db
         .create_table("images", image_reader)
         .mode(CreateTableMode::Overwrite)
@@ -164,7 +165,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let blob_reader = RecordBatchIterator::new(vec![Ok(blob_batch)].into_iter(), blob_schema);
+    let blob_reader: Box<dyn arrow_array::RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(blob_batch)].into_iter(), blob_schema));
     let blob_table = db
         .create_table("videos", blob_reader)
         .mode(CreateTableMode::Overwrite)

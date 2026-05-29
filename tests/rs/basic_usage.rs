@@ -7,9 +7,7 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 
-type BatchIter = RecordBatchIterator<
-    std::vec::IntoIter<std::result::Result<RecordBatch, arrow_schema::ArrowError>>,
->;
+type BatchIter = Box<dyn arrow_array::RecordBatchReader + Send>;
 
 // --8<-- [start:basic_imports]
 use arrow_array::types::Float32Type;
@@ -118,7 +116,7 @@ fn characters_to_record_batch(schema: Arc<Schema>, characters: &[Character]) -> 
 
 fn characters_to_reader(schema: Arc<Schema>, characters: &[Character]) -> BatchIter {
     let batch = characters_to_record_batch(schema.clone(), characters);
-    RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema)
+    Box::new(RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema))
 }
 
 fn camelot_json_path() -> PathBuf {

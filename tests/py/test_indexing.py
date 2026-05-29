@@ -69,6 +69,50 @@ def test_vector_index_build_ivf(tmp_db):
     assert table.list_indices()
 
 
+def test_vector_index_nested_field(tmp_db):
+    dim = 2
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int32()),
+            pa.field(
+                "image",
+                pa.struct([pa.field("embedding", pa.list_(pa.float32(), dim))]),
+            ),
+        ]
+    )
+    data = [
+        {
+            "id": i,
+            "image": {"embedding": np.random.random(dim).astype(np.float32).tolist()},
+        }
+        for i in range(512)
+    ]
+    table = tmp_db.create_table(
+        "vector_index_nested_field", data=data, schema=schema, mode="overwrite"
+    )
+
+    # --8<-- [start:vector_index_nested_field]
+    # The vector column `embedding` is nested inside the `image` struct.
+    # Pass its full dotted path as `vector_column_name`; the same path is used
+    # at query time and is what `list_indices()` reports under `columns`.
+    table.create_index(
+        vector_column_name="image.embedding",
+        num_partitions=1,
+        num_sub_vectors=1,
+        name="image_embedding_idx",
+    )
+
+    results = (
+        table.search([0.0, 1.0], vector_column_name="image.embedding")
+        .limit(1)
+        .to_list()
+    )
+    # --8<-- [end:vector_index_nested_field]
+
+    assert table.index_stats("image_embedding_idx")
+    assert len(results) == 1
+
+
 @pytest.mark.asyncio
 async def test_vector_index_async_config(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)

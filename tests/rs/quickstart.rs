@@ -35,9 +35,7 @@ fn adventurers_schema() -> Arc<Schema> {
 }
 // --8<-- [end:quickstart_define_struct]
 
-type BatchIter = RecordBatchIterator<
-    std::vec::IntoIter<std::result::Result<RecordBatch, arrow_schema::ArrowError>>,
->;
+type BatchIter = Box<dyn arrow_array::RecordBatchReader + Send>;
 
 fn adventurers_to_reader(schema: Arc<Schema>, rows: &[Adventurer]) -> BatchIter {
     let ids = LargeStringArray::from_iter_values(rows.iter().map(|row| row.id.as_str()));
@@ -54,7 +52,7 @@ fn adventurers_to_reader(schema: Arc<Schema>, rows: &[Adventurer]) -> BatchIter 
     )
     .unwrap();
 
-    RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema)
+    Box::new(RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema))
 }
 
 #[tokio::main]

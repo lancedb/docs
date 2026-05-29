@@ -60,6 +60,8 @@ export const PyVectorIndexCustomName = "# Override the default `{column}_idx` co
 
 export const PyVectorIndexDistanceRange = "# Only return results whose distance falls within [0.0, 0.5).\n# Useful for near-duplicate detection or thresholded similarity search.\n(\n    table.search(np.random.random(128))\n    .distance_range(lower_bound=0.0, upper_bound=0.5)\n    .limit(10)\n    .to_pandas()\n)\n";
 
+export const PyVectorIndexNestedField = "# The vector column `embedding` is nested inside the `image` struct.\n# Pass its full dotted path as `vector_column_name`; the same path is used\n# at query time and is what `list_indices()` reports under `columns`.\ntable.create_index(\n    vector_column_name=\"image.embedding\",\n    num_partitions=1,\n    num_sub_vectors=1,\n    name=\"image_embedding_idx\",\n)\n\nresults = (\n    table.search([0.0, 1.0], vector_column_name=\"image.embedding\")\n    .limit(1)\n    .to_list()\n)\n";
+
 export const PyVectorIndexNprobes = "# Always scan 10 partitions; scan up to 50 only if the initial pass\n# returns fewer than `limit` results (common with narrow filters).\n(\n    table.search(np.random.random(128))\n    .minimum_nprobes(10)\n    .maximum_nprobes(50)\n    .where(\"id > 100\")\n    .limit(5)\n    .to_pandas()\n)\n";
 
 export const PyVectorIndexQueryHnsw = "tbl = table\ntbl.search(np.random.random((16))).limit(2).to_pandas()\n";
