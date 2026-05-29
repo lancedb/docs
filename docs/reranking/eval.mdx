@@ -26,6 +26,11 @@ score-based path most readers encounter first; `LinearCombinationReranker` is an
 score-based strategy you opt into explicitly.
 </Info>
 
+By default, rerankers return `_relevance_score`. Pass `return_score="all"` when a reranker
+supports it, and you also need the original vector or FTS scores for debugging.
+Evaluation code can rely on returned rows being ordered by descending `_relevance_score`. Empty
+reranked result sets still include the `_relevance_score` column.
+
 The hybrid `rerank(...)` method also accepts a `normalize` argument that controls how the raw
 vector and FTS scores are made comparable before reranking:
 

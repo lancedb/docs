@@ -128,7 +128,7 @@ If you create a new area, also update `enabled_areas` in `config.toml` if the au
 After drafting the manifest, run:
 
 ```bash
-uv run python scripts/run_audit.py prepare --area <area>
+uv run python -m docs_audit.deterministic_runner prepare --area <area>
 ```
 
 Inspect:

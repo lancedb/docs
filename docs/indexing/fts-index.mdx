@@ -34,6 +34,8 @@ Check FTS index status using the API:
     </CodeBlock>
 </CodeGroup>
 
+`wait_for_index(...)` waits until the named FTS index exists and `index_stats(...)` reports `num_unindexed_rows == 0`. It can time out if writes keep adding rows faster than the index catches up. If a table has multiple FTS indexes, specify the target text column when querying instead of relying on implicit selection.
+
 ### Asynchronous API
 
 When using async connections (`connect_async`), use `create_index` with the `FTS` configuration:
@@ -47,6 +49,8 @@ When using async connections (`connect_async`), use `create_index` with the `FTS
 <Note>
 The `create_fts_index` method is not available on `AsyncTable`. Use `create_index` with `FTS` config instead.
 </Note>
+
+In TypeScript, create an FTS index with `table.createIndex("text", { config: lancedb.Index.fts() })` and query it with `table.query().nearestToText(...)`.
 
 ## Configuration Options
 
@@ -83,3 +87,22 @@ Enable phrase queries by setting:
 |:----------|:---------------|:--------|
 | `with_position` | `True` | Track token positions for phrase matching |
 | `remove_stop_words` | `False` | Preserve stop words for exact phrase matching |
+
+## Indexing nested string fields
+
+You can build an FTS index on a string field inside a struct by passing its full dotted path, like `nested.text`. The same path is used when you query the index through `fts_columns`, and the indexed column is reported back as the full path from `list_indices()`.
+
+```python
+# Schema: pa.struct([pa.field("text", pa.string())]) stored under the `nested` column.
+table.create_fts_index("nested.text")
+
+results = (
+    table.search("puppy", query_type="fts", fts_columns="nested.text")
+    .limit(5)
+    .to_list()
+)
+```
+
+<Note>
+Use the canonical Lance path: dot-separate each struct field from root to leaf (for example, `metadata.author.name`). The same convention applies to scalar and vector indexes.
+</Note>

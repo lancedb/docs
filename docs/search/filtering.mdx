@@ -12,6 +12,8 @@ with filtering capabilities even on datasets containing billions of records.
 
 **Pre-filtering** means LanceDB applies the metadata `where(...)` condition before running vector search, so the search only considers rows that already match the filter. **Post-filtering** means LanceDB runs vector search first and only then filters the returned candidates. Pre-filtering is enabled by default. In practice, pre-filtering is better when the filter is part of the result contract; post-filtering can be lower-latency for expensive or non-indexable filters, but it can return fewer than `limit` rows, or even zero, if the nearest neighbors do not pass the filter.
 
+On hybrid queries, the same `where(...)` filter is applied to both the vector and full-text halves of the query. The prefilter or postfilter choice controls whether that happens before each subquery scores candidates or after the subquery top-k is produced.
+
 ## Example: Metadata Filtering
 
 To illustrate filtering capabilities, let's try four data points with combinations of vectors and metadata:

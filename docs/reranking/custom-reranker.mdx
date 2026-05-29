@@ -16,6 +16,9 @@ cover, and only override the ones you need. The base class leaves `rerank_vector
 overridden raises `NotImplementedError` rather than silently returning unsorted results. That's a
 useful guard, but worth knowing about before you wire up a query path you didn't plan for.
 
+The Python base class exposes hybrid, vector-only, and FTS-only rerank hooks. TypeScript and Rust
+currently expose the custom reranker interface for hybrid reranking.
+
 ## Interface
 
 The `Reranker` base interface comes with a `merge_results()` method that can be used to combine the
@@ -23,7 +26,8 @@ results of semantic and full-text search. This is a vanilla merging algorithm th
 the results and removes the duplicates without taking the scores into consideration. It only keeps the
 first copy of the row encountered. This works well in cases that don't require the scores of semantic
 and full-text search to combine the results. If you want to use the scores or want to support
-`return_score="all"`, you'll need to implement your own merging algorithm.
+`return_score="all"`, you'll need to implement your own merging algorithm. The base
+`return_score` option accepts only `"relevance"` and `"all"`.
 
 Whichever methods you override, your reranker has one job on the way out: attach a
 `_relevance_score` column with the most relevant rows at the top. LanceDB will reject the result
