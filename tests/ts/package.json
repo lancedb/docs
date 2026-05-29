@@ -18,7 +18,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@huggingface/transformers": "^3.0.2",
-    "@lancedb/lancedb": "^0.21.0",
+    "@lancedb/lancedb": "^0.30.0",
     "openai": "^4.29.2",
     "sharp": "^0.33.5"
   },

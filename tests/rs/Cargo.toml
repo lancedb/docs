@@ -4,12 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-arrow-array = "56.2.0"
-arrow-json = "56.2.0"
-arrow-schema = "56.2.0"
+arrow-array = "58.3.0"
+arrow-json = "58.3.0"
+arrow-schema = "58.3.0"
 futures = "0.3.31"
 futures-util = "0.3.31"
-lancedb = { version = "0.22.3", features = ["polars"] }
+lance-namespace = "7.0.0"
+lancedb = { version = "0.30.0", features = ["polars"] }
 polars = ">=0.37,<0.40.0"
 polars-arrow = ">=0.37,<0.40.0"
 serde = { version = "1", features = ["derive"] }
@@ -36,3 +37,7 @@ path = "tables.rs"
 [[example]]
 name = "multimodal"
 path = "multimodal.rs"
+
+[[example]]
+name = "search"
+path = "search.rs"

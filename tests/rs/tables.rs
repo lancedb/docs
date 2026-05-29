@@ -138,7 +138,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema.clone());
+    let reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema.clone()));
     let table = db
         .create_table("test_table", reader)
         .mode(CreateTableMode::Overwrite)
@@ -168,8 +169,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let conflict_seed_reader =
-        RecordBatchIterator::new(vec![Ok(conflict_seed)].into_iter(), schema.clone());
+    let conflict_seed_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(conflict_seed)].into_iter(), schema.clone()));
     db.create_table("conflict_table", conflict_seed_reader)
         .execute()
         .await
@@ -198,7 +199,9 @@ async fn main() {
             ],
         )
         .unwrap();
-        RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema.clone())
+        let reader: Box<dyn RecordBatchReader + Send> =
+            Box::new(RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema.clone()));
+        reader
     };
     let exist_ok_reader = make_reader();
     let overwrite_reader = make_reader();
@@ -253,8 +256,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let custom_reader =
-        RecordBatchIterator::new(vec![Ok(custom_batch)].into_iter(), custom_schema.clone());
+    let custom_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(custom_batch)].into_iter(), custom_schema.clone()));
     let custom_table = db
         .create_table("my_table_custom_schema", custom_reader)
         .mode(CreateTableMode::Overwrite)
@@ -287,8 +290,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let arrow_reader =
-        RecordBatchIterator::new(vec![Ok(arrow_batch)].into_iter(), arrow_schema.clone());
+    let arrow_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(arrow_batch)].into_iter(), arrow_schema.clone()));
     let arrow_table = db
         .create_table("arrow_table_example", arrow_reader)
         .mode(CreateTableMode::Overwrite)
@@ -342,7 +345,8 @@ async fn main() {
         })
         .collect::<Vec<_>>();
 
-    let batch_reader = RecordBatchIterator::new(batches.into_iter().map(Ok), batch_schema.clone());
+    let batch_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(batches.into_iter().map(Ok), batch_schema.clone()));
     let batch_table = db
         .create_table("batched_table", batch_reader)
         .mode(CreateTableMode::Overwrite)
@@ -376,8 +380,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let open_reader =
-        RecordBatchIterator::new(vec![Ok(open_batch)].into_iter(), open_schema.clone());
+    let open_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(open_batch)].into_iter(), open_schema.clone()));
     db.create_table("test_table", open_reader)
         .mode(CreateTableMode::Overwrite)
         .execute()
@@ -431,8 +435,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let drop_reader =
-        RecordBatchIterator::new(vec![Ok(drop_batch)].into_iter(), drop_schema.clone());
+    let drop_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(drop_batch)].into_iter(), drop_schema.clone()));
     db.create_table("my_table", drop_reader)
         .mode(CreateTableMode::Overwrite)
         .execute()
@@ -479,10 +483,10 @@ async fn main() {
         ],
     )
     .unwrap();
-    let schema_add_reader = RecordBatchIterator::new(
+    let schema_add_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
         vec![Ok(schema_add_batch)].into_iter(),
         schema_add_schema.clone(),
-    );
+    ));
     let schema_add_table = db
         .create_table("schema_evolution_add_example", schema_add_reader)
         .mode(CreateTableMode::Overwrite)
@@ -562,10 +566,10 @@ async fn main() {
         ],
     )
     .unwrap();
-    let schema_alter_reader = RecordBatchIterator::new(
+    let schema_alter_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
         vec![Ok(schema_alter_batch)].into_iter(),
         schema_alter_schema.clone(),
-    );
+    ));
     let schema_alter_table = db
         .create_table("schema_evolution_alter_example", schema_alter_reader)
         .mode(CreateTableMode::Overwrite)
@@ -625,10 +629,10 @@ async fn main() {
         ],
     )
     .unwrap();
-    let expression_reader = RecordBatchIterator::new(
+    let expression_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
         vec![Ok(expression_batch)].into_iter(),
         expression_schema.clone(),
-    );
+    ));
     let expression_table = db
         .create_table("schema_evolution_expression_example", expression_reader)
         .mode(CreateTableMode::Overwrite)
@@ -689,10 +693,10 @@ async fn main() {
         ],
     )
     .unwrap();
-    let schema_drop_reader = RecordBatchIterator::new(
+    let schema_drop_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
         vec![Ok(schema_drop_batch)].into_iter(),
         schema_drop_schema.clone(),
-    );
+    ));
     let schema_drop_table = db
         .create_table("schema_evolution_drop_example", schema_drop_reader)
         .mode(CreateTableMode::Overwrite)
@@ -739,8 +743,8 @@ async fn main() {
         ],
     )
     .unwrap();
-    let vector_reader =
-        RecordBatchIterator::new(vec![Ok(vector_batch)].into_iter(), vector_schema.clone());
+    let vector_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(vector_batch)].into_iter(), vector_schema.clone()));
     let vector_table = db
         .create_table("vector_alter_example", vector_reader)
         .mode(CreateTableMode::Overwrite)

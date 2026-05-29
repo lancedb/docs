@@ -91,18 +91,20 @@ async fn namespace_admin_ops_example() -> lancedb::Result<()> {
     let db = lancedb::connect_namespace("dir", properties).execute().await?;
     let namespace = vec!["prod".to_string(), "search".to_string()];
 
-    db.create_namespace(lancedb::database::CreateNamespaceRequest {
-        namespace: vec!["prod".to_string()],
+    db.create_namespace(lance_namespace::models::CreateNamespaceRequest {
+        id: Some(vec!["prod".to_string()]),
+        ..Default::default()
     })
     .await?;
-    db.create_namespace(lancedb::database::CreateNamespaceRequest {
-        namespace: namespace.clone(),
+    db.create_namespace(lance_namespace::models::CreateNamespaceRequest {
+        id: Some(namespace.clone()),
+        ..Default::default()
     })
     .await?;
 
     let child_namespaces = db
-        .list_namespaces(lancedb::database::ListNamespacesRequest {
-            namespace: vec!["prod".to_string()],
+        .list_namespaces(lance_namespace::models::ListNamespacesRequest {
+            id: Some(vec!["prod".to_string()]),
             ..Default::default()
         })
         .await?;
@@ -112,12 +114,14 @@ async fn namespace_admin_ops_example() -> lancedb::Result<()> {
     );
     // Child namespaces under ["prod", "search"]: ["search"]
 
-    db.drop_namespace(lancedb::database::DropNamespaceRequest {
-        namespace: namespace.clone(),
+    db.drop_namespace(lance_namespace::models::DropNamespaceRequest {
+        id: Some(namespace.clone()),
+        ..Default::default()
     })
     .await?;
-    db.drop_namespace(lancedb::database::DropNamespaceRequest {
-        namespace: vec!["prod".to_string()],
+    db.drop_namespace(lance_namespace::models::DropNamespaceRequest {
+        id: Some(vec!["prod".to_string()]),
+        ..Default::default()
     })
     .await?;
     // --8<-- [end:namespace_admin_ops]

@@ -336,6 +336,299 @@ async def test_fts_native_async():
     # --8<-- [end:fts_incremental_index_async]
 
 
+def _vectors(n, dim, seed=0, column="vector"):
+    rng = np.random.default_rng(seed)
+    return [
+        {column: rng.random(dim).astype("float32"), "id": i} for i in range(n)
+    ]
+
+
+def _build_indexed_table(db, name, dim=128, n=512):
+    tbl = db.create_table(name, _vectors(n, dim), mode="overwrite")
+    tbl.create_index(metric="cosine", num_partitions=4, num_sub_vectors=8)
+    return tbl
+
+
+def test_vs_distance_metric_and_brute_force(tmp_db):
+    tbl = tmp_db.create_table("vs_metric", _vectors(64, 1536), mode="overwrite")
+
+    # --8<-- [start:configure_distance_metric]
+    tbl.search(np.random.random((1536))).distance_type("cosine").limit(10).to_list()
+    # --8<-- [end:configure_distance_metric]
+
+    # --8<-- [start:brute_force_search]
+    tbl.search(np.random.random((1536))).limit(3).to_list()
+    # --8<-- [end:brute_force_search]
+
+
+def test_vs_select_vector_column(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:select_vector_column]
+    import pyarrow as pa
+
+    schema = pa.schema([
+        pa.field("id", pa.int32()),
+        pa.field(
+            "image",
+            pa.struct([pa.field("embedding", pa.list_(pa.float32(), 2))]),
+        ),
+    ])
+    table = db.create_table(
+        "nested",
+        data=[{"id": 0, "image": {"embedding": [0.0, 1.0]}}],
+        schema=schema,
+    )
+
+    # Inferred: the only vector leaf is `image.embedding`.
+    table.search([0.0, 1.0]).limit(1).to_list()
+
+    # Explicit: required when more than one vector column matches.
+    table.search([0.0, 1.0], vector_column_name="image.embedding").limit(1).to_list()
+    # --8<-- [end:select_vector_column]
+
+
+def test_vs_index_nested_column(tmp_db):
+    dim = 16
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int32()),
+            pa.field(
+                "image",
+                pa.struct([pa.field("embedding", pa.list_(pa.float32(), dim))]),
+            ),
+        ]
+    )
+    rng = np.random.default_rng(0)
+    data = [
+        {"id": i, "image": {"embedding": rng.random(dim).astype("float32").tolist()}}
+        for i in range(512)
+    ]
+    table = tmp_db.create_table(
+        "nested_index", data=data, schema=schema, mode="overwrite"
+    )
+
+    # --8<-- [start:index_nested_column]
+    table.create_index(vector_column_name="image.embedding")
+    # --8<-- [end:index_nested_column]
+
+    assert table.list_indices()
+
+
+def test_vs_indexed_queries(tmp_db):
+    table = _build_indexed_table(tmp_db, "vs_indexed", dim=128, n=512)
+    embedding = np.random.random(128)
+
+    # --8<-- [start:exact_vs_approximate_distances]
+    # Indexed ANN search without refinement (fast, approximate `_distance`)
+    fast_results = (
+        table.search(embedding)
+        .limit(10)
+        .to_pandas()
+    )
+
+    # Recompute distances on full vectors for reranked candidates
+    exact_distance_results = (
+        table.search(embedding)
+        .limit(10)
+        .refine_factor(1)
+        .to_pandas()
+    )
+
+    # Rerank a larger candidate set for better recall (higher latency)
+    higher_recall_results = (
+        table.search(embedding)
+        .limit(10)
+        .refine_factor(20)
+        .to_pandas()
+    )
+    # --8<-- [end:exact_vs_approximate_distances]
+
+    # --8<-- [start:bypass_vector_index]
+    table.search(embedding).bypass_vector_index().limit(5).to_pandas()
+    # --8<-- [end:bypass_vector_index]
+
+    assert len(fast_results) == 10
+    assert len(exact_distance_results) == 10
+    assert len(higher_recall_results) == 10
+
+
+def test_vs_fast_search(tmp_db, monkeypatch):
+    table = _build_indexed_table(tmp_db, "vs_fast", dim=128, n=512)
+    embedding = np.random.random(128)
+
+    # `fast_search` is an Enterprise/async query flag; strip it so the snippet
+    # runs against a local OSS table without changing what readers see.
+    real_search = table.search
+    monkeypatch.setattr(
+        table,
+        "search",
+        lambda *a, **k: real_search(
+            *a, **{key: val for key, val in k.items() if key != "fast_search"}
+        ),
+    )
+
+    # --8<-- [start:fast_search]
+    table.search(embedding, fast_search=True).limit(5).to_pandas()
+    # --8<-- [end:fast_search]
+
+
+def test_vs_distance_range(tmp_db):
+    tbl = tmp_db.create_table("vs_distance_range", _vectors(256, 256), mode="overwrite")
+
+    # --8<-- [start:search_distance_range]
+    query = np.random.random(256)
+
+    # Search for the vectors within the range of [0.1, 0.5)
+    tbl.search(query).distance_range(0.1, 0.5).to_arrow()
+
+    # Search for the vectors with the distance less than 0.5
+    tbl.search(query).distance_range(upper_bound=0.5).to_arrow()
+
+    # Search for the vectors with the distance greater or equal to 0.1
+    tbl.search(query).distance_range(lower_bound=0.1).to_arrow()
+    # --8<-- [end:search_distance_range]
+
+
+def test_vs_multivector_search(tmp_db):
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            pa.field("vector", pa.list_(pa.list_(pa.float32(), 256))),
+        ]
+    )
+    rng = np.random.default_rng(0)
+    data = [{"id": i, "vector": rng.random(size=(2, 256)).tolist()} for i in range(64)]
+    tbl = tmp_db.create_table(
+        "vs_multivector", data=data, schema=schema, mode="overwrite"
+    )
+
+    # --8<-- [start:multivector_search]
+    query_multi = np.random.random(size=(2, 256))
+    results_multi = tbl.search(query_multi).limit(5).to_pandas()
+    # --8<-- [end:multivector_search]
+
+    assert len(results_multi) <= 5
+
+
+def test_vs_binary_search(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:search_binary_vectors]
+    import numpy as np
+    import pyarrow as pa
+
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            # for dim=256, lance stores every 8 bits in a byte
+            # so the vector field should be a list of 256 / 8 = 32 bytes
+            pa.field("vector", pa.list_(pa.uint8(), 32)),
+        ]
+    )
+    tbl = db.create_table("my_binary_vectors", schema=schema)
+
+    data = []
+    for i in range(1024):
+        vector = np.random.randint(0, 2, size=256)
+        # pack the binary vector into bytes to save space
+        packed_vector = np.packbits(vector)
+        data.append(
+            {
+                "id": i,
+                "vector": packed_vector,
+            }
+        )
+    tbl.add(data)
+
+    query = np.random.randint(0, 2, size=256)
+    packed_query = np.packbits(query)
+    tbl.search(packed_query).distance_type("hamming").to_arrow()
+    # --8<-- [end:search_binary_vectors]
+
+
+def test_vs_enterprise_filtering(tmp_db, monkeypatch):
+    import sys
+    import types
+
+    dim = 384
+    rng = np.random.default_rng(0)
+    rows = [
+        {
+            "vector": rng.random(dim).astype("float32"),
+            "text": f"story {i}",
+            "keywords": f"kw{i}",
+            "label": i % 4,
+        }
+        for i in range(50)
+    ]
+    tmp_db.create_table("lancedb-enterprise-quickstart", data=rows, mode="overwrite")
+    db = tmp_db
+
+    # Mock the Hugging Face dataset loader to avoid network downloads.
+    class _FakeDataset:
+        def __init__(self, n):
+            self._emb = [rng.random(dim).astype("float32") for _ in range(n)]
+            self._kw = [f"kw{i}" for i in range(n)]
+
+        def __getitem__(self, key):
+            if isinstance(key, str):
+                return {"keywords_embeddings": self._emb, "keywords": self._kw}[key]
+            return {"keywords": self._kw[key], "keywords_embeddings": self._emb[key]}
+
+    fake_datasets = types.ModuleType("datasets")
+    fake_datasets.load_dataset = lambda *a, **k: _FakeDataset(10)
+    monkeypatch.setitem(sys.modules, "datasets", fake_datasets)
+
+    # --8<-- [start:vector_search_prefilter]
+    from datasets import load_dataset
+
+    # Load query vector from dataset
+    query_dataset = load_dataset("sunhaozhepy/ag_news_sbert_keywords_embeddings", split="test[5000:5001]")
+    print(f"Query keywords: {query_dataset[0]['keywords']}")
+    query_embed = query_dataset["keywords_embeddings"][0]
+
+    # Open table and perform search
+    table_name = "lancedb-enterprise-quickstart"
+    table = db.open_table(table_name)
+
+    # Vector search with filters (pre-filtering is the default)
+    search_results = (
+        table.search(query_embed)
+        .where("label > 2")
+        .select(["text", "keywords", "label"])
+        .limit(5)
+        .to_pandas()
+    )
+
+    print("Search results (with pre-filtering):")
+    print(search_results)
+    # --8<-- [end:vector_search_prefilter]
+
+    # --8<-- [start:vector_search_postfilter]
+    results_post_filtered = (
+        table.search(query_embed)
+        .where("label > 1", prefilter=False)
+        .select(["text", "keywords", "label"])
+        .limit(5)
+        .to_pandas()
+    )
+
+    print("Vector search results with post-filter:")
+    print(results_post_filtered)
+    # --8<-- [end:vector_search_postfilter]
+
+    # --8<-- [start:batch_search]
+    # Load a batch of query embeddings
+    query_dataset = load_dataset(
+        "sunhaozhepy/ag_news_sbert_keywords_embeddings", split="test[5000:5005]"
+    )
+    query_embeds = query_dataset["keywords_embeddings"]
+    batch_results = table.search(query_embeds).limit(5).to_pandas()
+    print(batch_results)
+    # --8<-- [end:batch_search]
+
+
 @pytest.mark.skip()
 def test_hybrid_search():
     # --8<-- [start:import-openai]
