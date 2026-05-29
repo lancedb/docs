@@ -15,6 +15,7 @@ import {
     PyScalarIndexUuidTable as ScalarIndexUuidTable,
     PyScalarIndexUuidWait as ScalarIndexUuidWait,
     PyScalarIndexUuidUpsert as ScalarIndexUuidUpsert,
+    PyScalarIndexNestedFields as ScalarIndexNestedFields,
 } from '/snippets/indexing.mdx';
 
 Scalar indexes organize data by scalar attributes (e.g., numbers, categories) and enable fast filtering of vector data. They accelerate retrieval of scalar data associated with vectors, thus enhancing query performance.
@@ -157,3 +158,28 @@ LanceDB supports scalar indexes on UUID columns (stored as `FixedSizeBinary(16)`
     {ScalarIndexUuidUpsert}
     </CodeBlock>
 </CodeGroup>
+
+## Index nested fields
+
+You can build a scalar index on a field inside a struct column by passing the
+canonical dot-separated path to `create_index`. This is useful when filters
+target attributes nested under a `metadata`-style column, for example
+`metadata.user_id` or `metadata.event.type`.
+
+If a literal segment of the path itself contains a dot (for example a column
+named `user.id` nested inside `metadata`), wrap that segment in backticks so
+LanceDB can tell the dot apart from the path separator: `` metadata.`user.id` ``.
+
+`list_indices()` echoes the same canonical path back, so the column you pass in
+round-trips through index metadata regardless of nesting depth or escaping.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {ScalarIndexNestedFields}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+Composite indexes that cover multiple columns aren't supported yet. Each
+`create_index` call must target a single (possibly nested) field path.
+</Note>

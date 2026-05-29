@@ -458,6 +458,58 @@ def test_scalar_index_uuid(tmp_db):
     assert len(result) == n + len(new_users)
 
 
+@pytest.mark.asyncio
+async def test_scalar_index_nested_fields(mem_db_async):
+    db = mem_db_async
+
+    # --8<-- [start:scalar_index_nested_fields]
+    import pyarrow as pa
+    from lancedb.index import BTree
+
+    metadata_type = pa.struct(
+        [
+            pa.field("user_id", pa.int32()),
+            pa.field("user.id", pa.int32()),
+        ]
+    )
+    data = pa.Table.from_arrays(
+        [
+            pa.array([1, 2, 3], type=pa.int32()),
+            pa.array(
+                [
+                    {"user_id": 10, "user.id": 100},
+                    {"user_id": 20, "user.id": 200},
+                    {"user_id": 30, "user.id": 300},
+                ],
+                type=metadata_type,
+            ),
+        ],
+        names=["user_id", "metadata"],
+    )
+    table = await db.create_table("nested_scalar_index", data)
+
+    # Index a nested struct field.
+    await table.create_index(
+        "metadata.user_id", config=BTree(), name="nested_user_id_idx"
+    )
+
+    # Escape literal dots inside a segment with backticks.
+    await table.create_index(
+        "metadata.`user.id`", config=BTree(), name="escaped_user_id_idx"
+    )
+
+    # `columns` is returned as the canonical path you passed in.
+    for index in await table.list_indices():
+        print(index.name, index.columns)
+    # nested_user_id_idx  ['metadata.user_id']
+    # escaped_user_id_idx ['metadata.`user.id`']
+    # --8<-- [end:scalar_index_nested_fields]
+
+    index_columns = {index.name: index.columns for index in await table.list_indices()}
+    assert index_columns["nested_user_id_idx"] == ["metadata.user_id"]
+    assert index_columns["escaped_user_id_idx"] == ["metadata.`user.id`"]
+
+
 def test_fts_index_create(tmp_db):
     table = tmp_db.create_table(
         "fts-index-create",

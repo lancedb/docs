@@ -16,6 +16,8 @@ export const PyScalarIndexBuild = "tbl = db.open_table(\"scalar_index_build\")\n
 
 export const PyScalarIndexFilter = "table = db.open_table(\"books\")\nresult = table.search().where(\"book_id = 2\").limit(10).to_pandas()\n";
 
+export const PyScalarIndexNestedFields = "import pyarrow as pa\nfrom lancedb.index import BTree\n\nmetadata_type = pa.struct(\n    [\n        pa.field(\"user_id\", pa.int32()),\n        pa.field(\"user.id\", pa.int32()),\n    ]\n)\ndata = pa.Table.from_arrays(\n    [\n        pa.array([1, 2, 3], type=pa.int32()),\n        pa.array(\n            [\n                {\"user_id\": 10, \"user.id\": 100},\n                {\"user_id\": 20, \"user.id\": 200},\n                {\"user_id\": 30, \"user.id\": 300},\n            ],\n            type=metadata_type,\n        ),\n    ],\n    names=[\"user_id\", \"metadata\"],\n)\ntable = await db.create_table(\"nested_scalar_index\", data)\n\n# Index a nested struct field.\nawait table.create_index(\n    \"metadata.user_id\", config=BTree(), name=\"nested_user_id_idx\"\n)\n\n# Escape literal dots inside a segment with backticks.\nawait table.create_index(\n    \"metadata.`user.id`\", config=BTree(), name=\"escaped_user_id_idx\"\n)\n\n# `columns` is returned as the canonical path you passed in.\nfor index in await table.list_indices():\n    print(index.name, index.columns)\n# nested_user_id_idx  ['metadata.user_id']\n# escaped_user_id_idx ['metadata.`user.id`']\n";
+
 export const PyScalarIndexOptimize = "table.add([{\"vector\": [7, 8], \"book_id\": 4}])\ntable.optimize()\n";
 
 export const PyScalarIndexPrefilter = "table = db.open_table(\"book_with_embeddings\")\ntable.search([1.2] * 2).where(\"book_id != 3\").limit(10).to_pandas()\n";
