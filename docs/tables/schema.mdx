@@ -69,6 +69,10 @@ LanceDB supports three primary schema evolution operations:
 Schema evolution operations are applied immediately but do not typically require rewriting all data. However, data type changes may involve more substantial operations.
 </Tip>
 
+Each schema evolution operation commits a new table version and returns status metadata such as
+the committed `version`. Run these operations from a mutable table handle; if you checked out an
+older version for reads, call `checkout_latest` / `checkoutLatest` before modifying the schema.
+
 ## Add new columns
 
 You can add new columns to a table with the [`add_columns`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.add_columns) 
@@ -234,6 +238,9 @@ You can alter columns to contain NULL values:
     </CodeBlock>
 </CodeGroup>
 
+Changing a column to nullable affects future writes and merges too: missing values are accepted
+only when the target column is nullable.
+
 ### Multiple changes at once
 
 Apply several alterations in a single operation:
@@ -366,4 +373,3 @@ Remove several columns at once for efficiency:
 <Warning title="Irreversible Column Deletion">
 Dropping columns cannot be undone. Make sure you have backups or are certain before removing columns.
 </Warning>
-

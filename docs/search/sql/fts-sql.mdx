@@ -15,6 +15,8 @@ thoroughly and being prepared to update your queries as newer versions of LanceD
 
 LanceDB provides support for full-text search via SQL queries using the `fts()` User-Defined Table Function (UDTF). This allows you to incorporate keyword-based search (based on BM25) in your SQL queries for powerful text retrieval.
 
+The SQL `fts()` table function expects exactly two string literals: the table name and the JSON FTS query. Build the JSON query in your application, pass it as a SQL string literal, and keep filtering, grouping, or joining in the surrounding SQL.
+
 ## Table Setup
 
 First, set up your FlightSQL client connection. See [SQL Queries documentation](/search/sql) for detailed client setup instructions.

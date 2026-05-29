@@ -133,6 +133,14 @@ table creation patterns (Pandas, Polars, Pydantic, iterators, etc.) -- see the [
 | `merge_insert` | `.when_matched_update_all()` + `.when_not_matched_insert_all()` | You want both behaviors together (often called **upsert**: update existing keys **and** insert missing keys in the same operation). |
 | `merge_insert` | `.when_not_matched_by_source_delete(...)` | You want to remove target rows that are missing from the incoming source set. |
 
+Write operations return status metadata. For example, `update` reports updated row count and
+committed `version`, `delete` reports deleted row count and `version`, and `merge_insert` reports
+inserted, updated, deleted, retry-attempt, and `version` fields. Writes require a mutable table
+handle; after checking out an older version for reads, call `checkout_latest` / `checkoutLatest`
+before modifying data.
+The committed `version` advances even for writes that affect zero rows, such as a delete predicate
+that matches nothing.
+
 ## Update rows
 
 Use `update` when you already know which target rows to modify and you do not need to compare against an incoming dataset.
@@ -203,6 +211,10 @@ In merge operations, rows are split into three groups:
 - **Matched**: key exists in both source and target.
 - **Not matched**: key exists only in source.
 - **Not matched by source**: key exists only in target.
+
+Conditional merge clauses can compare old and new values. Use the `target.` prefix for the
+existing table row and `source.` for the incoming row, for example
+`target.last_update < source.last_update`.
 
 <Tip>
 **Use scalar indexes to speed up merge insert**

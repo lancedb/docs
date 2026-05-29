@@ -64,6 +64,8 @@ const results2 = await (
 
 Here you can see the same search but using `cosine` similarity instead of `l2` distance. The result focuses on vector direction rather than absolute distance, which works better for normalized embeddings.
 
+Set `.limit(...)` on vector searches you run in applications. You can page through results with `.offset(...)` and include LanceDB's internal row id with `.with_row_id()` / `.withRowId()` when you need a stable handle for follow-up operations.
+
 ## Selecting the vector column
 
 If your table has exactly one vector column, you can omit the column name and LanceDB will pick it for you. This works for both top-level columns (such as `vector`) and vector fields nested inside a struct (such as `image.embedding`).
@@ -342,6 +344,7 @@ the filter condition after obtaining the nearest neighbors based on vector simil
 Use multivector search when your documents contain multiple embeddings and you need sophisticated matching between query and document vector pairs. The late interaction approach finds the most relevant combinations across all available embeddings and provides nuanced similarity scoring.
 
 Only `cosine` similarity is supported as the distance metric for multivector search operations.
+Every query vector must match the inner dimension of the multivector column; LanceDB rejects mismatched query dimensions rather than guessing how to reshape them.
 
 <CodeGroup>
 ```python Python icon="python"
