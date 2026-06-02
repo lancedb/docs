@@ -58,11 +58,12 @@ LanceDB supports ACID-compliant schema evolution through granular operations (ad
 
 ## Schema evolution operations
 
-LanceDB supports three primary schema evolution operations:
+LanceDB supports four primary schema evolution operations:
 
 1. **Adding new columns**: Extend your table with additional attributes
 2. **Altering existing columns**: Change column names, data types, or nullability
-3. **Dropping columns**: Remove unnecessary columns from your schema
+3. **Updating field metadata**: Attach or change per-column Arrow metadata
+4. **Dropping columns**: Remove unnecessary columns from your schema
 
 
 <Tip title="Schema Evolution Performance">
@@ -309,6 +310,137 @@ For such cases, use `addColumns` / `add_columns` (with `arrow_cast`), then `drop
 <Warning title="Data Type Changes">
 Changing data types requires rewriting the column data and may be resource-intensive for large tables. Renaming columns or changing nullability is more efficient as it only updates metadata.
 </Warning>
+
+## Update field metadata
+
+Each column in a LanceDB table can carry a small key/value map of Arrow field metadata — useful
+for annotating columns with units, provenance, PII flags, embedding model versions, or any other
+schema-level context your application needs.
+
+Use [`update_field_metadata`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.update_field_metadata)
+in Python, [`updateFieldMetadata`](https://lancedb.github.io/lancedb/js/classes/Table/#updatefieldmetadata)
+in TypeScript/JavaScript, or `update_field_metadata` in Rust to add, change, or remove these
+key/value pairs without rewriting the column data. Each call commits a new table version and returns
+the new `version`.
+
+Each update targets one field by **dot-path**: top-level columns are addressed by name (for
+example `"embedding"`), and nested fields by their full path (for example `"address.zip"`). By
+default, the keys you pass are **merged** into the field's existing metadata — keys you do not
+mention are preserved, and passing `None` (Python) or `null` (TypeScript) deletes a key. Set
+`replace: true` to swap the field's entire metadata map instead of merging.
+
+<CodeGroup>
+```python Python icon="python"
+import pyarrow as pa
+import lancedb
+
+db = lancedb.connect("./lancedb")
+table = db.create_table(
+    "products",
+    data=pa.table({"id": [0, 1], "category": ["a", "b"]}),
+    mode="overwrite",
+)
+
+# Set two metadata keys on the `category` field.
+res = table.update_field_metadata(
+    {"path": "category", "metadata": {"unit": "label", "pii": "false"}}
+)
+print(res.version)
+
+# Merge: add a new key, delete one with None, keep the rest.
+table.update_field_metadata(
+    {"path": "category", "metadata": {"source": "import", "pii": None}}
+)
+
+# Arrow stores field metadata as bytes.
+assert table.schema.field("category").metadata == {
+    b"unit": b"label",
+    b"source": b"import",
+}
+```
+
+```typescript TypeScript icon="square-js"
+import * as lancedb from "@lancedb/lancedb";
+
+const db = await lancedb.connect("./lancedb");
+const table = await db.createTable("products", [
+  { id: 0, category: "a" },
+  { id: 1, category: "b" },
+]);
+
+// Set two metadata keys on the `category` field.
+const res = await table.updateFieldMetadata([
+  { path: "category", metadata: { unit: "label", pii: "false" } },
+]);
+console.log(res.version);
+
+// Merge: add a new key, delete one via null, keep the rest.
+await table.updateFieldMetadata([
+  { path: "category", metadata: { source: "import", pii: null } },
+]);
+```
+
+```rust Rust icon="rust"
+use lancedb::table::FieldMetadataUpdate;
+
+let res = table
+    .update_field_metadata(&[
+        FieldMetadataUpdate::new("category")
+            .set("unit", "label")
+            .set("pii", "false"),
+    ])
+    .await?;
+println!("version: {}", res.version);
+
+// Merge: add a new key, delete one with `.remove`, keep the rest.
+table
+    .update_field_metadata(&[
+        FieldMetadataUpdate::new("category")
+            .set("source", "import")
+            .remove("pii"),
+    ])
+    .await?;
+```
+</CodeGroup>
+
+To overwrite a field's metadata entirely instead of merging, set `replace` to `true`:
+
+<CodeGroup>
+```python Python icon="python"
+table.update_field_metadata(
+    {
+        "path": "category",
+        "metadata": {"owner": "search-team"},
+        "replace": True,
+    }
+)
+```
+
+```typescript TypeScript icon="square-js"
+await table.updateFieldMetadata([
+  {
+    path: "category",
+    metadata: { owner: "search-team" },
+    replace: true,
+  },
+]);
+```
+
+```rust Rust icon="rust"
+table
+    .update_field_metadata(&[
+        FieldMetadataUpdate::new("category")
+            .set("owner", "search-team")
+            .replace(),
+    ])
+    .await?;
+```
+</CodeGroup>
+
+<Tip>
+You can pass multiple updates in a single call to change metadata on several fields at once —
+each call commits a single new table version.
+</Tip>
 
 ## Drop columns
 
