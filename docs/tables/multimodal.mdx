@@ -216,7 +216,9 @@ Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas c
     </CodeBlock>
 </CodeGroup>
 
-Query builders accept the same PyArrow `to_pandas` kwargs, but not `blob_mode`. They materialize Arrow results first, apply LanceDB-specific `flatten` and `timeout` handling, and then forward the remaining kwargs:
+Query builders also accept `blob_mode` on their `to_pandas()` method for **plain scan queries** (queries without a vector search, full-text search, or `order_by` clause). Filters, projections, aliases, `limit`, and `offset` are all supported and routed through Lance's native pandas conversion so that lazy and bytes modes work end to end. Vector, FTS, hybrid, and other non-scan query shapes keep the existing Arrow conversion path and only accept `blob_mode="descriptions"`; using `"lazy"` or `"bytes"` on those queries raises a `RuntimeError` directing you to use `"descriptions"` or drop the blob column from the projection.
+
+The same `blob_mode` argument is available on both sync (`table.search(...).to_pandas(blob_mode=...)`) and async (`await table_async.query()...to_pandas(blob_mode=...)`) query builders. Extra PyArrow kwargs like `split_blocks` and `self_destruct` are still forwarded:
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
