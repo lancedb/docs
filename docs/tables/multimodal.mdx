@@ -202,11 +202,11 @@ When you call `to_pandas()` on a local LanceDB table that contains Blob API colu
 
 `blob_mode` accepts:
 
-- `"lazy"` (default): returns blob columns without eagerly materializing their payloads. Use this when you want existing behavior and don't need to inspect blob metadata. For namespace-managed tables and in-memory datasets, lazy mode falls back to the standard PyArrow `to_pandas()` path.
+- `"lazy"` (default): returns blob columns as lazy `BlobFile` objects without eagerly materializing their payloads. Use this when you want to stream blob bytes on demand or only inspect a subset of rows. Namespace-backed local tables also use the Lance native blob-aware pandas conversion for lazy blobs; in-memory datasets fall back to the standard PyArrow `to_pandas()` path.
 - `"bytes"`: eagerly materializes each blob as `bytes`. Use this when you need the raw payload in the DataFrame, for example to decode an image or audio clip in-process.
 - `"descriptions"`: returns blob descriptors (offsets, sizes, and positions) instead of the data itself. Use this when you want to plan I/O without paying the cost of loading every blob.
 
-`"bytes"` and `"descriptions"` require a filesystem-backed Lance dataset; they are not supported on in-memory tables or namespace-managed tables.
+`"bytes"` and `"descriptions"` require a filesystem-backed Lance dataset and are not supported on in-memory tables.
 
 Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas conversion, so you can also pass options like `split_blocks` or `self_destruct`:
 
