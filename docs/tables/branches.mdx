@@ -1,0 +1,74 @@
+---
+title: "Table branches"
+sidebarTitle: "Branches"
+description: "Fork isolated, writable copies of a LanceDB table to test changes without touching main."
+icon: "code-branch"
+keywords: ["branches", "branch", "versioning", "fork", "isolation"]
+---
+import {
+    PyBranches as Branches,
+    TsBranches as TsBranches,
+    RsBranches as RsBranches,
+} from '/snippets/tables.mdx';
+
+Branches are isolated, writable lines of history forked from another branch
+(or a specific version of one). Writes on a branch never touch `main`, and you
+can list, check out, or delete branches at any time. They are similar in spirit
+to git branches, but operate at the table level.
+
+Use a branch when you want to:
+
+- Try a destructive operation (re-embed, schema change, bulk update) without
+  risking the production table.
+- Stage data for evaluation, then promote or discard it.
+- Run experiments in parallel against the same base data.
+
+<Note>
+Branches are available for local and embedded LanceDB tables. Remote tables
+(LanceDB Enterprise) do not support branches yet.
+</Note>
+
+## Create, write, and check out a branch
+
+Forking a branch returns a new table handle scoped to that branch. All reads
+and writes through that handle stay on the branch, leaving `main` untouched until
+you explicitly promote the data yourself (for example, by copying rows back).
+There is no automatic merge.
+
+`branches.create(name)` forks from `main`'s latest version by default. To fork
+from somewhere else, pass a branch name, a specific version, or both.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {Branches}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranches}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranches}
+    </CodeBlock>
+</CodeGroup>
+
+`branches.list()` returns a map of branch name to metadata, including which
+branch each was forked from. `main` is the reserved default branch: wherever a
+branch is optional, leaving it out means `main`. To skip the explicit
+checkout, open a branch straight from the connection with
+`open_table(..., branch=...)` (`openTable(..., { branch })` in TypeScript, or
+the `.branch(...)` builder in Rust), as shown at the end of each example above.
+
+## Branches versus Tags
+
+Branches and [Tags](/tables/versioning#tag-based-versioning) both attach
+human-readable names to a table's history, but they serve different goals:
+
+| | Branches | Tags |
+|---|---|---|
+| Writable | Yes, each branch has its own history | No, just a label on an immutable version |
+| Affects `main` on write | No | N/A (Tags can't be written to) |
+| Typical use | Experiments, staging, isolation | Pinning a known-good version (`"prod"`, `"baseline"`) |
+
+Reach for a branch when you need to write data; reach for a tag when you just
+need a stable label on an existing version.

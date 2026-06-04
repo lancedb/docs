@@ -75,6 +75,7 @@
                   "tables/schema",
                   "tables/update",
                   "tables/versioning",
+                  "tables/branches",
                   "tables/consistency"
                 ]
               },
