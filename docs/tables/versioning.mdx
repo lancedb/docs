@@ -218,6 +218,133 @@ Deleting a tag only removes the label, not the version it points to. After
 deletion, the underlying table version becomes eligible for cleanup again.
 </Note>
 
+## Branches
+
+Branches are isolated, writable lines of history forked from another branch (or
+a specific version). Writes to a branch do **not** affect `main`, which makes
+branches ideal for:
+
+- Running experiments (new indexes, schema changes, reprocessing) without
+  disturbing production reads on `main`.
+- Backfills or migrations that you want to review before promoting.
+- Sharing a frozen point-in-time fork with a collaborator while continuing to
+  write to `main`.
+
+Unlike tags, which are read-only labels on existing versions, a branch has its
+own writable history. Creating or checking out a branch returns a new table
+handle whose reads and writes are scoped to that branch.
+
+<Note>
+Branches are currently supported on local and namespace-backed tables in
+LanceDB OSS. Branch support for LanceDB Enterprise (remote) tables is not yet
+available.
+</Note>
+
+### Create and Write to a Branch
+
+Create a branch from `main` (the default source) and write to it. The base
+table continues to point at `main` and is unaffected by writes on the branch.
+
+<CodeGroup>
+```python Python icon="python"
+# Create a branch from main and write to it — main is untouched.
+branch = table.branches.create("exp")
+branch.add([{"vector": [1.1, 2.2], "item": "experiment", "price": 99.0}])
+
+# Fork from a specific source branch or pinned version.
+branch_from_v3 = table.branches.create("hotfix", from_ref="main", from_version=3)
+```
+
+```typescript TypeScript icon="square-js"
+const branches = await table.branches();
+
+// Create a branch from main and write to it — main is untouched.
+const branch = await branches.create("exp");
+await branch.add([{ vector: [1.1, 2.2], item: "experiment", price: 99.0 }]);
+
+// Fork from a specific source branch or pinned version.
+const hotfix = await branches.create("hotfix", "main", 3);
+```
+
+```rust Rust icon="rust"
+use lancedb::table::Ref;
+
+// Create a branch from main's latest version and write to it.
+let branch = table.create_branch("exp", Ref::Version(None, None)).await?;
+branch.add(batches).execute().await?;
+```
+</CodeGroup>
+
+### Reopen a Branch
+
+You can reopen an existing branch either from a table handle or directly from
+the database connection when opening the table.
+
+<CodeGroup>
+```python Python icon="python"
+# Check out from an existing table handle.
+branch = table.branches.checkout("exp")
+
+# Or open the table directly into the branch.
+branch = db.open_table("items", branch="exp")
+```
+
+```typescript TypeScript icon="square-js"
+// Check out from an existing table handle.
+const branches = await table.branches();
+const checkedOut = await branches.checkout("exp");
+
+// Or open the table directly into the branch.
+const opened = await db.openTable("items", undefined, { branch: "exp" });
+```
+
+```rust Rust icon="rust"
+// Check out from an existing table handle.
+let branch = table.checkout_branch("exp").await?;
+
+// Or open the table directly into the branch.
+let branch = db.open_table("items").branch("exp").execute().await?;
+```
+</CodeGroup>
+
+### List and Delete Branches
+
+`list` returns a mapping of branch names to branch metadata. `delete` removes
+a branch and its branch-local history; data on `main` is not affected.
+
+<CodeGroup>
+```python Python icon="python"
+all_branches = table.branches.list()
+print(all_branches.keys())
+
+table.branches.delete("exp")
+```
+
+```typescript TypeScript icon="square-js"
+const branches = await table.branches();
+const all = await branches.list();
+console.log(Object.keys(all));
+
+await branches.delete("exp");
+```
+
+```rust Rust icon="rust"
+let all_branches = table.list_branches().await?;
+table.delete_branch("exp").await?;
+```
+</CodeGroup>
+
+<Note>
+**Branches vs. tags vs. checkout**
+
+- Use a **tag** to bookmark an existing version with a human-readable name. Tags
+  are read-only and protect that version from cleanup.
+- Use **`checkout(version)`** to read from a historical version of `main`
+  without forking. The handle is read-only until you `restore`.
+- Use a **branch** when you need to *write* on top of a point in history
+  without touching `main`.
+</Note>
+
 ## Delete Data From the Table
 
 Let's demonstrate how deletions also create new versions:
