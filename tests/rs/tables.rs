@@ -538,6 +538,26 @@ async fn main() {
         .unwrap();
     // --8<-- [end:add_columns_nullable]
 
+    // --8<-- [start:add_feature_columns_sql]
+    schema_add_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![
+                (
+                    "price_per_id".to_string(),
+                    "cast(price / id as float)".to_string(),
+                ),
+                ("price_log".to_string(), "ln(price)".to_string()),
+                (
+                    "price_score".to_string(),
+                    "cast(price / (price + 100.0) as float)".to_string(),
+                ),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    // --8<-- [end:add_feature_columns_sql]
+
     // --8<-- [start:schema_alter_setup]
     let schema_alter_schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int64, false),

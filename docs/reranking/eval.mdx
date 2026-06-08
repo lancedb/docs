@@ -15,7 +15,7 @@ Combining results from multiple searches thus requires a reranking step.
 
 There are two common approaches for reranking search results from multiple sources.
 
-- **Score-based**: Calculate final relevance scores from the individual search algorithm scores. Examples: Reciprocal Rank Fusion (the default in LanceDB), and weighted linear combination of semantic & keyword-based search scores.
+- **Score-based**: Calculate final relevance scores from the individual search algorithm scores. Examples: Reciprocal Rank Fusion (the default in LanceDB), mean reciprocal rank fusion, and weighted linear combination of semantic and keyword-based search scores.
 
 - **Relevance-based**: Discards the existing scores and calculates the relevance of each search result-query pair. Example: Cross Encoder models
 
@@ -41,9 +41,15 @@ This choice materially affects score-based rerankers (such as `LinearCombination
 when you evaluate score-based strategies, treat `normalize` as a tunable hyperparameter
 alongside the reranker itself.
 
-Even though there may many more strategies for reranking, there are no "universally best"
-ones that work well for all cases, because they be dataset or application specific.
-Evaluating whether a reranking strategy is a good one, is also a challenge. In the next
+For score-based evaluation, the main built-in knobs are:
+
+- `RRFReranker(K=60)`: rank fusion with a positive smoothing constant.
+- `MRRReranker(weight_vector=0.5, weight_fts=0.5)`: weighted reciprocal rank fusion where the weights must sum to `1.0`.
+- `LinearCombinationReranker(weight=0.7, fill=1.0)`: blends vector and FTS scores directly; `fill` controls how strongly to penalize a result missing from one side.
+
+Even though there are many more strategies for reranking, there are no "universally best"
+ones that work well for all cases, because reranking quality is dataset and application specific.
+Evaluating whether a reranking strategy is a good fit is also a challenge. In the next
 section, we discuss an example evaluation of different reranking strategies on a sample dataset.
 
 ## Example evaluation
