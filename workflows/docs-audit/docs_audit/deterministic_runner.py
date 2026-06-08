@@ -232,6 +232,28 @@ def extract_code_signals(text: str, keywords: list[str]) -> dict[str, Any]:
 
 
 def repo_snapshot(repo: RepoInfo, refresh: bool, simulate_failure: bool) -> dict[str, Any]:
+    if not repo.path.exists():
+        return {
+            "repo": repo.name,
+            "path": str(repo.path),
+            "branch": "",
+            "sha_before": "",
+            "dirty": False,
+            "refresh_requested": refresh,
+            "refresh_status": "skipped",
+            "message": "Configured repo path does not exist",
+        }
+    if not (repo.path / ".git").exists():
+        return {
+            "repo": repo.name,
+            "path": str(repo.path),
+            "branch": "",
+            "sha_before": "",
+            "dirty": False,
+            "refresh_requested": refresh,
+            "refresh_status": "skipped",
+            "message": "Configured repo path is not a git checkout",
+        }
     branch = run_git(repo.path, ["rev-parse", "--abbrev-ref", "HEAD"]) 
     sha_before = run_git(repo.path, ["rev-parse", "HEAD"])
     dirty = run_git(repo.path, ["status", "--porcelain"])

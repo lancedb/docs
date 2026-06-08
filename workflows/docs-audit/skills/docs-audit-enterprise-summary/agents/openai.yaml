@@ -1,0 +1,4 @@
+interface:
+  display_name: "Docs Audit Enterprise Summary"
+  short_description: "Query and summarize LanceDB docs-audit Enterprise findings."
+  default_prompt: "Summarize docs-audit Enterprise findings for a date range."

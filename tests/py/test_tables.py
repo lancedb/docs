@@ -972,6 +972,21 @@ def test_add_columns_nullable(tmp_db):
     assert "last_ordered" in table.schema.names
 
 
+def test_add_feature_columns_sql(tmp_db):
+    table = _setup_schema_add_table(tmp_db)
+
+    # --8<-- [start:add_feature_columns_sql]
+    table.add_columns(
+        {
+            "price_per_id": "cast(price / id as float)",
+            "price_log": "ln(price)",
+            "price_score": "cast(price / (price + 100.0) as float)",
+        }
+    )
+    # --8<-- [end:add_feature_columns_sql]
+    assert {"price_per_id", "price_log", "price_score"}.issubset(table.schema.names)
+
+
 def test_alter_columns_rename(tmp_db):
     table = _setup_schema_alter_table(tmp_db)
 

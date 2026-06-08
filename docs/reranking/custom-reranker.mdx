@@ -17,7 +17,8 @@ overridden raises `NotImplementedError` rather than silently returning unsorted 
 useful guard, but worth knowing about before you wire up a query path you didn't plan for.
 
 The Python base class exposes hybrid, vector-only, and FTS-only rerank hooks. TypeScript and Rust
-currently expose the custom reranker interface for hybrid reranking.
+currently expose the custom reranker interface for hybrid reranking. In Rust, a custom reranker must
+also satisfy the trait bounds `Debug + Send + Sync`.
 
 ## Interface
 
@@ -33,6 +34,10 @@ Whichever methods you override, your reranker has one job on the way out: attach
 `_relevance_score` column with the most relevant rows at the top. LanceDB will reject the result
 if that column is missing, and downstream `.limit(...)` calls trust the order you return, so
 sort descending before handing the table back.
+
+For vector-only reranking in Python, pass a text query to `.rerank(..., query_string="...")`.
+The vector query itself may be numeric, but `rerank_vector(query, vector_results)` still receives
+a string query so your reranker can score each candidate against the user's text intent.
 
 Below, we show the pseudocode of a custom reranker that combines the results of semantic and full-text
 search using a linear combination of the scores:

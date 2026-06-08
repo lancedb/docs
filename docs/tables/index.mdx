@@ -243,9 +243,10 @@ Load the data from the JSON file:
     </CodeBlock>
 </CodeGroup >
 
-You can now create a LanceDB table from the loaded data. Use the `mode="overwrite"` to
-replace any existing table with the same name and overwrite its data (useful during
-initial testing).
+You can now create a LanceDB table from the loaded data. By default, creating a table with a name
+that already exists raises an error. Use `mode="overwrite"` only when you intentionally want to
+replace the existing table and its data, or use `exist_ok` / `existOk` when repeatable setup should
+reuse the existing table instead of writing the supplied rows again.
 
 <CodeGroup >
     <CodeBlock filename="Python" language="Python" icon="Python">
@@ -267,6 +268,10 @@ ingestion into a table that already exists, open the table and call `add(...)` i
 `create_table(...)`. For repeatable setup with `exist_ok` / `existOk`, see
 [Handle existing tables](/tables/create#handle-existing-tables).
 </Info>
+
+For more ingestion patterns, including PyArrow tables, Python `pyarrow.dataset.Dataset` inputs,
+empty tables, and Python `LanceModel` schemas with nested fields, see
+[Ingesting data](/tables/create/).
 
 ### From Pandas DataFrames
 <Badge color="green">Python Only</Badge>
@@ -544,6 +549,9 @@ print(r1.sort("power", descending=True).limit(5))
 
 Merlin and Sir Galahad are the most powerful characters when considering the average of
 all their abilities! Sir Lancelot and the Lady of the Lake follow closely behind.
+
+For column renames, type changes, nullability changes, and grouping multiple schema changes into
+one operation, see [Schema and data evolution](/tables/schema/).
 
 ## Delete data
 

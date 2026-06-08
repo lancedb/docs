@@ -257,6 +257,26 @@ test("schema evolution snippets (async)", async () => {
     ]);
     // --8<-- [end:add_columns_nullable]
 
+    // --8<-- [start:add_feature_columns_sql]
+    await schemaAddTable.addColumns([
+      {
+        name: "price_per_id",
+        valueSql: "cast(price / id as float)",
+      },
+      {
+        name: "price_log",
+        valueSql: "ln(price)",
+      },
+      {
+        name: "price_score",
+        valueSql: "cast(price / (price + 100.0) as float)",
+      },
+    ]);
+    // --8<-- [end:add_feature_columns_sql]
+    expect((await schemaAddTable.schema()).fields.map((field) => field.name)).toEqual(
+      expect.arrayContaining(["price_per_id", "price_log", "price_score"]),
+    );
+
     // --8<-- [start:schema_alter_setup]
     const schemaAlter = new arrow.Schema([
       new arrow.Field("id", new arrow.Int64()),

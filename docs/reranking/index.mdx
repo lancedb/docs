@@ -75,19 +75,26 @@ The model-based rerankers need their provider package installed, and the hosted 
 as an `api_key` argument or set in the provider-specific environment variable.
 
 Rerankers add `_relevance_score` and return rows ordered by descending relevance. Python rerankers
-accept `return_score="relevance"` or `return_score="all"` − use `"all"` when you want to keep the
+accept `return_score="relevance"` or `return_score="all"`; use `"all"` when you want to keep the
 original vector distance or FTS score columns for debugging. Model-based rerankers read from
 `column="text"` by default, so either return that column in the search results or pass a different
 column.
+
+Use `refine_factor` on vector or hybrid queries when you're reranking approximate IVF-PQ results and
+want a larger candidate pool before the final ranking step. A value of `3` asks LanceDB to fetch
+`limit * 3` candidates, refine them with the full vectors, and keep the requested `limit`. Higher
+values can improve recall, but they also increase query latency.
 
 <Note>
 **SDK coverage differs across languages**
 
 The provider-specific rerankers in the table above
 (`CohereReranker`, `CrossEncoderReranker`, `ColbertReranker`, and others under `lancedb.rerankers`)
-are currently **Python-only**. The TypeScript and Rust SDKs currently expose the generic `Reranker`
-interface (`rerankHybrid` / `rerank_hybrid`) and the built-in `RRFReranker`. To use a
-model-based reranker from TypeScript or Rust, you must implement the `Reranker` interface yourself.
+are currently **Python-only**. The TypeScript and Rust SDKs currently expose hybrid reranking through
+the generic `Reranker` interface (`rerankHybrid` / `rerank_hybrid`) and the built-in `RRFReranker`.
+In TypeScript, create the built-in RRF reranker with `await RRFReranker.create(k)`. To use a
+model-based reranker from TypeScript or Rust, you must implement the hybrid reranker interface
+yourself.
 </Note>
 
 

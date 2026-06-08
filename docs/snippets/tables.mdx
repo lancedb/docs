@@ -12,6 +12,8 @@ export const PyAddDataPydanticModel = "from lancedb.pydantic import LanceModel, 
 
 export const PyAddDataToTable = "import pyarrow as pa\n\n# create an empty table with schema\ndata = [\n    {\"vector\": [3.1, 4.1], \"item\": \"foo\", \"price\": 10.0},\n    {\"vector\": [5.9, 26.5], \"item\": \"bar\", \"price\": 20.0},\n    {\"vector\": [10.2, 100.8], \"item\": \"baz\", \"price\": 30.0},\n    {\"vector\": [1.4, 9.5], \"item\": \"fred\", \"price\": 40.0},\n]\n\nschema = pa.schema(\n    [\n        pa.field(\"vector\", pa.list_(pa.float32(), 2)),\n        pa.field(\"item\", pa.utf8()),\n        pa.field(\"price\", pa.float32()),\n    ]\n)\n\ntable_name = \"basic_ingestion_example\"\ntable = db.create_table(table_name, schema=schema, mode=\"overwrite\")\n# Add data\ntable.add(data)\n";
 
+export const PyAddFeatureColumnsSql = "table.add_columns(\n    {\n        \"price_per_id\": \"cast(price / id as float)\",\n        \"price_log\": \"ln(price)\",\n        \"price_score\": \"cast(price / (price + 100.0) as float)\",\n    }\n)\n";
+
 export const PyAddFromDataset = "import pyarrow.dataset as ds\n\ndataset = ds.dataset(data_path, format=\"parquet\")\ndb = tmp_db\ntable = db.create_table(\"my_table\", schema=dataset.schema, mode=\"overwrite\")\ntable.add(dataset)\n";
 
 export const PyAlterColumnsDataType = "# Change price from int32 to int64 for larger numbers\ntable.alter_columns({\"path\": \"price\", \"data_type\": pa.int64()})\n";
@@ -128,6 +130,8 @@ export const TsAddColumnsDefaultValues = "// Add a stock status column with defa
 
 export const TsAddColumnsNullable = "// Add a nullable timestamp column\nawait schemaAddTable.addColumns([\n  {\n    name: \"last_ordered\",\n    valueSql: \"cast(NULL as timestamp)\",\n  },\n]);\n";
 
+export const TsAddFeatureColumnsSql = "await schemaAddTable.addColumns([\n  {\n    name: \"price_per_id\",\n    valueSql: \"cast(price / id as float)\",\n  },\n  {\n    name: \"price_log\",\n    valueSql: \"ln(price)\",\n  },\n  {\n    name: \"price_score\",\n    valueSql: \"cast(price / (price + 100.0) as float)\",\n  },\n]);\n";
+
 export const TsAlterColumnsDataType = "// Change price from int32 to int64 for larger numbers\nawait schemaAlterTable.alterColumns([\n  { path: \"price\", dataType: new arrow.Int64() },\n]);\n";
 
 export const TsAlterColumnsMultiple = "// Rename, change type, and make nullable in one operation\nawait schemaAlterTable.alterColumns([\n  {\n    path: \"sale_price\",\n    rename: \"final_price\",\n    dataType: new arrow.Float64(),\n    nullable: true,\n  },\n]);\n";
@@ -221,6 +225,8 @@ export const RsAddColumnsCalculated = "// Add a discounted price column (10% dis
 export const RsAddColumnsDefaultValues = "// Add a stock status column with default value\nschema_add_table\n    .add_columns(\n        NewColumnTransform::SqlExpressions(vec![(\n            \"in_stock\".to_string(),\n            \"cast(true as boolean)\".to_string(),\n        )]),\n        None,\n    )\n    .await\n    .unwrap();\n";
 
 export const RsAddColumnsNullable = "// Add a nullable timestamp column\nschema_add_table\n    .add_columns(\n        NewColumnTransform::SqlExpressions(vec![(\n            \"last_ordered\".to_string(),\n            \"cast(NULL as timestamp)\".to_string(),\n        )]),\n        None,\n    )\n    .await\n    .unwrap();\n";
+
+export const RsAddFeatureColumnsSql = "schema_add_table\n    .add_columns(\n        NewColumnTransform::SqlExpressions(vec![\n            (\n                \"price_per_id\".to_string(),\n                \"cast(price / id as float)\".to_string(),\n            ),\n            (\"price_log\".to_string(), \"ln(price)\".to_string()),\n            (\n                \"price_score\".to_string(),\n                \"cast(price / (price + 100.0) as float)\".to_string(),\n            ),\n        ]),\n        None,\n    )\n    .await\n    .unwrap();\n";
 
 export const RsAlterColumnsDataType = "// Change price from int32 to int64 for larger numbers\nschema_alter_table\n    .alter_columns(&[ColumnAlteration::new(\"price\".to_string()).cast_to(DataType::Int64)])\n    .await\n    .unwrap();\n";
 
