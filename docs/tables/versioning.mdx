@@ -35,6 +35,9 @@ import {
     PyVersioningTags as VersioningTags,
     TsVersioningTags as TsVersioningTags,
     RsVersioningTags as RsVersioningTags,
+    PyBranches as Branches,
+    TsBranches as TsBranches,
+    RsBranches as RsBranches,
     RsVersioningMakeQuotesReader as RsVersioningMakeQuotesReader,
 } from '/snippets/tables.mdx';
 
@@ -240,99 +243,35 @@ LanceDB OSS. Branch support for LanceDB Enterprise (remote) tables is not yet
 available.
 </Note>
 
-### Create and Write to a Branch
+### Create, Write, and Reopen a Branch
 
-Create a branch from `main` (the default source) and write to it. The base
-table continues to point at `main` and is unaffected by writes on the branch.
-
-<CodeGroup>
-```python Python icon="python"
-# Create a branch from main and write to it — main is untouched.
-branch = table.branches.create("exp")
-branch.add([{"vector": [1.1, 2.2], "item": "experiment", "price": 99.0}])
-
-# Fork from a specific source branch or pinned version.
-branch_from_v3 = table.branches.create("hotfix", from_ref="main", from_version=3)
-```
-
-```typescript TypeScript icon="square-js"
-const branches = await table.branches();
-
-// Create a branch from main and write to it — main is untouched.
-const branch = await branches.create("exp");
-await branch.add([{ vector: [1.1, 2.2], item: "experiment", price: 99.0 }]);
-
-// Fork from a specific source branch or pinned version.
-const hotfix = await branches.create("hotfix", "main", 3);
-```
-
-```rust Rust icon="rust"
-use lancedb::table::Ref;
-
-// Create a branch from main's latest version and write to it.
-let branch = table.create_branch("exp", Ref::Version(None, None)).await?;
-branch.add(batches).execute().await?;
-```
-</CodeGroup>
-
-### Reopen a Branch
-
-You can reopen an existing branch either from a table handle or directly from
-the database connection when opening the table.
+Create a branch from `main` (the default source) and write to it. The base table
+continues to point at `main` and is unaffected by writes on the branch. You can
+also reopen an existing branch either from a table handle or directly from the
+database connection when opening the table.
 
 <CodeGroup>
-```python Python icon="python"
-# Check out from an existing table handle.
-branch = table.branches.checkout("exp")
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {Branches}
+    </CodeBlock>
 
-# Or open the table directly into the branch.
-branch = db.open_table("items", branch="exp")
-```
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranches}
+    </CodeBlock>
 
-```typescript TypeScript icon="square-js"
-// Check out from an existing table handle.
-const branches = await table.branches();
-const checkedOut = await branches.checkout("exp");
-
-// Or open the table directly into the branch.
-const opened = await db.openTable("items", undefined, { branch: "exp" });
-```
-
-```rust Rust icon="rust"
-// Check out from an existing table handle.
-let branch = table.checkout_branch("exp").await?;
-
-// Or open the table directly into the branch.
-let branch = db.open_table("items").branch("exp").execute().await?;
-```
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranches}
+    </CodeBlock>
 </CodeGroup>
 
-### List and Delete Branches
+`list` returns a mapping of branch names to branch metadata, including which
+branch each was forked from. `main` is the reserved default branch: wherever a
+branch is optional, leaving it out means `main`. To fork from somewhere else,
+pass a branch name, a specific version, or both when creating the branch.
 
-`list` returns a mapping of branch names to branch metadata. `delete` removes
-a branch and its branch-local history; data on `main` is not affected.
-
-<CodeGroup>
-```python Python icon="python"
-all_branches = table.branches.list()
-print(all_branches.keys())
-
-table.branches.delete("exp")
-```
-
-```typescript TypeScript icon="square-js"
-const branches = await table.branches();
-const all = await branches.list();
-console.log(Object.keys(all));
-
-await branches.delete("exp");
-```
-
-```rust Rust icon="rust"
-let all_branches = table.list_branches().await?;
-table.delete_branch("exp").await?;
-```
-</CodeGroup>
+Deleting a branch removes that branch and its branch-local history; data on
+`main` is not affected. There is no automatic merge operation. To promote
+changes, copy the desired data back explicitly.
 
 <Note>
 **Branches vs. tags vs. checkout**
