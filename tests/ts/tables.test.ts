@@ -429,6 +429,38 @@ test("schema evolution snippets (async)", async () => {
     await vectorTable.alterColumns([{ path: "embedding_v2", rename: "embedding" }]);
     // --8<-- [end:alter_vector_column]
     expect(await vectorTable.countRows()).toBe(1);
+
+    const fieldMetadataTable = await db.createTable(
+      "schema_field_metadata_example",
+      [
+        { id: 0, category: "a" },
+        { id: 1, category: "b" },
+      ],
+      { mode: "overwrite" },
+    );
+
+    // --8<-- [start:schema_field_metadata_merge]
+    // Set two metadata keys on the `category` field.
+    const res = await fieldMetadataTable.updateFieldMetadata([
+      { path: "category", metadata: { unit: "label", pii: "false" } },
+    ]);
+    console.log(res.version);
+
+    // Merge: add a new key, delete one via null, keep the rest.
+    await fieldMetadataTable.updateFieldMetadata([
+      { path: "category", metadata: { source: "import", pii: null } },
+    ]);
+    // --8<-- [end:schema_field_metadata_merge]
+
+    // --8<-- [start:schema_field_metadata_replace]
+    await fieldMetadataTable.updateFieldMetadata([
+      {
+        path: "category",
+        metadata: { owner: "search-team" },
+        replace: true,
+      },
+    ]);
+    // --8<-- [end:schema_field_metadata_replace]
   });
 });
 

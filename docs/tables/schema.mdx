@@ -47,6 +47,12 @@ import {
     PyAlterVectorColumn as AlterVectorColumn,
     TsAlterVectorColumn as TsAlterVectorColumn,
     RsAlterVectorColumn as RsAlterVectorColumn,
+    PySchemaFieldMetadataMerge as SchemaFieldMetadataMerge,
+    TsSchemaFieldMetadataMerge as TsSchemaFieldMetadataMerge,
+    RsSchemaFieldMetadataMerge as RsSchemaFieldMetadataMerge,
+    PySchemaFieldMetadataReplace as SchemaFieldMetadataReplace,
+    TsSchemaFieldMetadataReplace as TsSchemaFieldMetadataReplace,
+    RsSchemaFieldMetadataReplace as RsSchemaFieldMetadataReplace,
 } from '/snippets/tables.mdx';
 
 Schema evolution enables non-breaking modifications to a database table's structure — such as adding columns, altering data types, or dropping fields — to adapt to evolving data requirements without service interruptions. 
@@ -330,111 +336,33 @@ mention are preserved, and passing `None` (Python) or `null` (TypeScript) delete
 `replace: true` to swap the field's entire metadata map instead of merging.
 
 <CodeGroup>
-```python Python icon="python"
-import pyarrow as pa
-import lancedb
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {SchemaFieldMetadataMerge}
+    </CodeBlock>
 
-db = lancedb.connect("./lancedb")
-table = db.create_table(
-    "products",
-    data=pa.table({"id": [0, 1], "category": ["a", "b"]}),
-    mode="overwrite",
-)
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsSchemaFieldMetadataMerge}
+    </CodeBlock>
 
-# Set two metadata keys on the `category` field.
-res = table.update_field_metadata(
-    {"path": "category", "metadata": {"unit": "label", "pii": "false"}}
-)
-print(res.version)
-
-# Merge: add a new key, delete one with None, keep the rest.
-table.update_field_metadata(
-    {"path": "category", "metadata": {"source": "import", "pii": None}}
-)
-
-# Arrow stores field metadata as bytes.
-assert table.schema.field("category").metadata == {
-    b"unit": b"label",
-    b"source": b"import",
-}
-```
-
-```typescript TypeScript icon="square-js"
-import * as lancedb from "@lancedb/lancedb";
-
-const db = await lancedb.connect("./lancedb");
-const table = await db.createTable("products", [
-  { id: 0, category: "a" },
-  { id: 1, category: "b" },
-]);
-
-// Set two metadata keys on the `category` field.
-const res = await table.updateFieldMetadata([
-  { path: "category", metadata: { unit: "label", pii: "false" } },
-]);
-console.log(res.version);
-
-// Merge: add a new key, delete one via null, keep the rest.
-await table.updateFieldMetadata([
-  { path: "category", metadata: { source: "import", pii: null } },
-]);
-```
-
-```rust Rust icon="rust"
-use lancedb::table::FieldMetadataUpdate;
-
-let res = table
-    .update_field_metadata(&[
-        FieldMetadataUpdate::new("category")
-            .set("unit", "label")
-            .set("pii", "false"),
-    ])
-    .await?;
-println!("version: {}", res.version);
-
-// Merge: add a new key, delete one with `.remove`, keep the rest.
-table
-    .update_field_metadata(&[
-        FieldMetadataUpdate::new("category")
-            .set("source", "import")
-            .remove("pii"),
-    ])
-    .await?;
-```
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsSchemaFieldMetadataMerge}
+    </CodeBlock>
 </CodeGroup>
 
 To overwrite a field's metadata entirely instead of merging, set `replace` to `true`:
 
 <CodeGroup>
-```python Python icon="python"
-table.update_field_metadata(
-    {
-        "path": "category",
-        "metadata": {"owner": "search-team"},
-        "replace": True,
-    }
-)
-```
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {SchemaFieldMetadataReplace}
+    </CodeBlock>
 
-```typescript TypeScript icon="square-js"
-await table.updateFieldMetadata([
-  {
-    path: "category",
-    metadata: { owner: "search-team" },
-    replace: true,
-  },
-]);
-```
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsSchemaFieldMetadataReplace}
+    </CodeBlock>
 
-```rust Rust icon="rust"
-table
-    .update_field_metadata(&[
-        FieldMetadataUpdate::new("category")
-            .set("owner", "search-team")
-            .replace(),
-    ])
-    .await?;
-```
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsSchemaFieldMetadataReplace}
+    </CodeBlock>
 </CodeGroup>
 
 <Tip>

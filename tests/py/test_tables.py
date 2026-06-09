@@ -1124,6 +1124,45 @@ def test_alter_vector_column(tmp_db):
     # --8<-- [end:alter_vector_column]
 
 
+def test_schema_field_metadata(tmp_db):
+    table = tmp_db.create_table(
+        "schema_field_metadata_example",
+        pa.table({"id": [0, 1], "category": ["a", "b"]}),
+        mode="overwrite",
+    )
+
+    # --8<-- [start:schema_field_metadata_merge]
+    # Set two metadata keys on the `category` field.
+    res = table.update_field_metadata(
+        {"path": "category", "metadata": {"unit": "label", "pii": "false"}}
+    )
+    print(res.version)
+
+    # Merge: add a new key, delete one with None, keep the rest.
+    table.update_field_metadata(
+        {"path": "category", "metadata": {"source": "import", "pii": None}}
+    )
+
+    # Arrow stores field metadata as bytes.
+    assert table.schema.field("category").metadata == {
+        b"unit": b"label",
+        b"source": b"import",
+    }
+    # --8<-- [end:schema_field_metadata_merge]
+
+    # --8<-- [start:schema_field_metadata_replace]
+    table.update_field_metadata(
+        {
+            "path": "category",
+            "metadata": {"owner": "search-team"},
+            "replace": True,
+        }
+    )
+    # --8<-- [end:schema_field_metadata_replace]
+
+    assert table.schema.field("category").metadata == {b"owner": b"search-team"}
+
+
 # ============================================================================
 # Versioning Examples
 # ============================================================================
