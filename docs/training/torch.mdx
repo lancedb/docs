@@ -99,11 +99,12 @@ for batch in dataloader:
 
 ## Using multiple DataLoader workers
 
-PyTorch's `DataLoader` can fan out reads across worker processes by setting `num_workers > 0`. LanceDB tables and `Permutation` objects are picklable, so each worker reopens its own connection after the worker process starts.
+Set `num_workers > 0` to read from LanceDB in multiple PyTorch worker processes. LanceDB tables and `Permutation` objects are picklable, so each worker reopens the table after it starts.
 
-Because LanceDB is multi-threaded internally, use the `spawn` start method (not `fork`) when running with multiple workers. See [the performance guide](/performance) for more on safe multiprocessing patterns.
+Prefer the `spawn` start method when using multiple workers; LanceDB uses internal threads. See [the performance guide](/performance) for more multiprocessing guidance.
 
 ```py Python icon=Python 
+import torch
 from lancedb.permutation import Permutation
 
 permutation = Permutation.identity(table)
@@ -119,11 +120,11 @@ dataloader = torch.utils.data.DataLoader(
 
 ### Remote tables in DataLoader workers
 
-Tables opened from a remote LanceDB Enterprise connection (`db://...`) also work with multi-worker DataLoaders. The connection details needed to reopen the table — `db_url`, `api_key`, `region`, `host_override`, and the serializable parts of `client_config` — travel with the pickled table and are used to rebuild the connection in each worker.
+Remote LanceDB Enterprise tables (`db://...`) work the same way: workers reopen the table from the pickled connection state.
 
 ```py Python icon=Python 
 import lancedb
-from lancedb.permutation import Permutation
+import torch
 
 db = lancedb.connect(
     "db://my-database",
@@ -132,9 +133,8 @@ db = lancedb.connect(
 )
 table = db.open_table("my_table")
 
-permutation = Permutation.identity(table).select_columns(["id", "image"])
 dataloader = torch.utils.data.DataLoader(
-    permutation,
+    table,
     batch_size=512,
     num_workers=4,
     multiprocessing_context="spawn",
@@ -142,16 +142,17 @@ dataloader = torch.utils.data.DataLoader(
 ```
 
 <Note>
-This embeds the API key in the pickle sent to each worker. If you'd rather load credentials inside the worker — for example, from an environment variable or a secret manager — use the connection factory escape hatch described below. A factory is also required when your `client_config` uses a non-serializable `header_provider`.
+This sends the connection state, including the API key, to each worker. Use a connection factory if credentials should be loaded inside the worker or your `client_config` contains a non-serializable `header_provider`.
 </Note>
 
 ### Providing a custom connection factory
 
-`Permutation.with_connection_factory` lets you control how each worker reopens the base table. The factory takes the base table name and returns a LanceDB table. It must be picklable, which in practice means a top-level function, a `functools.partial` of one, or an instance of a picklable class with `__call__` — lambdas and closures over local variables will not work.
+`Permutation.with_connection_factory` lets each worker reopen the base table with custom logic. The factory takes the table name, returns a LanceDB table, and must be picklable.
 
 ```py Python icon=Python 
 import os
 import lancedb
+import torch
 from lancedb.permutation import Permutation
 
 def open_table(name: str):
@@ -162,6 +163,7 @@ def open_table(name: str):
     )
     return db.open_table(name)
 
+table = open_table("my_table")
 permutation = (
     Permutation.identity(table)
     .with_connection_factory(open_table)
