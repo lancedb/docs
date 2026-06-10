@@ -33,7 +33,7 @@ LanceDB provides a comprehensive suite of indexing strategies for different data
 | `FTS` (Full-text search) | String columns (e.g., title, description, content) requiring keyword-based search with BM25 ranking. | Full-text search index using BM25 ranking algorithm. Tokenizes text with configurable tokenization, stemming, stop word removal, and language-specific processing. |
 | `BTree` (Scalar) | Numeric, temporal, and string columns with mostly distinct values. Best for highly selective queries on columns with many unique values. | Sorted index storing sorted copies of scalar columns with block headers in a btree cache. Header entries map to blocks of rows (4096 rows per block) for efficient disk reads. |
 | `Bitmap` (Scalar) | Low-cardinality columns with few thousand or fewer distinct values. Accelerates equality and range filters. | Stores a bitmap for each distinct value in the column, with one bit per row indicating presence. Memory-efficient for low-cardinality data. |
-| `LabelList` (Scalar) | List columns (e.g., tags, categories, keywords) requiring array containment queries. | Scalar index for `List<T>` columns using an underlying bitmap index structure to enable fast array membership lookups. |
+| `LabelList` (Scalar) | List columns (e.g., tags, categories, keywords) requiring array containment queries. | Scalar index for `List<T>` and `LargeList<T>` columns of primitive values, using an underlying bitmap index structure to enable fast array membership lookups. |
 
 <Note>
 TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
