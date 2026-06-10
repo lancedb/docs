@@ -24,7 +24,7 @@ LanceDB supports three types of scalar indexes:
 
 - `BTREE`: Stores column data in sorted order for binary search. Best for columns with many unique values.
 - `BITMAP`: Uses bitmaps to track value presence. Ideal for columns with few unique values (e.g., categories, tags).
-- `LABEL_LIST`: Special index for `List<T>` columns supporting `array_contains_all` and `array_contains_any` queries.
+- `LABEL_LIST`: Special index for `List<T>` and `LargeList<T>` columns of primitive values supporting `array_contains_all` and `array_contains_any` queries.
 
 ## Choosing the Right Index Type
 
