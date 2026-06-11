@@ -344,6 +344,19 @@ Navigate to your table page - the "Index" column shows index status. It remains 
 Use `list_indices()` and `index_stats()` to check index status. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
 To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_index()` or call `wait_for_index()` on the table.
 
+<Note title="Per-index metadata">
+Each entry returned by `list_indices()` also carries detailed metadata you can inspect without a follow-up call to `index_stats()`:
+
+- `num_indexed_rows` / `numIndexedRows` and `num_unindexed_rows` / `numUnindexedRows` — coverage of the index over the table
+- `size_bytes` / `sizeBytes` — total size of the index files on disk
+- `num_segments` / `numSegments` and `index_version` / `indexVersion` — physical layout and on-disk format version
+- `created_at` / `createdAt` — index creation time (milliseconds since the Unix epoch in Node.js)
+- `index_uuid` / `indexUuid` and `type_url` / `typeUrl` — internal identifiers for the index segment
+- `index_details` / `indexDetails` — type-specific JSON details (for example, IVF partition counts or quantization settings)
+
+These fields are populated for local and embedded tables. On LanceDB Enterprise remote tables they are returned as `None` / `undefined` until the server response surfaces them.
+</Note>
+
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexCheckStatus}
