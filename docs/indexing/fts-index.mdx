@@ -3,7 +3,6 @@ title: "Full-Text Search (FTS) Index"
 sidebarTitle: "FTS index"
 description: "Create and tune BM25-based full-text search indexes in LanceDB."
 icon: "book"
-mode: "wide"
 ---
 import { PyFtsIndexAsync as FtsIndexAsync, PyFtsIndexCreate as FtsIndexCreate, PyFtsIndexNested as FtsIndexNested, PyFtsIndexWait as FtsIndexWait } from '/snippets/indexing.mdx';
 
@@ -83,8 +82,8 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 | Parameter | Type | Default | Description |
 |:----------|:-----|:--------|:------------|
 | `with_position` | bool | `False` | Store token positions (required for phrase queries) |
-| `base_tokenizer` | str | `"simple"` | Text splitting method (`simple`, `whitespace`, `raw`, `ngram`, `jieba/*`, or `lindera/*`) |
-| `language` | str | `"English"` | Language for stemming/stop words |
+| `base_tokenizer` | str | `"simple"` | Text splitting method (`simple`, `whitespace`, `raw`, `ngram`, `icu`, `jieba/*`, or `lindera/*`) |
+| `language` | str | `"English"` | Language for stemming and stop-word filters. Choose CJK and mixed-language segmentation with `base_tokenizer`. |
 | `max_token_length` | int | `40` | Maximum token size; longer tokens are omitted |
 | `lower_case` | bool | `True` | Lowercase tokens |
 | `stem` | bool | `True` | Apply stemming (`running` → `run`) |
@@ -101,7 +100,19 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 - `ascii_folding` helps with international text (e.g., “café” → “cafe”).
 </Note>
 
-Model-backed tokenizers such as `jieba/default` and `lindera/ipadic` require tokenizer model files in Lance's language model home. Lance looks under the default platform data directory for `lance/language_models`, or you can set `LANCE_LANGUAGE_MODEL_HOME` to point to another model root. For example, `jieba/default` is resolved under `<model-home>/jieba/default/...`.
+### Tokenizer choices
+
+`base_tokenizer` controls segmentation before token filters run:
+
+- `simple`, `whitespace`, and `raw` cover common tokenization strategies for space-delimited text.
+- `ngram` indexes overlapping character spans for substring-style matching.
+- `icu` uses bundled ICU4X word segmentation for mixed-language text and scripts where whitespace splitting is not enough. ICU stands for [International Components for Unicode](https://icu.unicode.org/), and this tokenizer does not need external model files.
+- `jieba/*` is for Chinese word segmentation with Jieba.
+- `lindera/*` loads a compiled Lindera dictionary, such as `lindera/ipadic` for Japanese or `lindera/ko-dic` for Korean.
+
+Model-backed tokenizers such as `jieba/default`, `lindera/ipadic`, and `lindera/ko-dic` require tokenizer model files in Lance's language model home. Lance looks under the default platform data directory for `lance/language_models`, or you can set `LANCE_LANGUAGE_MODEL_HOME` to point to another model root. For example, `jieba/default` is resolved under `<model-home>/jieba/default/...`.
+
+`language` is used by token filters, not by the base tokenizer. Stemming supports Arabic, Danish, Dutch, English, Finnish, French, German, Greek, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian, Spanish, Swedish, Tamil, and Turkish. Built-in stop-word removal supports Danish, Dutch, English, Finnish, French, German, Hungarian, Italian, Norwegian, Portuguese, Russian, Spanish, and Swedish. For other stemming languages, set `remove_stop_words=False` or pass `custom_stop_words`.
 
 ### Phrase Query Configuration
 
