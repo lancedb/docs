@@ -236,6 +236,51 @@ def download_udf(filename: str) -> bytes:
 tbl.add_columns({"area": area_udf, "content": download_udf })
 ```
 
+### Registering Multi-Output UDFs
+
+Use a multi-output UDF when one expensive read or decode can produce several features. For example, if a table stores image bytes, a single UDF can open the image once and return `height`, `width`, and an embedding column together. This avoids separate UDFs that would each read or decode the same image.
+
+Define the output shape with `typing.NamedTuple` and annotate the UDF return type as `geneva.Columns[YourNamedTuple]`. Passing that UDF directly to [`Table.add_columns()`](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.add_columns) expands the result into multiple sibling columns using the `NamedTuple` field names.
+
+If those names need a namespace or would conflict with existing columns, wrap the UDF with `geneva.UnpackedUDF(udf, prefix="...")` before calling `add_columns()`. The prefix is added to each materialized column name while keeping the outputs in one logical feature group.
+
+Manage multi-output sibling columns as a group. Backfill, drop, or alter the full group together instead of changing only one sibling column.
+
+```python
+import io
+from typing import NamedTuple
+
+import geneva
+from PIL import Image
+
+db = geneva.connect("/data/mydb")
+tbl = db.open_table("images")
+
+
+class ImageFeatures(NamedTuple):
+    height: int
+    width: int
+    embedding: list[float]
+
+
+@geneva.udf
+def image_features(image: bytes) -> geneva.Columns[ImageFeatures]:
+    img = Image.open(io.BytesIO(image))  # Read and decode the image once.
+    embedding = embedding_model.encode(img)
+    return ImageFeatures(
+        height=img.height,
+        width=img.width,
+        embedding=embedding,
+    )
+
+
+# Adds sibling columns named "height", "width", and "embedding".
+tbl.add_columns(image_features)
+
+# Or add the same outputs with a prefix to avoid name conflicts.
+tbl.add_columns(geneva.UnpackedUDF(image_features, prefix="image_"))
+```
+
 Batched UDFs require return type in their `udf` annotations
 
 ```python
