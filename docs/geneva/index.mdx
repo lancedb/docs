@@ -72,16 +72,16 @@ db = geneva.connect(
 
 tbl = db.open_table("my_table")
 
-# Define a User Defined Function (UDF)
-@geneva.udf(data_type=pa.string(), version="1")
-def my_udf(text: str) -> str:
-    return text + "foo"
+# Define a User Defined Function (UDF) that counts the words in the text column
+@geneva.udf(data_type=pa.int32(), version="1")
+def word_count(text: str) -> int:
+    return len(text.split())
 
 # Register the UDF as a new virtual column
-tbl.add_columns({"my_col": my_udf})
+tbl.add_columns({"word_count": word_count})
 
 # Backfill the new column using distributed execution with incremental checkpointing
-tbl.backfill("my_col")
+tbl.backfill("word_count")
 ```
 </CodeGroup>
 
@@ -93,15 +93,15 @@ data or the UDF version changes — no explicit `backfill()` call needed (see
 
 <CodeGroup>
 ```python Python icon="python"
-# Change the column to use a new UDF with auto-backfill enabled
-@geneva.udf(data_type=pa.string(), version="2", auto_backfill=True)
-def my_auto_udf(text: str) -> str:
-    return text + "foo2"
+# Change the column to use a new UDF version with auto-backfill enabled
+@geneva.udf(data_type=pa.int32(), version="2", auto_backfill=True)
+def word_count(text: str) -> int:
+    return len(text.split())
 
-tbl.alter_columns({"path": "my_col", "udf": my_auto_udf})
+tbl.alter_columns({"path": "word_count", "udf": word_count})
 
-# Add new rows. my_col is computed automatically in the background.
-tbl.add([{"text": "hello"}])
+# Add new rows. word_count is computed automatically in the background.
+tbl.add([{"text": "hello world"}])
 ```
 </CodeGroup>
 
@@ -114,11 +114,11 @@ row into many rows (1:N) — useful for splitting documents, videos, or images.
 <CodeGroup>
 ```python Python icon="python"
 # Materialized view: a query with UDF-computed columns, refreshed incrementally
-query = tbl.search(None).select({"my_col": "my_col", "derived": my_udf})
+query = tbl.search(None).select({"text": "text", "word_count": word_count})
 view = db.create_materialized_view("my_view", query)
 view.refresh()
 
-# Chunker view: 1:N row expansion
+# Chunker view: 1:N row expansion — split each row's text into one row per word
 from typing import Iterator, NamedTuple
 
 class Chunk(NamedTuple):
@@ -126,13 +126,13 @@ class Chunk(NamedTuple):
     chunk_text: str
 
 @geneva.chunker
-def split_text(my_col: str) -> Iterator[Chunk]:
-    for i, word in enumerate(my_col.split()):
+def split_text(text: str) -> Iterator[Chunk]:
+    for i, word in enumerate(text.split()):
         yield Chunk(chunk_index=i, chunk_text=word)
 
 chunks = db.create_udtf_view(
     "my_chunks",
-    source=tbl.search(None).select(["my_col"]),
+    source=tbl.search(None).select(["text"]),
     udtf=split_text,
 )
 chunks.refresh()
