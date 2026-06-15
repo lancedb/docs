@@ -1112,10 +1112,11 @@ paths:
       - $ref: "#/components/parameters/branch"
       - name: "on"
         in: query
-        description: Column name to use for matching rows (required)
+        description: Lance field path to use for matching rows. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         required: true
         schema:
           type: string
+          minLength: 1
       - name: "when_matched_update_all"
         in: query
         description: Update all columns when rows match
@@ -1125,7 +1126,7 @@ paths:
           default: false
       - name: "when_matched_update_all_filt"
         in: query
-        description: The row is updated (similar to UpdateAll) only for rows where the SQL expression evaluates to true
+        description: "The row is updated (similar to UpdateAll) only for rows where the SQL expression evaluates to true. Field references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
         required: false
         schema:
           type: string
@@ -1145,7 +1146,7 @@ paths:
           default: false
       - name: "when_not_matched_by_source_delete_filt"
         in: query
-        description: Delete rows from the target table if there is no match AND the SQL expression evaluates to true
+        description: "Delete rows from the target table if there is no match AND the SQL expression evaluates to true. Field references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
         schema:
           type: string
       - name: "timeout"
@@ -1670,7 +1671,7 @@ paths:
       summary: Create an index on a table
       operationId: CreateTableIndex
       description: |
-        Create an index on a table column for faster search operations.
+        Create an index on a table field for faster search operations.
         Supports vector indexes (IVF_FLAT, IVF_HNSW_SQ, IVF_PQ, etc.) and scalar indexes (BTREE, BITMAP, FTS, etc.).
         Index creation is handled asynchronously.
         Use the `ListTableIndices` and `DescribeTableIndexStats` operations to monitor index creation progress.
@@ -1709,7 +1710,7 @@ paths:
       summary: Create a scalar index on a table
       operationId: CreateTableScalarIndex
       description: |
-        Create a scalar index on a table column for faster filtering operations.
+        Create a scalar index on a table field for faster filtering operations.
         Supports scalar indexes (BTREE, BITMAP, LABEL_LIST, FTS, etc.).
         This is an alias for CreateTableIndex specifically for scalar indexes.
         Index creation is handled asynchronously.
@@ -2389,7 +2390,7 @@ components:
               9 - TableTagAlreadyExists: A table tag with this name already exists
               10 - TransactionNotFound: The specified transaction does not exist
               11 - TableVersionNotFound: The specified table version does not exist
-              12 - TableColumnNotFound: The specified table column does not exist
+              12 - TableColumnNotFound: The specified table field does not exist
               13 - InvalidInput: Malformed request or invalid parameters
               14 - ConcurrentModification: Optimistic concurrency conflict
               15 - PermissionDenied: User lacks permission for this operation
@@ -2398,6 +2399,9 @@ components:
               18 - Internal: Unexpected server/implementation error
               19 - InvalidTableState: Table is in an invalid state for the operation
               20 - TableSchemaValidationError: Table schema validation failed
+              21 - Throttling: Request rate limit exceeded
+              22 - TableBranchNotFound: The specified table branch does not exist
+              23 - TableBranchAlreadyExists: A table branch with this name already exists
           example: 4
         detail:
           type: string
@@ -2902,7 +2906,8 @@ components:
             Branch to target. When not specified, the main branch is used.
         predicate:
           description: |
-            Optional SQL predicate to filter rows for counting
+            Optional SQL predicate to filter rows for counting. Field
+            references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled.
           type: string
 
     CountTableRowsResponse:
@@ -2964,14 +2969,15 @@ components:
           description: |
             Branch to target. When not specified, the main branch is used.
         "on":
-          description: Column name to use for matching rows (required)
+          description: Lance field path to use for matching rows. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
           type: string
+          minLength: 1
         when_matched_update_all:
           description: Update all columns when rows match
           type: boolean
           default: false
         when_matched_update_all_filt:
-          description: The row is updated (similar to UpdateAll) only for rows where the SQL expression evaluates to true
+          description: "The row is updated (similar to UpdateAll) only for rows where the SQL expression evaluates to true. Field references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
           type: string
         when_not_matched_insert_all:
           description: Insert all columns when rows don't match
@@ -2982,7 +2988,7 @@ components:
           type: boolean
           default: false
         when_not_matched_by_source_delete_filt:
-          description: Delete rows from the target table if there is no match AND the SQL expression evaluates to true
+          description: "Delete rows from the target table if there is no match AND the SQL expression evaluates to true. Field references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
           type: string
         timeout:
           description: Timeout for the operation (e.g., "30s", "5m")
@@ -3023,7 +3029,7 @@ components:
     UpdateTableRequest:
       type: object
       description: |
-        Each update consists of a column name and an SQL expression that will be
+        Each update consists of a field path and an SQL expression that will be
         evaluated against the current row's value. Optionally, a predicate can be
         provided to filter which rows to update.
       required:
@@ -3044,7 +3050,7 @@ components:
         predicate:
           type: string
           nullable: true
-          description: Optional SQL predicate to filter rows for update
+          description: "Optional SQL predicate to filter rows for update. Field references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
         updates:
           type: array
           items:
@@ -3053,7 +3059,7 @@ components:
             maxItems: 2
             items:
               type: string
-          description: List of column updates as [column_name, expression] pairs
+          description: "List of field updates as [field_path, expression] pairs. Field paths and expression references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
         properties:
           type: object
           description: |
@@ -3110,7 +3116,7 @@ components:
             Branch to target. When not specified, the main branch is used.
         predicate:
           type: string
-          description: SQL predicate to filter rows for deletion
+          description: "SQL predicate to filter rows for deletion. Field references must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled."
 
     DeleteFromTableResponse:
       type: object
@@ -3149,18 +3155,21 @@ components:
           type: object
           nullable: true
           description: |
-            Optional columns to return. Provide either column_names or column_aliases, not both.
+            Optional field paths to return. Provide either column_names or
+            column_aliases, not both.
           properties:
             column_names:
               type: array
               items:
                 type: string
-              description: List of column names to return
+                minLength: 1
+              description: List of Lance field paths to return. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments.
             column_aliases:
               type: object
               additionalProperties:
                 type: string
-              description: Object mapping output aliases to source column names
+                minLength: 1
+              description: Object mapping output aliases to source Lance field paths. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments.
         distance_type:
           type: string
           description: Distance metric to use
@@ -3173,7 +3182,8 @@ components:
           description: Whether to use fast search
         filter:
           type: string
-          description: Optional SQL filter expression
+          description: |
+            Optional SQL filter expression. Field references in the expression must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled.
         full_text_query:
           type: object
           nullable: true
@@ -3232,7 +3242,8 @@ components:
               description: Multiple query vectors for batch search
         vector_column:
           type: string
-          description: Name of the vector column to search
+          minLength: 1
+          description: Lance field path of the vector field to search. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         version:
           type: integer
           format: int64
@@ -3262,7 +3273,8 @@ components:
             Branch to target. When not specified, the main branch is used.
         column:
           type: string
-          description: Name of the column to create index on
+          minLength: 1
+          description: Lance field path to create the index on. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         index_type:
           type: string
           description: Type of index to create (e.g., BTREE, BITMAP, LABEL_LIST, IVF_FLAT, IVF_PQ, IVF_HNSW_SQ, FTS)
@@ -3381,10 +3393,63 @@ components:
           type: array
           items:
             type: string
-          description: Columns covered by this index
+            minLength: 1
+          description: Canonical Lance field paths covered by this index. Nested fields use dot-separated segments; segments containing literal dots are backtick-quoted, and backticks inside quoted segments are doubled.
         status:
           type: string
           description: Current status of the index
+        index_type:
+          type: string
+          description: >-
+            Friendly index type, e.g. IVF_PQ, BTREE. Unknown if no plugin
+            recognizes the index.
+        type_url:
+          type: string
+          description: Protobuf type URL, a precise type identifier for the index.
+        num_indexed_rows:
+          type: integer
+          format: int64
+          minimum: 0
+          description: >-
+            Number of live rows covered by the index. This does not count
+            rows that are in the index but have since been deleted.
+        num_unindexed_rows:
+          type: integer
+          format: int64
+          minimum: 0
+          description: >-
+            Number of rows that are not indexed.
+        size_bytes:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: >-
+            Total index size in bytes across all segments. Null for indices
+            predating file-size tracking.
+        num_segments:
+          type: integer
+          format: int32
+          minimum: 0
+          description: Number of index deltas/segments.
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            Creation time for indexes. Null for legacy indices.
+        index_version:
+          type: integer
+          format: int32
+          minimum: 0
+          description: On-disk index format version.
+        index_details:
+          type: string
+          nullable: true
+          description: >-
+            Opaque, type-specific JSON with additional index details. For vector
+            indices this carries metric/distance type, partitioning, and
+            HNSW/PQ/SQ/RQ parameters.
 
     DescribeTableIndexStatsRequest:
       type: object
@@ -3868,6 +3933,8 @@ components:
           type: array
           items:
             type: string
+            minLength: 1
+          description: Lance field paths to search. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Omit to search all indexed FTS fields.
         query:
           type: string
 
@@ -3907,6 +3974,8 @@ components:
           format: float
         column:
           type: string
+          minLength: 1
+          description: Lance field path to match. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Omit to use the query default fields.
         fuzziness:
           type: integer
           format: int32
@@ -3941,6 +4010,8 @@ components:
       properties:
         column:
           type: string
+          minLength: 1
+          description: Lance field path to match. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Omit to use the query default fields.
         slop:
           type: integer
           format: int32
@@ -4871,18 +4942,21 @@ components:
           type: object
           nullable: true
           description: |
-            Optional columns to return. Provide either column_names or column_aliases, not both.
+            Optional field paths to return. Provide either column_names or
+            column_aliases, not both.
           properties:
             column_names:
               type: array
               items:
                 type: string
-              description: List of column names to return
+                minLength: 1
+              description: List of Lance field paths to return. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments.
             column_aliases:
               type: object
               additionalProperties:
                 type: string
-              description: Object mapping output aliases to source column names
+                minLength: 1
+              description: Object mapping output aliases to source Lance field paths. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments.
         distance_type:
           type: string
           description: Distance metric to use
@@ -4895,7 +4969,8 @@ components:
           description: Whether to use fast search
         filter:
           type: string
-          description: Optional SQL filter expression
+          description: |
+            Optional SQL filter expression. Field references in the expression must use Lance field path syntax: nested fields use dot-separated segments, literal dots require backtick-quoted segments, and backticks inside quoted segments are doubled.
         full_text_query:
           type: object
           nullable: true
@@ -4954,7 +5029,8 @@ components:
               description: Multiple query vectors for batch search
         vector_column:
           type: string
-          description: Name of the vector column to search
+          minLength: 1
+          description: Lance field path of the vector field to search. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         version:
           type: integer
           format: int64
@@ -5028,7 +5104,8 @@ components:
           type: array
           items:
             type: string
-          description: List of input column names for the virtual column
+            minLength: 1
+          description: List of input Lance field paths for the virtual column. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments.
         outputs:
           type: array
           items:
@@ -5143,7 +5220,8 @@ components:
       properties:
         path:
           type: string
-          description: Field (column) path whose metadata to update
+          minLength: 1
+          description: Lance field path whose metadata to update. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         metadata:
           type: object
           additionalProperties:
@@ -5178,7 +5256,7 @@ components:
             additionalProperties:
               type: string
           description: |
-            Resulting metadata for each updated field, keyed by field path.
+            Resulting metadata for each updated field, keyed by canonical Lance field path.
 
     AlterTableAlterColumnsRequest:
       type: object
@@ -5209,7 +5287,8 @@ components:
       properties:
         path:
           type: string
-          description: Column path to alter
+          minLength: 1
+          description: Lance field path to alter. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         data_type:
           type: object
           description: New data type for the column using JSON representation (optional)
@@ -5238,7 +5317,8 @@ components:
             - "null"
           items:
             type: string
-          description: List of input column names for the virtual column (optional)
+            minLength: 1
+          description: List of input Lance field paths for the virtual column. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Optional.
         image:
           type:
             - string
@@ -5316,7 +5396,8 @@ components:
             Branch to target. When not specified, the main branch is used.
         column:
           type: string
-          description: Column name to backfill
+          minLength: 1
+          description: Lance field path to backfill. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         where:
           type:
             - string
@@ -5422,6 +5503,13 @@ components:
             - integer
             - "null"
           description: Optional intra-applier concurrency override
+        source_task_size:
+          type:
+            - integer
+            - "null"
+          description: |
+            Optional number of source row ids per work item during expansion.
+            Bounds per-actor memory for chunker materialized views.
         cluster:
           type:
             - string
@@ -5548,25 +5636,23 @@ components:
             - "null"
           items:
             type: string
+            minLength: 1
           description: |
-            Source columns the UDTF reads. Null means all columns (batch
-            UDTF only).
+            Source Lance field paths the UDTF reads. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Null means all fields (batch UDTF only).
         partition_by:
-          type:
-            - string
-            - "null"
+          oneOf:
+            - type: "null"
+            - type: string
+              minLength: 1
           description: |
-            Batch UDTF only. Column-value partition key for
-            partition-parallel execution. Mutually exclusive with
-            `partition_by_indexed_column`.
+            Batch UDTF only. Lance field path used as the field-value partition key for partition-parallel execution. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Mutually exclusive with `partition_by_indexed_column`.
         partition_by_indexed_column:
-          type:
-            - string
-            - "null"
+          oneOf:
+            - type: "null"
+            - type: string
+              minLength: 1
           description: |
-            Batch UDTF only. Source column with an IVF-family index used
-            for index-based partitioning. The server validates the index
-            exists at create time.
+            Batch UDTF only. Lance field path with an IVF-family index used for index-based partitioning. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. The server validates the index exists at create time.
         num_cpus:
           type:
             - number
@@ -5645,7 +5731,8 @@ components:
           type: array
           items:
             type: string
-          description: Names of columns to drop
+            minLength: 1
+          description: Lance field paths to drop. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
 
     AlterTableDropColumnsResponse:
       type: object
@@ -5824,7 +5911,7 @@ components:
           type: array
           items:
             type: integer
-          description: Field IDs of the source columns in the schema
+          description: Field IDs of the source fields in the schema
           example: [1]
         transform:
           $ref: "#/components/schemas/PartitionTransform"
