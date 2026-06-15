@@ -352,7 +352,41 @@ For example, this filter would only update the rows where area was currently nul
 table.backfill("area", where="area is null")
 ```
 
+## Auto-backfill
+
+For columns whose values should always stay in sync with their source data, set
+`auto_backfill=True` on the UDF. On LanceDB Enterprise (`db://` connections), the column is
+then recomputed for you automatically — you don't need to call `backfill()` yourself.
+
+```python
+@udf(data_type=pa.int32(), version="2", auto_backfill=True)
+def area_udf(x: int, y: int) -> int:
+    return x * y
+
+# Register a new auto-backfill column...
+tbl.add_columns({"area": area_udf})
+
+# ...or re-point an existing column to an auto-backfill UDF
+tbl.alter_columns({"path": "area", "udf": area_udf})
+```
+
+### How it works
+
+The `auto_backfill` flag is recorded in the column's metadata when the column is added or
+altered. LanceDB Enterprise's managed agent watches for columns that need recomputation and
+dispatches a [distributed backfill job](/geneva/jobs/backfilling/) automatically — there is no
+manual trigger and no status polling. A column is recomputed when, for example:
+
+- **New rows are added** to the table (`tbl.add(...)`), leaving the column null for those rows.
+- **The UDF version changes** — you bump `version=` and `alter_columns()` to the new function.
+
+<Note>
+Auto-backfill is an enterprise feature. On direct object-storage or local-filesystem
+connections there is no managed agent, so `auto_backfill=True` has no effect and you must run
+`backfill()` explicitly.
+</Note>
+
 Reference:
 * [`alter_columns` API](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.alter_columns)
 * [`add_columns` API](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.add_columns)
-* [UDF](https://lancedb.github.io/geneva/api/udf/) — full `@udf` decorator reference including `data_type`, `num_gpus`, `batch_size`, and other options
+* [UDF](https://lancedb.github.io/geneva/api/udf/) — full `@udf` decorator reference including `data_type`, `num_gpus`, `auto_backfill`, `batch_size`, and other options

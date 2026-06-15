@@ -64,14 +64,14 @@ geneva:
 
   azure:
     # Azure managed identity client ID for the Geneva client.
-    # This identity should have a federated credential for the Geneva namespace
+    # This identity should have a federated credential for the LanceDB namespace
     # and Storage Blob Data Contributor role on the storage account.
     clientPrincipalId: ""
 ```
 
 3. Install kuberay operator
 ```bash
-export NAMESPACE=geneva
+export NAMESPACE=lancedb
 
 helm repo add kuberay https://ray-project.github.io/kuberay-helm/
 helm repo update
@@ -89,4 +89,86 @@ kubectl apply -f nvidia-device-plugin.yml
 5. Install Geneva Helm chart
 ```bash
 helm install geneva ./geneva -n $NAMESPACE --create-namespace
+```
+
+## Default cluster and manifest
+
+In LanceDB Enterprise, backfill and refresh jobs run on a **default cluster** (the compute
+pool jobs run on) and a **default manifest** (the Python dependency environment — image and
+packages). Configuring these in the LanceDB Enterprise chart lets jobs run out of the box
+without per-job configuration. They are set under `geneva.defaults` in the chart's
+`values.yaml`:
+
+```yaml
+geneva:
+  defaults:
+    cluster:
+      cluster_type: kuberay
+      name: deployment-default
+      kuberay:
+        namespace: lancedb
+        config_method: IN_CLUSTER
+        head_group:
+          service_account: geneva-service-account
+          num_cpus: 2
+          memory: 8Gi
+          image: rayproject/ray:2.54.0-py312
+        worker_groups:
+          - name: cpu
+            service_account: geneva-service-account
+            num_cpus: 4
+            memory: 8Gi
+            replicas: 2
+            min_replicas: 0
+            max_replicas: 4
+            idle_timeout_seconds: 60
+            node_selector:
+              geneva.lancedb.com/ray-worker-cpu: "true"
+            image: rayproject/ray:2.54.0-py312
+    manifest:
+      name: deployment-default
+      pip: [geneva, pyarrow, lancedb, pylance]
+      head_image: rayproject/ray:2.54.0-py312
+      worker_image: rayproject/ray:2.54.0-py312
+      skip_site_packages: true
+```
+
+When set, the chart renders a `geneva-defaults` ConfigMap mounted at `/etc/geneva/defaults/`
+in the query node and job pods. If no default is configured, jobs must specify a cluster and
+manifest explicitly. Individual jobs can override these defaults per call with the `cluster=`
+/ `manifest=` parameters — see [Advanced Job Configuration](/geneva/jobs/advanced-job-configuration).
+
+## Providing a Ray cluster
+
+The lancedb Helm chart can be configured to deploy a static KubeRay cluster, provision KubeRay clusters on demand per job, or
+use an existing Ray cluster.
+
+### Use default LanceDB Enterprise Ray cluster (default)
+
+By default, LanceDB Enterprise will use a shared, statically provisioned Ray cluster for job execution.
+
+This can be enabled in the Helm chart by setting the following values.
+
+```yaml
+raycluster:
+    enabled: true
+
+global:
+    rayclusterUri: "ray://raycluster-kuberay-head-svc.lancedb.svc.cluster.local:10001"
+```
+
+Configuration for the Ray cluster can be specified by modifying raycluster.yaml Helm values.
+
+### Provision KubeRay clusters on demand
+
+Set `global.rayclusterUri` to an empty value to provision ephemeral KubeRay clusters on-demand for each execution job.
+
+### Use an external Ray cluster
+
+Self-managed enterprise customers can bring an existing Ray cluster to run Geneva jobs. Simply set the rayclusterUri property in the Helm chart
+to a Ray address that can be accessed from the LanceDB Enterprise deployment.
+
+```yaml
+global:
+  rayclusterUri: "ray://my-ray-cluster.my-ns.svc.cluster.local:10001"
 ```

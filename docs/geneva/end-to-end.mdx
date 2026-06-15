@@ -1,36 +1,44 @@
 ---
 title: End-to-End Example
 sidebarTitle: End-to-end example
-description: A complete Geneva example — raw data on S3, a backfill using a KubeRay cluster, and a materialized view with embeddings.
+description: A complete Geneva example on LanceDB Enterprise — create a table, backfill computed columns, and build a materialized view with embeddings.
 icon: play
 ---
 
-This example walks through a complete Geneva workflow: creating a raw table in S3, adding computed columns via a backfill on a KubeRay cluster, and materializing a view with embeddings for downstream search.
+This example walks through a complete Geneva workflow on LanceDB Enterprise: creating a raw
+table, adding computed columns with a distributed backfill, and materializing a view with
+embeddings for downstream search.
 
-The dataset is a product catalog with titles and descriptions. We'll compute a `word_count` feature column, then create a materialized view that adds text embeddings.
+The dataset is a product catalog with titles and descriptions. We'll compute a `word_count`
+feature column, then create a materialized view that adds text embeddings.
 
 ## 0. What you need to run this
 
-Before running this example, you'll need:
-
-- **An S3 bucket** (or other cloud object storage) that Geneva can read and write to
-- **A Kubernetes cluster** with the [KubeRay operator installed](/geneva/deployment/) and [Geneva deployed](/geneva/deployment/helm/)
-- **IAM credentials** granting your Geneva client access to the bucket and Kubernetes API — see [Manual Deployment](/geneva/deployment/) for the required permissions
-
-Fill in these constants and the rest of the code will run as-is:
+All you need is an existing **LanceDB Enterprise deployment**. Distributed job execution,
+clusters, and dependency manifests are managed for you — there is no Kubernetes or cluster
+setup in this example. Set your connection details:
 
 ```python
-CLOUD_OBJECT_STORAGE_LOCATION = "s3://my-bucket/product-catalog" # your S3/GCS/ABS path
-K8S_NAMESPACE = "geneva" # namespace where Geneva is deployed
+import os
+
+PHALANX_URI = os.getenv("PHALANX_URI")          # your LanceDB Enterprise endpoint
+PHALANX_API_KEY = os.getenv("PHALANX_API_KEY")  # your API key
+DB_URI = "db://my-db"                            # your database
 ```
 
 ## 1. Connect and create a table
 
 ```python
+import os
 import pyarrow as pa
 import geneva
 
-db = geneva.connect(CLOUD_OBJECT_STORAGE_LOCATION)
+# Connect to LanceDB Enterprise
+db = geneva.connect(
+    uri=DB_URI,
+    host_override=os.getenv("PHALANX_URI"),
+    api_key=os.getenv("PHALANX_API_KEY"),
+)
 
 # Create a raw product table
 schema = pa.schema([
@@ -84,111 +92,74 @@ def price_tier(price: float) -> str:
         return "premium"
 ```
 
-## 3. Register columns and run a backfill on KubeRay
+## 3. Register columns and run a backfill
+
+Register the UDFs as virtual columns and trigger a backfill. The job runs on your
+deployment's default distributed execution environment — no cluster or context to configure.
 
 ```python
-from geneva.cluster.builder import KubeRayClusterBuilder
-from geneva.manifest.builder import PipManifestBuilder
-import sys
-import ray
-from importlib.metadata import version
-from geneva.utils.ray import get_ray_image
-
-# Define the Python environment for workers
-manifest = (
-    PipManifestBuilder.create("product-catalog-manifest")
-    .pip([
-        "sentence-transformers==3.3.1",
-        "torch==2.5.1",
-        f"geneva[udf-text-sentence-transformers]=={version('geneva')}",
-    ])
-    .build()
-)
-db.define_manifest("product-catalog-manifest", manifest)
-
-# Make sure to use an image that:
-# 1. matches your local ray and python versions
-# 2. matches the architecture of the k8s nodes. These are in AWS and are
-#    x64 nodes, so we set arm=False.
-# get_ray_image() helps you get the right image.
-ray_image = get_ray_image(
-    ray.__version__,
-    f"{sys.version_info.major}.{sys.version_info.minor}",
-    arm=False,
-)
-
-# Define the KubeRay cluster
-cluster = (
-    KubeRayClusterBuilder.create("product-catalog-cluster")
-    .namespace(K8S_NAMESPACE)
-    .head_group(cpus=4, memory="8Gi", image=ray_image)
-    .add_worker_group(
-        KubeRayClusterBuilder.cpu_worker()
-        .cpus(4)
-        .memory("16Gi")
-        .min_replicas(1)
-        .max_replicas(3)
-        .image(ray_image)
-        .build()
-    )
-    .build()
-)
-db.define_cluster("product-catalog-cluster", cluster)
-
 # Add computed columns
 table.add_columns({
     "word_count": word_count,
     "price_tier": price_tier,
 })
 
-# Run the backfill on the KubeRay cluster
-with db.context(cluster="product-catalog-cluster", manifest="product-catalog-manifest"):
-    table.backfill("word_count")
-    table.backfill("price_tier")
+# Run the backfills
+table.backfill("word_count")
+table.backfill("price_tier")
 ```
 
 ## 4. Create a materialized view with embeddings
 
-The materialized view selects a subset of columns from the source table — here we drop `price` and `price_tier`, keeping only what's needed for search.
-After creating a materialized view, we will add and backfill a new column of embeddings.
+The embedding model needs extra Python dependencies (`sentence-transformers`, `torch`). Rather
+than configuring a deployment-wide environment, we bundle those dependencies **with the UDF**
+using `@udf(manifest=...)`. The manifest is snapshotted onto the view, so refreshes use it
+automatically.
+
+The materialized view selects a subset of columns from the source table — here we drop `price`
+and `price_tier`, keeping only what's needed for search — plus a derived `embedding` column.
 
 ```python
-from geneva.udfs import sentence_transformer_udf
+from geneva import udf
+from geneva.manifest import GenevaManifest
 
-# Define an embedding UDF using a template from LanceDB's UDF library
-embed = sentence_transformer_udf(
-    column="description",
-    model="BAAI/bge-small-en-v1.5",
-    normalize=True,
-    dimension=384,  # BAAI/bge-small-en-v1.5 output dimension; avoids loading model locally
+# Bundle the embedding model's dependencies and attach them to the UDF
+embed_manifest = (
+    GenevaManifest.create_pip("embedding-deps")
+    .pip(["sentence-transformers==3.3.1", "torch==2.5.1"])
+    .build()
 )
 
-# Select only the columns needed for search — price and price_tier are excluded
-query = (
-    table.search()
-    .select(["product_id", "title", "description", "category", "word_count"])
-)
+@udf(data_type=pa.list_(pa.float32(), 384), manifest=embed_manifest)
+class EmbedDescription:
+    def __init__(self):
+        self.model = None
 
-# Create the materialized view with an embedding column derived from description
-db.create_materialized_view(
-    "products_enriched",
-    query,
-    columns={"embedding": embed},
-)
+    def __call__(self, description: str) -> list[float]:
+        if self.model is None:
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+        return self.model.encode(description, normalize_embeddings=True).tolist()
 
-# Populate the materialized view
+# Build a query that selects search columns plus the derived embedding
+query = table.search(None).select({
+    "product_id": "product_id",
+    "title": "title",
+    "description": "description",
+    "category": "category",
+    "word_count": "word_count",
+    "embedding": EmbedDescription(),
+})
+
+# Create the materialized view and populate it — the embedding UDF runs on refresh
+db.create_materialized_view("products_enriched", query)
 enriched = db.open_table("products_enriched")
-with db.context(cluster="product-catalog-cluster", manifest="product-catalog-manifest"):
-    enriched.refresh()
-    enriched.add_columns({"embedding": embed})
-    enriched.backfill("embedding") # refresh (above) adds rows but doesn't compute UDF columns
+enriched.refresh()
 ```
 
 ## 5. Query the enriched table
 
 ```python
-import pyarrow.compute as pc
-
 enriched = db.open_table("products_enriched")
 
 # Vector search
@@ -209,7 +180,8 @@ armor_results = (
 
 ## 6. Incremental refresh
 
-As new products are added to the source table, refresh the view to compute embeddings for the new rows only:
+As new products are added to the source table, backfill the new rows and refresh the view to
+compute embeddings for them — only the new rows are processed:
 
 ```python
 # Append new products
@@ -225,9 +197,15 @@ new_data = pa.table({
 })
 table.add(new_data)
 
-with db.context(cluster="product-catalog-cluster", manifest="product-catalog-manifest"):
-    table.backfill("word_count") # only fills null values
-    table.backfill("price_tier")
-    enriched.refresh()
-    enriched.backfill("embedding") # refresh adds new rows but doesn't compute UDF columns
+# Only null/new values are computed
+table.backfill("word_count")
+table.backfill("price_tier")
+
+# Incrementally materialize the new rows (including their embeddings) into the view
+enriched.refresh()
 ```
+
+<Tip>
+To keep source columns in sync automatically, mark their UDFs with `@udf(auto_backfill=True)`. See
+[Backfilling](/geneva/jobs/backfilling/).
+</Tip>

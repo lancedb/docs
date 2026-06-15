@@ -1,15 +1,24 @@
 ---
-title: Execution Contexts
-sidebarTitle: Contexts
-description: Learn how to set up your cluster for distributed execution.
+title: Advanced Execution Contexts
+sidebarTitle: Advanced execution contexts
+description: Configure the distributed execution backend — clusters and dependency manifests — for Geneva jobs on object-storage and local-filesystem connections.
 icon: circle-nodes
 ---
 
 <Note>
-The APIs on this page require Geneva **v0.10.0** or later.
+**This page applies to direct object-storage and local-filesystem connections only.** On
+LanceDB Enterprise (`db://`) connections, distributed job execution is fully managed: the
+cluster and manifest are configured at deployment time (see
+[Helm deployment](/geneva/deployment/helm)) and can be overridden per job with `cluster=` /
+`manifest=` (see [Advanced Job Configuration](/geneva/jobs/advanced-job-configuration)). You
+do not define execution contexts there.
+
+When you connect Geneva directly to object storage (`s3://`, `gs://`, …) or a local path,
+there is no managed control plane, so you configure the execution backend yourself using the
+contexts below. The APIs on this page require Geneva **v0.10.0** or later.
 </Note>
 
-Geneva currently supports one processing backend: **Ray**. There are 3 ways to connect to a Ray cluster: 
+Geneva's distributed execution backend is **Ray**. There are 3 ways to connect to a Ray cluster:
 
 1. Local Ray
 2. KubeRay: create a cluster on demand in your Kubernetes cluster.
@@ -53,7 +62,7 @@ db = geneva.connect("s3://my-bucket/my-db")
 
 cluster_name = "my-geneva-cluster" # lowercase, numbers, hyphens only
 service_account = "my_k8s_service_account" # k8s service account that Geneva runs as
-k8s_namespace = "geneva"  # k8s namespace
+k8s_namespace = "lancedb"  # k8s namespace
 
 cluster = (
     GenevaCluster.create_kuberay(cluster_name)

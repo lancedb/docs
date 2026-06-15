@@ -17,6 +17,10 @@ With an API designed to leverage LanceDB's optimized data storage and retrieval,
 streamlines prototyping extraction and transformation tasks, performing experiments, exploring your
 data, scaling up execution, and moving to production.
 
+LanceDB Multimodal Feature Engineering enables researchers to seamlessly transition from
+experiments in local notebooks to fully-managed distributed job execution on datasets with
+billions of rows.
+
 <Card>
 Feature Engineering and the `geneva` Python package are currently only available as part of
 [LanceDB Enterprise](/enterprise). Please [contact us](mailto:contact@lancedb.com) if you're interested
@@ -37,7 +41,7 @@ as columns in a Lance dataset. Adding a feature is straightforward:
   Register the UDF as a virtual column using `Table.add_columns()`.
   </Step>
   <Step>
-  (Optional) Configure where the UDF will run: locally, on a Ray cluster, or on a Kubernetes cluster with KubeRay (see [Contexts](/geneva/jobs/contexts)).
+  (Optional, advanced) Override where the job runs — see [Advanced Execution Contexts](/geneva/jobs/contexts). On LanceDB Enterprise, distributed job execution is fully managed, so most users can skip this step.
   </Step>
   <Step>
   Trigger a `backfill` operation (see [Backfilling](/geneva/jobs/backfilling/)).
@@ -48,13 +52,116 @@ as columns in a Lance dataset. Adding a feature is straightforward:
 You can build your Python feature generator function in an IDE or a notebook using your project's Python versions and dependencies. `geneva` will automate much of the dependency and version management needed to move from prototype to scale and production.
 </Tip>
 
+## Getting Started
+
+Connect to your LanceDB Enterprise deployment, define a UDF, and run a distributed
+backfill — all from a notebook or a script. No cluster setup required.
+
+<CodeGroup>
+```python Python icon="python"
+import os
+import geneva
+import pyarrow as pa
+
+# Connect to LanceDB Enterprise
+db = geneva.connect(
+    uri="db://my-db",
+    host_override=os.getenv("PHALANX_URI", "http://localhost:10024"),
+    api_key=os.getenv("PHALANX_API_KEY"),
+)
+
+tbl = db.open_table("my_table")
+
+# Define a User Defined Function (UDF)
+@geneva.udf(data_type=pa.string(), version="1")
+def my_udf(text: str) -> str:
+    return text + "foo"
+
+# Register the UDF as a new virtual column
+tbl.add_columns({"my_col": my_udf})
+
+# Backfill the new column using distributed execution with incremental checkpointing
+tbl.backfill("my_col")
+```
+</CodeGroup>
+
+### Auto-backfill
+
+With `auto_backfill=True`, LanceDB Enterprise recomputes the column for you whenever the
+data or the UDF version changes — no explicit `backfill()` call needed (see
+[Backfilling](/geneva/jobs/backfilling/)).
+
+<CodeGroup>
+```python Python icon="python"
+# Change the column to use a new UDF with auto-backfill enabled
+@geneva.udf(data_type=pa.string(), version="2", auto_backfill=True)
+def my_auto_udf(text: str) -> str:
+    return text + "foo2"
+
+tbl.alter_columns({"path": "my_col", "udf": my_auto_udf})
+
+# Add new rows. my_col is computed automatically in the background.
+tbl.add([{"text": "hello"}])
+```
+</CodeGroup>
+
+### Materialized views and chunkers
+
+A [materialized view](/geneva/jobs/materialized-views/) applies UDFs over a query and
+refreshes incrementally. A [chunker](/geneva/udfs/scalar-udtfs) view expands each source
+row into many rows (1:N) — useful for splitting documents, videos, or images.
+
+<CodeGroup>
+```python Python icon="python"
+# Materialized view: a query with UDF-computed columns, refreshed incrementally
+query = tbl.search(None).select({"my_col": "my_col", "derived": my_udf})
+view = db.create_materialized_view("my_view", query)
+view.refresh()
+
+# Chunker view: 1:N row expansion
+from typing import Iterator, NamedTuple
+
+class Chunk(NamedTuple):
+    chunk_index: int
+    chunk_text: str
+
+@geneva.chunker
+def split_text(my_col: str) -> Iterator[Chunk]:
+    for i, word in enumerate(my_col.split()):
+        yield Chunk(chunk_index=i, chunk_text=word)
+
+chunks = db.create_udtf_view(
+    "my_chunks",
+    source=tbl.search(None).select(["my_col"]),
+    udtf=split_text,
+)
+chunks.refresh()
+```
+</CodeGroup>
+
+### Connecting to object storage or a local filesystem
+
+Geneva can also run directly against cloud object storage or a local path, without a
+LanceDB Enterprise control plane. In this mode, jobs run on a
+[distributed execution context](/geneva/jobs/contexts) you provide.
+
+<CodeGroup>
+```python Python icon="python"
+# Cloud object storage (S3, GCS, Azure)
+db = geneva.connect("s3://my-bucket/my-database")
+
+# Local filesystem
+db = geneva.connect("/path/to/my-database")
+```
+</CodeGroup>
+
 ## Continue learning
 
 Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:
 
 - **Overview**: [What is Feature Engineering?](/geneva/overview/) · [End-to-end example](/geneva/end-to-end)
 - **UDFs**: [Using UDFs](/geneva/udfs/udfs) · [Blob helpers](/geneva/udfs/blobs/) · [Error handling](/geneva/udfs/error_handling) · [Advanced configuration](/geneva/udfs/advanced-configuration) 
-- **Jobs**: [Backfilling](/geneva/jobs/backfilling/) · [Startup optimizations](/geneva/jobs/startup/) · [Materialized views](/geneva/jobs/materialized-views/) · [Execution contexts](/geneva/jobs/contexts/) · [Geneva console](/geneva/jobs/console) · [Performance](/geneva/jobs/performance/)
+- **Jobs**: [Backfilling](/geneva/jobs/backfilling/) · [Materialized views](/geneva/jobs/materialized-views/) · [Advanced job configuration](/geneva/jobs/advanced-job-configuration/) · [Advanced execution contexts](/geneva/jobs/contexts/) · [Geneva console](/geneva/jobs/console) · [Performance](/geneva/jobs/performance/)
 - **Deployment**: [Deployment overview](/geneva/deployment/) · [Helm deployment](/geneva/deployment/helm/) · [Troubleshooting](/geneva/deployment/troubleshooting/)
 
 ## API Reference

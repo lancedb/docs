@@ -1,7 +1,7 @@
 ---
 title: Understanding Transforms
 sidebarTitle: Understanding Transforms
-description: Understand the three types of user-defined functions in Geneva — UDFs, scalar UDTFs, and batch UDTFs — and when to use each.
+description: Understand the three types of user-defined functions in Geneva — UDFs, chunkers (scalar UDTFs), and batch UDTFs — and when to use each.
 icon: code-compare
 ---
 
@@ -10,19 +10,19 @@ Geneva provides three types of user-defined functions for transforming data. Eac
 ## Choosing the Right Type
 
 - **Adding a column to each row?** Use a [**UDF**](/geneva/udfs/udfs).
-- **Splitting each row into multiple rows?** Use a [**Scalar UDTF**](/geneva/udfs/scalar-udtfs).
+- **Splitting each row into multiple rows?** Use a [**Chunker**](/geneva/udfs/scalar-udtfs).
 - **Computing across rows with a different output shape?** Use a [**Batch UDTF**](/geneva/udfs/batch-udtfs).
 
 ## At a Glance
 
-| | UDF | Scalar UDTF | Batch UDTF |
+| | UDF | Chunker (Scalar UDTF) | Batch UDTF |
 |---|---|---|---|
 | **Cardinality** | 1:1 | 1:N | N:M |
-| **Decorator** | `@udf` | `@scalar_udtf` | `@udtf` |
+| **Decorator** | `@udf` | `@chunker` | `@udtf` |
 | **Refresh** | Incremental | Incremental | Full |
 | **Parallelism** | Fragment-parallel | Fragment-parallel | Partition-parallel |
 | **Inherited columns** | N/A — adds to existing rows | Automatic from query | Independent output schema |
-| **Registration** | [`table.add_columns()`](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.add_columns) | [`db.create_scalar_udtf_view()`](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_scalar_udtf_view) | [`db.create_udtf_view()`](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_udtf_view) |
+| **Registration** | [`table.add_columns()`](https://lancedb.github.io/geneva/api/table/#geneva.table.Table.add_columns) | [`db.create_udtf_view()`](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_udtf_view) | [`db.create_udtf_view()`](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_udtf_view) |
 
 ## UDFs (1:1)
 
@@ -40,9 +40,9 @@ Each input row produces exactly one output value. The new column is added to the
 
 See [UDFs](/geneva/udfs/udfs) for the full guide.
 
-## Scalar UDTFs (1:N)
+## Chunkers (Scalar UDTFs, 1:N)
 
-Scalar UDTFs **expand each source row into multiple output rows**. The output is a materialized view that inherits parent columns and supports incremental refresh.
+Chunkers — also called scalar UDTFs — **expand each source row into multiple output rows**. The output is a materialized view that inherits parent columns and supports incremental refresh.
 
 **Source: `documents`**
 
@@ -51,7 +51,7 @@ Scalar UDTFs **expand each source row into multiple output rows**. The output is
 | 1 | "Intro to AI" | "Machine learning is..." |
 | 2 | "Data Guide" | "Data pipelines are..." |
 
-**Derived: `chunks`** (1:N expansion via `@scalar_udtf`)
+**Derived: `chunks`** (1:N expansion via `@chunker`)
 
 | doc_id | title | chunk_index | chunk_text |
 |--------|-------|-------------|------------|
@@ -66,7 +66,7 @@ Each source row produces **one or more** output rows. Parent columns (`doc_id`, 
 
 **Use cases**: Document chunking, video segmentation, image tiling.
 
-See [Scalar UDTFs](/geneva/udfs/scalar-udtfs) for the full guide.
+See [Chunkers](/geneva/udfs/scalar-udtfs) for the full guide.
 
 ## Batch UDTFs (N:M)
 
@@ -99,6 +99,6 @@ See [Batch UDTFs](/geneva/udfs/batch-udtfs) for the full guide.
 ## API Reference
 
 - [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator and `UDF` class
-- [UDTF](https://lancedb.github.io/geneva/api/udtf/) — `@udtf`, `@scalar_udtf`, `@batch_udtf` decorators and `UDTF`/`ScalarUDTF` classes
+- [UDTF](https://lancedb.github.io/geneva/api/udtf/) — `@udtf`, `@chunker`, `@batch_udtf` decorators and `UDTF`/`Chunker` classes
 - [Table](https://lancedb.github.io/geneva/api/table/) — `add_columns()`, `backfill()`
-- [Connection](https://lancedb.github.io/geneva/api/connection/) — `create_udtf_view()`, `create_scalar_udtf_view()`
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — `create_udtf_view()`, `create_materialized_view()`
