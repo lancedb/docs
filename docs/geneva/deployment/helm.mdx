@@ -99,32 +99,16 @@ packages). Configuring these in the LanceDB Enterprise chart lets jobs run out o
 without per-job configuration. They are set under `geneva.defaults` in the chart's
 `values.yaml`:
 
+By default, LanceDB Enterprise deploys a default Ray cluster
+
+
 ```yaml
 geneva:
   defaults:
     cluster:
-      cluster_type: kuberay
+      cluster_type: external_ray
       name: deployment-default
-      kuberay:
-        namespace: lancedb
-        config_method: IN_CLUSTER
-        head_group:
-          service_account: geneva-service-account
-          num_cpus: 2
-          memory: 8Gi
-          image: rayproject/ray:2.54.0-py312
-        worker_groups:
-          - name: cpu
-            service_account: geneva-service-account
-            num_cpus: 4
-            memory: 8Gi
-            replicas: 2
-            min_replicas: 0
-            max_replicas: 4
-            idle_timeout_seconds: 60
-            node_selector:
-              geneva.lancedb.com/ray-worker-cpu: "true"
-            image: rayproject/ray:2.54.0-py312
+      ray_address: "ray://raycluster-kuberay-head-svc.lancedb.svc.cluster.local:10001"
     manifest:
       name: deployment-default
       pip: [geneva, pyarrow, lancedb, pylance]
@@ -163,7 +147,36 @@ Configuration for the Ray cluster can be specified by modifying raycluster.yaml 
 
 ### Provision KubeRay clusters on demand
 
-Set `global.rayclusterUri` to an empty value to provision ephemeral KubeRay clusters on-demand for each execution job.
+Set `global.rayclusterUri` to an empty value to provision ephemeral KubeRay clusters on-demand for each execution job. The default KubeRay cluster configuration
+is specified in `geneva.defaults.cluster`, i.e.
+
+```yaml
+geneva:
+  defaults:
+    cluster:
+      cluster_type: kuberay
+      name: deployment-default
+      kuberay:
+        namespace: lancedb
+        config_method: IN_CLUSTER
+        head_group:
+          service_account: geneva-service-account
+          num_cpus: 2
+          memory: 8Gi
+          image: rayproject/ray:2.54.0-py312
+        worker_groups:
+          - name: cpu
+            service_account: geneva-service-account
+            num_cpus: 4
+            memory: 8Gi
+            replicas: 2
+            min_replicas: 0
+            max_replicas: 4
+            idle_timeout_seconds: 60
+            node_selector:
+              geneva.lancedb.com/ray-worker-cpu: "true"
+            image: rayproject/ray:2.54.0-py312
+```
 
 ### Use an external Ray cluster
 
