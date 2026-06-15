@@ -135,8 +135,10 @@ geneva:
 
 When set, the chart renders a `geneva-defaults` ConfigMap mounted at `/etc/geneva/defaults/`
 in the query node and job pods. If no default is configured, jobs must specify a cluster and
-manifest explicitly. Individual jobs can override these defaults per call with the `cluster=`
-/ `manifest=` parameters — see [Advanced Job Configuration](/geneva/jobs/advanced-job-configuration).
+manifest explicitly. Individual transforms can override the default manifest by pinning one
+with `@udf` / `@chunker` / `@udtf` (see
+[Advanced Job Configuration](/geneva/jobs/advanced-job-configuration)); to override the cluster
+at runtime, use an [Advanced Execution Context](/geneva/jobs/contexts).
 
 ## Providing a Ray cluster
 
