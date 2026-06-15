@@ -31,6 +31,15 @@ the manifest builders, then attach it to your transform with the `manifest=` arg
 when the transform is registered, so every backfill or refresh of that transform uses it
 automatically — there is no per-call manifest argument to remember.
 
+<Note>
+**Manifests are immutable at the column / view level.** When a transform is registered, its
+manifest is snapshotted onto the column (or view) metadata. Changing the deployment-default
+manifest — or the `GenevaManifest` object in your code — does **not** affect existing columns
+or views: they keep using the snapshot taken at creation time. To move a column or view to a
+new manifest, re-point it to a new (or updated) UDF / chunker / UDTF — for example with
+`alter_columns()` for a column, or by recreating the view.
+</Note>
+
 ```python
 import pyarrow as pa
 from typing import Iterator, NamedTuple
@@ -98,6 +107,40 @@ def group_stats(source) -> Iterator[pa.RecordBatch]:
 view = db.create_udtf_view("summaries", source=tbl.search(None), udtf=group_stats)
 view.refresh()   # the refresh job runs with embed_manifest
 ```
+
+## Capturing your local environment for testing
+
+When iterating locally, you often want the workers to run with the *exact* packages from your
+current environment rather than a curated pip list. `Connection.capture_local_environment()`
+zips your workspace (and, optionally, your site-packages), uploads the archives through the
+connection, and returns a ready-to-use `GenevaManifest` you can attach to a transform with
+`manifest=`.
+
+```python
+import os
+import pyarrow as pa
+import geneva
+from geneva import udf
+
+db = geneva.connect(
+    uri="db://my-db",
+    host_override=os.getenv("PHALANX_URI"),
+    api_key=os.getenv("PHALANX_API_KEY"),
+)
+
+# Capture the local workspace; rely on the worker image for site-packages
+manifest = db.capture_local_environment(skip_site_packages=True)
+
+@udf(data_type=pa.string(), manifest=manifest)
+def shout(text: str) -> str:
+    return text.upper()
+
+tbl = db.open_table("my_table")
+tbl.add_columns({"shout": shout})
+tbl.backfill("shout")   # workers run with your captured environment
+```
+
+Pass `skip_site_packages=False` (the default) to also upload your local site-packages.
 
 ## Manifest resolution
 
