@@ -17,8 +17,8 @@ import pyarrow as pa
 # Connect to LanceDB Enterprise
 db = geneva.connect(
     uri="db://my-db",
-    host_override=os.getenv("PHALANX_URI", "http://localhost:10024"),
-    api_key=os.getenv("PHALANX_API_KEY"),
+    host_override=os.getenv("LANCEDB_URI", "http://localhost:10024"),
+    api_key=os.getenv("LANCEDB_API_KEY"),
 )
 
 tbl = db.open_table("my_table")

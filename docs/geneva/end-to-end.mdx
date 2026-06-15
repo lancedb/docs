@@ -16,15 +16,7 @@ feature column, then create a materialized view that adds text embeddings.
 
 All you need is an existing **LanceDB Enterprise deployment**. Distributed job execution,
 clusters, and dependency manifests are managed for you — there is no Kubernetes or cluster
-setup in this example. Set your connection details:
-
-```python
-import os
-
-PHALANX_URI = os.getenv("PHALANX_URI")          # your LanceDB Enterprise endpoint
-PHALANX_API_KEY = os.getenv("PHALANX_API_KEY")  # your API key
-DB_URI = "db://my-db"                            # your database
-```
+setup in this example.
 
 ## 1. Connect and create a table
 
@@ -35,9 +27,9 @@ import geneva
 
 # Connect to LanceDB Enterprise
 db = geneva.connect(
-    uri=DB_URI,
-    host_override=os.getenv("PHALANX_URI"),
-    api_key=os.getenv("PHALANX_API_KEY"),
+    uri="db://my-db",
+    host_override=os.getenv("LANCEDB_URI"),
+    api_key=os.getenv("LANCEDB_API_KEY"),
 )
 
 # Create a raw product table
