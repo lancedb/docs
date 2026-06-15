@@ -1,0 +1,107 @@
+---
+title: Getting Started
+sidebarTitle: Getting Started
+description: Connect to LanceDB Enterprise, define a UDF, and run a distributed backfill — from a notebook or a script.
+icon: rocket
+---
+
+Connect to your LanceDB Enterprise deployment, define a UDF, and run a distributed
+backfill — all from a notebook or a script. No cluster setup required.
+
+<CodeGroup>
+```python Python icon="python"
+import os
+import geneva
+import pyarrow as pa
+
+# Connect to LanceDB Enterprise
+db = geneva.connect(
+    uri="db://my-db",
+    host_override=os.getenv("PHALANX_URI", "http://localhost:10024"),
+    api_key=os.getenv("PHALANX_API_KEY"),
+)
+
+tbl = db.open_table("my_table")
+
+# Define a User Defined Function (UDF) that counts the words in the text column
+@geneva.udf(data_type=pa.int32())
+def word_count(text: str) -> int:
+    return len(text.split())
+
+# Register the UDF as a new virtual column
+tbl.add_columns({"word_count": word_count})
+
+# Backfill the new column using distributed execution with incremental checkpointing
+tbl.backfill("word_count")
+```
+</CodeGroup>
+
+## Auto-backfill
+
+With `auto_backfill=True`, LanceDB Enterprise recomputes the column for you whenever the
+data or the UDF version changes — no explicit `backfill()` call needed (see
+[Backfilling](/geneva/jobs/backfilling/)).
+
+<CodeGroup>
+```python Python icon="python"
+# Change the column to use a new UDF version with auto-backfill enabled
+@geneva.udf(data_type=pa.int32(), auto_backfill=True)
+def word_count(text: str) -> int:
+    return len(text.split())
+
+tbl.alter_columns({"path": "word_count", "udf": word_count})
+
+# Add new rows. word_count is computed automatically in the background.
+tbl.add([{"text": "hello world"}])
+```
+</CodeGroup>
+
+## Materialized views and chunkers
+
+A [materialized view](/geneva/jobs/materialized-views/) applies UDFs over a query and
+refreshes incrementally. A [chunker](/geneva/udfs/scalar-udtfs) view expands each source
+row into many rows (1:N) — useful for splitting documents, videos, or images.
+
+<CodeGroup>
+```python Python icon="python"
+# Materialized view: a query with UDF-computed columns, refreshed incrementally
+query = tbl.search(None).select({"text": "text", "word_count": word_count})
+view = db.create_materialized_view("my_view", query)
+view.refresh()
+
+# Chunker view: 1:N row expansion — split each row's text into one row per word
+from typing import Iterator, NamedTuple
+
+class Chunk(NamedTuple):
+    chunk_index: int
+    chunk_text: str
+
+@geneva.chunker
+def split_text(text: str) -> Iterator[Chunk]:
+    for i, word in enumerate(text.split()):
+        yield Chunk(chunk_index=i, chunk_text=word)
+
+chunks = db.create_udtf_view(
+    "my_chunks",
+    source=tbl.search(None).select(["text"]),
+    udtf=split_text,
+)
+chunks.refresh()
+```
+</CodeGroup>
+
+## Connecting to object storage or a local filesystem
+
+Geneva can also run directly against cloud object storage or a local path, without a
+LanceDB Enterprise control plane. In this mode, jobs run on a
+[distributed execution context](/geneva/jobs/contexts) you provide.
+
+<CodeGroup>
+```python Python icon="python"
+# Cloud object storage (S3, GCS, Azure)
+db = geneva.connect("s3://my-bucket/my-database")
+
+# Local filesystem
+db = geneva.connect("/path/to/my-database")
+```
+</CodeGroup>
