@@ -157,6 +157,7 @@
             "pages": [
               "geneva/index",
               "geneva/overview/index",
+              "geneva/getting-started",
               {
                 "group": "Transforms",
                 "pages": [
