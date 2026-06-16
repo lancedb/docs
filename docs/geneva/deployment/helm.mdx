@@ -99,9 +99,6 @@ packages). Configuring these in the LanceDB Enterprise chart lets jobs run out o
 without per-job configuration. They are set under `geneva.defaults` in the chart's
 `values.yaml`:
 
-By default, LanceDB Enterprise deploys a default Ray cluster
-
-
 ```yaml
 geneva:
   defaults:
@@ -117,9 +114,7 @@ geneva:
       skip_site_packages: true
 ```
 
-When set, the chart renders a `geneva-defaults` ConfigMap mounted at `/etc/geneva/defaults/`
-in the query node and job pods. If no default is configured, jobs must specify a cluster and
-manifest explicitly. Individual transforms can override the default manifest by pinning one
+If no default is configured, jobs must specify a manifest explicitly. Individual transforms can override the default manifest by pinning one
 with `@udf` / `@chunker` / `@udtf` (see
 [Advanced Job Configuration](/geneva/jobs/advanced-job-configuration)); to override the cluster
 at runtime, use an [Advanced Execution Context](/geneva/jobs/contexts).
