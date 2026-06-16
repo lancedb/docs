@@ -1,13 +1,13 @@
 ---
 title: Dependency Verification
 sidebarTitle: Dependency Verification
-description: Diagnose and resolve package version mismatches between local and Ray worker environments.
+description: Diagnose and resolve package version mismatches between local and distributed worker environments.
 icon: magnifying-glass-chart
 ---
 
 import { PyQuickFixManifest, PyEnvVarsViaCluster, PyPipManifest, PyCondaClusterPath, PyCondaClusterInline } from '/snippets/geneva_dependency_verification.mdx';
 
-When running Geneva UDFs on Ray, your code is serialized locally and executed on remote workers. If the worker environment differs from your local environment, you may encounter subtle and difficult-to-debug errors.
+When running Geneva UDFs on distributed workers, your code is serialized locally and executed on remote workers. If the worker environment differs from your local environment, you may encounter subtle and difficult-to-debug errors.
 
 ## Example environment mismatch errors
 

@@ -32,7 +32,7 @@ via the instructions below.
 In the following sections we'll use these variables:
 
 ```bash
-NAMESPACE=geneva  # replace with your actual namespace if different
+NAMESPACE=lancedb  # replace with your actual namespace if different
 KSA_NAME=geneva-ray-runner # replace with an identity name
 ```
 
@@ -142,7 +142,7 @@ Geneva needs the ability to deploy a KubeRay cluster and submit jobs to Ray. The
 In the following sections we'll use these variables:
 
 ```bash
-NAMESPACE=geneva  # replace with your actual namespace if different
+NAMESPACE=lancedb  # replace with your actual namespace if different
 KSA_NAME=geneva-ray-runner # replace with an identity name
 PROJECT_ID=...  # replace with your google cloud project name
 GSA_EMAIL=${KSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
@@ -218,7 +218,7 @@ Geneva can be used to provision Ray clusters running in Amazon Web Services (AWS
 In the following sections we'll use these variables:
 
 ```bash
-NAMESPACE=geneva  # replace with your actual namespace if different
+NAMESPACE=lancedb  # replace with your actual namespace if different
 CLUSTER=geneva  # replace with your actual namespace if different
 KSA_NAME=geneva-ray-runner # replace with an identity name
 ```
@@ -428,7 +428,7 @@ worker_spec = _WorkerGroupSpec(
 
 with ray_cluster(
     name="my-ray-cluster",
-    namespace="geneva",
+    namespace="lancedb",
     cluster_name="geneva",
     config_method=K8sConfigMethod.EKS_AUTH,
     region="us-east-1",

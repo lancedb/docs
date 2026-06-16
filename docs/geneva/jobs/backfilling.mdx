@@ -11,6 +11,39 @@ Triggering backfill creates a distributed job to run the UDF and populate the co
 
 **Checkpoints**: Each batch of UDF execution is checkpointed so that partial results are not lost in case of job failures. Jobs can resume and avoid most of the expense of having to recalculate values.
 
+## Auto-backfill
+
+Computed columns can be explicitly backfilled or they can be configured to be backfilled
+automatically as data changes. Set `auto_backfill=True` on the UDF, and the column is automatically recomputed
+whenever it falls out of sync with its source data.
+
+<CodeGroup>
+```python Python icon="python"
+# Mark the column's UDF for automatic backfill
+@udf(data_type=pa.list_(pa.float32(), 1536), version="1", auto_backfill=True)
+def embed_udf(text: str) -> list[float]:
+    return embedding_model.encode(text)
+
+tbl.add_columns({"embedding": embed_udf})
+
+# No explicit backfill() needed — adding rows triggers recomputation automatically
+tbl.add(new_rows)
+```
+</CodeGroup>
+
+The `auto_backfill` flag is recorded in the column metadata when the column is added or
+altered. LanceDB Enterprise's managed agent watches for columns that need recomputation and
+dispatches a distributed backfill job for you — there is no manual trigger and no status
+polling. A column is recomputed when, for example, **new rows are added** (leaving it null for
+those rows) or the **UDF version changes** (you bump `version=` and `alter_columns()` to the
+new function).
+
+<Note>
+Auto-backfill is an enterprise feature. On direct object-storage or local-filesystem
+connections there is no managed agent, so `auto_backfill=True` has no effect and you must run
+`backfill()` explicitly.
+</Note>
+
 ## Adaptive checkpoint sizing
 
 Geneva can automatically adjust checkpoint sizes during a backfill. It starts with small checkpoints (faster proof-of-life) and grows them as it observes stable throughput, while staying within safe bounds. Planning still uses your configured checkpoint size (`checkpoint_size`), but the actual checkpoint chunks can be smaller when adaptive sizing is enabled.

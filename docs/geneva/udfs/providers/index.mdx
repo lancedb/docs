@@ -64,7 +64,7 @@ table.backfill("summary_openai", where="summary_openai is null")
 
 All built-in UDFs share these capabilities:
 
-- **API key handling** — Keys are captured from your local environment at UDF creation time and serialized with the UDF. No cluster-level environment configuration required.
+- **API key handling** — Keys are captured from your local environment at UDF creation time and securely serialized with the UDF. No cluster-level environment configuration required.
 - **Retry with backoff** — Transient API errors (rate limits, timeouts, server errors) are automatically retried with exponential backoff.
 - **Batch processing** — Embedding UDFs batch multiple rows per API call for better throughput.
 - **L2 normalization** — Embedding UDFs support optional L2 normalization via the `normalize` parameter (disabled by default since both providers return pre-normalized vectors).

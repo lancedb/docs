@@ -157,6 +157,7 @@
             "pages": [
               "geneva/index",
               "geneva/overview/index",
+              "geneva/getting-started",
               {
                 "group": "Transforms",
                 "pages": [
@@ -181,26 +182,27 @@
               {
                 "group": "Running Jobs",
                 "pages": [
-                  "geneva/jobs/contexts",
                   "geneva/jobs/backfilling",
                   "geneva/jobs/bulk-load-columns",
                   "geneva/jobs/materialized-views",
+                  "geneva/jobs/advanced-job-configuration",
                   "geneva/jobs/lifecycle",
                   "geneva/jobs/conflicts",
                   "geneva/jobs/performance",
                   "geneva/jobs/job_metrics",
                   "geneva/jobs/console",
-                  "geneva/jobs/troubleshooting"
+                  "geneva/jobs/troubleshooting",
+                  "geneva/jobs/contexts"
                 ]
               },
               {
                 "group": "Deployment",
                 "pages": [
-                  "geneva/deployment/index",
                   "geneva/deployment/helm",
                   "geneva/jobs/startup",
                   "geneva/deployment/dependency-verification",
                   "geneva/udfs/advanced-configuration",
+                  "geneva/deployment/index",
                   "geneva/deployment/troubleshooting"
                 ]
               },

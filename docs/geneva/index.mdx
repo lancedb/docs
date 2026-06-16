@@ -17,6 +17,10 @@ With an API designed to leverage LanceDB's optimized data storage and retrieval,
 streamlines prototyping extraction and transformation tasks, performing experiments, exploring your
 data, scaling up execution, and moving to production.
 
+LanceDB Multimodal Feature Engineering enables researchers to seamlessly transition from
+experiments in local notebooks to fully-managed distributed job execution on datasets with
+billions of rows.
+
 <Card>
 Feature Engineering and the `geneva` Python package are currently only available as part of
 [LanceDB Enterprise](/enterprise). Please [contact us](mailto:contact@lancedb.com) if you're interested
@@ -37,7 +41,7 @@ as columns in a Lance dataset. Adding a feature is straightforward:
   Register the UDF as a virtual column using `Table.add_columns()`.
   </Step>
   <Step>
-  (Optional) Configure where the UDF will run: locally, on a Ray cluster, or on a Kubernetes cluster with KubeRay (see [Contexts](/geneva/jobs/contexts)).
+  (Optional, advanced) Override where the job runs — see [Advanced Execution Contexts](/geneva/jobs/contexts). On LanceDB Enterprise, distributed job execution is fully managed, so most users can skip this step.
   </Step>
   <Step>
   Trigger a `backfill` operation (see [Backfilling](/geneva/jobs/backfilling/)).
@@ -48,13 +52,15 @@ as columns in a Lance dataset. Adding a feature is straightforward:
 You can build your Python feature generator function in an IDE or a notebook using your project's Python versions and dependencies. `geneva` will automate much of the dependency and version management needed to move from prototype to scale and production.
 </Tip>
 
+Ready to write your first feature? Head to [Getting Started](/geneva/getting-started).
+
 ## Continue learning
 
 Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:
 
-- **Overview**: [What is Feature Engineering?](/geneva/overview/) · [End-to-end example](/geneva/end-to-end)
+- **Get started**: [Getting Started](/geneva/getting-started) · [What is Feature Engineering?](/geneva/overview/) · [End-to-end example](/geneva/end-to-end)
 - **UDFs**: [Using UDFs](/geneva/udfs/udfs) · [Blob helpers](/geneva/udfs/blobs/) · [Error handling](/geneva/udfs/error_handling) · [Advanced configuration](/geneva/udfs/advanced-configuration) 
-- **Jobs**: [Backfilling](/geneva/jobs/backfilling/) · [Startup optimizations](/geneva/jobs/startup/) · [Materialized views](/geneva/jobs/materialized-views/) · [Execution contexts](/geneva/jobs/contexts/) · [Geneva console](/geneva/jobs/console) · [Performance](/geneva/jobs/performance/)
+- **Jobs**: [Backfilling](/geneva/jobs/backfilling/) · [Materialized views](/geneva/jobs/materialized-views/) · [Startup optimizations](/geneva/jobs/startup/) · [Advanced job configuration](/geneva/jobs/advanced-job-configuration/) · [Advanced execution contexts](/geneva/jobs/contexts/) · [Geneva console](/geneva/jobs/console) · [Performance](/geneva/jobs/performance/)
 - **Deployment**: [Deployment overview](/geneva/deployment/) · [Helm deployment](/geneva/deployment/helm/) · [Troubleshooting](/geneva/deployment/troubleshooting/)
 
 ## API Reference

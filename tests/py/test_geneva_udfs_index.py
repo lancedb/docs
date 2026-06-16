@@ -19,20 +19,20 @@ def test_registration_udf(monkeypatch):
 
 
 def test_registration_scalar_udtf(monkeypatch):
-    # Verifies that Connection.create_scalar_udtf_view exists with the expected signature.
+    # Verifies that Connection.create_udtf_view accepts a chunker.
     # If this fails, update the Registration row in docs/geneva/udfs/index.mdx.
     import geneva
     mock_db = create_autospec(geneva.db.Connection, instance=True)
     monkeypatch.setattr("geneva.connect", MagicMock(return_value=mock_db))
     my_source = MagicMock()
-    my_scalar_udtf = MagicMock()
+    my_chunker = MagicMock()
 
     # --8<-- [start:registration_scalar_udtf]
     db = geneva.connect("/data/mydb")
-    db.create_scalar_udtf_view("my_view", source=my_source, scalar_udtf=my_scalar_udtf)
+    db.create_udtf_view("my_view", source=my_source, udtf=my_chunker)
     # --8<-- [end:registration_scalar_udtf]
 
-    mock_db.create_scalar_udtf_view.assert_called_once()
+    mock_db.create_udtf_view.assert_called_once()
 
 
 def test_registration_udtf(monkeypatch):
