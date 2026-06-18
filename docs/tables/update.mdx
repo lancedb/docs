@@ -228,6 +228,18 @@ Read more about scalar indices in the [Scalar Index](/indexing/scalar-index/) gu
 If you see this HTTP 400 error from `merge_insert`: `Bad request: Merge insert cannot be performed because the number of unindexed rows exceeds the maximum of 10000`. Verify that the scalar index on the join column is up to date before retrying.
 </Info>
 
+<Note>
+**Rust: build merge predicates with DataFusion expressions**
+
+In the Rust SDK, you can pass a `datafusion_expr::Expr` directly instead of a SQL string by using
+`when_matched_update_all_expr` and `when_not_matched_by_source_delete_expr` on `MergeInsertBuilder`.
+This is useful when you are constructing predicates programmatically and want to avoid building a SQL string.
+
+These methods are only supported on local tables. Calling them against a remote table returns a
+`NotSupported` error — use the SQL string variants (`when_matched_update_all` /
+`when_not_matched_by_source_delete`) for remote tables.
+</Note>
+
 Like the create table and add APIs, the merge insert API will automatically compute embeddings based on the [embedding registry](/embedding/index#embedding-registry) if the table has an embedding definition in its schema.
 
 During `merge_insert`, if the input data doesn't contain the source column (i.e., the original field used to generate embeddings, such as text for a text embedding model or `image_uri` for an image model), or if a vector value is already provided, LanceDB skips embedding generation for that row. Embeddings are only auto-generated when that source field is present in the incoming data, **and** the vector field is empty.
