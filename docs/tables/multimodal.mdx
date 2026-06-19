@@ -196,6 +196,34 @@ For more advanced usage, including random access and file-like reading of blobs,
 Lance format's [blob API documentation](https://lance.org/guide/blob/).
 </Card>
 
+### Declare blob v2 columns in Rust
+
+The Rust SDK also exposes a `lancedb::blob()` helper that builds a blob v2 column directly, without setting `lance-encoding:blob` metadata by hand. The helper returns an Arrow `Field` with the `lance.blob.v2` extension marker and a `Struct<data, uri>` layout that Lance expects on write.
+
+When you create a table whose schema contains a `lancedb::blob()` column, LanceDB automatically bumps the table's data storage format to Lance file format `>= 2.2`. Pair the helper with `stable_row_ids` at create time, then write rows by supplying raw `Binary` or `LargeBinary` data — LanceDB coerces the payload into the blob struct layout for you.
+
+```rust Rust icon="rust"
+use arrow_schema::{DataType, Field, Schema};
+use lancedb::database::listing::OPT_NEW_TABLE_ENABLE_STABLE_ROW_IDS;
+
+let schema = Schema::new(vec![
+    Field::new("id", DataType::Int64, false),
+    lancedb::blob("image", true),
+]);
+
+let table = db
+    .create_empty_table("photos", Arc::new(schema))
+    .storage_option(OPT_NEW_TABLE_ENABLE_STABLE_ROW_IDS, "true")
+    .execute()
+    .await?;
+
+// Append a batch whose `image` column is plain `LargeBinary`;
+// LanceDB rewrites it into the blob v2 struct on write.
+table.add(batch_with_large_binary_image_column).execute().await?;
+```
+
+Queries against blob v2 columns return small struct descriptors rather than the raw bytes, so metadata scans stay cheap even when the underlying payloads are large. Materializing the bytes from a `lancedb::blob()` column and the equivalent Python and TypeScript helpers are planned in follow-up releases — for now, use the Rust write path described above to land data in the blob v2 layout.
+
 ### 3. Convert blob tables to pandas
 
 When you call `to_pandas()` on a local LanceDB table that contains Blob API columns, the `blob_mode` argument controls how those columns materialize. This is available in the Python SDK on local tables; remote tables raise `NotImplementedError`.
