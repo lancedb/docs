@@ -96,3 +96,82 @@ dataloader = torch.utils.data.DataLoader(
 for batch in dataloader:
     print(batch.schema)
 ```
+
+## Using multiple DataLoader workers
+
+Set `num_workers > 0` to read from LanceDB in multiple PyTorch worker processes. LanceDB tables and `Permutation` objects are picklable, so each worker reopens the table after it starts.
+
+Prefer the `spawn` start method when using multiple workers; LanceDB uses internal threads. See [the performance guide](/performance) for more multiprocessing guidance.
+
+```py Python icon=Python 
+import torch
+from lancedb.permutation import Permutation
+
+permutation = Permutation.identity(table)
+dataloader = torch.utils.data.DataLoader(
+    permutation,
+    batch_size=1024,
+    shuffle=True,
+    num_workers=4,
+    multiprocessing_context="spawn",
+    persistent_workers=True,
+)
+```
+
+### Remote tables in DataLoader workers
+
+Remote LanceDB Enterprise tables (`db://...`) work the same way: workers reopen the table from the pickled connection state.
+
+```py Python icon=Python 
+import lancedb
+import torch
+
+db = lancedb.connect(
+    "db://my-database",
+    api_key="sk-...",
+    region="us-east-1",
+)
+table = db.open_table("my_table")
+
+dataloader = torch.utils.data.DataLoader(
+    table,
+    batch_size=512,
+    num_workers=4,
+    multiprocessing_context="spawn",
+)
+```
+
+<Note>
+This sends the connection state, including the API key, to each worker. Use a connection factory if credentials should be loaded inside the worker or your `client_config` contains a non-serializable `header_provider`.
+</Note>
+
+### Providing a custom connection factory
+
+`Permutation.with_connection_factory` lets each worker reopen the base table with custom logic. The factory takes the table name, returns a LanceDB table, and must be picklable.
+
+```py Python icon=Python 
+import os
+import lancedb
+import torch
+from lancedb.permutation import Permutation
+
+def open_table(name: str):
+    db = lancedb.connect(
+        "db://my-database",
+        api_key=os.environ["LANCEDB_API_KEY"],
+        region="us-east-1",
+    )
+    return db.open_table(name)
+
+table = open_table("my_table")
+permutation = (
+    Permutation.identity(table)
+    .with_connection_factory(open_table)
+)
+dataloader = torch.utils.data.DataLoader(
+    permutation,
+    batch_size=512,
+    num_workers=4,
+    multiprocessing_context="spawn",
+)
+```
