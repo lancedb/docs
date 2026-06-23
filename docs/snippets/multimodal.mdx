@@ -52,3 +52,63 @@ export const RsProcessResults = "for batch in &results {\n    let filenames = ba
 
 export const RsSearchData = "let query_vector = vec![0.1_f32; 128];\nlet results = table\n    .query()\n    .nearest_to(query_vector)\n    .unwrap()\n    .limit(1)\n    .execute()\n    .await\n    .unwrap()\n    .try_collect::<Vec<_>>()\n    .await\n    .unwrap();\n";
 
+export const RsBlobV2Schema = `use std::sync::Arc;
+use arrow_schema::{DataType, Field, Schema};
+use lancedb::blob;
+
+let schema = Arc::new(Schema::new(vec![
+    Field::new("id", DataType::Int64, false),
+    // Declare a blob v2 column. Pass nullable: true to allow null payloads.
+    blob("image", true),
+]));
+`;
+
+export const RsBlobV2Fetch = `use arrow_array::UInt64Array;
+use futures::TryStreamExt;
+use lancedb::query::{ExecutableQuery, QueryBase};
+
+// 1. Run any query, asking LanceDB to return the stable _rowid column.
+let mut stream = table
+    .query()
+    .with_row_id()
+    .only_if("label = 'red'")
+    .limit(32)
+    .execute()
+    .await?;
+
+// 2. Collect row ids from the result.
+let mut row_ids: Vec<u64> = Vec::new();
+while let Some(batch) = stream.try_next().await? {
+    let ids = batch
+        .column_by_name("_rowid")
+        .unwrap()
+        .as_any()
+        .downcast_ref::<UInt64Array>()
+        .unwrap();
+    row_ids.extend(ids.values());
+}
+
+// 3. Materialize blob bytes. Output length and order match row_ids.
+//    Null and zero-length rows come back as null.
+let images = table.fetch_blobs("image", &row_ids).await?;
+for i in 0..images.len() {
+    if images.is_null(i) {
+        continue;
+    }
+    let bytes = images.value(i);
+    println!("row {} -> {} bytes", row_ids[i], bytes.len());
+}
+`;
+
+export const RsBlobV2FetchFiles = `// Open one lazy handle per row id. No bytes are read yet.
+let handles = table.fetch_blob_files("image", &row_ids).await?;
+
+// Read only the rows you actually need.
+for (row_id, handle) in row_ids.iter().zip(handles.iter()) {
+    let Some(handle) = handle.as_ref() else {
+        continue; // null row
+    };
+    let bytes = handle.read().await?;
+    println!("row {} -> {} bytes", row_id, bytes.len());
+}
+`;

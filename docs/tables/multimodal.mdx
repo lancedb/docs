@@ -33,6 +33,9 @@ import {
     RsBlobApiIngest as RsBlobApiIngest,
     PyBlobApiToPandas as BlobApiToPandas,
     PyQueryToPandasKwargs as QueryToPandasKwargs,
+    RsBlobV2Schema,
+    RsBlobV2Fetch,
+    RsBlobV2FetchFiles,
 } from '/snippets/multimodal.mdx';
 
 LanceDB handles multimodal data—images, audio, video, and PDF files—natively by storing the raw bytes in a binary column alongside your vectors and metadata. This approach simplifies your data infrastructure by keeping the raw assets and their embeddings in the same database, eliminating the need for separate object storage for many use cases.
@@ -223,6 +226,60 @@ Query builders accept the same PyArrow `to_pandas` kwargs, but not `blob_mode`. 
     {QueryToPandasKwargs}
     </CodeBlock>
 </CodeGroup>
+
+## Blob v2 columns (Rust)
+
+The Rust crate exposes blob v2 columns — a successor to the `lance-encoding:blob` metadata
+flag — together with read APIs that materialize bytes on demand. Use blob v2 when you want
+queries to return small descriptors instead of full payloads, then pull the bytes for only
+the rows you need.
+
+Blob v2 columns require Lance file format 2.2 or newer and stable row IDs at table creation
+time. They are currently available in the Rust SDK only; remote tables return `NotSupported`.
+
+### Declare a blob v2 column
+
+Use [`lancedb::blob`](https://docs.rs/lancedb/latest/lancedb/fn.blob.html) to create the field.
+A blob column may be top-level or nested inside a struct or list — nested blobs are addressed
+by a dotted path (for example `info.blob`) when reading.
+
+<CodeGroup>
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBlobV2Schema}
+    </CodeBlock>
+</CodeGroup>
+
+### Materialize bytes for selected rows
+
+Run a query with `with_row_id()` to surface the `_rowid` column, then pass those IDs to
+`fetch_blobs` to pull the raw payloads. The returned `LargeBinaryArray` matches the input
+length and order; null and zero-length rows come back as null.
+
+<CodeGroup>
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBlobV2Fetch}
+    </CodeBlock>
+</CodeGroup>
+
+Use `fetch_blobs` when the selection fits comfortably in memory and you want one round trip.
+For larger payloads, switch to lazy handles.
+
+### Open lazy blob handles
+
+`fetch_blob_files` returns one [`BlobFile`](https://docs.rs/lancedb/latest/lancedb/blob/struct.BlobFile.html)
+handle per requested row ID. Bytes are not read from disk until you call `read()` (or a
+ranged read) on the handle, so you can defer or skip I/O for rows you do not end up using.
+
+<CodeGroup>
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBlobV2FetchFiles}
+    </CodeBlock>
+</CodeGroup>
+
+Call `table.blob_columns().await?` to discover the blob v2 columns on a table — useful when
+you ship generic tooling that should adapt to a table's schema. Multiple blob columns
+(for example `image` and `thumbnail`) can be materialized independently with separate
+`fetch_blobs` or `fetch_blob_files` calls.
 
 ## Other modalities
 
