@@ -147,7 +147,8 @@
                 "pages": [
                   "training/index",
                   "training/torch",
-                  "training/object-detection"
+                  "training/object-detection",
+                  "training/vlm-finetuning"
                 ]
               }
             ]
