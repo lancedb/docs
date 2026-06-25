@@ -54,10 +54,15 @@ When using `IVF_RQ`, vector dimensions must be divisible by `8`.
 
 `num_bits` controls how many bits per dimension are used:
 
+1 bit is the classic RaBitQ setting. You can set it to 2, 4, or 8 bits to improve fidelity for better precision or recall — the main trade-off is additional storage for the extra bits per dimension, with only a modest increase in query-time compute.
+It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to how you would do in `IVF_PQ`.
+
+<Warning title="Reading multi-bit indexes across versions">
+Indexes built with `num_bits >= 2` use an updated on-disk layout. Older LanceDB versions cannot read them and will fail with a clear missing-column error rather than returning incorrect results. Existing indexes keep working and upgrade automatically when they are rewritten (for example, during compaction, optimize, or remap). `num_bits=1` indexes are unaffected in both directions.
+</Warning>
+
 ## API Reference
 
-1 bit is the classic RaBitQ setting, but you could (at higher computational cost) set it to 2, 4 or 8 bits if you want to improve the fidelity for better precision or recall.
-It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to how you would do in `IVF_PQ`.
 The full list of parameters to the algorithm are listed below.
 
 - `distance_type`: Literal["l2", "cosine", "dot"], defaults to "l2"  
@@ -65,7 +70,7 @@ The full list of parameters to the algorithm are listed below.
 - `num_partitions`: Optional[int], defaults to None  
   Number of IVF partitions (affects index build time and query accuracy). More partitions can improve recall but may increase build time.
 - `num_bits`: int, defaults to 1  
-  Bits per dimension for quantization (1 is standard RaBitQ). Higher values improve fidelity at the cost of more storage and computation.
+  Bits per dimension for quantization (1 is standard RaBitQ). Higher values improve fidelity, mainly at the cost of additional storage.
 - `max_iterations`: int, defaults to 50  
   Maximum number of iterations for training the quantizer. Increase for larger datasets or to improve quantization quality.
 - `sample_rate`: int, defaults to 256  
