@@ -8,6 +8,72 @@ icon: rocket
 Connect to your LanceDB Enterprise deployment, define a UDF, and run a distributed
 backfill — all from a notebook or a script. No cluster setup required.
 
+## Installation
+
+Geneva is published on [PyPI](https://pypi.org/project/geneva/). Install the latest stable
+release with [`uv`](https://docs.astral.sh/uv/) (recommended) or `pip`. Newer pre-release
+builds with the latest features are also available on LanceDB's Fury indexes — see
+[Pre-release builds](#pre-release-builds) below.
+
+### Prerequisites
+
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/) (recommended) or `pip`
+
+### Install the latest stable release
+
+<CodeGroup>
+```bash uv icon="terminal"
+uv pip install --upgrade geneva
+```
+
+```bash pip icon="terminal"
+pip install --upgrade geneva
+```
+</CodeGroup>
+
+### Verify
+
+```bash
+python -c "import geneva; print(geneva.__version__)"
+```
+
+### Pre-release builds
+
+To pick up the newest features ahead of a stable release, install a pre-release from LanceDB's
+Fury indexes. Geneva and its dependencies are published across two indexes:
+
+| Package | Index |
+|---------|-------|
+| `geneva`, `lancedb` | `https://pypi.fury.io/lancedb/` |
+| `pylance` | `https://pypi.fury.io/lance-format/` |
+
+<CodeGroup>
+```bash uv icon="terminal"
+uv pip install --pre --upgrade \
+  --extra-index-url https://pypi.fury.io/lancedb/ \
+  --extra-index-url https://pypi.fury.io/lance-format \
+  --index-strategy unsafe-best-match \
+  geneva
+```
+
+```bash pip icon="terminal"
+pip install --pre --upgrade \
+  --extra-index-url https://pypi.fury.io/lancedb/ \
+  --extra-index-url https://pypi.fury.io/lance-format \
+  geneva
+```
+</CodeGroup>
+
+<Note>
+The `--index-strategy unsafe-best-match` flag is required with `uv`. By default, `uv` only
+considers package versions from the first index that lists a given package (PyPI). Since
+`geneva` and `pylance` also appear on PyPI, this flag tells `uv` to pick the best match across
+all indexes.
+</Note>
+
+## Quickstart
+
 <CodeGroup>
 ```python Python icon="python"
 import os
