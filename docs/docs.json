@@ -64,6 +64,16 @@
             ]
           },
           {
+            "group": "Model training",
+            "pages": [
+              "training/why-lancedb",
+              "training/index",
+              "training/torch",
+              "training/object-detection",
+              "training/vlm-finetuning"
+            ]
+          },
+          {
             "group": "Guides",
             "pages": [
               {
@@ -140,15 +150,6 @@
                 "pages": [
                   "storage/index",
                   "storage/configuration"
-                ]
-              },
-              {
-                "group": "Training",
-                "pages": [
-                  "training/index",
-                  "training/torch",
-                  "training/object-detection",
-                  "training/vlm-finetuning"
                 ]
               }
             ]
