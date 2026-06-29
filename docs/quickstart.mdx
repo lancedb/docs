@@ -38,8 +38,15 @@ runs in-process (like SQLite). Let's get started in just a few steps!
 Install LanceDB in your client SDK.
 
 <CodeGroup>
-```bash Python icon=Python
-pip install lancedb  # or uv add lancedb
+```bash uv icon="terminal"
+uv add lancedb
+
+# Or, in an existing virtual environment:
+uv pip install lancedb
+```
+
+```bash pip icon="terminal"
+pip install lancedb
 ```
 
 ```bash TypeScript icon=js
@@ -50,6 +57,31 @@ npm install @lancedb/lancedb
 cargo add lancedb
 ```
 </CodeGroup>
+
+### Python pre-release builds
+
+Stable LanceDB releases are created about every 2 weeks. To pick up the latest features and bug fixes
+before the next stable release, install a pre-release from LanceDB's Fury index.
+
+<CodeGroup>
+```bash pip icon="terminal"
+pip install --pre --extra-index-url https://pypi.fury.io/lancedb/ lancedb
+```
+
+```bash uv icon="terminal"
+uv venv
+uv pip install --prerelease allow --index https://pypi.fury.io/lancedb/ lancedb
+
+# To add to pyproject.toml, use:
+uv add --prerelease allow --index https://pypi.fury.io/lancedb/ lancedb
+```
+</CodeGroup>
+
+<Note>
+Pre-release builds receive the same level of testing as stable releases, but are not guaranteed to
+remain available for more than 6 months after release. Once your application is stable, switch back
+to stable releases.
+</Note>
 
 ## 2. Connect to a LanceDB database
 
