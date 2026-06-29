@@ -28,20 +28,23 @@
     </linearGradient>
   </defs>
 
-  <rect width="2048" height="540" fill="#FAF5F0"/>
+  <rect x="28" y="28" width="464" height="146" rx="8" style="fill:#FFFFFF !important;stroke:#3E3A35 !important;" stroke-width="2" filter="url(#cardShadow)"/>
+  <rect x="28" y="202" width="464" height="146" rx="8" style="fill:#FFFFFF !important;stroke:#3E3A35 !important;" stroke-width="2" filter="url(#cardShadow)"/>
 
-  <rect x="28" y="28" width="464" height="146" rx="8" fill="#3E3A35" filter="url(#cardShadow)"/>
-  <rect x="28" y="202" width="464" height="146" rx="8" fill="#3E3A35" filter="url(#cardShadow)"/>
+  <rect x="512" y="28" width="1506" height="146" rx="8" style="fill:url(#enterpriseGradient) !important;" filter="url(#cardShadow)"/>
+  <rect x="516" y="32" width="1498" height="138" rx="6" style="fill:#FFFFFF !important;"/>
+  <rect x="512" y="202" width="360" height="146" rx="8" style="fill:url(#curationGradient) !important;" filter="url(#cardShadow)"/>
+  <rect x="516" y="206" width="352" height="138" rx="6" style="fill:#FFFFFF !important;"/>
+  <rect x="894" y="202" width="360" height="146" rx="8" style="fill:url(#featureGradient) !important;" filter="url(#cardShadow)"/>
+  <rect x="898" y="206" width="352" height="138" rx="6" style="fill:#FFFFFF !important;"/>
+  <rect x="1276" y="202" width="360" height="146" rx="8" style="fill:url(#searchGradient) !important;" filter="url(#cardShadow)"/>
+  <rect x="1280" y="206" width="352" height="138" rx="6" style="fill:#FFFFFF !important;"/>
+  <rect x="1658" y="202" width="360" height="146" rx="8" style="fill:url(#trainingGradient) !important;" filter="url(#cardShadow)"/>
+  <rect x="1662" y="206" width="352" height="138" rx="6" style="fill:#FFFFFF !important;"/>
 
-  <rect x="512" y="28" width="1506" height="146" rx="8" fill="url(#enterpriseGradient)" filter="url(#cardShadow)"/>
-  <rect x="512" y="202" width="360" height="146" rx="8" fill="url(#curationGradient)" filter="url(#cardShadow)"/>
-  <rect x="894" y="202" width="360" height="146" rx="8" fill="url(#featureGradient)" filter="url(#cardShadow)"/>
-  <rect x="1276" y="202" width="360" height="146" rx="8" fill="url(#searchGradient)" filter="url(#cardShadow)"/>
-  <rect x="1658" y="202" width="360" height="146" rx="8" fill="url(#trainingGradient)" filter="url(#cardShadow)"/>
+  <rect x="28" y="376" width="1990" height="116" rx="8" style="fill:#FFFFFF !important;stroke:#665FFF !important;" stroke-width="3" filter="url(#cardShadow)"/>
 
-  <rect x="28" y="376" width="1990" height="116" rx="8" fill="#FAF5F0" stroke="#665FFF" stroke-width="3" filter="url(#cardShadow)"/>
-
-  <g fill="#FFFFFF">
+  <g style="fill:#241712 !important;">
     <circle cx="78" cy="78" r="9"/>
     <circle cx="94" cy="78" r="9"/>
     <circle cx="110" cy="78" r="9"/>
@@ -54,10 +57,10 @@
     <circle cx="94" cy="126" r="9"/>
     <circle cx="126" cy="126" r="9"/>
   </g>
-  <text x="162" y="117" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="760">LanceDB OSS</text>
-  <text x="260" y="291" text-anchor="middle" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="500">Search</text>
+  <text x="162" y="117" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="760">LanceDB OSS</text>
+  <text x="260" y="291" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="42" font-weight="500">Search</text>
 
-  <g fill="#241712">
+  <g style="fill:#241712 !important;">
     <circle cx="748" cy="78" r="9"/>
     <circle cx="764" cy="78" r="9"/>
     <circle cx="780" cy="78" r="9"/>
@@ -70,14 +73,14 @@
     <circle cx="764" cy="126" r="9"/>
     <circle cx="796" cy="126" r="9"/>
   </g>
-  <text x="834" y="117" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="760">LanceDB Enterprise - Multimodal Lakehouse</text>
+  <text x="834" y="117" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="760">LanceDB Enterprise - Multimodal Lakehouse</text>
 
-  <text x="692" y="285" text-anchor="middle" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Curation</text>
-  <text x="1074" y="265" text-anchor="middle" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Feature</text>
-  <text x="1074" y="309" text-anchor="middle" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Engineering</text>
-  <text x="1456" y="265" text-anchor="middle" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Search &amp;</text>
-  <text x="1456" y="309" text-anchor="middle" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Retrieval</text>
-  <text x="1838" y="285" text-anchor="middle" fill="#241712" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Training</text>
+  <text x="692" y="285" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Curation</text>
+  <text x="1074" y="265" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Feature</text>
+  <text x="1074" y="309" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Engineering</text>
+  <text x="1456" y="265" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Search &amp;</text>
+  <text x="1456" y="309" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Retrieval</text>
+  <text x="1838" y="285" text-anchor="middle" style="fill:#241712 !important;" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="500">Training</text>
 
   <rect x="456" y="414" width="42" height="42" rx="2" fill="#665FFF"/>
   <g stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
