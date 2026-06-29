@@ -1,0 +1,102 @@
+---
+title: "Authentication"
+sidebarTitle: "Authentication"
+description: "Authenticate to LanceDB Enterprise with an API key or OAuth credentials."
+icon: "key"
+keywords: ["authentication", "oauth", "api key", "azure managed identity", "client credentials"]
+---
+
+LanceDB Enterprise supports two ways for clients to authenticate against a `db://` remote table:
+
+- **API keys** — a long-lived shared secret passed as `api_key` on connect. Works in every SDK.
+- **OAuth 2.0** — short-lived bearer tokens obtained from your identity provider, refreshed automatically by the client.
+
+OAuth is the recommended option when you want to rotate credentials centrally, plug into an existing identity provider, or run on Azure with managed identities so no secret material lives on the client.
+
+## API key
+
+Pass the API key from your Enterprise tenant on `connect`. This works with both the synchronous and asynchronous Python clients, as well as TypeScript and Rust.
+
+```python Python icon="python"
+import lancedb
+
+db = lancedb.connect(
+    uri="db://your-database-uri",
+    api_key="your-api-key",
+    region="us-east-1",
+    host_override="https://your-enterprise-endpoint.com",
+)
+```
+
+## OAuth
+
+The async Python client can obtain bearer tokens from an OIDC issuer and attach them to every request. Token acquisition, caching, and refresh are handled inside the client — your application code only provides the configuration.
+
+<Info>
+OAuth is currently supported through `lancedb.connect_async`. The synchronous `connect` entry point continues to use API key authentication for `db://` URIs.
+</Info>
+
+### Supported flows
+
+`OAuthFlowType` selects how the client acquires tokens:
+
+| Flow | Value | When to use |
+| --- | --- | --- |
+| Client Credentials | `CLIENT_CREDENTIALS` | Service-to-service / machine-to-machine. Requires a client ID and client secret registered with your identity provider. |
+| Azure Managed Identity | `AZURE_MANAGED_IDENTITY` | Workloads running on Azure compute (VMs, AKS, App Service, Container Apps). Tokens are fetched from the Azure IMDS endpoint, so no client secret is stored on the client. |
+
+### Configure OAuth
+
+Build an `OAuthConfig` and pass it to `connect_async` via the `oauth_config` parameter.
+
+```python Python icon="python"
+import lancedb
+from lancedb.remote import OAuthConfig, OAuthFlowType
+
+# Client Credentials (service-to-service)
+oauth_config = OAuthConfig(
+    issuer_url="https://login.microsoftonline.com/{tenant}/v2.0",
+    client_id="your-application-client-id",
+    client_secret="your-application-client-secret",
+    scopes=["api://lancedb-api/.default"],
+    flow=OAuthFlowType.CLIENT_CREDENTIALS,
+)
+
+db = await lancedb.connect_async(
+    uri="db://your-database-uri",
+    region="us-east-1",
+    host_override="https://your-enterprise-endpoint.com",
+    oauth_config=oauth_config,
+)
+```
+
+For workloads running on Azure compute, use a managed identity instead of a client secret:
+
+```python Python icon="python"
+from lancedb.remote import OAuthConfig, OAuthFlowType
+
+oauth_config = OAuthConfig(
+    issuer_url="https://login.microsoftonline.com/{tenant}/v2.0",
+    client_id="your-application-client-id",
+    scopes=["api://lancedb-api/.default"],
+    flow=OAuthFlowType.AZURE_MANAGED_IDENTITY,
+    # Optional: required only for user-assigned managed identities.
+    managed_identity_client_id="your-user-assigned-identity-client-id",
+)
+```
+
+### Configuration reference
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `issuer_url` | Yes | OIDC issuer URL or OAuth authority URL. For Azure, use `https://login.microsoftonline.com/{tenant_id}/v2.0`. |
+| `client_id` | Yes | Application / client ID registered with your identity provider. |
+| `scopes` | Yes | List of OAuth scopes to request. For Azure managed identity, provide exactly one scope or resource, for example `["api://your-app-id/.default"]`. |
+| `flow` | No | `OAuthFlowType.CLIENT_CREDENTIALS` (default) or `OAuthFlowType.AZURE_MANAGED_IDENTITY`. |
+| `client_secret` | Conditional | Required for `CLIENT_CREDENTIALS`. Redacted from the config's `repr` so it does not leak into logs. |
+| `managed_identity_client_id` | No | Client ID of a user-assigned managed identity. Only used with `AZURE_MANAGED_IDENTITY`; omit for system-assigned identities. |
+| `refresh_buffer_secs` | No | How many seconds before token expiry to proactively refresh. Defaults to 300. Keep this well below the token TTL — setting it greater than or equal to the TTL forces a refresh on every request. |
+
+<Warning>
+Treat `client_secret` like any other production credential. Load it from a secret manager or environment variable rather than committing it to source control. The dataclass deliberately omits `client_secret` from its `repr` so accidental log lines do not expose the value.
+</Warning>
