@@ -57,4 +57,7 @@ jobs:
             sleep 15
           done
           gh pr checks "$pr" -R "$GITHUB_REPOSITORY" --watch --fail-fast --interval 30
-          gh pr merge "$pr" -R "$GITHUB_REPOSITORY" --squash --delete-branch
+          # --admin bypasses the "require status check" base-branch policy on the
+          # immediate merge. Safe here: checks are already confirmed green above, and
+          # the bot token (admin) only ever merges this one bot-generated sync PR.
+          gh pr merge "$pr" -R "$GITHUB_REPOSITORY" --squash --delete-branch --admin
