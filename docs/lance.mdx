@@ -5,15 +5,15 @@ description: "Open-source lakehouse format for multimodal AI."
 icon: "/static/assets/logo/lance-logo-gray.svg"
 ---
 
-[Lance](https://lance.org/) is an open-source lakehouse format, which provides the
-foundation for LanceDB's capabilities. It provides a file format,
-table format, and catalog spec with multimodal data at the center of its design, allowing developers
+[Lance](https://lance.org/) is an open-source, columnar lakehouse format for multimodal AI.
+It provides a file format, table format, and lightweight catalog spec, allowing developers
 to build a complete open lakehouse on top of object storage.
 
-Building on top of open foundations and optimizing the format for AI workloads brings
-high-performance vector search, full-text search, random access, and feature engineering capabilities
-to a single unified system ([LanceDB](/enterprise)), eliminating the need for bespoke ETL and data pipelines that move data
-to multiple other specialized data systems.
+Building on top of open foundations and optimizing the format for random access
+(without compromising scan performance) enables
+high-performance vector search, full-text search, indexing, and feature engineering capabilities.
+[LanceDB](/enterprise) builds on these capabilities so teams can work with one multimodal data layer
+instead of moving data across separate storage, search, feature, and training systems.
 
 <Card
   title="Lance format documentation"
@@ -23,15 +23,17 @@ to multiple other specialized data systems.
   Visit the Lance format documentation to learn more about its design, features, and how it enables the multimodal lakehouse.
 </Card>
 
-## Advantages of the Lance format
+## Capabilities of the Lance format
 
-Advantage | Description
+Capability | What it enables
 --- | ---
-Multimodal storage | Efficiently holds vectors, images, videos, audio, text, and more
-Version control | Built-in data versioning for reproducible ML experiments and data lineage
-ML-optimized | Designed for training and inference workloads with fast random access
-Query performance | Columnar storage enables blazing-fast vector search and analytics
-Cloud-native | Seamless integration with cloud object stores (S3, GCS, Azure Blob)
+Multimodal columns | Store images, video, audio, text, embeddings, annotations, metadata, and features in one table.
+Fast random access and scans | Sample, shuffle, and retrieve individual rows efficiently without giving up high-throughput sequential reads.
+Column projection | Read only the raw media, labels, tokens, embeddings, or feature columns needed by a workload.
+Data evolution | Add or backfill embeddings, features, quality signals, and derived columns without rewriting the original dataset.
+Versioned tables | Reproduce experiments, restore previous states, and tie downstream artifacts to the exact table version they used.
+Hybrid search and indexing | Combine vector search, full-text search, and scalar filters on the same dataset with Lance indexes.
+Open lakehouse interoperability | Build on object storage and connect Lance tables to open engines such as PyTorch, Ray, Spark, DuckDB, and Trino.
 
 ## Key concepts
 
