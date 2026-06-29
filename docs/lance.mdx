@@ -27,10 +27,11 @@ instead of moving data across separate storage, search, feature, and training sy
 
 Capability | What it enables
 --- | ---
-Multimodal columns | Store images, video, audio, text, embeddings, annotations, metadata, and features in one table.
+Multimodal storage | Store images, video, audio, text, embeddings, annotations, metadata, features, and more, all in one table.
+First-class blob API | Store large binary objects such as images, video, audio, and model artifacts in blob columns with lazy reads and streaming byte access.
 Fast random access and scans | Sample, shuffle, and retrieve individual rows efficiently without giving up high-throughput sequential reads.
-Column projection | Read only the raw media, labels, tokens, embeddings, or feature columns needed by a workload.
-Data evolution | Add or backfill embeddings, features, quality signals, and derived columns without rewriting the original dataset.
+Flexible data evolution | Add, drop, rename, or alter columns as datasets change, often without rewriting existing data files.
+Feature backfills | Populate new embedding, label, quality signal, or feature columns with SQL expressions, batch UDFs, or merges without rewriting the original dataset.
 Versioned tables | Reproduce experiments, restore previous states, and tie downstream artifacts to the exact table version they used.
 Hybrid search and indexing | Combine vector search, full-text search, and scalar filters on the same dataset with Lance indexes.
 Open lakehouse interoperability | Build on object storage and connect Lance tables to open engines such as PyTorch, Ray, Spark, DuckDB, and Trino.
