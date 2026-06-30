@@ -35,9 +35,6 @@ import {
     PyVersioningTags as VersioningTags,
     TsVersioningTags as TsVersioningTags,
     RsVersioningTags as RsVersioningTags,
-    PyVersioningBranches as VersioningBranches,
-    TsVersioningBranches as TsVersioningBranches,
-    RsVersioningBranches as RsVersioningBranches,
     RsVersioningMakeQuotesReader as RsVersioningMakeQuotesReader,
 } from '/snippets/tables.mdx';
 
@@ -219,56 +216,6 @@ plus checking out by tag name.
 <Note>
 Deleting a tag only removes the label, not the version it points to. After
 deletion, the underlying table version becomes eligible for cleanup again.
-</Note>
-
-## Branches
-
-Branches are isolated, writable lines of history forked from another branch
-(or a specific version of one). Use them when you need to experiment with
-schema or data changes, run an A/B compaction strategy, or stage a backfill
-without affecting readers on `main`. Conceptually they sit next to tags:
-**tags label a single version**, while **branches let history diverge** from
-that point.
-
-The branch manager supports the standard operations — `create`, `list`,
-`checkout`, `delete` — and `checkout` / `create` return a new table handle
-scoped to the branch. Writes on that handle do not touch `main`. The
-original handle keeps pointing at the branch it was opened on, which is
-reported by `current_branch()` (`null` / `None` for `main`).
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningBranches}
-    </CodeBlock>
-
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningBranches}
-    </CodeBlock>
-
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningBranches}
-    </CodeBlock>
-</CodeGroup>
-
-In Python, you can also open a branch directly from the connection by
-passing `branch=` to `open_table()`. Combine it with `version=` to open a
-read-only handle pinned to a specific version on that branch:
-
-```python
-# Latest version of the experiment branch (writable)
-experiment = db.open_table("my_table", branch="experiment")
-
-# Pinned to v3 of the experiment branch (read-only)
-snapshot = db.open_table("my_table", branch="experiment", version=3)
-```
-
-<Note>
-Each branch handle has its own freshness state and version pin, so reopening
-a branch on a new connection — or restoring one from a pickled handle —
-keeps you on the branch instead of silently reverting to `main`.
-
-Branches are supported by tables backed by the Lance format directly and by
-remote tables served by LanceDB Enterprise.
 </Note>
 
 ## Delete Data From the Table

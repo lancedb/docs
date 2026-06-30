@@ -3,51 +3,85 @@ title: LanceDB
 sidebarTitle: "LanceDB"
 description: "Multimodal lakehouse for AI."
 icon: "/static/assets/logo/lancedb-icon-gray.svg"
-keywords: ["open source", "oss"]
+keywords: ["multimodal lakehouse", "training", "feature engineering", "search", "open source", "oss"]
 ---
 
-**LanceDB** is a [multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/) for
-AI, built on top of [Lance](/lance), an open-source lakehouse format. Below, we list a few
-ways LanceDB can help you build and scale your AI and ML workloads.
+**LanceDB** is a [multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/) for AI teams that need
+one data layer for curation, feature engineering, search and retrieval, and model training.
+It is built on top of [Lance](/lance), an open-source lakehouse format designed for multimodal AI data.
+
+Move from data exploration to model training on one, unified platform without needing to manage a
+fragmented stack of storage, feature, retrieval, and training systems.
+
+## Build better models, faster
+
+Training data and experimentation slow down when raw data, metadata, embeddings, features, and governance
+artifacts live in separate systems. LanceDB keeps them together in one versioned multimodal table, so AI teams spend less
+time stitching infrastructure together and more time improving datasets, testing features, and keeping GPUs fed.
+
+![Training data lifecycle: Curation, Feature Engineering, Search and Retrieval, Training](/static/assets/images/overview/training-data-lifecycle.svg)
+
+Use the same table to curate training data, add derived features, retrieve examples, and feed training jobs that rely on expensive GPUs.
+Training workloads can sample, shuffle, and scan projected columns from local storage or object storage, then assemble
+GPU-ready batches from a tagged dataset version.
+
+For a deeper look at how this works in training pipelines, start with [Why LanceDB for training](/training/why-lancedb).
+
+## LanceDB suite
+
+The LanceDB suite includes LanceDB OSS, an open-source embedded retrieval library, and LanceDB Enterprise,
+a multimodal lakehouse platform for the full AI data lifecycle.
+OSS is easy to set up on a local machine for search and regular-scale workflows. LanceDB Enterprise is built
+for teams that need scale without building bespoke infrastructure for curation,
+feature engineering, search and retrieval, and efficient training data access.
+
+![LanceDB suite: OSS search and Enterprise multimodal lakehouse on Lance format](/static/assets/images/overview/lancedb-suite.svg)
+
+## Why teams use LanceDB
 
 <Steps>
-  <Step title="High-performance random access and data management for model training">
-    Use LanceDB to curate, explore and distribute very large multimodal datasets for training and fine-tuning models.
-    LanceDB comes with built-in table versioning, schema evolution, and fast random access, making it far more efficient to do
-    dataset slicing, sampling, filtering and shuffles on large, rapidly evolving datasets.
+  <Step title="One table for the whole AI data loop">
+    Store images, video, audio, text, annotations, embeddings, and model-generated features together in one schema-enforced table.
+    The same table can support dataset curation, feature backfills, experiment splits, retrieval, and training.
   </Step>
-  <Step title="Massively scalable, fast and high-quality retrieval − without breaking the bank">
-    Use LanceDB as the data + retrieval layer for production AI workloads: RAG, agents, semantic search,
-    recommendation systems, and more.
-    Keep multimodal data, metadata, and embeddings in the same table and query them via vector search,
-    full-text search or SQL. Easily add new features (columns in your tables) as your
-    application evolves, without copying existing data.
+  <Step title="High-throughput data access for training">
+    Training workloads mix fast random access with high-throughput sequential scans. LanceDB is designed for both, so
+    teams can shuffle data into GPU-ready batches more efficiently, improve input throughput, and iterate on experiments faster.
+  </Step>
+  <Step title="Fast, versatile search and retrieval">
+    Whether the end user is a human or an agent, LanceDB powers production retrieval workloads such as semantic search,
+    hybrid search, RAG, agent memory, and recommendation systems. Retrieval runs against the same LanceDB tables used
+    for curation, feature engineering, and training workflows.
   </Step>
 </Steps>
 
-LanceDB is designed for a variety of workloads and deployment scenarios, and supports use cases
-that are way beyond traditional vector search. The LanceDB suite includes LanceDB OSS, an open-source embedded library,
-and LanceDB Enterprise, a distributed and managed multimodal lakehouse.
-Both are built on top of the same open-source Lance format and table abstractions.
+## Start with your workload
 
-![](/static/assets/images/overview/lancedb-suite.png)
+<CardGroup cols={2}>
+  <Card title="Train and fine-tune models" icon="fire" href="/training/why-lancedb">
+    Learn why LanceDB works well as the data layer for training workloads.
+  </Card>
+  <Card title="Load data into PyTorch" icon="boxes-stacked" href="/training/">
+    Use LanceDB tables and permutations for projected, shuffled, random-access training reads.
+  </Card>
+  <Card title="Browse ready-to-use datasets" icon="database" href="/datasets">
+    Explore Lance-formatted multimodal datasets with raw bytes, metadata, embeddings, and indices.
+  </Card>
+  <Card title="Build search and retrieval" icon="search" href="/search/">
+    Use vector search, full-text search, hybrid search, reranking, filtering, and SQL.
+  </Card>
+</CardGroup>
 
-## Use cases
+## From local development to production scale
 
-- **Search**: Build high-performance search and retrieval applications using LanceDB's optimized storage, including vector search, full-text search, and hybrid search with secondary indexes.
-- **Data Curation**: Manage and filter on petabyte-scale multimodal datasets, including video and point cloud data, to gain insights, explore data and inform model development.
-- **Feature engineering**: Add new columns (features), create embeddings, and transform your data at
-scale. LanceDB lets you extend tables both vertically and horizontally with minimal I/O overhead.
-- **Training**: Efficiently access and manage large-scale multimodal datasets for training and fine-tuning AI models.
-
-## Choose how you run LanceDB
-
-Depending on your needs, you can choose one of the following ways to run LanceDB.
+LanceDB OSS and LanceDB Enterprise share the same Lance format and table model. Start locally with the embedded OSS
+library, then move to Enterprise when your team needs distributed scale, managed infrastructure, private deployment,
+or higher-throughput curation, feature engineering, search and retrieval, and training workflows.
 
 ### 1. LanceDB OSS
 The fastest way to get started is the open-source embedded library, with client SDKs in Python, TypeScript
-and Rust. Run it locally during development, then use the same data model and APIs as you scale up
-and need a managed solution. Start here:
+and Rust. Run it locally in just a few steps, which lets you explore datasets, curate data, and run search and retrieval workloads
+for agents. Start here:
 
 <Columns cols={2}>
   <Card
@@ -59,19 +93,18 @@ and need a managed solution. Start here:
 </Card>
   <Card
     title="Basic Table Operations"
-    icon="search"
+    icon="table"
     href="/tables/"
   >
-    Create tables, search vectors, and modify data in LanceDB.
+    Create tables, evolve schemas, version data, and modify rows in LanceDB.
   </Card>
 </Columns>
 
 ### 2. LanceDB Enterprise
 
-[LanceDB Enterprise](/enterprise) is a distributed and managed **multimodal lakehouse** built for
-search, curation, feature engineering, and training-oriented data access workflows
-on top of the same core table abstraction. This eliminates the need for teams to build bespoke
-infrastructure to manage petabyte-scale multimodal datasets.
+[LanceDB Enterprise](/enterprise) is a petabyte-scale (and beyond), distributed **multimodal lakehouse** platform built for
+search, curation, feature engineering, and high-throughput training data access workflows on top of the same core table
+abstraction. This eliminates the need for teams to build bespoke infrastructure to manage large multimodal datasets.
 To set up LanceDB Enterprise in your organization, reach out to us at
 [contact@lancedb.com](mailto:contact@lancedb.com).
 
