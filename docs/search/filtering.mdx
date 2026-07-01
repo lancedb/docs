@@ -14,6 +14,37 @@ with filtering capabilities even on datasets containing billions of records.
 
 On hybrid queries, the same `where(...)` filter is applied to both the vector and full-text halves of the query. The prefilter or postfilter choice controls whether that happens before each subquery scores candidates or after the subquery top-k is produced.
 
+## Chaining `where` clauses
+
+You can call `where(...)` (Python and TypeScript) or `only_if(...)` (Rust) more than once on the same query builder. Each additional filter is combined with the previous one using logical `AND`, so `where("a > 0").where("b < 10")` is equivalent to `where("(a > 0) AND (b < 10)")`. This lets you compose filters incrementally — for example, applying a shared base predicate in a helper and then adding a per-call predicate at the query site.
+
+<CodeGroup>
+```python Python icon="python"
+# Both filters apply: item is in the list AND price is above 15.
+result = (
+    table.search([100, 102])
+    .where("item IN ('foo', 'bar', 'baz')")
+    .where("price > 15.0")
+    .limit(3)
+    .to_arrow()
+)
+```
+
+```typescript TypeScript icon="square-js"
+// Both filters apply: item is in the list AND price is above 15.
+const result = await table
+  .search([100, 102])
+  .where("item IN ('foo', 'bar', 'baz')")
+  .where("price > 15.0")
+  .limit(3)
+  .toArray();
+```
+</CodeGroup>
+
+<Warning>
+In LanceDB releases before this behavior shipped, a second `where(...)` call silently replaced the first filter, so only the last predicate was applied. If you are upgrading from an older release and previously relied on that behavior, review any code that chains `where(...)` and drop the earlier calls you no longer want to apply.
+</Warning>
+
 ## Example: Metadata Filtering
 
 To illustrate filtering capabilities, let's try four data points with combinations of vectors and metadata:
