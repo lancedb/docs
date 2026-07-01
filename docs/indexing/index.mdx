@@ -53,7 +53,7 @@ Vector indexes can use different quantization methods to compress vectors and im
 | :----------- | :------- | :---------- |
 | `PQ` (Product Quantization) | Default choice for most vector search scenarios. Use when you need to balance index size and recall. | Divides vectors into subvectors and quantizes each subvector independently. Provides a good balance between compression ratio and search accuracy. |
 | `SQ` (Scalar Quantization) | Use when you need faster indexing or when vector dimensions have consistent value ranges. | Quantizes each dimension independently. Simpler than PQ but typically provides less compression. |
-| `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. For `IVF_RQ`, vector dimensions must be divisible by `8`. |
+| `RQ` (RaBitQ Quantization) | Use when you need compact high-dimensional vector search with strong recall and low serving memory. | RaBitQ supports a classic 1-bit path and multi-bit quantization for higher recall. For `IVF_RQ`, vector dimensions must be divisible by `8`. See the [RaBitQ indexing guide](/indexing/rabitq) for performance and memory tradeoffs. |
 | `None/Flat` | Use for binary vectors (with `hamming` distance) or when you need maximum recall and have sufficient storage. | No quantization—stores raw vectors. Provides the highest accuracy but requires more storage and memory. |
 
 ## Understanding the IVF-PQ Index

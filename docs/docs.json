@@ -110,6 +110,7 @@
                   "indexing/scalar-index",
                   "indexing/gpu-indexing",
                   "indexing/quantization",
+                  "indexing/rabitq",
                   "indexing/reindexing"
                 ]
               },

@@ -1,0 +1,113 @@
+---
+title: "RaBitQ Indexing"
+sidebarTitle: "RaBitQ"
+description: "Use IVF_RQ and multi-bit RaBitQ to improve recall, tail latency, and serving memory for high-dimensional vector search in LanceDB."
+icon: "gauge-high"
+keywords: ["rabitq", "ivf_rq", "approx_mode", "vector search", "quantization", "recall"]
+---
+import { PyRabitqCreateIndex as RabitqCreateIndex } from '/snippets/indexing.mdx';
+
+RaBitQ (`IVF_RQ`) is LanceDB's high-compression vector index for large embedding workloads. It is built for the cases where you want strong recall and low latency without keeping full-precision vectors in the hot serving path.
+
+<Info>
+The improvements described on this page are available in LanceDB Cloud.
+</Info>
+
+## Start with the result
+
+On a DBpedia 1M benchmark with 1,536-dimensional vectors, `top_k=10`, `nprobes=24`, and no raw-vector refine, multi-bit `IVF_RQ` improves both quality and speed compared with `IVF_PQ`.
+
+`QPS/core` is single-core throughput. It is not the total throughput of a LanceDB deployment.
+
+![p99 latency comparison for IVF_PQ and multi-bit IVF_RQ](/static/assets/images/indexing/rabitq-p99-latency.svg)
+
+![QPS per core comparison for IVF_PQ and multi-bit IVF_RQ](/static/assets/images/indexing/rabitq-qps-per-core.svg)
+
+| Index | Recall@10 | Avg latency | p99 latency | QPS/core |
+| :--- | ---: | ---: | ---: | ---: |
+| `IVF_PQ`, no refine | 74.83% | 12.80 ms | 14.72 ms | 78.0 |
+| `IVF_RQ`, 3-bit | 93.52% | 3.82 ms | 4.74 ms | 261.0 |
+| `IVF_RQ`, 5-bit | 96.24% | 4.56 ms | 5.57 ms | 218.1 |
+| `IVF_RQ`, 7-bit | 96.83% | 4.96 ms | 5.94 ms | 200.7 |
+
+The 5-bit `IVF_RQ` index reaches 96.24% recall while keeping p99 latency about 2.6x lower than `IVF_PQ` in this benchmark. If you prioritize throughput, 3-bit `IVF_RQ` reaches 261 QPS/core with much higher recall than `IVF_PQ`.
+
+## Higher recall without raw-vector refine
+
+Classic RaBitQ stores one bit per dimension. Multi-bit RaBitQ keeps the same compact search structure and adds extra bits that preserve more of the original vector signal.
+
+![Recall comparison for IVF_PQ and multi-bit IVF_RQ](/static/assets/images/indexing/rabitq-recall.svg)
+
+This matters because high recall with `IVF_PQ` often depends on `refine_factor`: LanceDB first searches the compressed index, then fetches and reranks extra candidates using the original full-precision vectors. That can work well, but it increases the memory and I/O pressure of the serving path.
+
+With multi-bit `IVF_RQ`, LanceDB can recover much of that quality directly from the quantized index. You can get high recall without making raw-vector refine the default path for every query.
+
+## Serving memory tradeoff
+
+The memory difference is easiest to see if you separate index storage from hot serving memory.
+
+![Hot serving memory comparison for IVF_PQ refine and IVF_RQ modes](/static/assets/images/indexing/rabitq-hot-memory.svg)
+
+| Serving path | Hot vector memory intuition |
+| :--- | :--- |
+| `IVF_PQ`, no refine | Very small, but recall can be limited. |
+| 5-bit `IVF_RQ` with `approx_mode="fast"` | Can use the 1-bit RaBitQ search path, so hot search memory can match the 1-bit budget. |
+| 5-bit `IVF_RQ` with multi-bit scoring | Uses more quantized bits, but still avoids full raw vectors in the hot path. |
+| `IVF_PQ` with raw-vector refine | Requires the compressed index plus full-precision vectors for reranking. |
+
+<Note>
+A 5-bit `IVF_RQ` index stores more quantized code bytes than a 1-bit `IVF_RQ` index, and can be larger on disk than a default `IVF_PQ` index. The advantage is in high-recall serving: multi-bit `IVF_RQ` can use compact quantized codes for reranking, while `IVF_PQ` typically needs full-precision vectors to recover similar recall.
+</Note>
+
+This is also where `approx_mode` becomes useful. A 5-bit `IVF_RQ` index can run a fast query that only uses the 1-bit path, or a higher-recall query that uses more of the stored multi-bit signal. You do not need to rebuild the index to move between those points.
+
+## How LanceDB makes it fast
+
+The recent RaBitQ work improves the full query path:
+
+- **Fast rotation**: RaBitQ uses a randomized rotation before quantization. The optimized rotation path reduces the cost of preparing vectors for compact binary-style scoring.
+- **Multi-bit reranking**: Extra bits give LanceDB more signal during candidate scoring, so recall improves without always falling back to raw-vector refine.
+- **SIMD distance kernels**: The inner scoring loop runs over packed quantized data and uses CPU vector instructions to evaluate many dimensions at once.
+- **A one-bit fast path**: Even if the index stores extra bits, `approx_mode="fast"` can search with the 1-bit representation when you want the lowest-latency path.
+
+The result is not just a smaller index format. It is a faster high-recall serving path for large, high-dimensional vectors.
+
+## Tune the tradeoff at query time
+
+`approx_mode` lets you tune recall and performance per query instead of rebuilding separate indexes for different product needs. The option applies to RQ-quantized indexes such as `IVF_RQ`; other index types ignore it.
+
+| `approx_mode` | When to use it |
+| :--- | :--- |
+| `fast` | Lowest-latency path. Useful for autocomplete, exploration, high-fanout retrieval, or queries with recall headroom. |
+| `normal` | Default balance. Good starting point for most production traffic. |
+| `accurate` | Higher-recall path. Useful for quality-sensitive retrieval, evaluation, and requests where a few extra milliseconds are acceptable. |
+
+On the same 5-bit `IVF_RQ` index, the query mode controls the speed/quality point:
+
+![Average latency comparison across approx_mode values](/static/assets/images/indexing/rabitq-approx-mode-latency.svg)
+
+![QPS per core comparison across approx_mode values](/static/assets/images/indexing/rabitq-approx-mode-qps.svg)
+
+| `approx_mode` | Recall@10 | Avg latency | Approx QPS/core |
+| :--- | ---: | ---: | ---: |
+| `fast` | 81.42% | 3.175 ms | 315 |
+| `normal` | 96.11% | 3.802 ms | 263 |
+| `accurate` | 96.57% | 4.508 ms | 222 |
+
+Approx QPS/core is computed from the single-core mean latency in this benchmark. Use it for relative comparison, not as a cluster-level throughput estimate.
+
+See the [vector search guide](/search/vector-search) for the current query API behavior and the full interaction between `approx_mode`, `nprobes`, and `refine_factor`.
+
+## Create an IVF_RQ index
+
+To switch a table to RaBitQ, create an `IVF_RQ` index with the `IvfRq` config object. Start with `num_bits=5` when recall matters, and lower it if you want a smaller index.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {RabitqCreateIndex}
+    </CodeBlock>
+</CodeGroup>
+
+All of these RaBitQ updates are available in LanceDB Cloud. Build an `IVF_RQ` index once, then tune recall and performance at query time with `approx_mode` as your workload changes.
+
+Use `IVF_RQ` when your workload has high-dimensional embeddings, needs strong recall, and cannot afford to keep full-precision vectors hot just to rerank every query. For small vectors, especially dimensions at or below 256, benchmark `IVF_PQ` as well because it can still be a better fit.

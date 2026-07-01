@@ -16,7 +16,7 @@ Use quantization when:
 LanceDB currently exposes multiple quantized vector index types, including:
 - `IVF_PQ` -- Inverted File index with Product Quantization (default). See the [vector indexing guide](/indexing/vector-index) for `IVF_PQ` examples.
 - `IVF_SQ` -- Inverted File index with Scalar Quantization. This is available in Python and Rust; TypeScript does not currently expose `IvfSq`.
-- `IVF_RQ` -- Inverted File index with **RaBitQ** quantization (binary, 1 bit per dimension). Requires vector dimensions divisible by `8`. See [below](#rabitq-quantization) for details.
+- `IVF_RQ` -- Inverted File index with **RaBitQ** quantization. It supports the classic 1-bit representation and multi-bit quantization for higher recall. Requires vector dimensions divisible by `8`. See [below](#rabitq-quantization) for details.
 - `IVF_HNSW_SQ` -- IVF partitions with an **HNSW graph per partition** plus **Scalar Quantization**. Strong recall/latency/size trade-off for most workloads.
 - `IVF_HNSW_PQ` -- IVF partitions with an **HNSW graph per partition** plus **Product Quantization**. Prefer when PQ-level compression matters and you still want HNSW-style in-partition search.
 
@@ -26,7 +26,7 @@ Use the same distance metric when training the index and running queries against
 
 ## RaBitQ quantization
 
-RaBitQ is a binary quantization method that represents each normalized embedding using **1 bit per dimension**, plus a couple of small corrective scalars. In practice, a 1,024-dimensional `float32` vector that would normally take 4 KB can be compressed to roughly a few hundred bytes with RaBitQ, while still maintaining reasonable recall.
+RaBitQ is a quantization method that can represent each normalized embedding using the classic **1 bit per dimension** layout, plus a couple of small corrective scalars. LanceDB also supports multi-bit RaBitQ through `num_bits`, which stores extra quantized signal for higher recall. In practice, a 1,024-dimensional `float32` vector that would normally take 4 KB can be compressed to roughly a few hundred bytes with RaBitQ, while still maintaining reasonable recall.
 
 ### How RaBitQ works
 
@@ -42,7 +42,7 @@ Compared to `IVF_PQ`, RaBitQ:
 - Builds indexes faster and handles updates more easily
 - Maintains or improves recall at high dimensionality under the same storage budget
 
-For a deeper dive into the theory and some benchmark results, see the blog post: [LanceDB's RaBitQ Quantization for Blazing Fast Vector Search](https://lancedb.com/blog/feature-rabitq-quantization/).
+For a deeper dive into current performance, memory, multi-bit recall, and `approx_mode` tradeoffs, see the [RaBitQ indexing guide](/indexing/rabitq). For the original theory and early benchmark results, see the blog post: [LanceDB's RaBitQ Quantization for Blazing Fast Vector Search](https://lancedb.com/blog/feature-rabitq-quantization/).
 
 ### Using RaBitQ
 
@@ -54,7 +54,7 @@ When using `IVF_RQ`, vector dimensions must be divisible by `8`.
 
 `num_bits` controls how many bits per dimension are used:
 
-1 bit is the classic RaBitQ setting. You can set it to 2, 4, or 8 bits to improve fidelity for better precision or recall — the main trade-off is additional storage for the extra bits per dimension, with only a modest increase in query-time compute.
+1 bit is the classic RaBitQ setting. You can set it to a higher `num_bits` value to improve fidelity for better precision or recall. The main trade-off is additional storage for the extra bits per dimension, with only a modest increase in query-time compute.
 It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to how you would do in `IVF_PQ`.
 
 <Warning title="Reading multi-bit indexes across versions">

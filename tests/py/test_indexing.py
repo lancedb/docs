@@ -274,6 +274,29 @@ def test_vector_index_custom_name(tmp_db):
     assert table.index_stats("my_custom_index")
 
 
+def test_rabitq_create_index(tmp_db):
+    table = tmp_db.create_table(
+        "rabitq_index",
+        _make_vector_rows(512, 8),
+        mode="overwrite",
+    )
+
+    # --8<-- [start:rabitq_create_index]
+    from lancedb.index import IvfRq
+
+    table.create_index(
+        "vector",
+        config=IvfRq(
+            distance_type="cosine",
+            num_bits=5,
+        ),
+        replace=True,
+    )
+    # --8<-- [end:rabitq_create_index]
+
+    assert table.list_indices()
+
+
 def test_vector_index_hnsw(tmp_db):
     table = tmp_db.create_table(
         "vector_index_hnsw",
