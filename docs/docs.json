@@ -47,7 +47,6 @@
                 "group": "LanceDB Enterprise",
                 "pages": [
                   "enterprise/index",
-                  "enterprise/quickstart",
                   "enterprise/architecture",
                   "enterprise/security",
                   "enterprise/benchmarks",

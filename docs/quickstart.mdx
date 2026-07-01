@@ -18,35 +18,54 @@ import {
     TsConnectObjectStorage,
 } from '/snippets/connection.mdx';
 import {
+    PyQuickstartData,
     PyQuickstartCreateTable,
     PyQuickstartCreateTableAsync,
+    PyQuickstartAddFeature,
+    PyQuickstartCurateWithMetadata,
+    PyQuickstartMultimodalBytes,
+    PyQuickstartQueryFeature,
     PyQuickstartVectorSearch1,
     PyQuickstartVectorSearch1Async,
     PyQuickstartOutputPandas,
+    RsQuickstartAddFeature,
+    RsQuickstartCurateWithMetadata,
     RsQuickstartCreateTable,
+    RsQuickstartData,
     RsQuickstartDefineStruct,
+    RsQuickstartMultimodalBytes,
+    RsQuickstartQueryFeature,
     RsQuickstartVectorSearch1,
+    TsQuickstartAddFeature,
+    TsQuickstartCurateWithMetadata,
     TsQuickstartCreateTable,
+    TsQuickstartData,
+    TsQuickstartMultimodalBytes,
+    TsQuickstartQueryFeature,
     TsQuickstartVectorSearch1,
 } from '/snippets/quickstart.mdx';
 
-The easiest way to get started with LanceDB is the open source version, which is an embedded database that
-runs in-process (like SQLite). Let's get started in just a few steps!
+As described in [the landing page](/), LanceDB provides one data layer for
+curation, feature engineering, search and retrieval, and model training. Whether you are preparing
+training data, building a RAG or agentic retrieval system, reviewing examples, or adding model-generated
+features, you'll work with the same underlying table and search primitives.
+
+Let's get started in just a few steps!
 
 ## 1. Install LanceDB
 
 Install LanceDB in your client SDK.
 
 <CodeGroup>
+```bash pip icon="terminal"
+pip install lancedb
+```
+
 ```bash uv icon="terminal"
 uv add lancedb
 
 # Or, in an existing virtual environment:
 uv pip install lancedb
-```
-
-```bash pip icon="terminal"
-pip install lancedb
 ```
 
 ```bash TypeScript icon=js
@@ -60,7 +79,7 @@ cargo add lancedb
 
 ### Python pre-release builds
 
-Stable LanceDB releases are created about every 2 weeks. To pick up the latest features and bug fixes
+To pick up the latest features and bug fixes
 before the next stable release, install a pre-release from LanceDB's Fury index.
 
 <CodeGroup>
@@ -78,9 +97,9 @@ uv add --prerelease allow --index https://pypi.fury.io/lancedb/ lancedb
 </CodeGroup>
 
 <Note>
-Pre-release builds receive the same level of testing as stable releases, but are not guaranteed to
-remain available for more than 6 months after release. Once your application is stable, switch back
-to stable releases.
+Pre-release builds receive the same level of testing as stable releases, but their availability is not guaranteed
+for more than 6 months after release. For real-world workloads, we recommend you use the latest stable release
+as far as possible.
 </Note>
 
 ## 2. Connect to a LanceDB database
@@ -89,12 +108,12 @@ LanceDB supports several URI patterns to connect to a database.
 
 - A local filesystem path (when using it as an embedded library)
 - A `db://...` URI (when using LanceDB Enterprise)
-- An object storage URI: `s3://...`, `gs://...`, or `az://...` (OSS mode)
+- An object storage URI: `s3://...`, `gs://...`, or `az://...` (when connecting directly from the client SDK)
 
-### Connect via local path with LanceDB
+### Connect via local directory path
 
-The simplest way to begin is to use LanceDB OSS. Simply import LanceDB as an embedded library in your
-client SDK of choice and point to a local path.
+The simplest way to begin is to use LanceDB as an embedded library. Import LanceDB in your
+client SDK of choice and point to a local directory path.
 
 <CodeGroup >
     <CodeBlock filename="Python (sync)" language="Python" icon="python">
@@ -119,7 +138,7 @@ client SDK of choice and point to a local path.
 
 ### Connect via object storage URIs
 
-You can also connect LanceDB OSS directly to object storage:
+You can also connect directly to object storage from the client SDK:
 
 <CodeGroup >
     <CodeBlock filename="Python (sync)" language="Python" icon="python">
@@ -144,9 +163,9 @@ For credentials, endpoints, and provider-specific options, see
 
 ### Connect to LanceDB Enterprise
 
-If you're using LanceDB Enterprise, you can connect using a `db://` URI along
-with the API key, region, and cluster endpoint you received from the LanceDB
-team. Pass the cluster endpoint via `host_override` so the client routes
+If you're using LanceDB Enterprise, you can connect to the remote database using the
+`db://` URI along with the API key, region, and cluster endpoint you received from the
+LanceDB team. Pass the cluster endpoint via `host_override` so the client routes
 requests to your deployment.
 
 <CodeGroup >
@@ -169,25 +188,57 @@ requests to your deployment.
 <Note>
 `host_override` is the full URL of your cluster endpoint, including the scheme
 (`https://`) and a port if your deployment listens on a non-default one
-(e.g. `https://your-enterprise-endpoint.com:443`). If you don't know the
+(e.g. `https://your-enterprise-endpoint.com:443`). If you don't have the
 endpoint, [contact the LanceDB team](mailto:contact@lancedb.com).
 </Note>
 
-For a walkthrough on how to use LanceDB Enterprise (including `RemoteTable`
-semantics), see its [quickstart](/enterprise/quickstart). To learn
-more about LanceDB Enterprise overall, see the
-[Enterprise documentation](/enterprise).
+To learn more about `RemoteTable` semantics and how Enterprise differs operationally from
+embedded LanceDB, see the [Enterprise overview](/enterprise).
 
-## 3. Obtain data and ingest into LanceDB
+## 3. Create a new table
 
-Let's look at an example. We have the following records of characters in an adventure board game.
-The vector column holds 3-dimensional embeddings representing each character.
+Let's create a small table of characters from the kingdom of Camelot. Each row stores source text,
+metadata, structured fields, and a vector embedding in the same LanceDB table.
 
-To ingest the data into LanceDB, obtain data of the required shape
-and pass in the data object to the `create_table` method as shown below.
-Note that LanceDB tables require a schema. If you don't provide one, LanceDB
-will infer it from the data. For the Rust snippet, you can find the helper functions in the
-[code](https://github.com/lancedb/docs/blob/main/tests/rs/quickstart.rs).
+<Info>
+The embeddings we use in this example are synthetic and for demonstration purposes only. In a real AI
+data workflow, you would generate them from text, images, audio, or video using an embedding model of choice.
+</Info>
+
+Each row has source text, metadata, structured fields, and a vector:
+
+```json
+{
+  "id": "2",
+  "name": "Merlin",
+  "role": "Wizard",
+  "description": "Advisor and prophet with deep magical knowledge.",
+  "stats": { "strength": 2, "magic": 5, "leadership": 4, "wisdom": 5 },
+  "vector": [0.2, 0.9, 0.4, 0.9]
+}
+```
+
+The full raw records are included below:
+
+<Accordion title="View raw character records">
+    <CodeGroup >
+        <CodeBlock filename="Python (sync)" language="Python" icon="python">
+        {PyQuickstartData}
+        </CodeBlock>
+
+        <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+        {TsQuickstartData}
+        </CodeBlock>
+
+        <CodeBlock filename="Rust" language="Rust" icon="rust">
+        {RsQuickstartDefineStruct}
+        {RsQuickstartData}
+        </CodeBlock>
+    </CodeGroup >
+</Accordion>
+
+You can now create a LanceDB table from those records. The code below creates a LanceDB table
+with the appropriate schema and ingests the data.
 
 <CodeGroup >
     <CodeBlock filename="Python (sync)" language="Python" icon="python">
@@ -203,25 +254,19 @@ will infer it from the data. For the Rust snippet, you can find the helper funct
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsQuickstartDefineStruct}
     {RsQuickstartCreateTable}
     </CodeBlock>
 </CodeGroup >
 
-<Warning>
-The `vector` arrays here are synthetic and for demonstration purposes only. In your real-world
-applications, you'd generate these vectors from the raw text fields using a suitable embedding model.
-</Warning>
+## 4. Semantic search
 
-## 4. Run a vector similarity search
+Search is a useful capability for all kinds of AI data pipelines. Below, we do a vector similarity
+search for samples similar to a "_wise magical advisor_" (transforming the natural language query to
+an embedding), and project only the columns needed by the next step.
 
-Now, let's perform a vector similarity search. The query vector should have the same
-dimensionality as your data vectors and be generated using the same embedding model.
-The search returns the most similar vectors based on a chosen distance metric (default is L2,
-or Euclidean distance).
-
-Our query is a vector that represents a "warrior". Let's find the result that's most similar
-to it!
+Search (which requires random access) is a ubiquitous access pattern that appears in many workloads:
+whether you're building a RAG or recommendation system, serving agent memory, or curating a training
+dataset.
 
 <CodeGroup >
     <CodeBlock filename="Python (sync)" language="Python" icon="python">
@@ -252,28 +297,133 @@ to be used downstream in your application.
   </CodeBlock>
 </Accordion>
 
-<Info>
+## 5. Curation
+
+Searching for relevant results can be more useful when combined with metadata filters.
+In this tiny example, we filter to examples with high `magic` stats.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartCurateWithMetadata}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartCurateWithMetadata}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartCurateWithMetadata}
+    </CodeBlock>
+</CodeGroup >
+
+When working with large datasets, it's common to use the same pattern to filter on quality labels,
+train/eval splits, numeric fields, categorical values, timestamp windows, or generated tags and labels.
+
+## 6. Add a derived feature
+
+Feature engineering is the process of cleaning up your data and creating new signals that
+help your model learn, make better predictions, or your agent retrieve more useful information.
+In the example below, we add a `power_score` column from the structured `stats` fields.
+Lance supports data evolution, so you can add new columns without rewriting the entire table.
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartAddFeature}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartAddFeature}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    { "use lancedb::table::NewColumnTransform;\n\n" }
+    {RsQuickstartAddFeature}
+    </CodeBlock>
+</CodeGroup >
+
+Next, you can query a compact view of the new feature:
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartQueryFeature}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartQueryFeature}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartQueryFeature}
+    </CodeBlock>
+</CodeGroup >
+
+| name | role | power_score |
+| --- | --- | --- |
+| King Arthur | King | 3.5 |
+| Merlin | Wizard | 4.0 |
+| Sir Lancelot | Knight | 3.0 |
+
+The same workflow is used for data preparation tasks when adding derived features, cached model signals, review scores, or dataset
+quality indicators.
+
+## 7. Store multimodal data
+
+Multimodal data is a first-class citizen in LanceDB. Binary data (image, audio, video, etc.) is
+stored as blobs or inline Arrow binary types in a LanceDB column, and they benefit from the same
+table operations and data versioning semantics as other data types. All the data is governed
+in the same table, so you can search, filter, and retrieve multimodal records together with structured
+fields, metadata, and embeddings.
+
+In this example, the
+[`lancedb/magical_kingdom`](https://huggingface.co/datasets/lancedb/magical_kingdom) dataset stores
+character images, descriptions, structured stats, image embeddings, and text embeddings together.
+
+Say we downloaded the image for Sir Lancelot from that dataset locally. You can read the image bytes
+in your client SDK and store them in a LanceDB column. The image bytes can be used for downstream tasks
+like retrieval, evaluation, or training.
+
+<div style={{ display: "flex", justifyContent: "center" }}>
+  <img
+    src="/static/assets/images/quickstart/sir-lancelot.jpg"
+    alt="Sir Lancelot from the lancedb/magical_kingdom dataset"
+    width="320"
+  />
+</div>
+
+These snippets load the local image file and store the bytes in an `image` column:
+
+<CodeGroup >
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyQuickstartMultimodalBytes}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsQuickstartMultimodalBytes}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsQuickstartMultimodalBytes}
+    </CodeBlock>
+</CodeGroup >
+
+For more examples, see the [multimodal data](/tables/multimodal) section.
+
+## Code
+
 See the full code for these examples (including helper functions) in the
 `quickstart` file for the appropriate client language in the
-[files provided here](https://github.com/lancedb/docs/tree/main/tests).
-</Info>
+[files provided in the repo](https://github.com/lancedb/docs/tree/main/tests).
 
 
 ## What's next?
 
-You've learned how to install LanceDB, connect, create a table, and run a first
-vector search. In the real world, embeddings capture meaning and vector search
-allows you to find the most relevant data based on semantic similarity.
+You've learned how to install LanceDB, connect, create one table for AI data, retrieve related
+examples, curate with metadata, add a derived feature, and represent multimodal records. These same
+primitives apply across the AI data lifecycle, from data preparation and feature engineering to
+retrieval, evaluation, and training.
 
-Note that LanceDB is much more than "just a vector database" -- it's
-[a multimodal lakehouse](https://lancedb.com/blog/multimodal-lakehouse/).
-There's a lot more you can do with it! Continue
-to the [Table management](/tables/) guide to build on
-this example with schema options, appending data, updates, and versioning.
-
-As you explore LanceDB further, you can combine vector search with other techniques like filtering based
-on metadata fields, full-text search, hybrid search, and more. Check out the tutorials
-and guides below to continue learning.
+Continue to the table and search guides to build on this example with schema options, appends,
+updates, versioning, indexing, full-text search, hybrid search, and reranking.
 
 <Columns cols={2}>
 <Card
@@ -289,5 +439,19 @@ and guides below to continue learning.
   href="/tutorials/agents/"
 >
   Learn how to build Retrieval-Augmented Generation (RAG) applications using LanceDB.
+</Card>
+<Card
+  title="Indexing"
+  icon="layer-group"
+  href="/indexing/"
+>
+  Create vector, full-text, and scalar indexes to speed up queries on larger datasets.
+</Card>
+<Card
+  title="Data loading and shuffles"
+  icon="boxes-stacked"
+  href="/training/"
+>
+  Use LanceDB for projected, shuffled, random-access reads in training workflows.
 </Card>
 </Columns>
