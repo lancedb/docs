@@ -5,11 +5,13 @@ description: "Introduction to loading data, shuffling, and creating permutations
 icon: boxes-stacked
 ---
 
-LanceDB makes an excellent data backend for training machine learning models. This section will describe the
-`Permutation` API in LanceDB that's designed to facilitate the
-process of training a model and explain how to use LanceDB as a data backend for training.
+LanceDB makes an excellent data backend for training machine learning models. While a `Table` by itself can be treated
+as input to a data loader this is typcially limited.  A `Permutation` can be created to control which rows are accessed
+and in what order.  For an even more complete solution LanceDB also provides a `StreamingDataset` which adapts the lower
+level `Permutation` API into a simple iterable dataset supporting prefetching, elastic determinism, resumability,
+and multi-threaded transformations.
 
-## Data loading
+## Basic Data loading
 
 Most model training frameworks iterate through data in batches and feed this data into the model. This process is
 often referred to as **data loading**. The simplest way to load data into a model is to iterate a LanceDB table in
@@ -29,7 +31,83 @@ for batch in table:
 
 In practice, this is too simplistic for effective training. We may not want to load all the data, or we may want
 to load the data in a different order, or we may need to apply some sort of processing to the data before training.
-To achieve this, we will often want to create a `Permutation` of the table.
+To achieve this, we can use the `StreamingDataset`.
+
+## Advanced Data Loading
+
+The `StreamingDataset` wraps a LanceDB `Table` and, by default, simply adds prefetching and transformation from
+Arrow format to Python.  However, it can be configured to handle more advanced scenarios.  To help understand we
+will consider a model trained with stochastic gradient descent (SGD) and distributed data parallelism (DDP).  In
+this example we need to load multiple GPUs, across multiple servers, with batches of data.  After each batch is
+processed the GPUs exchange weights and the next batch is loaded.  This introduces a number of concepts and we
+will use terms from PyTorch in our examples:
+
+ * World size - The world size is the number of GPUs that we are loading.  For example, if we have 2 servers and
+   each server has 4 GPUs then the world size is 8.
+ * Rank - When loading data we will create a process for each GPU.  Each process will have its own rank.  This is
+   an integer in the range `[0, world_size]`.  This is important for data loading because each rank should get its
+   own portion of the data (e.g. rank 3 and rank 4 will see different rows).
+ * Global batch size - The global batch size is the number of rows, across _all_ GPUs, that we process in each step
+   of the SGD algorithm.  For example, if we have 8 GPUs and the global batch size is 1024 then we need to load
+   128 rows onto each GPU for each step.
+ * Batch size - The batch size is the number of rows, for a single GPU, that we process in each step of the SGD
+   algorithm.  Once again, if we have 8 GPUs and the global batch size is 1024 then the batch size is 128.
+
+Other concepts (read batch size, num_workers) will be discussed later but are specific to a particular section.
+
+### Prefetching
+
+PyTorch datasets were originally built around in-memory structures like a Pandas DataFrame.  When they are iterated
+they yield a single sample at a time.  This makes sense for simple in-memory structure but if try and access a
+(potentially remote) database one row at a time the per-call overhead will typically be far too expensive.  To work
+around this the `StreamingDataset` fetches data and transforms data in batches.  The `read_batch_size` parameter
+controls how many rows we read per call to the underlying `Table`.
+
+In addition to batching up requests to the database the prefetching mechanism will read ahead in the background.
+While the first batch is being transformed and processed by the GPU a `StreamingDataset` will also be reading the
+next batch of data.  The `prefetch_batches` parameter controls how many batches of data we will read ahead.  This
+should typically be at least 2.  A larger value can provide more buffering against jittery workloads but will
+require more RAM.
+
+### Transformation
+
+Many model training workloads require a transformation step between loading the data and training the model.  For
+example, we may need to decode images, tokenize text, or normalize data.  A transformation function can be provided
+using the `transform` parameter.  Transformation can be expensive and we often want to utilize multiple CPUs to apply
+these transformations.  By default transformations will be applied with a `ThreadPoolExecutor` with a number of workers
+equal to the number of CPUs.
+
+Transformations are applied on batches of data, not individual samples, to allow transformations to amortize per-batch
+overhead.  A transformation function will receive an Arrow record batch and should return an iterable of samples (one
+sample per row).  The `StreamingDataset` does not care what format these samples take but they should match what your
+data loader expects.  For example, the default PyTorch dataloader's collation function can except a variety of different
+sample types, with a python dictionary being one of the most common.  The default transformation function converts
+the Arrow record batch into an iterable of python dictionaries without doing any processing of the data itself.
+
+#### Worker Info
+
+The thread-based transformation model that `StreamingDataset` uses by default is only effective when the transform
+function releases the GIL.  This is true for most Python scientific libraries (e.g. numpy, pandas, arrow, torchvision)
+but there are some libraries which may not do this.  Because of this limitation PyTorch supports launching multiple
+worker processes per rank (the num_workers variable in the data loader).  The `StreamingDataset` can handle this
+scenario and will call `get_worker_info` to determine the worker id and the total number of workers and will adjust
+accordingly.  However, we find this multiprocessing to be inefficient (adds pickling and transfer overhead as well
+as significantly increasing the amount of RAM required) and suggest starting with `num_workers=1` and only using 
+a higher value when you've confirmed an unavoidable GIL bottleneck.
+
+### Observability
+
+Optimizing data loader performance is tricky because it can be difficult to locate the bottleneck.  What is often
+blamed on I/O ends up being a CPU bottleneck in the transform stage (or vice versa).  To assist developers the
+`StreamingDataset` offers a number of observability controls.  The `raw_queue_depth` can be polled on a regular
+basis to determine the number of rows that have been loaded (I/O finished) but not trasnformed.  The
+`prefetch_queue_depth` can be polled to determine the number of rows that have been transformed and are waiting
+to be consumed by the GPU.  As long as these queue sizes are non-empty the GPU should be operating at capacity.
+
+If the `prefetch_queue_depth` is consistently zero but the `raw_queue_depth` is not then you have a CPU
+transformation bottleneck.  You should investigate GIL bottlenecks or look for ways to optimize your transformation.
+This can often be done by batching the compute work.  If both the `prefetch_queue_depth` and `raw_queue_depth` are
+consistently zero then you are bottlenecked by I/O.
 
 ## Selecting rows
 
@@ -45,7 +123,7 @@ a separate permutation table.
 <Note>
 Permutation tables are tables, just like any other table in LanceDB. By default, they are
 stored in memory but they can be persisted to storage as well. This is useful when you want to share a permutation
-table across processes or nodes.
+table across processes or nodes.  A permutation can also be pickled to support multiprocessing scenarios.
 </Note>
 
 ## Selecting all rows
