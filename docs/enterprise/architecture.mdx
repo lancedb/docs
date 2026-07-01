@@ -81,7 +81,7 @@ A [remote table](/tables-and-namespaces#understanding-tables) is the user-facing
 
 This is why Enterprise feels familiar at the API level while operationally behaving differently. Your application still issues table operations and queries, but it is no longer coupled to a local storage path or a single host. Instead, the cluster takes responsibility for execution, coordination, and background upkeep. In SDK terms, `open_table(...)` returns a `RemoteTable`. Architecturally, a remote table is the bridge between the client-facing API and the storage-backed system behind it.
 
-This design makes LanceDB Enterprise suitable for catalog-backed layouts, see [Namespaces and the Catalog Model](/namespaces) for more details. For the basic application flow, see the [Enterprise quickstart](/enterprise/quickstart).
+This design makes LanceDB Enterprise suitable for catalog-backed layouts, see [Namespaces and the Catalog Model](/namespaces) for more details. For the basic application flow, see the shared [quickstart](/quickstart).
 
 ## Read path
 
