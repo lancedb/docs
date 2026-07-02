@@ -115,7 +115,9 @@ the Arrow record batch into an iterable of python dictionaries without doing any
 import pyarrow as pa
 
 def normalize(batch: pa.RecordBatch) -> list[dict]:
-    """Scale pixel values from [0, 255] to [0.0, 1.0]."""
+    # This pure-Python loop holds the GIL and is shown for illustration only.
+    # In practice, prefer a library like torchvision or numpy that releases the
+    # GIL so the ThreadPoolExecutor can run transforms in parallel.
     rows = batch.to_pylist()
     for row in rows:
         row["image"] = [v / 255.0 for v in row["image"]]
@@ -194,8 +196,8 @@ ids that match the filter, then divide the matching row ids into splits for load
 ds = StreamingDataset(
     table,
     shuffle_seed=42,
-    columns=["image", "label"],    # skip all other columns
-    filter="split = 'train'",      # only training rows
+    columns=["image", "label"],       # skip all other columns
+    filter="category = 'train'",      # only training rows
 )
 ```
 </CodeGroup>
