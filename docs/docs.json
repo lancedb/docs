@@ -268,6 +268,7 @@
               },
               {
                 "group": "Data Platforms & Frameworks",
+                "expanded": true,
                 "pages": [
                   "integrations/data/pydantic",
                   "integrations/data/duckdb",
@@ -279,8 +280,10 @@
               },
               {
                 "group": "AI Platforms & Frameworks",
+                "expanded": true,
                 "pages": [
                   "integrations/ai/agno",
+                  "integrations/ai/hermes-agent",
                   "integrations/ai/huggingface",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
