@@ -12,7 +12,9 @@ use arrow_array::{
 use arrow_schema::{DataType, Field, Schema};
 use lancedb::connect;
 use lancedb::database::CreateTableMode;
-use lancedb::table::{ColumnAlteration, Duration, NewColumnTransform, OptimizeAction};
+use lancedb::table::{
+    ColumnAlteration, Duration, FieldMetadataUpdate, NewColumnTransform, OptimizeAction,
+};
 
 // --8<-- [start:update_make_users_reader]
 fn make_users_reader(
@@ -792,6 +794,56 @@ async fn main() {
         .unwrap();
     // --8<-- [end:alter_vector_column]
     assert_eq!(vector_table.count_rows(None).await.unwrap(), 1);
+
+    let field_metadata_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("category", DataType::Utf8, false),
+    ]));
+    let field_metadata_batch = RecordBatch::try_new(
+        field_metadata_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![0, 1])),
+            Arc::new(StringArray::from(vec!["a", "b"])),
+        ],
+    )
+    .unwrap();
+    let field_metadata_reader: Box<dyn RecordBatchReader + Send> = Box::new(
+        RecordBatchIterator::new(vec![Ok(field_metadata_batch)].into_iter(), field_metadata_schema),
+    );
+    let field_metadata_table = db
+        .create_table("schema_field_metadata_example", field_metadata_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    // --8<-- [start:schema_field_metadata_merge]
+    // Set two metadata keys on the `category` field.
+    let res = field_metadata_table
+        .update_field_metadata(&[FieldMetadataUpdate::new("category")
+            .set("unit", "label")
+            .set("pii", "false")])
+        .await
+        .unwrap();
+    println!("version: {}", res.version);
+
+    // Merge: add a new key, delete one with `.remove`, keep the rest.
+    field_metadata_table
+        .update_field_metadata(&[FieldMetadataUpdate::new("category")
+            .set("source", "import")
+            .remove("pii")])
+        .await
+        .unwrap();
+    // --8<-- [end:schema_field_metadata_merge]
+
+    // --8<-- [start:schema_field_metadata_replace]
+    field_metadata_table
+        .update_field_metadata(&[FieldMetadataUpdate::new("category")
+            .set("owner", "search-team")
+            .replace()])
+        .await
+        .unwrap();
+    // --8<-- [end:schema_field_metadata_replace]
 
     // --8<-- [start:update_example_table_setup]
     let table = db
