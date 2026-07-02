@@ -16,7 +16,9 @@ On hybrid queries, the same `where(...)` filter is applied to both the vector an
 
 ## Chaining `where` clauses
 
-You can call `where(...)` (Python and TypeScript) or `only_if(...)` (Rust) more than once on the same query builder. Each additional filter is combined with the previous one using logical `AND`, so `where("a > 0").where("b < 10")` is equivalent to `where("(a > 0) AND (b < 10)")`. This lets you compose filters incrementally — for example, applying a shared base predicate in a helper and then adding a per-call predicate at the query site.
+Starting in LanceDB Python `0.34.0` and LanceDB Rust/TypeScript `0.31.0`, you can call `where(...)` (Python and TypeScript) or `only_if(...)` (Rust) more than once on the same query builder. Each additional filter is combined with the previous one using logical `AND`, so `where("a > 0").where("b < 10")` is equivalent to `where("(a > 0) AND (b < 10)")`.
+
+For a fixed predicate, writing one `where(...)` clause with `AND` is just as valid and often clearer. Chaining is mainly useful when code composes filters incrementally, such as applying a shared base predicate in a helper and then adding a per-call predicate at the query site.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -42,7 +44,7 @@ const result = await table
 </CodeGroup>
 
 <Warning>
-In LanceDB releases before this behavior shipped, a second `where(...)` call silently replaced the first filter, so only the last predicate was applied. If you are upgrading from an older release and previously relied on that behavior, review any code that chains `where(...)` and drop the earlier calls you no longer want to apply.
+In Python versions before `0.34.0` and Rust/TypeScript versions before `0.31.0`, a second `where(...)` or `only_if(...)` call replaced the first filter, so only the last predicate was applied. If your code needs to run on those older clients, write a single predicate with `AND` instead of chaining calls. When upgrading, review any existing chained filters and drop earlier calls you no longer want to apply.
 </Warning>
 
 ## Example: Metadata Filtering
