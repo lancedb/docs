@@ -49,6 +49,7 @@
                   "enterprise/index",
                   "enterprise/architecture",
                   "enterprise/security",
+                  "enterprise/authentication",
                   "enterprise/benchmarks",
                   {
                     "group": "Deployment",
