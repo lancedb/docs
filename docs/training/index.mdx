@@ -174,3 +174,12 @@ models.  However, we must also be able to checkpoint the data loader so that we 
 To support this the streaming dataset provides the `state_dict` and `load_state_dict` methods so that you can save and
 load the state of the data loader.  These methods should be called by your training framework when you want to save or
 load a checkpoint.  The `state_dict` method returns a simple python dictionary that can easily be persisted.
+
+## Permutations
+
+In some more complicated scenarios, you may want to flexibility of the `StreamingDataset` to shuffle, split, and select
+data while not buying into the full behavior of the iterable dataset.  In these cases you can use the `Permutation`
+class.  This is a lower level class which the `StreamingDataset` is built on top of.  A `Permutation` can be used to
+define a custom ordering of the data.  You can then index into the `Permutation` using the `__getitems__` method to
+access rows by their ordering in the `Permutation`.  More details on the `Permutation` class can be found in the API
+reference.
