@@ -26,7 +26,7 @@ visibility.
 
 ### 1. 100B+ row scale
 
-LanceDB Enterprise is built for demanding workloads that exceed the capabilities of a single machine, whether that's extremely large data volumes or a high number of concurrent queries. Instead of asking your
+LanceDB Enterprise is built for demanding workloads that exceed the capabilities of a single machine, whether from extremely large data volumes or a high number of concurrent queries. Instead of asking your
 application to own caching, query scaling, and maintenance, Enterprise turns those into **platform** capabilities.
 
 This matters when your AI application moves past a prototype and starts serving real users, larger datasets, and
@@ -133,6 +133,68 @@ your account. The managed option hands day-to-day operations to the vendor, incl
 monitoring. Both enterprise modes are designed for private networking, compliance, and operational oversight.
 
 Read More: [LanceDB Enterprise Deployment](/enterprise/deployment/)
+
+## Usage differences between Enterprise and OSS
+
+The [quickstart](/quickstart) guide shows both local embedded connections and Enterprise `db://...`
+connections. Once connected to LanceDB, the table API is largely the same: create a table, search,
+filter, evolve the schema, and store multimodal records. However, there are some semantic differences
+worth understanding when your code is talking to LanceDB Enterprise.
+
+### 1. Connection model
+
+In LanceDB Enterprise, your app connects via a `db://...` URI and sends requests to the cluster API.
+The cluster executes table operations on your behalf. Your code is coupled to a **managed service endpoint**,
+whereas embedded LanceDB is directly coupled to local or object-storage paths.
+
+### 2. Returned table type
+
+Connecting to an Enterprise table via `open_table(...)` returns a `RemoteTable`, unlike embedded LanceDB,
+which returns a `LanceTable`. `RemoteTable` is a catalog-backed table accessed through a server/cluster,
+and does not support all the same methods as `LanceTable` (see below).
+
+### 3. Materialization APIs
+
+For Python users working with LanceDB Enterprise, `RemoteTable` does not support table-level
+materialization methods like `table.to_arrow()` or `table.to_pandas()`. This protects users from
+accidentally materializing tables that are too large to fit in memory.
+
+Instead, materialize results through query/search builders, for example
+`table.search(...).limit(...).to_pandas()` or `table.query(...).to_arrow()`. For quick previews, use
+`table.head()`.
+
+### 4. Maintenance lifecycle
+
+In Enterprise, maintenance operations like `optimize` and `compact_files` are handled by the cluster
+as background work. You can trigger them manually, but they are not required for performance or
+correctness in the same way they are in embedded LanceDB.
+
+That means maintenance is managed by platform behavior and cluster configuration, not by explicit
+per-table maintenance calls in your application code.
+
+### 5. Guardrails and limits
+
+Enterprise can enforce platform-level guardrails, such as index/table limits and safety checks around
+operations like `merge_insert` when too many rows are unindexed. Embedded LanceDB mostly exposes
+storage/format-level behavior, and you tune many lifecycle tasks yourself.
+
+This means an operation in LanceDB Enterprise can fail due to service-level policy, not just because
+of local table shape or schema mismatch.
+
+### 6. Cluster-managed background work
+
+In Enterprise, async writes and reindexing workflows are handled by cluster background systems. In
+embedded LanceDB, if you want ongoing upkeep, you usually schedule and run it yourself in your
+application or jobs.
+
+In practice, your app issues table operations, and the platform handles distributed orchestration for
+maintenance and indexing in the background.
+
+<Info>
+As a rule of thumb, all you need to remember is this: treat `db://...` as a remote service boundary,
+use query builders to fetch results, and otherwise interact with your tables as you would in embedded
+LanceDB.
+</Info>
 
 ## Which one should I use?
 
