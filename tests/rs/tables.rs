@@ -1322,4 +1322,61 @@ async fn main() {
     let remaining = tags.list().await.unwrap();
     assert!(remaining.contains_key("baseline"));
     assert!(!remaining.contains_key("with-edits"));
+
+    // Setup: a fresh quotes table to demonstrate branches on.
+    let branches_table = db
+        .create_table(
+            "quotes_branches_example",
+            make_quotes_reader(vec![
+                (1, "Lancelot", "My lance never fails."),
+                (2, "Arthur", "Long live Camelot!"),
+                (3, "Merlin", "Magic always has a price."),
+            ]),
+        )
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    // --8<-- [start:branches]
+    use lancedb::table::Ref;
+
+    // Fork an isolated, writable branch from main's latest version.
+    // The returned handle is scoped to the branch; writes on it do not
+    // affect main.
+    let branch = branches_table
+        .create_branch("exp", Ref::Version(None, None))
+        .await
+        .unwrap();
+    branch
+        .add(make_quotes_reader(vec![(4, "Lancelot", "For the realm!")]))
+        .execute()
+        .await
+        .unwrap();
+    let branch_rows = branch.count_rows(None).await.unwrap();
+    let main_rows = branches_table.count_rows(None).await.unwrap();
+    println!("Branch rows: {}", branch_rows); // 4
+    println!("Main rows: {}", main_rows); // 3; main is untouched
+
+    // List all branches, mapping name to branch metadata.
+    let all_branches = branches_table.list_branches().await.unwrap();
+    println!("Branches: {:?}", all_branches);
+
+    // Reopen the branch later by name, or open it directly via the builder.
+    let checked_out = branches_table.checkout_branch("exp").await.unwrap();
+    let opened = db
+        .open_table("quotes_branches_example")
+        .branch("exp")
+        .execute()
+        .await
+        .unwrap();
+    let checked_out_rows = checked_out.count_rows(None).await.unwrap();
+    let opened_rows = opened.count_rows(None).await.unwrap();
+    println!("Reopened rows: {}, {}", checked_out_rows, opened_rows); // both 4
+
+    // Delete a branch when you're done with it.
+    branches_table.delete_branch("exp").await.unwrap();
+    // --8<-- [end:branches]
+    assert_eq!(branches_table.count_rows(None).await.unwrap(), 3);
+    assert!(!branches_table.list_branches().await.unwrap().contains_key("exp"));
 }

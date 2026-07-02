@@ -1362,6 +1362,58 @@ def test_versioning_tags(tmp_db):
 
 
 # ============================================================================
+# Branches Examples
+# ============================================================================
+
+
+def test_branches(tmp_db):
+    import pyarrow as pa
+
+    db = tmp_db
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            pa.field("author", pa.string()),
+            pa.field("quote", pa.string()),
+        ]
+    )
+    table = db.create_table(
+        "quotes_branches_example",
+        [
+            {"id": 1, "author": "Lancelot", "quote": "My lance never fails."},
+            {"id": 2, "author": "Arthur", "quote": "Long live Camelot!"},
+            {"id": 3, "author": "Merlin", "quote": "Magic always has a price."},
+        ],
+        schema=schema,
+        mode="overwrite",
+    )
+
+    # --8<-- [start:branches]
+    # Fork an isolated, writable branch from main's latest version.
+    # The returned handle is scoped to the branch; writes on it do not
+    # affect main.
+    branch = table.branches.create("exp")
+    branch.add([{"id": 4, "author": "Lancelot", "quote": "For the realm!"}])
+    print(branch.count_rows())  # 4 rows on the branch
+    print(table.count_rows())  # 3 rows; main is untouched
+
+    # List all branches, mapping name to branch metadata.
+    print(table.branches.list())
+
+    # Reopen the branch later by name, or open it directly from the
+    # database connection.
+    checked_out = table.branches.checkout("exp")
+    branch_handle = db.open_table("quotes_branches_example", branch="exp")
+    print(checked_out.count_rows(), branch_handle.count_rows())  # both 4
+
+    # Delete a branch when you're done with it.
+    table.branches.delete("exp")
+    # --8<-- [end:branches]
+    assert table.count_rows() == 3
+    assert "exp" not in table.branches.list()
+
+
+# ============================================================================
 # Consistency Examples
 # ============================================================================
 

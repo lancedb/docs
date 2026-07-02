@@ -849,6 +849,52 @@ test("versioning snippets (async)", async () => {
   });
 });
 
+test("branch snippets (async)", async () => {
+  await withTempDirectory(async (databaseDir) => {
+    const db = await lancedb.connect(databaseDir);
+    const table = await db.createTable(
+      "quotes_branches_example",
+      [
+        { id: 1, author: "Lancelot", quote: "My lance never fails." },
+        { id: 2, author: "Arthur", quote: "Long live Camelot!" },
+        { id: 3, author: "Merlin", quote: "Magic always has a price." },
+      ],
+      { mode: "overwrite" },
+    );
+
+    // --8<-- [start:branches]
+    const branches = await table.branches();
+
+    // Fork an isolated, writable branch from main's latest version.
+    // The returned handle is scoped to the branch; writes on it do not
+    // affect main.
+    const branch = await branches.create("exp");
+    await branch.add([{ id: 4, author: "Lancelot", quote: "For the realm!" }]);
+    console.log(await branch.countRows()); // 4 rows on the branch
+    console.log(await table.countRows()); // 3 rows; main is untouched
+
+    // List all branches, mapping name to branch metadata.
+    console.log(await branches.list());
+
+    // Reopen the branch later by name, or open it directly from the
+    // database connection.
+    const checkedOut = await branches.checkout("exp");
+    const branchHandle = await db.openTable(
+      "quotes_branches_example",
+      undefined,
+      { branch: "exp" },
+    );
+    console.log(await checkedOut.countRows()); // 4
+    console.log(await branchHandle.countRows()); // 4
+
+    // Delete a branch when you're done with it.
+    await branches.delete("exp");
+    // --8<-- [end:branches]
+    expect(await table.countRows()).toBe(3);
+    expect(await branches.list()).not.toHaveProperty("exp");
+  });
+});
+
 test("consistency snippets (async)", async () => {
   await withTempDirectory(async (databaseDir) => {
     // --8<-- [start:consistency_strong]
