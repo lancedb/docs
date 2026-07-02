@@ -43,11 +43,11 @@ dataloader = torch.utils.data.DataLoader(permutation)
 
 ## Output Formats
 
-By default, a `Table` data loader will emit Arrow data. PyTorch calls the `collate_fn` argument to turn the fetched
-items into one batch. Its default collate function only knows how to combine tensors, NumPy arrays, numbers, dicts, and
-lists, so it does not accept Arrow data directly. Direct `Table` data loaders should provide a custom collate function
-such as `lancedb.util.tbl_to_tensor`, which converts numeric Arrow columns into a column-major `torch.Tensor` with shape
-`(columns, rows)`.
+By default, a `Table` data loader will emit Arrow data. `collate_fn` is PyTorch's batching hook: PyTorch calls it to
+turn the fetched items into one batch. PyTorch's default collate function only knows how to combine tensors, NumPy
+arrays, numbers, dicts, and lists, so it does not accept Arrow data directly. When using a `Table` directly, pass
+LanceDB's `lancedb.util.tbl_to_tensor` helper as PyTorch's `collate_fn`; it converts numeric Arrow columns into a
+column-major `torch.Tensor` with shape `(columns, rows)`.
 
 `Permutation` works differently: its default output is a list of Python dicts, which PyTorch's default collate function
 can batch into a dict of tensors. This is usually more convenient when you are getting started. However, there is a
