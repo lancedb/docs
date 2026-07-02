@@ -1,7 +1,7 @@
 ---
 title: "Hermes Agent"
 sidebarTitle: "Hermes Agent"
-description: "Use LanceDB as a persistent, semantic memory backend for Hermes Agent — durable recall across sessions with vector and hybrid search."
+description: "Use LanceDB as a persistent, semantic memory backend for Hermes Agent. Get durable recall across sessions with vector and hybrid search."
 ---
 
 [Hermes Agent](https://github.com/NousResearch/hermes-agent) is a self-hosted, open-source
@@ -15,8 +15,12 @@ convention once, and the agent can retrieve it weeks later in a brand-new sessio
 you ask for it in completely different words. Everything runs inside Hermes' own Python
 process, storing a single LanceDB table on local disk. There's no memory server to operate.
 
-The mental model is clean: **Hermes owns the agent loop; LanceDB manages the durable
-long-term memory and offers semantic recall.**
+<Info>
+**The mental model is clean**
+
+- Hermes owns the agent loop
+- LanceDB manages the durable long-term memory and offers semantic recall.
+</Info>
 
 ## Why LanceDB fits agent memory
 
@@ -127,10 +131,12 @@ Beyond these tools, the plugin also captures durable facts from your conversatio
 automatically — an auxiliary model distills them before context is compressed and again when a
 session ends, so insights survive even when the raw messages are summarized away.
 
-## Walkthrough: teach it a project convention
+## Walkthrough
 
-Let's make this concrete with the pain we opened on: re-explaining your setup every session.
-We'll save a convention once, then prove a brand-new session can recall it — touching all four
+"_Teach it your project preferences_"
+
+Let's make this concrete with the pain we opened on: re-explaining your setup to the agent every session.
+We'll save a convention once and then prove a brand-new session can recall it. This example will touch all four
 tools along the way.
 
 ### Remember
@@ -308,7 +314,7 @@ per-question-type breakdown, and a reproducible harness, see the
 
 ## Why this works well
 
-- **It's local-first and embedded.** The memory table lives on your disk with no server to run;
+- **It's local-first and embedded.** The LanceDB memory table lives on your disk with no server to run;
   the plugin installs as a dependency of Hermes' own environment.
 - **Recall survives paraphrasing.** Semantic search matches meaning, not spelling, which is the
   failure mode that sinks keyword-only session search.
