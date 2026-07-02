@@ -17,13 +17,14 @@ The `Table` class in LanceDB implements a contract for a PyTorch
 import lancedb
 import torch
 import pyarrow as pa
+from lancedb.util import tbl_to_tensor
 
 mem_db = lancedb.connect("memory://")
 table = mem_db.create_table("test_table", pa.table({"a": range(1000)}))
 
 # Any LanceDB table can be used as a PyTorch Dataset
 dataloader = torch.utils.data.DataLoader(
-    table, batch_size=1024, shuffle=True
+    table, batch_size=1024, shuffle=True, collate_fn=tbl_to_tensor
 )
 
 for batch in dataloader:
@@ -42,12 +43,17 @@ dataloader = torch.utils.data.DataLoader(permutation)
 
 ## Output Formats
 
-By default, a `Table` data loader will emit a `pyarrow.RecordBatch`.  To convert to a different format (such as a
-`pytorch.Tensor`), you will need to provide a custom collate function.
+By default, a `Table` data loader will emit Arrow data. PyTorch calls the `collate_fn` argument to turn the fetched
+items into one batch. Its default collate function only knows how to combine tensors, NumPy arrays, numbers, dicts, and
+lists, so it does not accept Arrow data directly. Direct `Table` data loaders should provide a custom collate function
+such as `lancedb.util.tbl_to_tensor`, which converts numeric Arrow columns into a column-major `torch.Tensor` with shape
+`(columns, rows)`.
 
-The `Permutation` class is more flexible.  By default, the output will be a list of dicts.  This is the default output
-format of standard data loaders and usually more convenient when you are getting started.  However, there is a
-significant performance penalty converting from Arrow, Lance's internal representation, to this default format.
+`Permutation` works differently: its default output is a list of Python dicts, which PyTorch's default collate function
+can batch into a dict of tensors. This is usually more convenient when you are getting started. However, there is a
+significant performance penalty converting from Arrow, Lance's internal representation, to this default format. Use a
+direct `Table` with `collate_fn` when you want Arrow-to-tensor conversion, or a `Permutation` when you want the default
+PyTorch dict-of-tensors behavior.
 
 To address this, the `Permutation` class provides a set of builtin transform functions that can be applied to map
 the Arrow data in different ways.  The `arrow` and `polars` formats will always avoid data copies.  However, `numpy`,
@@ -125,6 +131,7 @@ Remote LanceDB Enterprise tables (`db://...`) work the same way: workers reopen 
 ```py Python icon=Python 
 import lancedb
 import torch
+from lancedb.util import tbl_to_tensor
 
 db = lancedb.connect(
     "db://my-database",
@@ -138,6 +145,7 @@ dataloader = torch.utils.data.DataLoader(
     batch_size=512,
     num_workers=4,
     multiprocessing_context="spawn",
+    collate_fn=tbl_to_tensor,
 )
 ```
 
