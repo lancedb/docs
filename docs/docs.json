@@ -277,6 +277,7 @@
                 "group": "AI Platforms & Frameworks",
                 "pages": [
                   "integrations/ai/agno",
+                  "integrations/ai/hermes-agent",
                   "integrations/ai/huggingface",
                   "integrations/ai/langchain",
                   "integrations/ai/llamaIndex",
