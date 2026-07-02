@@ -33,6 +33,21 @@ In practice, this is too simplistic for effective training. We may not want to l
 to load the data in a different order, or we may need to apply some sort of processing to the data before training.
 To achieve this, we can use the `StreamingDataset`.
 
+<CodeGroup>
+```py Python icon=Python
+from lancedb.streaming import StreamingDataset
+import lancedb
+
+db = lancedb.connect("file://some/db/path")
+table = db.open_table("some_table")
+
+ds = StreamingDataset(table, shuffle_seed=42)
+for sample in ds:
+    # sample is a plain Python dict, e.g. {"feature": 0.82, "label": "cat"}
+    train_step(sample)
+```
+</CodeGroup>
+
 ## Advanced Data Loading
 
 The `StreamingDataset` wraps a LanceDB `Table` and, by default, simply adds prefetching and transformation from
@@ -45,7 +60,7 @@ will use terms from PyTorch in our examples:
  * World size - The world size is the number of GPUs that we are loading.  For example, if we have 2 servers and
    each server has 4 GPUs then the world size is 8.
  * Rank - When loading data we will create a process for each GPU.  Each process will have its own rank.  This is
-   an integer in the range `[0, world_size]`.  This is important for data loading because each rank should get its
+   an integer in the range `[0, world_size)`.  This is important for data loading because each rank should get its
    own portion of the data (e.g. rank 3 and rank 4 will see different rows).
  * Global batch size - The global batch size is the number of rows, across _all_ GPUs, that we process in each step
    of the SGD algorithm.  For example, if we have 8 GPUs and the global batch size is 1024 then we need to load
@@ -69,6 +84,17 @@ next batch of data.  The `prefetch_batches` parameter controls how many batches 
 should typically be at least 2.  A larger value can provide more buffering against jittery workloads but will
 require more RAM.
 
+<CodeGroup>
+```py Python icon=Python
+ds = StreamingDataset(
+    table,
+    shuffle_seed=42,
+    read_batch_size=256,   # rows fetched per LanceDB call per split
+    prefetch_batches=8,    # batches to keep in flight per split
+)
+```
+</CodeGroup>
+
 ### Transformation
 
 Many model training workloads require a transformation step between loading the data and training the model.  For
@@ -83,6 +109,21 @@ sample per row).  The `StreamingDataset` does not care what format these samples
 data loader expects.  For example, the default PyTorch dataloader's collation function can except a variety of different
 sample types, with a python dictionary being one of the most common.  The default transformation function converts
 the Arrow record batch into an iterable of python dictionaries without doing any processing of the data itself.
+
+<CodeGroup>
+```py Python icon=Python
+import pyarrow as pa
+
+def normalize(batch: pa.RecordBatch) -> list[dict]:
+    """Scale pixel values from [0, 255] to [0.0, 1.0]."""
+    rows = batch.to_pylist()
+    for row in rows:
+        row["image"] = [v / 255.0 for v in row["image"]]
+    return rows
+
+ds = StreamingDataset(table, shuffle_seed=42, transform=normalize)
+```
+</CodeGroup>
 
 #### Worker Info
 
@@ -110,6 +151,32 @@ This can often be done by batching the compute work.  If both the `prefetch_queu
 consistently zero then you are bottlenecked by I/O.  A larger read batch size or clumped shuffling could help to
 reduce the I/O bottleneck.
 
+<CodeGroup>
+```py Python icon=Python
+import threading, time
+
+ds = StreamingDataset(table, shuffle_seed=42)
+
+def log_pipeline_health():
+    while True:
+        print(
+            f"unscanned={ds.unscanned_rows} "
+            f"raw={ds.raw_queue_depth} "
+            f"cooked={ds.prefetch_queue_depth} "
+            f"consumed={ds.consumed_rows}"
+        )
+        time.sleep(1.0)
+
+monitor = threading.Thread(target=log_pipeline_health, daemon=True)
+monitor.start()
+
+for sample in ds:
+    train_step(sample)
+
+print(f"fetch time: {ds.fetch_time:.2f}s  transform time: {ds.transform_time:.2f}s")
+```
+</CodeGroup>
+
 ### Filtering data
 
 By default the streaming dataset will load all rows and all columns.  LanceDB is a columnar database that also
@@ -121,6 +188,17 @@ cache.
 You can use the `columns` parameter to specify which columns to load.  You can use the `filter` parameter to
 specify which rows to load.  Filtered rows are not loaded from storage.  LanceDB will first calculate the row
 ids that match the filter, then divide the matching row ids into splits for loading.
+
+<CodeGroup>
+```py Python icon=Python
+ds = StreamingDataset(
+    table,
+    shuffle_seed=42,
+    columns=["image", "label"],    # skip all other columns
+    filter="split = 'train'",      # only training rows
+)
+```
+</CodeGroup>
 
 ### Shuffling rows
 
@@ -134,6 +212,25 @@ will ensure that each epoch has a different ordering.  If you wish for all epoch
 you can set the `epoch` parameter to `0` (it is only used to determine the shuffle seed).  If you do not want
 to provide a `shuffle_seed` then you can set it to `None` and a random seed will be used instead.
 
+<CodeGroup>
+```py Python icon=Python
+# Training loop: each epoch gets a different shuffled ordering
+for epoch in range(num_epochs):
+    ds = StreamingDataset(
+        table,
+        shuffle_seed=42,
+        epoch=epoch,       # changes the permutation each epoch
+    )
+    for sample in ds:
+        train_step(sample)
+
+# Evaluation: deterministic sequential order, no shuffle
+eval_ds = StreamingDataset(table, shuffle=False)
+for sample in eval_ds:
+    eval_step(sample)
+```
+</CodeGroup>
+
 <Note>
 Shuffling can have significant impacts on I/O performance, especially if you are loading data from cloud storage.
 In many cases the GPU pipeline is slow enough that this penalty will not be noticeable.  However,
@@ -141,6 +238,18 @@ you can use the `shuffle_clump_size` parameter to shuffle the data in clumps (sm
 shuffled together).  This will give some penalty to the randomness of the shuffle, but will significantly improve
 I/O performance.
 </Note>
+
+<CodeGroup>
+```py Python icon=Python
+# Clumped shuffle: groups of 16 contiguous rows are shuffled together,
+# preserving read locality while still randomising the global ordering.
+ds = StreamingDataset(
+    table,
+    shuffle_seed=42,
+    shuffle_clump_size=16,
+)
+```
+</CodeGroup>
 
 ### Data splits and elasticity
 
@@ -166,6 +275,30 @@ both 8 and 6.  For example, we could choose `num_splits=24`.  Good choices for `
 numbers like 48 (allows for 1, 2, 3, 4, 6, 8, 12, 16, 24, and 48 GPUs) and 60 (allows for 1, 2, 3, 4, 5, 6, 10,
 12, 15, 20, 30, 40, and 60 GPUs).
 
+<CodeGroup>
+```py Python icon=Python
+import torch.distributed as dist
+
+dist.init_process_group("nccl")
+rank = dist.get_rank()
+world_size = dist.get_world_size()
+
+# num_splits=48 is divisible by 1, 2, 3, 4, 6, 8, 12, 16, 24, 48
+# so this dataset works unchanged as you scale up or down GPUs.
+ds = StreamingDataset(
+    table,
+    num_splits=48,
+    shuffle_seed=42,
+    epoch=current_epoch,
+    rank=rank,
+    world_size=world_size,
+)
+
+for sample in ds:
+    train_step(sample)
+```
+</CodeGroup>
+
 ### Checkpointing and resumability
 
 Model training is an expensive process and failures can often occur partway through.  Checkpointing allows you to save
@@ -174,6 +307,33 @@ models.  However, we must also be able to checkpoint the data loader so that we 
 To support this the streaming dataset provides the `state_dict` and `load_state_dict` methods so that you can save and
 load the state of the data loader.  These methods should be called by your training framework when you want to save or
 load a checkpoint.  The `state_dict` method returns a simple python dictionary that can easily be persisted.
+
+<CodeGroup>
+```py Python icon=Python
+import torch
+
+ds = StreamingDataset(table, num_splits=48, shuffle_seed=42, rank=rank, world_size=world_size)
+
+for step, sample in enumerate(ds):
+    train_step(sample)
+
+    if step % checkpoint_interval == 0:
+        torch.save(
+            {"model": model.state_dict(), "dataloader": ds.state_dict()},
+            f"checkpoint_{step}.pt",
+        )
+
+# --- resuming after a crash ---
+checkpoint = torch.load("checkpoint_100.pt")
+model.load_state_dict(checkpoint["model"])
+
+ds = StreamingDataset(table, num_splits=48, shuffle_seed=42, rank=rank, world_size=world_size)
+ds.load_state_dict(checkpoint["dataloader"])
+
+for sample in ds:   # continues from step 100, no repeated or skipped rows
+    train_step(sample)
+```
+</CodeGroup>
 
 ## Permutations
 
