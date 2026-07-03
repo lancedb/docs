@@ -1,0 +1,282 @@
+---
+title: "Branches"
+sidebarTitle: "Branches"
+description: "Fork isolated, writable lines of table history in LanceDB. Run experiments, backfills, and index rebuilds without disturbing production reads on main."
+icon: "code-branch"
+---
+import {
+    PyConnect,
+    TsConnect,
+    RsConnect,
+    PyConnectEnterpriseQuickstart,
+    TsConnectEnterpriseQuickstart,
+    RsConnectEnterpriseQuickstart,
+} from '/snippets/connection.mdx';
+import {
+    PyBranchCreate as BranchCreate,
+    TsBranchCreate,
+    RsBranchCreate,
+    PyBranchWrite as BranchWrite,
+    TsBranchWrite,
+    RsBranchWrite,
+    PyBranchReopen as BranchReopen,
+    TsBranchReopen,
+    RsBranchReopen,
+    PyBranchDelete as BranchDelete,
+    TsBranchDelete,
+    RsBranchDelete,
+    PyBranchPromote as BranchPromote,
+    TsBranchPromote,
+    RsBranchPromote,
+    PyBranchIndex as BranchIndex,
+    TsBranchIndex,
+    RsBranchIndex,
+} from '/snippets/tables.mdx';
+
+A branch is an isolated, writable line of history forked from `main` (or from any
+other branch). Anything you do on a branch (e.g., adding rows, changing the schema,
+building an index) stays on that branch, so `main` keeps serving production
+reads exactly as before. Branches are a natural fit when you want to:
+
+- Experiment with a new index, schema change, or reprocessing step without
+  affecting live queries on `main`.
+- Run a backfill or migration you'd like to review before promoting it.
+- Hand a collaborator a frozen point-in-time fork while you keep writing to `main`.
+
+## How branches relate to versions and tags
+
+Every LanceDB table already tracks a linear history of [versions](/tables/versioning),
+and you can [tag](/tables/versioning#tag-based-versioning) a version or `checkout`
+one to read it. Branches add the missing piece: a *separate, writable* line of
+history. Where a tag is a read-only label and `checkout` is a read-only view, a
+branch forks from a point in history and then evolves on its own. Creating or
+checking out a branch hands you a new table handle whose reads and writes are
+scoped to that branch. The [comparison table](#branches-vs-tags-vs-checkout) at
+the end of this page lays out when to reach for each.
+
+<Note>
+Branches are supported on local and namespace-backed tables in LanceDB OSS, as
+well as on LanceDB Enterprise (remote) tables.
+</Note>
+
+## Connect to a table
+
+The branch API is identical no matter how you connect — only the connection
+itself differs between OSS and Enterprise. Establish a connection (`db`) and open
+a `table` (see [Create a table](/tables/create)), then use the same branch calls
+in every example that follows.
+
+### LanceDB OSS
+
+Point LanceDB at a local directory (or an object-storage URI) to use it as an
+embedded library.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyConnect}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnect}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    { "use lancedb::connect;\n\n" }
+    {RsConnect}
+    </CodeBlock>
+</CodeGroup>
+
+### LanceDB Enterprise
+
+<Badge color="red">Enterprise</Badge>
+
+Branching on LanceDB Enterprise works the same way as on OSS, but you connect to your
+Enterprise deployment with a `db://` URI, an API key, and your
+region. Once you have a connection, open a table and use the same branch calls in
+every example that follows.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyConnectEnterpriseQuickstart}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnectEnterpriseQuickstart}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsConnectEnterpriseQuickstart}
+    </CodeBlock>
+</CodeGroup>
+
+## Work with branches
+
+The lifecycle of a branch is short and predictable: fork it, write to it, reopen
+it whenever you need it, and delete it once you're done. The examples below use a
+small `quotes` table with three rows on `main`.
+
+### Create a branch
+
+Forking from `main` returns a table handle scoped to the new branch. `main` is
+the reserved default source, so `create` needs only a name; to fork from
+somewhere else, pass a branch name, a specific version, or both.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BranchCreate}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranchCreate}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranchCreate}
+    </CodeBlock>
+</CodeGroup>
+
+### Write to a branch
+
+Writes go through the branch handle and stay there — the `main` handle keeps
+reporting its original row count. Listing branches returns a mapping of each
+branch name to its metadata, including the version it was forked from.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BranchWrite}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranchWrite}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranchWrite}
+    </CodeBlock>
+</CodeGroup>
+
+### Reopen a branch
+
+A branch outlives the handle that created it. Reopen it later by name — either
+from an existing table handle or straight from the connection when you open the
+table. Both routes give you a writable handle tracking the branch's latest state.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BranchReopen}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranchReopen}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranchReopen}
+    </CodeBlock>
+</CodeGroup>
+
+### Delete a branch
+
+Deleting a branch removes it and its branch-local history; `main` is untouched.
+Delete a branch only once you've promoted anything worth keeping — see
+[Merging a branch into `main`](#merging-a-branch-into-main) below.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BranchDelete}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranchDelete}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranchDelete}
+    </CodeBlock>
+</CodeGroup>
+
+## Merge a branch into `main`
+
+<Warning>
+LanceDB doesn't yet support an automatic merge of a branch into `main`, with full conflict-handling.
+There's no single `merge()` call that reconciles the two histories for you.
+</Warning>
+
+Until full merge support is available, you can promote a branch the same way any other data lands in a table: by
+running an ingestion workload against `main`. The only real question is how each
+branch row lines up with the row it should replace on `main`. This is exactly
+what [`merge_insert`](/tables/update#merge-incoming-rows-by-key) handles. Keyed on
+a unique column, it updates rows that already exist and inserts the ones that
+don't (an *upsert*), leaving everything else on `main` untouched.
+
+Read the rows you want out of the branch, then upsert them into `main` on your
+key column — `id` in this example:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BranchPromote}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranchPromote}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranchPromote}
+    </CodeBlock>
+</CodeGroup>
+
+Since this is just a keyed write against `main`, it looks like a normal
+ingestion job: point the job's source at the branch and its destination at
+`main`. Reading the whole branch and upserting it is the simplest approach and is
+safe to re-run, because `merge_insert` is idempotent on the key. To promote only
+what changed, filter the branch read down to the rows you touched before the
+upsert.
+
+## Build indexes on a branch
+
+One of the most useful things a branch buys you is a safe place to build and
+validate an index without affecting what's in production on the `main` branch.
+Fork a branch, create your vector (ANN) and full-text search (FTS)
+indexes on it, check recall and latency, and only then promote the change to
+`main`. Because the indexes live on the branch, queries against `main` never see
+a half-built index and are never slowed down by the build.
+
+This pattern is especially valuable on <Badge color="red">Enterprise</Badge>
+deployments, where `main` is typically serving production traffic while you tune
+an index configuration on the side.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BranchIndex}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsBranchIndex}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsBranchIndex}
+    </CodeBlock>
+</CodeGroup>
+
+Schema changes such as adding, altering, or dropping columns are branch-scoped in
+the same way, so you can stage a larger reshaping of a table and review it before
+it ever reaches `main`.
+
+## Branches vs. tags vs. versions
+
+Now that you're familiar with branches, you can see how they complement the other ways LanceDB
+give you to work with table history. Choose these approaches based on whether you need to
+*label*, *read*, or *write* data at a point in history:
+
+| Feature | Writable? | Purpose |
+| --- | --- | --- |
+| **[Branch](#work-with-branches)** | ✅ Yes | Write on top of a point in history without touching `main`. |
+| **[Tag](/tables/versioning#tag-based-versioning)** | ❌ No | Attach a human-readable label to an existing version; protects it from cleanup. |
+| **[`checkout(version)`](/tables/versioning#rollback-to-previous-versions)** | ❌ No | Read a historical version of `main` without forking. Read-only until you `restore`. |
+
+<Note>
+For linear version history — creating versions, listing them, rolling back, and
+tagging — see the [Versioning and Reproducibility](/tables/versioning) guide.
+</Note>

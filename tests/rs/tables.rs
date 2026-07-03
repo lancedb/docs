@@ -10,7 +10,9 @@ use arrow_array::{
     RecordBatchIterator, RecordBatchReader, StringArray,
 };
 use arrow_schema::{DataType, Field, Schema};
+use futures::TryStreamExt;
 use lancedb::connect;
+use lancedb::query::ExecutableQuery;
 use lancedb::database::CreateTableMode;
 use lancedb::table::{
     ColumnAlteration, Duration, FieldMetadataUpdate, NewColumnTransform, OptimizeAction,
@@ -66,6 +68,45 @@ fn make_quotes_reader(rows: Vec<(i64, &str, &str)>) -> Box<dyn RecordBatchReader
     Box::new(reader)
 }
 // --8<-- [end:versioning_make_quotes_reader]
+
+// Helper: a table with a `vector` and a `text` column, used to demonstrate
+// building indexes on a branch.
+fn make_products_reader(n: i32) -> Box<dyn RecordBatchReader + Send> {
+    const DIM: usize = 4;
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(
+                Arc::new(Field::new("item", DataType::Float32, true)),
+                DIM as i32,
+            ),
+            true,
+        ),
+        Field::new("text", DataType::Utf8, false),
+    ]));
+
+    let ids = Int32Array::from_iter_values(0..n);
+    let vectors = FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+        (0..n).map(|i| {
+            Some(
+                (0..DIM)
+                    .map(|d| Some((((i as usize * 31 + d * 7) % 97) as f32) / 97.0))
+                    .collect::<Vec<Option<f32>>>(),
+            )
+        }),
+        DIM as i32,
+    );
+    let texts = StringArray::from_iter_values((0..n).map(|i| format!("product number {i}")));
+
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![Arc::new(ids), Arc::new(vectors), Arc::new(texts)],
+    )
+    .unwrap();
+    let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);
+    Box::new(reader)
+}
 
 #[allow(dead_code)]
 async fn update_connect_enterprise_example() {
@@ -1338,45 +1379,134 @@ async fn main() {
         .await
         .unwrap();
 
-    // --8<-- [start:branches]
     use lancedb::table::Ref;
 
+    // --8<-- [start:branch_create]
     // Fork an isolated, writable branch from main's latest version.
-    // The returned handle is scoped to the branch; writes on it do not
-    // affect main.
+    // `create_branch` returns a table handle scoped to the new branch.
     let branch = branches_table
         .create_branch("exp", Ref::Version(None, None))
         .await
         .unwrap();
+    // --8<-- [end:branch_create]
+
+    // --8<-- [start:branch_write]
+    // Writes land on the branch handle only; main is left untouched.
     branch
         .add(make_quotes_reader(vec![(4, "Lancelot", "For the realm!")]))
         .execute()
         .await
         .unwrap();
-    let branch_rows = branch.count_rows(None).await.unwrap();
-    let main_rows = branches_table.count_rows(None).await.unwrap();
-    println!("Branch rows: {}", branch_rows); // 4
-    println!("Main rows: {}", main_rows); // 3; main is untouched
+    println!("Branch rows: {}", branch.count_rows(None).await.unwrap()); // 4
+    println!("Main rows: {}", branches_table.count_rows(None).await.unwrap()); // 3
 
-    // List all branches, mapping name to branch metadata.
-    let all_branches = branches_table.list_branches().await.unwrap();
-    println!("Branches: {:?}", all_branches);
+    // List every branch, each mapped to its metadata (including its fork point).
+    println!("Branches: {:?}", branches_table.list_branches().await.unwrap());
+    // --8<-- [end:branch_write]
 
-    // Reopen the branch later by name, or open it directly via the builder.
-    let checked_out = branches_table.checkout_branch("exp").await.unwrap();
+    // --8<-- [start:branch_reopen]
+    // Reopen an existing branch by name from the table handle...
+    let checked_out = branches_table.checkout_branch("exp", None).await.unwrap();
+    // ...or open it directly via the connection's builder.
     let opened = db
         .open_table("quotes_branches_example")
         .branch("exp")
         .execute()
         .await
         .unwrap();
-    let checked_out_rows = checked_out.count_rows(None).await.unwrap();
-    let opened_rows = opened.count_rows(None).await.unwrap();
-    println!("Reopened rows: {}, {}", checked_out_rows, opened_rows); // both 4
+    println!(
+        "Reopened rows: {}, {}",
+        checked_out.count_rows(None).await.unwrap(),
+        opened.count_rows(None).await.unwrap()
+    ); // both 4
+    // --8<-- [end:branch_reopen]
 
-    // Delete a branch when you're done with it.
+    // --8<-- [start:branch_delete]
+    // Delete the branch and its branch-local history. Data on main is safe.
     branches_table.delete_branch("exp").await.unwrap();
-    // --8<-- [end:branches]
+    // --8<-- [end:branch_delete]
+
     assert_eq!(branches_table.count_rows(None).await.unwrap(), 3);
     assert!(!branches_table.list_branches().await.unwrap().contains_key("exp"));
+
+    // Setup: a branch that diverges from main, ready to promote back.
+    let promo = branches_table
+        .create_branch("promote", Ref::Version(None, None))
+        .await
+        .unwrap();
+    promo
+        .update()
+        .only_if("id = 1")
+        .column("quote", "'Revised on the branch'")
+        .execute()
+        .await
+        .unwrap();
+    promo
+        .add(make_quotes_reader(vec![(4, "Galahad", "The grail awaits.")]))
+        .execute()
+        .await
+        .unwrap();
+
+    // --8<-- [start:branch_promote]
+    // There is no built-in merge yet, so promote a branch by writing its rows
+    // back to main with a normal ingestion call. `merge_insert` keys on a
+    // unique column, so rows that already exist on main are updated in place and
+    // new rows are appended — exactly what an upsert-style ingestion job does.
+    let schema = promo.schema().await.unwrap();
+    let batches = promo
+        .query()
+        .execute()
+        .await
+        .unwrap()
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    let promoted = RecordBatchIterator::new(batches.into_iter().map(Ok), schema);
+
+    let mut merge = branches_table.merge_insert(&["id"]);
+    merge
+        .when_matched_update_all(None) // update rows that already exist on main
+        .when_not_matched_insert_all(); // insert rows that are new on the branch
+    merge.execute(Box::new(promoted)).await.unwrap();
+    // --8<-- [end:branch_promote]
+
+    assert_eq!(branches_table.count_rows(None).await.unwrap(), 4);
+    branches_table.delete_branch("promote").await.unwrap();
+
+    // Setup: a larger table with a vector and a text column to index.
+    let products = db
+        .create_table("products_branch_index", make_products_reader(512))
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    // --8<-- [start:branch_index]
+    use lancedb::index::scalar::FtsIndexBuilder;
+    use lancedb::index::Index;
+
+    // Build and validate indexes on a branch before promoting them to main.
+    let dev = products
+        .create_branch("index-dev", Ref::Version(None, None))
+        .await
+        .unwrap();
+
+    // A vector (ANN) index and a full-text search index, both branch-scoped.
+    dev.create_index(&["vector"], Index::Auto)
+        .execute()
+        .await
+        .unwrap();
+    dev.create_index(&["text"], Index::FTS(FtsIndexBuilder::default()))
+        .execute()
+        .await
+        .unwrap();
+
+    // Both indexes live only on the branch; main still has none.
+    println!("Branch indexes: {}", dev.list_indices().await.unwrap().len()); // 2
+    println!("Main indexes: {}", products.list_indices().await.unwrap().len()); // 0
+    // --8<-- [end:branch_index]
+
+    assert_eq!(dev.list_indices().await.unwrap().len(), 2);
+    assert_eq!(products.list_indices().await.unwrap().len(), 0);
+    products.delete_branch("index-dev").await.unwrap();
 }

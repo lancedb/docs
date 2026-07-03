@@ -35,9 +35,6 @@ import {
     PyVersioningTags as VersioningTags,
     TsVersioningTags as TsVersioningTags,
     RsVersioningTags as RsVersioningTags,
-    PyBranches as Branches,
-    TsBranches as TsBranches,
-    RsBranches as RsBranches,
     RsVersioningMakeQuotesReader as RsVersioningMakeQuotesReader,
 } from '/snippets/tables.mdx';
 
@@ -223,66 +220,13 @@ deletion, the underlying table version becomes eligible for cleanup again.
 
 ## Branches
 
-Branches are isolated, writable lines of history forked from another branch (or
-a specific version). Writes to a branch do **not** affect `main`, which makes
-branches ideal for:
+Beyond linear history, LanceDB also supports **branches** — isolated, writable
+lines of history forked from `main` (or a specific version). Whereas tags and
+`checkout` give you read-only views of existing versions, a branch has its own
+writable history, making it ideal for experiments, backfills, and migrations
+that you want to keep separate from production reads on `main`.
 
-- Running experiments (new indexes, schema changes, reprocessing) without
-  disturbing production reads on `main`.
-- Backfills or migrations that you want to review before promoting.
-- Sharing a frozen point-in-time fork with a collaborator while continuing to
-  write to `main`.
-
-Unlike tags, which are read-only labels on existing versions, a branch has its
-own writable history. Creating or checking out a branch returns a new table
-handle whose reads and writes are scoped to that branch.
-
-<Note>
-Branches are currently supported on local and namespace-backed tables in
-LanceDB OSS. Branch support for LanceDB Enterprise (remote) tables is not yet
-available.
-</Note>
-
-### Create, Write, and Reopen a Branch
-
-Create a branch from `main` (the default source) and write to it. The base table
-continues to point at `main` and is unaffected by writes on the branch. You can
-also reopen an existing branch either from a table handle or directly from the
-database connection when opening the table.
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {Branches}
-    </CodeBlock>
-
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsBranches}
-    </CodeBlock>
-
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsBranches}
-    </CodeBlock>
-</CodeGroup>
-
-`list` returns a mapping of branch names to branch metadata, including which
-branch each was forked from. `main` is the reserved default branch: wherever a
-branch is optional, leaving it out means `main`. To fork from somewhere else,
-pass a branch name, a specific version, or both when creating the branch.
-
-Deleting a branch removes that branch and its branch-local history; data on
-`main` is not affected. There is no automatic merge operation. To promote
-changes, copy the desired data back explicitly.
-
-<Note>
-**Branches vs. tags vs. checkout**
-
-- Use a **tag** to bookmark an existing version with a human-readable name. Tags
-  are read-only and protect that version from cleanup.
-- Use **`checkout(version)`** to read from a historical version of `main`
-  without forking. The handle is read-only until you `restore`.
-- Use a **branch** when you need to *write* on top of a point in history
-  without touching `main`.
-</Note>
+Branches are covered in their own guide: see [Branches](/tables/branching).
 
 ## Delete Data From the Table
 
