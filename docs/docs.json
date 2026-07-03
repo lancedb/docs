@@ -85,6 +85,7 @@
                   "tables/schema",
                   "tables/update",
                   "tables/versioning",
+                  "tables/branching",
                   "tables/consistency"
                 ]
               },

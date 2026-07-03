@@ -1367,7 +1367,9 @@ def test_versioning_tags(tmp_db):
 
 
 def test_branches(tmp_db):
+    import numpy as np
     import pyarrow as pa
+    from lancedb.index import FTS, IvfPq
 
     db = tmp_db
     schema = pa.schema(
@@ -1388,29 +1390,93 @@ def test_branches(tmp_db):
         mode="overwrite",
     )
 
-    # --8<-- [start:branches]
+    # --8<-- [start:branch_create]
     # Fork an isolated, writable branch from main's latest version.
-    # The returned handle is scoped to the branch; writes on it do not
-    # affect main.
+    # `create` returns a table handle scoped to the new branch.
     branch = table.branches.create("exp")
+    # --8<-- [end:branch_create]
+
+    # --8<-- [start:branch_write]
+    # Writes land on the branch handle only; main is left untouched.
     branch.add([{"id": 4, "author": "Lancelot", "quote": "For the realm!"}])
     print(branch.count_rows())  # 4 rows on the branch
-    print(table.count_rows())  # 3 rows; main is untouched
+    print(table.count_rows())  # 3 rows; main is unaffected
 
-    # List all branches, mapping name to branch metadata.
+    # List every branch, each mapped to its metadata (including its fork point).
     print(table.branches.list())
+    # --8<-- [end:branch_write]
 
-    # Reopen the branch later by name, or open it directly from the
-    # database connection.
+    # --8<-- [start:branch_reopen]
+    # Reopen an existing branch by name from the table handle...
     checked_out = table.branches.checkout("exp")
+    # ...or open it directly from the database connection.
     branch_handle = db.open_table("quotes_branches_example", branch="exp")
     print(checked_out.count_rows(), branch_handle.count_rows())  # both 4
+    # --8<-- [end:branch_reopen]
 
-    # Delete a branch when you're done with it.
+    # --8<-- [start:branch_delete]
+    # Delete the branch and its branch-local history. Data on main is safe.
     table.branches.delete("exp")
-    # --8<-- [end:branches]
+    # --8<-- [end:branch_delete]
+
     assert table.count_rows() == 3
     assert "exp" not in table.branches.list()
+
+    # Setup: a branch that diverges from main, ready to promote back.
+    promo = table.branches.create("promote")
+    promo.update(where="id = 1", values={"quote": "Revised on the branch"})
+    promo.add([{"id": 4, "author": "Galahad", "quote": "The grail awaits."}])
+
+    # --8<-- [start:branch_promote]
+    # There is no built-in merge yet, so promote a branch by writing its rows
+    # back to main with a normal ingestion call. `merge_insert` keys on a
+    # unique column, so rows that already exist on main are updated in place and
+    # new rows are appended — exactly what an upsert-style ingestion job does.
+    promoted = promo.to_arrow()  # or filter down to just the rows you changed
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()  # update rows that already exist on main
+        .when_not_matched_insert_all()  # insert rows that are new on the branch
+        .execute(promoted)
+    )
+    # --8<-- [end:branch_promote]
+
+    promoted_main = {row["id"]: row["quote"] for row in table.to_arrow().to_pylist()}
+    assert table.count_rows() == 4
+    assert promoted_main[1] == "Revised on the branch"
+    assert 4 in promoted_main
+    table.branches.delete("promote")
+
+    # Setup: a larger table with a vector and a text column to index.
+    rng = np.random.default_rng(0)
+    products = db.create_table(
+        "products_branch_index",
+        [
+            {"id": i, "vector": rng.random(4).tolist(), "text": f"product number {i}"}
+            for i in range(512)
+        ],
+        mode="overwrite",
+    )
+
+    # --8<-- [start:branch_index]
+    # Build and validate indexes on a branch before promoting them to main.
+    dev = products.branches.create("index-dev")
+
+    # A vector (ANN) index and a full-text search index, both branch-scoped.
+    dev.create_index(
+        "vector",
+        config=IvfPq(distance_type="cosine", num_partitions=1, num_sub_vectors=2),
+    )
+    dev.create_index("text", config=FTS())
+
+    # Both indexes live only on the branch; main still has none.
+    print([ix.name for ix in dev.list_indices()])  # branch: two indexes
+    print([ix.name for ix in products.list_indices()])  # main: [] (untouched)
+    # --8<-- [end:branch_index]
+
+    assert len(dev.list_indices()) == 2
+    assert len(products.list_indices()) == 0
+    products.branches.delete("index-dev")
 
 
 # ============================================================================
