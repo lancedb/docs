@@ -219,7 +219,7 @@ Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas c
 Query builders also accept `blob_mode` on their `to_pandas()` method:
 
 - Plain scans support `"lazy"`, `"bytes"`, and `"descriptions"` with filters, projections, aliases, `limit`, and `offset`.
-- Vector, FTS, hybrid, and ordered queries only support `blob_mode="descriptions"`; use that mode or omit blob columns from the projection.
+- Vector, FTS, hybrid, and ordered queries can't materialize blob columns through `to_pandas()`; omit blob columns from the projection for those query shapes.
 - This works on both sync and async query builders. Extra PyArrow kwargs like `split_blocks` and `self_destruct` are still forwarded.
 
 <CodeGroup>
