@@ -51,9 +51,10 @@ column-major `torch.Tensor` with shape `(columns, rows)`.
 
 `Permutation` works differently: its default output is a list of Python dicts, which PyTorch's default collate function
 can batch into a dict of tensors. This is usually more convenient when you are getting started. However, there is a
-significant performance penalty converting from Arrow, Lance's internal representation, to this default format. Use a
-direct `Table` with `collate_fn` when you want Arrow-to-tensor conversion, or a `Permutation` when you want the default
-PyTorch dict-of-tensors behavior.
+significant performance penalty converting from Arrow, Lance's internal representation, to this default format. If you
+want the default PyTorch dict-of-tensors behavior, use a `Permutation` as-is; if you want direct Arrow-to-tensor
+conversion, either pass `lancedb.util.tbl_to_tensor` as `collate_fn` with a direct `Table` or configure a `Permutation`
+with one of the transform formats described below.
 
 To address this, the `Permutation` class provides a set of builtin transform functions that can be applied to map
 the Arrow data in different ways.  The `arrow` and `polars` formats will always avoid data copies.  However, `numpy`,
@@ -107,7 +108,11 @@ for batch in dataloader:
 
 Set `num_workers > 0` to read from LanceDB in multiple PyTorch worker processes. LanceDB tables and `Permutation` objects are picklable, so each worker reopens the table after it starts.
 
-Prefer the `spawn` start method when using multiple workers; LanceDB uses internal threads. See [the performance guide](/performance) for more multiprocessing guidance.
+Prefer the `forkserver` start method when using multiple workers. LanceDB uses internal threads, so the default `fork` method is unsafe; `forkserver` avoids that while being cheaper to start than `spawn`, and it is set to become the Python default. See [the performance guide](/performance) for more multiprocessing guidance.
+
+<Note>
+`forkserver` is only available on POSIX systems (Linux and macOS). On Windows, use `spawn` instead — it is the only start method available there.
+</Note>
 
 ```py Python icon=Python 
 import torch
@@ -119,7 +124,7 @@ dataloader = torch.utils.data.DataLoader(
     batch_size=1024,
     shuffle=True,
     num_workers=4,
-    multiprocessing_context="spawn",
+    multiprocessing_context="forkserver",
     persistent_workers=True,
 )
 ```
@@ -144,7 +149,7 @@ dataloader = torch.utils.data.DataLoader(
     table,
     batch_size=512,
     num_workers=4,
-    multiprocessing_context="spawn",
+    multiprocessing_context="forkserver",
     collate_fn=tbl_to_tensor,
 )
 ```
@@ -180,6 +185,6 @@ dataloader = torch.utils.data.DataLoader(
     permutation,
     batch_size=512,
     num_workers=4,
-    multiprocessing_context="spawn",
+    multiprocessing_context="forkserver",
 )
 ```
