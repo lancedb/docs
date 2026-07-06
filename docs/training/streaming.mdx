@@ -1,0 +1,218 @@
+---
+title: "Elastic streaming dataloader"
+sidebarTitle: "Streaming dataloader"
+description: "Stream training data from a LanceDB table with deterministic, resumable, topology-independent order."
+icon: forward-fast
+keywords: ["streaming", "dataloader", "pytorch", "iterabledataset", "training", "resumable", "elastic"]
+---
+
+`lancedb.streaming.StreamingDataset` is a PyTorch [`IterableDataset`](https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.IterableDataset)
+that streams rows directly from a LanceDB table. Unlike the map-style [`Permutation`](/training/) dataset, it is
+designed for large training runs where you cannot fit the dataset in memory and where the number of GPUs or
+DataLoader workers may change between runs.
+
+`StreamingDataset` provides two guarantees that are hard to get together with a normal PyTorch pipeline:
+
+- **Elastic determinism** — for a fixed `(num_splits, shuffle_seed, epoch)` the set of samples that forms each
+  global training step is identical regardless of `world_size` or `num_workers`. Scale the cluster up or down
+  between runs and the model sees the same data in the same order.
+- **Resumability** — `state_dict()` / `load_state_dict()` capture a single topology-independent counter, so a
+  checkpoint saved with 8 GPUs can resume correctly on 4 or 16 GPUs.
+
+## When to use it
+
+Use `StreamingDataset` when any of the following are true:
+
+- The training set does not fit in memory and you want to stream rows on demand.
+- You need bit-exact reproducibility across cluster sizes (e.g. resuming a preempted job on a smaller node count).
+- You want a filter (e.g. `"label = 'dog'"`) to be applied once at permutation-build time rather than re-evaluated
+  on every fetch.
+- You are training on object storage and want prefetching to hide read latency.
+
+For smaller in-memory datasets, or when you want map-style random access, use the
+[`Permutation`](/training/torch) API instead.
+
+## Quickstart
+
+```py Python icon=Python
+import lancedb
+import pyarrow as pa
+import torch
+from lancedb.streaming import StreamingDataset
+
+db = lancedb.connect("file:///tmp/mydb")
+table = db.create_table("data", pa.table({"id": list(range(10_000))}))
+
+dataset = StreamingDataset(
+    table,
+    num_splits=8,       # must be divisible by world_size * num_workers
+    shuffle_seed=42,
+    epoch=0,
+)
+
+loader = torch.utils.data.DataLoader(dataset, batch_size=32)
+
+for batch in loader:
+    ...  # train
+```
+
+Rows are yielded as plain Python dicts by default and PyTorch's default collate function batches them into a dict
+of tensors. Pass a `transform` callable if you need a different output format (see [Transforms](#transforms)).
+
+## How it works
+
+The table is partitioned into `num_splits` fixed splits using a deterministic shuffle controlled by `shuffle_seed`
+and `epoch`. Each rank is assigned a contiguous block of splits, and within a rank each DataLoader worker is
+assigned a contiguous sub-block. Samples are yielded by round-robining over the assigned splits, one sample per
+split per cycle.
+
+Because the split structure is fixed, the set of samples that makes up each global step is independent of the
+number of processes reading them — that is what makes the dataset elastic. It also means the resume state is a
+single scalar (`samples_consumed_per_split`) rather than a per-rank or per-worker counter.
+
+<Note>
+`num_splits` must be divisible by `world_size`, and when using DataLoader workers it must also be divisible by
+`world_size * num_workers`. If the filtered row count is not evenly divisible by `num_splits`, up to
+`num_splits - 1` surplus rows are dropped per epoch to keep all splits the same length.
+</Note>
+
+## Distributed training
+
+Pass `rank` and `world_size` explicitly so each process sees only its assigned splits:
+
+```py Python icon=Python
+import torch.distributed as dist
+from lancedb.streaming import StreamingDataset
+
+dataset = StreamingDataset(
+    table,
+    num_splits=64,
+    shuffle_seed=42,
+    epoch=epoch,
+    rank=dist.get_rank(),
+    world_size=dist.get_world_size(),
+)
+```
+
+Advance `epoch` at the top of each epoch to reshuffle. `shuffle_seed` stays constant across the run.
+
+## Resuming from a checkpoint
+
+`state_dict()` returns a topology-independent snapshot. Save it alongside your model checkpoint and reload it into
+a fresh dataset when resuming.
+
+```py Python icon=Python
+# Save
+checkpoint = {
+    "model": model.state_dict(),
+    "dataset": dataset.state_dict(),
+}
+torch.save(checkpoint, "ckpt.pt")
+
+# Resume — world_size may differ from the run that saved the checkpoint
+checkpoint = torch.load("ckpt.pt")
+dataset = StreamingDataset(
+    table,
+    num_splits=64,
+    shuffle_seed=42,
+    epoch=checkpoint_epoch,
+    rank=dist.get_rank(),
+    world_size=dist.get_world_size(),
+)
+dataset.load_state_dict(checkpoint["dataset"])
+```
+
+`load_state_dict` raises `ValueError` if `num_splits` or `shuffle_seed` differ from the checkpoint, since a
+different split structure or shuffle order makes mid-epoch resumption meaningless.
+
+## Filters as prefilters
+
+The `filter` argument is applied once when the permutation is built. Only matching rows are stored in the
+permutation table, so subsequent reads never touch non-matching rows on storage.
+
+```py Python icon=Python
+dataset = StreamingDataset(
+    table,
+    num_splits=8,
+    filter="label = 'dog'",
+)
+```
+
+Because the filter is applied before splitting, split sizes reflect the filtered row count.
+
+## Selecting columns
+
+Pass `columns` to read only the fields you need. Everything else is skipped on the storage read.
+
+```py Python icon=Python
+dataset = StreamingDataset(
+    table,
+    num_splits=8,
+    columns=["image", "label"],
+)
+```
+
+## Transforms
+
+Pass a `transform` callable to decode, augment, or convert format before rows are yielded. The callable receives
+one `pyarrow.RecordBatch` at a time and must return an iterable whose length equals the number of rows in the
+batch.
+
+```py Python icon=Python
+import io
+from PIL import Image
+
+def decode(batch):
+    imgs = [Image.open(io.BytesIO(b.as_py())) for b in batch["image"]]
+    labels = batch["label"].to_pylist()
+    return [{"image": img, "label": lbl} for img, lbl in zip(imgs, labels)]
+
+dataset = StreamingDataset(table, num_splits=8, transform=decode)
+```
+
+Transforms run in an internal thread pool sized to `os.cpu_count()`, so pure-Python transforms are limited by the
+GIL. For heavy per-sample work, prefer transforms that release the GIL (NumPy, PyArrow, Torch, PIL decode) or
+move the work into a Rust-backed pipeline.
+
+## Tuning I/O
+
+Two parameters control the I/O pipeline:
+
+- `read_batch_size` (default `64`) — number of rows fetched per storage request. Larger values amortise per-request
+  overhead, which matters most on object storage where a single round-trip can cost ~100 ms.
+- `prefetch_batches` (default `4`) — number of batches kept in flight per split. Higher values overlap storage
+  latency with transform and training compute at the cost of more memory and threads.
+
+```py Python icon=Python
+dataset = StreamingDataset(
+    table,
+    num_splits=16,
+    read_batch_size=256,
+    prefetch_batches=8,
+)
+```
+
+With well-tuned values, `num_workers=0` often reaches full throughput because prefetching hides latency without
+needing extra worker processes.
+
+## Multiple DataLoader workers
+
+`StreamingDataset` supports `num_workers > 0`, but it is generally discouraged: PyTorch multiprocessing is
+expensive to set up and duplicates connection state per worker. The built-in prefetcher usually makes it
+unnecessary.
+
+If you do use workers, `num_splits` must be divisible by `world_size * num_workers`, and you should use the
+`forkserver` start method — LanceDB uses internal threads, so `fork` is unsafe.
+
+```py Python icon=Python
+loader = torch.utils.data.DataLoader(
+    dataset,
+    batch_size=32,
+    num_workers=2,
+    multiprocessing_context="forkserver",
+    persistent_workers=True,
+)
+```
+
+See the [PyTorch integration page](/training/torch#using-multiple-dataloader-workers) for more on multiprocessing
+with LanceDB.

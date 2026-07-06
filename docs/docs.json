@@ -69,6 +69,7 @@
               "training/why-lancedb",
               "training/index",
               "training/torch",
+              "training/streaming",
               "training/object-detection",
               "training/vlm-finetuning"
             ]
