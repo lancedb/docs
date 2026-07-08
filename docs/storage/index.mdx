@@ -5,7 +5,7 @@ description: "Understand LanceDB storage backends, tradeoffs, and how to pick th
 icon: "database"
 ---
 
-LanceDB is one of the few vector databases built on modular, disk-first components. That design makes it flexible enough to run across local NVMe, EBS, EFS, and any object store that exposes an S3-compatible API.
+LanceDB is one of the few vector databases built on modular, disk-first components. That design makes it flexible enough to run across local NVMe, EBS, EFS, and any object store that exposes an S3-compatible API. It also supports region-specific backends such as [Tencent COS](/storage/configuration#tencent-cos) and cache-acceleration layers such as [GooseFS](/storage/configuration#goosefs).
 
 Choosing a backend is a balance between latency, scalability, cost, and operational complexity. Use this guide to pick the right fit for your workload.
 
