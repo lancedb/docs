@@ -217,6 +217,7 @@
             "group": "Support",
             "pages": [
               "troubleshooting",
+              "monitoring",
               {
                 "group": "FAQ",
                 "pages": [
