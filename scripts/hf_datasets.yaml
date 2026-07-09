@@ -23,6 +23,10 @@ categories:
       - { dir: imagenet1k_val, slug: imagenet-1k-val, hf: imagenet-1k-val-lance, title: "ImageNet-1k Validation" }
       - { dir: eurosat,        slug: eurosat,         hf: eurosat-lance,         title: "EuroSAT" }
 
+  - name: "OCR & Handwriting"
+    datasets:
+      - { dir: handwriting-ocr, slug: handwriting-ocr, hf: handwriting-ocr, title: "Handwriting OCR" }
+
   - name: "Object Detection & Segmentation"
     datasets:
       - { dir: coco_detection_2017, slug: coco-detection-2017,          hf: coco-detection-2017-lance,          title: "COCO 2017 Detection" }

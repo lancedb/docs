@@ -362,6 +362,12 @@
             ]
           },
           {
+            "group": "OCR & Handwriting",
+            "pages": [
+              "datasets/handwriting-ocr"
+            ]
+          },
+          {
             "group": "Object Detection & Segmentation",
             "pages": [
               "datasets/coco-detection-2017",
