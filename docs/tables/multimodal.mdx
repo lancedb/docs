@@ -228,6 +228,98 @@ Query builders also accept `blob_mode` on their `to_pandas()` method:
     </CodeBlock>
 </CodeGroup>
 
+## Fetch blob v2 payloads on demand
+
+For the Lance blob v2 extension type, LanceDB queries return lightweight
+*descriptors* rather than raw bytes. This keeps result sets small when you
+project a blob column alongside vectors or metadata, and it lets you fetch the
+actual payload only for the rows you care about.
+
+Declare a blob v2 column with the `lancedb.blob()` helper, which produces a
+PyArrow field backed by the `lance.blob.v2` extension type:
+
+```python Python icon="python"
+import lancedb
+import pyarrow as pa
+
+db = lancedb.connect("./.lancedb")
+
+schema = pa.schema([
+    pa.field("id", pa.int64()),
+    lancedb.blob("video"),
+])
+
+table = db.create_table("videos", schema=schema)
+table.add([{"id": 1, "video": open("clip.mp4", "rb").read()}])
+```
+
+<Info>
+Blob v2 fetch APIs are available on local tables. Remote tables raise
+`NotImplementedError` today; use blob v1 (`lance-encoding:blob` metadata) for
+those workloads until server-side support ships.
+</Info>
+
+### Lazy file handles with `fetch_blob_files`
+
+`Table.fetch_blob_files()` returns a list of seekable `BlobFile` handles — one
+per input row — without materializing bytes. Prefer this path for large
+payloads such as video or long audio: you can seek to an offset and read only
+the range you need, which keeps memory use flat and works well with streaming
+decoders.
+
+Pass a `list[int]` of Lance row IDs, or the `pyarrow.Table` returned by a query
+(the query result carries the row IDs it needs in its schema metadata).
+`BlobFile` implements the standard `io.RawIOBase` interface — `read`, `seek`,
+`tell`, and `readinto` — plus `read_range(offset, length)` and `read_up_to(n)`
+for partial reads, and wraps cleanly in `io.BufferedReader`.
+
+```python Python icon="python"
+hits = table.search().select(["id", "video"]).to_arrow()
+
+handles = table.fetch_blob_files("video", hits)
+
+# Seek and partial read — pipe into a decoder like PyAV.
+handle = handles[0]
+handle.seek(frame_offset)
+chunk = handle.read_range(0, 65536)
+```
+
+Rows without a blob come back as `None`, so the returned list stays aligned
+with the input result set.
+
+### Eager bytes with `fetch_blobs`
+
+When payloads are small enough to hold in memory, `Table.fetch_blobs()` returns
+a `pyarrow.LargeBinaryArray` with the full bytes for each row (nulls for
+missing values).
+
+```python Python icon="python"
+blobs = table.fetch_blobs("video", hits)
+first_bytes = blobs[0].as_py()
+```
+
+### `to_pandas(blob_mode="bytes")` on blob v2 tables
+
+`Table.to_pandas()` and its query-builder counterpart accept the same
+`blob_mode` argument for blob v2 columns as for blob v1:
+
+- `"lazy"` (default) leaves blob columns as descriptors.
+- `"bytes"` materializes the payloads as Python `bytes` in the DataFrame.
+- `"descriptions"` returns the raw descriptor struct (URI, position, size).
+
+```python Python icon="python"
+df = table.to_pandas(blob_mode="bytes")
+```
+
+### Row IDs are handled for you
+
+`fetch_blob_files` and `fetch_blobs` need Lance row IDs as the join key. When
+you call `to_arrow()` (or `to_pandas()`) on a query against a blob v2 table,
+LanceDB auto-injects the internal `_rowid` column and stashes it in the Arrow
+schema metadata — it is not exposed as a visible column unless you explicitly
+call `.with_row_id(True)`. Pass the query result straight into `fetch_*` and
+LanceDB reads the row IDs from that metadata.
+
 ## Other modalities
 
 The `pa.binary()` and `pa.large_binary()` types are universal. You can use this same pattern for other types of multimodal data:
