@@ -900,26 +900,30 @@ test("branch snippets (async)", async () => {
     expect(await table.countRows()).toBe(3);
     expect(await branches.list()).not.toHaveProperty("exp");
 
-    // Setup: a branch that diverges from main, ready to promote back.
-    const promo = await branches.create("promote");
-    await promo.update({ where: "id = 1", values: { quote: "Revised on the branch" } });
-    await promo.add([{ id: 4, author: "Galahad", quote: "The grail awaits." }]);
+    // Setup: a branch with row results that we want to apply to main.
+    const candidate = await branches.create("candidate");
+    await candidate.update({
+      where: "id = 1",
+      values: { quote: "Revised on the branch" },
+    });
+    await candidate.add([
+      { id: 4, author: "Galahad", quote: "The grail awaits." },
+    ]);
 
-    // --8<-- [start:branch_promote]
-    // There is no built-in merge yet, so promote a branch by writing its rows
-    // back to main with a normal ingestion call. `mergeInsert` keys on a
-    // unique column, so rows that already exist on main are updated in place and
-    // new rows are appended — exactly what an upsert-style ingestion job does.
-    const promoted = await promo.toArrow(); // or filter down to just the changed rows
+    // --8<-- [start:branch_upsert_to_main]
+    // This is a row-level upsert, not a merge of branch histories.
+    // `mergeInsert` updates matching rows and inserts new rows using a stable
+    // unique key. Filter the branch read if you only want to apply some results.
+    const rowsToApply = await candidate.toArrow();
     await table
       .mergeInsert("id")
       .whenMatchedUpdateAll() // update rows that already exist on main
       .whenNotMatchedInsertAll() // insert rows that are new on the branch
-      .execute(promoted);
-    // --8<-- [end:branch_promote]
+      .execute(rowsToApply);
+    // --8<-- [end:branch_upsert_to_main]
 
     expect(await table.countRows()).toBe(4);
-    await branches.delete("promote");
+    await branches.delete("candidate");
 
     // Setup: a larger table with a vector and a text column to index.
     const products = await db.createTable(
@@ -934,7 +938,8 @@ test("branch snippets (async)", async () => {
     const productBranches = await products.branches();
 
     // --8<-- [start:branch_index]
-    // Build and validate indexes on a branch before promoting them to main.
+    // Build and validate indexes on a branch before using the configuration on
+    // main.
     const dev = await productBranches.create("index-dev");
 
     // A vector (ANN) index and a full-text search index, both branch-scoped.

@@ -1422,30 +1422,33 @@ def test_branches(tmp_db):
     assert table.count_rows() == 3
     assert "exp" not in table.branches.list()
 
-    # Setup: a branch that diverges from main, ready to promote back.
-    promo = table.branches.create("promote")
-    promo.update(where="id = 1", values={"quote": "Revised on the branch"})
-    promo.add([{"id": 4, "author": "Galahad", "quote": "The grail awaits."}])
+    # Setup: a branch with row results that we want to apply to main.
+    candidate = table.branches.create("candidate")
+    candidate.update(where="id = 1", values={"quote": "Revised on the branch"})
+    candidate.add(
+        [{"id": 4, "author": "Galahad", "quote": "The grail awaits."}]
+    )
 
-    # --8<-- [start:branch_promote]
-    # There is no built-in merge yet, so promote a branch by writing its rows
-    # back to main with a normal ingestion call. `merge_insert` keys on a
-    # unique column, so rows that already exist on main are updated in place and
-    # new rows are appended — exactly what an upsert-style ingestion job does.
-    promoted = promo.to_arrow()  # or filter down to just the rows you changed
+    # --8<-- [start:branch_upsert_to_main]
+    # This is a row-level upsert, not a merge of branch histories.
+    # `merge_insert` updates matching rows and inserts new rows using a stable
+    # unique key. Filter the branch read if you only want to apply some results.
+    rows_to_apply = candidate.to_arrow()
     (
         table.merge_insert("id")
         .when_matched_update_all()  # update rows that already exist on main
         .when_not_matched_insert_all()  # insert rows that are new on the branch
-        .execute(promoted)
+        .execute(rows_to_apply)
     )
-    # --8<-- [end:branch_promote]
+    # --8<-- [end:branch_upsert_to_main]
 
-    promoted_main = {row["id"]: row["quote"] for row in table.to_arrow().to_pylist()}
+    main_rows = {
+        row["id"]: row["quote"] for row in table.to_arrow().to_pylist()
+    }
     assert table.count_rows() == 4
-    assert promoted_main[1] == "Revised on the branch"
-    assert 4 in promoted_main
-    table.branches.delete("promote")
+    assert main_rows[1] == "Revised on the branch"
+    assert 4 in main_rows
+    table.branches.delete("candidate")
 
     # Setup: a larger table with a vector and a text column to index.
     rng = np.random.default_rng(0)
@@ -1459,7 +1462,8 @@ def test_branches(tmp_db):
     )
 
     # --8<-- [start:branch_index]
-    # Build and validate indexes on a branch before promoting them to main.
+    # Build and validate indexes on a branch before using the configuration on
+    # main.
     dev = products.branches.create("index-dev")
 
     # A vector (ANN) index and a full-text search index, both branch-scoped.
