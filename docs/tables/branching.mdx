@@ -25,9 +25,9 @@ import {
     PyBranchDelete as BranchDelete,
     TsBranchDelete,
     RsBranchDelete,
-    PyBranchPromote as BranchPromote,
-    TsBranchPromote,
-    RsBranchPromote,
+    PyBranchUpsertToMain as BranchUpsertToMain,
+    TsBranchUpsertToMain,
+    RsBranchUpsertToMain,
     PyBranchIndex as BranchIndex,
     TsBranchIndex,
     RsBranchIndex,
@@ -40,7 +40,8 @@ reads exactly as before. Branches are a natural fit when you want to:
 
 - Experiment with a new index, schema change, or reprocessing step without
   affecting live queries on `main`.
-- Run a backfill or migration you'd like to review before promoting it.
+- Run a backfill or migration you'd like to validate before applying it to
+  `main`.
 - Hand a collaborator a frozen point-in-time fork while you keep writing to `main`.
 
 ## How branches relate to versions and tags
@@ -178,8 +179,9 @@ table. Both routes give you a writable handle tracking the branch's latest state
 ### Delete a branch
 
 Deleting a branch removes it and its branch-local history; `main` is untouched.
-Delete a branch only once you've promoted anything worth keeping — see
-[Merging a branch into `main`](#merging-a-branch-into-main) below.
+Before deleting a branch, make sure you've retained any results you need — see
+[Apply branch-tested changes to `main`](#apply-branch-tested-changes-to-main)
+below.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -195,52 +197,68 @@ Delete a branch only once you've promoted anything worth keeping — see
     </CodeBlock>
 </CodeGroup>
 
-## Merge a branch into `main`
+## Apply branch-tested changes to `main`
 
 <Warning>
-LanceDB doesn't yet support an automatic merge of a branch into `main`, with full conflict-handling.
-There's no single `merge()` call that reconciles the two histories for you.
+A branch has its own writable history. LanceDB does not currently reconcile one
+branch's history with another or detect conflicts between them. To carry
+accepted work forward, rerun the validated operation against `main` or
+explicitly write selected results to it.
 </Warning>
 
-Until full merge support is available, you can promote a branch the same way any other data lands in a table: by
-running an ingestion workload against `main`. The only real question is how each
-branch row lines up with the row it should replace on `main`. This is exactly
-what [`merge_insert`](/tables/update#merge-incoming-rows-by-key) handles. Keyed on
-a unique column, it updates rows that already exist and inserts the ones that
-don't (an *upsert*), leaving everything else on `main` untouched.
+How you apply a validated change depends on the type of work:
 
-Read the rows you want out of the branch, then upsert them into `main` on your
-key column — `id` in this example:
+- **Backfill or transformation:** rerun the validated job against `main`.
+- **Schema change:** apply the same reviewed schema operation to `main`.
+- **Index change:** build the index on `main` using the configuration validated
+  on the branch.
+- **Selected row results:** upsert those rows into `main` using a stable unique
+  key.
+
+### Upsert selected branch rows into `main`
+
+If the result you want to retain is a set of inserted or updated rows, use
+[`merge_insert`](/tables/update#merge-incoming-rows-by-key) to write them to
+`main`. Despite its name, `merge_insert` is a row-ingestion operation: it
+matches incoming rows by key and does not merge branch histories.
+
+Read the rows you want from the reviewed branch, then upsert them into `main` on
+your key column — `id` in this example. Here, `candidate` is the branch handle:
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {BranchPromote}
+    {BranchUpsertToMain}
     </CodeBlock>
 
     <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsBranchPromote}
+    {TsBranchUpsertToMain}
     </CodeBlock>
 
     <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsBranchPromote}
+    {RsBranchUpsertToMain}
     </CodeBlock>
 </CodeGroup>
 
-Since this is just a keyed write against `main`, it looks like a normal
-ingestion job: point the job's source at the branch and its destination at
-`main`. Reading the whole branch and upserting it is the simplest approach and is
-safe to re-run, because `merge_insert` is idempotent on the key. To promote only
-what changed, filter the branch read down to the rows you touched before the
-upsert.
+This operation transfers only the inserted or updated rows in its input. It does
+not transfer branch history, schema changes, indexes, or branch-local deletions,
+and it does not determine which rows changed after the branch was created.
+
+Reapplying an identical payload is idempotent on the key, but the operation is
+not conflict-aware. If `main` has diverged, incoming branch rows can overwrite
+newer values with the same key. Read and upsert the whole branch only when that
+overwrite is intentional; otherwise, filter the branch read to the rows you
+intend to apply.
 
 ## Build indexes on a branch
 
 One of the most useful things a branch buys you is a safe place to build and
 validate an index without affecting what's in production on the `main` branch.
 Fork a branch, create your vector (ANN) and full-text search (FTS)
-indexes on it, check recall and latency, and only then promote the change to
-`main`. Because the indexes live on the branch, queries against `main` never see
-a half-built index and are never slowed down by the build.
+indexes on it, and check recall and latency. Once you have selected a
+configuration, build the corresponding index on `main` through your normal
+deployment workflow. Because the indexes live on the branch, queries against
+`main` never see a half-built index and are never slowed down by the branch's
+build.
 
 This pattern is especially valuable on <Badge color="red">Enterprise</Badge>
 deployments, where `main` is typically serving production traffic while you tune
@@ -261,8 +279,8 @@ an index configuration on the side.
 </CodeGroup>
 
 Schema changes such as adding, altering, or dropping columns are branch-scoped in
-the same way, so you can stage a larger reshaping of a table and review it before
-it ever reaches `main`.
+the same way, so you can stage and review a larger reshaping of a table before
+applying the same schema operations to `main`.
 
 ## Branches vs. tags vs. versions
 

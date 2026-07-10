@@ -1429,31 +1429,34 @@ async fn main() {
     assert_eq!(branches_table.count_rows(None).await.unwrap(), 3);
     assert!(!branches_table.list_branches().await.unwrap().contains_key("exp"));
 
-    // Setup: a branch that diverges from main, ready to promote back.
-    let promo = branches_table
-        .create_branch("promote", Ref::Version(None, None))
+    // Setup: a branch with row results that we want to apply to main.
+    let candidate = branches_table
+        .create_branch("candidate", Ref::Version(None, None))
         .await
         .unwrap();
-    promo
+    candidate
         .update()
         .only_if("id = 1")
         .column("quote", "'Revised on the branch'")
         .execute()
         .await
         .unwrap();
-    promo
-        .add(make_quotes_reader(vec![(4, "Galahad", "The grail awaits.")]))
+    candidate
+        .add(make_quotes_reader(vec![(
+            4,
+            "Galahad",
+            "The grail awaits.",
+        )]))
         .execute()
         .await
         .unwrap();
 
-    // --8<-- [start:branch_promote]
-    // There is no built-in merge yet, so promote a branch by writing its rows
-    // back to main with a normal ingestion call. `merge_insert` keys on a
-    // unique column, so rows that already exist on main are updated in place and
-    // new rows are appended — exactly what an upsert-style ingestion job does.
-    let schema = promo.schema().await.unwrap();
-    let batches = promo
+    // --8<-- [start:branch_upsert_to_main]
+    // This is a row-level upsert, not a merge of branch histories.
+    // `merge_insert` updates matching rows and inserts new rows using a stable
+    // unique key. Filter the branch read if you only want to apply some results.
+    let schema = candidate.schema().await.unwrap();
+    let batches = candidate
         .query()
         .execute()
         .await
@@ -1461,17 +1464,17 @@ async fn main() {
         .try_collect::<Vec<_>>()
         .await
         .unwrap();
-    let promoted = RecordBatchIterator::new(batches.into_iter().map(Ok), schema);
+    let rows_to_apply = RecordBatchIterator::new(batches.into_iter().map(Ok), schema);
 
     let mut merge = branches_table.merge_insert(&["id"]);
     merge
         .when_matched_update_all(None) // update rows that already exist on main
         .when_not_matched_insert_all(); // insert rows that are new on the branch
-    merge.execute(Box::new(promoted)).await.unwrap();
-    // --8<-- [end:branch_promote]
+    merge.execute(Box::new(rows_to_apply)).await.unwrap();
+    // --8<-- [end:branch_upsert_to_main]
 
     assert_eq!(branches_table.count_rows(None).await.unwrap(), 4);
-    branches_table.delete_branch("promote").await.unwrap();
+    branches_table.delete_branch("candidate").await.unwrap();
 
     // Setup: a larger table with a vector and a text column to index.
     let products = db
@@ -1485,7 +1488,8 @@ async fn main() {
     use lancedb::index::scalar::FtsIndexBuilder;
     use lancedb::index::Index;
 
-    // Build and validate indexes on a branch before promoting them to main.
+    // Build and validate indexes on a branch before using the configuration on
+    // main.
     let dev = products
         .create_branch("index-dev", Ref::Version(None, None))
         .await
