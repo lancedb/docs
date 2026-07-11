@@ -122,6 +122,7 @@
                   "search/vector-search",
                   "search/multivector-search",
                   "search/full-text-search",
+                  "search/fts-examples",
                   "search/hybrid-search",
                   "search/filtering",
                   "search/optimize-queries",
