@@ -186,6 +186,7 @@
               {
                 "group": "Running Jobs",
                 "pages": [
+                  "geneva/jobs/index",
                   "geneva/jobs/backfilling",
                   "geneva/jobs/bulk-load-columns",
                   "geneva/jobs/materialized-views",
