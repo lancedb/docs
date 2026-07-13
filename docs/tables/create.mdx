@@ -144,6 +144,10 @@ non-nullable column, or provide actual nulls for it, ingestion fails; nullable c
 omitted or written with null values. Without an explicit schema, Python infers list-like vector
 values as fixed-size `float32` vector fields from the observed dimension.
 
+For Python ingest, malformed vector values fail by default. If you expect occasional wrong-length,
+null, or NaN vectors, choose an `on_bad_vectors` policy: `"drop"` removes those rows, `"fill"` writes
+`fill_value`, and `"null"` writes nulls.
+
 ### From an Arrow Table
 You can also create LanceDB tables directly from Arrow tables.
 Rust uses an Arrow `RecordBatchReader` for the same Arrow-native ingest flow.

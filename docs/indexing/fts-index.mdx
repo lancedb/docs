@@ -49,6 +49,9 @@ When using async connections (`connect_async`), use `create_index` with the `FTS
 The `create_fts_index` method is not available on `AsyncTable`. Use `create_index` with `FTS` config instead.
 </Note>
 
+The current FTS implementation is Lance-native. Legacy Tantivy-only options, including
+`use_tantivy`, are no longer accepted by the index creation APIs.
+
 ## Nested field paths
 
 FTS indexes can target text leaves inside struct columns by passing a dotted path (for example, `payload.text`). The same path works for [`MatchQuery`](/search/full-text-search) and [`PhraseQuery`](/search/full-text-search), and for the `columns` argument on async `nearest_to_text` queries.
