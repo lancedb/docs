@@ -266,7 +266,8 @@
                   "integrations/reranking/colbert",
                   "integrations/reranking/jina",
                   "integrations/reranking/openai",
-                  "integrations/reranking/voyageai"
+                  "integrations/reranking/voyageai",
+                  "integrations/reranking/watsonx"
                 ]
               },
               {
