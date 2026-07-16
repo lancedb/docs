@@ -102,6 +102,32 @@ for more than 6 months after release. For real-world workloads, we recommend you
 as far as possible.
 </Note>
 
+### Pre-Haswell x86_64 hosts
+
+The default `lancedb` wheel targets `x86-64-haswell` (AVX2 + FMA + F16C) for full performance on modern
+hardware. On x86_64 CPUs without AVX2 — Intel Sandy Bridge, Ivy Bridge, or Westmere; AMD Bulldozer, Piledriver,
+or Steamroller — `import lancedb` crashes with `Illegal instruction`.
+
+For those hosts, install `lancedb-compat` instead:
+
+```bash pip icon="terminal"
+pip install lancedb-compat
+```
+
+The compat wheel exposes the same Python API (`import lancedb` still works) but is compiled at the
+`x86-64-v2` (Nehalem-class) baseline and relies on runtime SIMD dispatch, so it runs cleanly on
+pre-Haswell CPUs while still using AVX2, FMA, or AVX-512 when the host supports them.
+
+<Warning>
+`lancedb` and `lancedb-compat` install into the same `lancedb/` namespace and conflict at install time.
+Pick one. To switch, uninstall the other first:
+
+```bash
+pip uninstall lancedb
+pip install lancedb-compat
+```
+</Warning>
+
 ## 2. Connect to a LanceDB database
 
 LanceDB supports several URI patterns to connect to a database.
