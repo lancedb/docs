@@ -59,6 +59,20 @@ table.add(stream())
 
 Streaming inputs don't auto-parallelize, so use decently large chunks of several thousand rows or more, rather than yielding single-row batches.
 
+### Bounding memory on wide-row uploads
+
+For wide rows — anything with large embedding columns, long text, or many columns — the client can hold a large fraction of the dataset in memory during `add()`, because writes fan out across parallel partitions and each partition buffers a batch in flight. If bulk ingestion is using more memory than you expect, cap the number of parallel partitions with `write_parallelism`:
+
+```python Python icon="python"
+table.add(ds.dataset("data/", format="parquet"), write_parallelism=2)
+```
+
+Lower values trade throughput for a smaller memory footprint. `write_parallelism` defaults to an estimate based on the data size, capped at the CPU core count.
+
+<Note>
+When you pass a `pyarrow.dataset.Dataset` (or `LanceDataset`) to `add()`, LanceDB already sizes the scan batch and read-ahead based on the schema's bytes-per-row, so wide-row datasets stay near a ~1 GiB in-flight budget without extra configuration. Narrow datasets keep PyArrow's defaults, so throughput is unaffected.
+</Note>
+
 ## Indexing
 
 ### Vector indexes
