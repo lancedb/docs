@@ -62,9 +62,9 @@ For very large initial loads, create the table empty first; passing data directl
 Scanning a `pyarrow.dataset.Dataset` or `LanceDataset` for `add()` automatically bounds the scanner's batch size and read-ahead based on the schema's bytes-per-row, so wide-row datasets (large embedding columns, long text, many columns) stay near a ~1 GiB in-flight budget during the scan. Narrow datasets keep PyArrow's defaults, so throughput is unaffected.
 </Note>
 
-### Iterator ingestion: for streaming or computed-on-the-fly data
+### Iterator ingestion: for data you transform on the fly
 
-If your dataset doesn't fit in memory all at once — rows computed on the fly (generating embeddings as you ingest), or pulled from a streaming source — materializing the full table before calling `add()` will run you out of memory. The best practice is to pass an iterator of `pyarrow.RecordBatch` instead. LanceDB consumes one batch at a time, so peak memory stays bounded by the batch size you yield.
+If each row needs work before it can be written — generating embeddings as you ingest, for example — the data doesn't exist as a file you can point `ds.dataset(...)` at. The best practice is to pass an iterator of `pyarrow.RecordBatch` instead; LanceDB consumes one batch at a time as you produce them.
 
 ```python Python icon="python"
 def stream():
@@ -75,13 +75,19 @@ def stream():
 table.add(stream())
 ```
 
-Use decently large chunks of several thousand rows or more, rather than yielding single-row batches. Unlike a `Dataset`, a reader can't be counted ahead of time, so LanceDB can't auto-size parallelism for it — set `write_parallelism` yourself:
+Use decently large chunks of several thousand rows or more, rather than yielding single-row batches.
+
+<Note>
+**Set `write_parallelism` yourself for large inputs**
+
+Unlike a `Dataset`, a reader can't be counted or rescanned ahead of time, so LanceDB can't auto-size parallelism for it. For large inputs, set `write_parallelism` explicitly:
 
 ```python Python icon="python"
 table.add(stream(), write_parallelism=4)
 ```
 
-More parallelism means more write bandwidth, but each partition also becomes its own fragment, so over-parallelizing a small stream just fragments the table for no benefit. As a rule of thumb, don't budget more than one unit of parallelism per ~100K rows or ~1 GB of data — a 1,000-row stream needs `write_parallelism=1`, not more. `write_parallelism` is also a memory knob independent of that tradeoff: each partition buffers a batch in flight, so lower it if ingestion is using more memory than expected.
+More parallelism means more write bandwidth, but each partition also becomes its own fragment, so don't over-allocate on a small input — budget one unit of parallelism per ~100K rows or ~1 GB of data as a rule of thumb.
+</Note>
 
 ## Indexing
 
