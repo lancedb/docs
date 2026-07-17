@@ -48,6 +48,10 @@ Pass `progress=True` to watch it happen: LanceDB displays a live tqdm bar with r
 table.add(ds.dataset("data/", format="parquet"), progress=True)
 ```
 
+```text
+71%|███████▏  | 710000/1000000 [00:12<00:05, 58.8kit/s, 42.3 MB/s | 8/8 workers]
+```
+
 For larger-than-memory data, prefer scanning a file-backed dataset (`ds.dataset(...)`) over building your own `pyarrow.RecordBatchReader`. Both stream without loading the whole table into memory, but only a `Dataset` can be counted and rescanned: LanceDB knows the total row count upfront, which lets it auto-size parallelism, and it can retry a failed write by rescanning from the start. A hand-built reader can only be consumed once, so neither is possible — reach for the iterator path below only when the data genuinely can't be backed by files, e.g. embeddings computed on the fly.
 
 For very large initial loads, create the table empty first; passing data directly to `create_table(name, data)` skips the auto-parallel path.
