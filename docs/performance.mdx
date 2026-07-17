@@ -52,19 +52,13 @@ table.add(ds.dataset("data/", format="parquet"), progress=True)
 71%|███████▏  | 710000/1000000 [00:12<00:05, 58.8kit/s, 42.3 MB/s | 8/8 workers]
 ```
 
-For larger-than-memory data, prefer scanning a file-backed dataset (`ds.dataset(...)`) over a hand-built `pyarrow.RecordBatchReader`: a `Dataset` can be counted and rescanned, so LanceDB knows the row count upfront (better auto-parallelism) and can retry a failed write from the start — a reader can only be consumed once, so neither is possible. Reach for the iterator path below only when the data genuinely can't be backed by files, e.g. embeddings computed on the fly.
+For larger-than-memory data, prefer scanning a file-backed dataset (`ds.dataset(...)`) over a hand-built `pyarrow.RecordBatchReader`: a `Dataset` can be counted and rescanned, so LanceDB knows the row count upfront (better auto-parallelism) and can retry a failed write from the start — a reader can only be consumed once, so neither is possible. Reach for the iterator path below only when the data genuinely can't be backed by files, e.g. to apply custom data transformations as you ingest.
 
 For very large initial loads, create the table empty first; passing data directly to `create_table(name, data)` skips the auto-parallel path.
 
-<Note>
-**Wide rows and scan memory**
-
-Scanning a `pyarrow.dataset.Dataset` or `LanceDataset` for `add()` automatically bounds the scanner's batch size and read-ahead based on the schema's bytes-per-row, so wide-row datasets (large embedding columns, long text, many columns) stay near a ~1 GiB in-flight budget during the scan. Narrow datasets keep PyArrow's defaults, so throughput is unaffected.
-</Note>
-
 ### Iterator ingestion: for data you transform on the fly
 
-If each row needs work before it can be written — generating embeddings as you ingest, for example — the data doesn't exist as a file you can point `ds.dataset(...)` at. The best practice is to pass an iterator of `pyarrow.RecordBatch` instead; LanceDB consumes one batch at a time as you produce them.
+If each row needs work before it can be written — applying a custom transformation as you ingest, for example — the data doesn't exist as a file you can point `ds.dataset(...)` at. The best practice is to pass an iterator of `pyarrow.RecordBatch` instead; LanceDB consumes one batch at a time as you produce them.
 
 ```python Python icon="python"
 def stream():
