@@ -59,6 +59,34 @@ table.add(stream())
 
 Streaming inputs don't auto-parallelize, so use decently large chunks of several thousand rows or more, rather than yielding single-row batches.
 
+### Bulk ingests into a remote table
+
+<Info>
+This section applies only to remote tables (`db://` connections). Embedded (local) writes are unaffected.
+</Info>
+
+When you write to a remote LanceDB Enterprise table, the client splits each write partition into one or more HTTP `insert` parts and uploads them under a single upload id. Each part is streamed (not buffered), so peak memory stays bounded — but each part still has to complete within the client read timeout while the server writes it to object storage. On very large bulk ingests, an oversized part can run past that timeout and surface as:
+
+```text
+lancedb.remote.errors.HttpError: operation timed out
+```
+
+Two environment variables control how parts are cut. Both are picked up automatically by the Python and TypeScript clients:
+
+| Variable | Default | What it controls |
+|----------|---------|------------------|
+| `LANCE_CLIENT_MAX_BYTES_PER_REQUEST` | 8 GiB | Maximum size (in Arrow IPC, LZ4-compressed bytes) of a single insert part. Set to `0` to disable splitting and send one request per partition. |
+| `LANCE_CLIENT_MAX_REQUEST_DURATION` | Half the read timeout | Maximum wall-clock time (in whole seconds) any one insert part is allowed to stay open. A part is cut when it reaches either the byte budget or this duration, whichever comes first. Set to `0` to disable the time-based cut. |
+
+If large ingests are hitting the read timeout, lower `LANCE_CLIENT_MAX_BYTES_PER_REQUEST` (for example, `1073741824` for 1 GiB) so each part is smaller and finishes well within the read timeout. Lowering `LANCE_CLIENT_MAX_REQUEST_DURATION` has the same effect for slow or throttled uploads where the byte budget is not the limiting factor.
+
+```bash
+export LANCE_CLIENT_MAX_BYTES_PER_REQUEST=1073741824  # 1 GiB
+export LANCE_CLIENT_MAX_REQUEST_DURATION=120          # 2 minutes
+```
+
+Splitting into more parts does not change the final table — the server commits all parts of an upload atomically when the write completes.
+
 ## Indexing
 
 ### Vector indexes
