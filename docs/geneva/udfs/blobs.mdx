@@ -68,7 +68,23 @@ tbl = db.create_table(
 
 ### Blob v2
 
-Declare the output as a **struct with a `lance.blob_field(...)` child**. This is the pattern Geneva's large-scale image pipelines use — the struct carries the payload plus any per-row metadata (an error string, dimensions, a content hash, and so on):
+The simplest form is a scalar UDF whose `data_type` is `BlobType()` — return the payload as `bytes` (or `None`):
+
+<CodeGroup>
+```python Python icon="python"
+from lance.blob import BlobType
+from geneva import udf
+
+@udf(data_type=BlobType())
+def render_thumbnail(image_url: str) -> bytes:
+    return make_thumbnail(image_url)
+
+tbl.add_columns({"thumbnail": render_thumbnail})
+tbl.backfill("thumbnail")
+```
+</CodeGroup>
+
+For production pipelines, declare the output as a **struct with a `lance.blob_field(...)` child**. This is the pattern Geneva's large-scale image pipelines use — the struct carries the payload plus any per-row metadata (an error string, dimensions, a content hash, and so on):
 
 <CodeGroup>
 ```python Python icon="python"
@@ -123,10 +139,6 @@ tbl = db.create_table(
 )
 ```
 </CodeGroup>
-
-<Warning>
-Declare Blob v2 outputs nested in a struct, as shown above. A bare top-level `BlobType()` output currently loses its blob typing when the column is committed, leaving the column unreadable through the blob APIs.
-</Warning>
 
 ## Reading blob columns in UDFs
 
