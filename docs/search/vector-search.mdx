@@ -204,6 +204,10 @@ You can change `approx_mode` per query without rebuilding the index. For RQ inde
 - If recall is too low, increase `nprobes` gradually, but after a certain threshold, increasing `nprobes` yields only marginal accuracy gains.
 - If you need higher performance and have recall headroom, decrease `nprobes` gradually.
 
+For filtered ANN searches, you can also set `minimum_nprobes` and `maximum_nprobes`. LanceDB starts
+with the minimum and can scan more partitions up to the maximum if the filter leaves too few
+candidates. Calling `nprobes(n)` fixes both values to `n`, which disables that adaptive behavior.
+
 ### Vector Search with Prefiltering
 
 This is the default vector search setting. You can use prefiltering to boost query performance by reducing the search space before vector calculations begin. The system first applies your filter criteria to the dataset, then conducts vector search operations only on the remaining relevant subset.
