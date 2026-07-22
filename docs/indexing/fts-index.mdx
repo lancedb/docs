@@ -126,6 +126,96 @@ Enable phrase queries by setting:
 | `with_position` | `True` | Track token positions for phrase matching |
 | `remove_stop_words` | `False` | Preserve stop words for exact phrase matching |
 
+## Inspecting query tokenization
+
+When a query returns unexpected FTS results, it helps to see the exact tokens the index will match. LanceDB exposes two ways to run the tokenizer directly:
+
+- `Table.tokenize` uses the tokenizer configured on an existing FTS index. This is the fastest way to reproduce what happens inside `search(...)` for a given column or named index.
+- The top-level `tokenize` helper runs the tokenizer without touching a table, so you can preview the behavior of a `base_tokenizer`, language, or `ngram` configuration before you build an index.
+
+Both entry points return a list of tokens with the token text (after filters such as lowercasing, stemming, and stop-word removal) and the token position used by phrase matching.
+
+<Note>
+Model-backed tokenizers such as `jieba/*` and `lindera/*` are rebuilt in the client from index metadata. For remote tables, the same tokenizer model files must also exist locally, in Lance's language model home.
+</Note>
+
+### Tokenize against an existing FTS index
+
+Specify exactly one of `column` or the index name. Passing a column requires that column to have exactly one FTS index; passing an index name uses that index regardless of column.
+
+<CodeGroup>
+```python Python icon="python"
+# Sync table
+tokens = table.tokenize("Running in cafés", column="text")
+for tok in tokens:
+    print(tok.text, tok.position)
+# run 0
+# cafe 2
+
+# Or select a specific index by name
+tokens = table.tokenize("Running in cafés", index_name="text_idx")
+```
+
+```python Async Python icon="python"
+# Async table
+tokens = await async_table.tokenize("Running in cafés", column="text")
+```
+
+```typescript TypeScript icon="square-js"
+// Pass either { column } or { indexName }
+const tokens = await tbl.tokenize("Running in cafés", { column: "text" });
+for (const t of tokens) {
+    console.log(t.text, t.position);
+}
+```
+
+```rust Rust icon="rust"
+// By index name
+let tokens = table.tokenize("Running in cafés", "text_idx").await?;
+
+// Or resolve the FTS index by column
+let tokens = table.tokenize_with_column("Running in cafés", "text").await?;
+```
+</CodeGroup>
+
+### Tokenize without an index
+
+Use this to explore tokenizer settings before you commit to a specific `FTS` configuration. The options mirror the FTS index parameters described above.
+
+<CodeGroup>
+```python Python icon="python"
+import lancedb
+
+tokens = lancedb.tokenize(
+    "Running in cafés",
+    base_tokenizer="simple",
+    language="English",
+    lower_case=True,
+    stem=True,
+    ascii_folding=True,
+)
+```
+
+```typescript TypeScript icon="square-js"
+import { tokenize } from "@lancedb/lancedb";
+
+const tokens = await tokenize("Running in cafés", {
+    baseTokenizer: "simple",
+    language: "English",
+    lowercase: true,
+    stem: true,
+    asciiFolding: true,
+});
+```
+
+```rust Rust icon="rust"
+use lancedb::{index::scalar::FtsIndexBuilder, tokenize};
+
+let params = FtsIndexBuilder::default().base_tokenizer("simple".to_string());
+let tokens = tokenize("Running in cafés", &params)?;
+```
+</CodeGroup>
+
 ## Indexing nested string fields
 
 You can build an FTS index on a string field inside a struct by passing its full dotted path, like `nested.text`. The same path is used when you query the index through `fts_columns`, and the indexed column is reported back as the full path from `list_indices()`.
