@@ -1,74 +1,208 @@
 ---
 title: Blob Types in Geneva UDFs
 sidebarTitle: Blobs
-description: Learn how to work with Lance Blobs in Geneva UDFs for handling large binary objects efficiently with lazy reading capabilities.
+description: Write and read large binary objects (images, audio, documents) from Geneva UDFs using Lance Blob v1 and Blob v2 encodings.
 icon: splotch
 ---
 
-Geneva supports UDFs that take [Lance Blobs](https://docs.lancedb.com/tables/multimodal) (large binary objects) as input and has the ability to write out columns with binaries encoded as Lance Blobs.  Lance blobs are an optimization intended for large objects (1's MBs -> 100MB's) and provide a file-like object that lazily reads large binary objects.
+Geneva UDFs can consume and produce [Lance Blob](https://docs.lancedb.com/tables/multimodal) columns — large binary objects (roughly 1 MB to 100s of MB per value) such as images, audio clips, or documents. Blob columns keep large payloads out of the regular column data path and provide lazy, file-like access on read.
 
-## Reading Blobs
+Lance has two blob encodings, and Geneva supports both:
 
-Defining functions that read blob columns is straight forward.
+| | Blob v1 | Blob v2 |
+|---|---|---|
+| **Declaration** | `pa.large_binary()` + `lance-encoding:blob` field metadata | `lance.blob_field(...)` (the `lance.blob.v2` extension type) |
+| **Table requirement** | data storage version ≥ 2.0 | data storage version ≥ 2.2 |
+| **Storage** | payload bytes inline in the column | payloads packed into sidecar blob files, referenced by descriptors |
+| **Use when** | the table already exists on an older storage version | creating new tables — cheaper checkpoints and bulk writes at scale |
 
-For scalar UDFs, blob columns are expected to be of type `BlobFile`
+For Blob v2 output columns on data storage version 2.2+, Geneva checkpoints compact **descriptors** instead of the payload bytes and writes payloads through PyLance's bulk blob writer, which significantly reduces checkpoint I/O for large backfills. This requires `pylance>=9.0.0b24`.
 
+## Writing blob columns from UDFs
 
-<CodeGroup>
-```python Python icon="python"
-from lance.blob import BlobFile
+### Blob v1
 
-@udf
-def work_on_udf(blob: BlobFile) -> int:
-    assert isinstance(blob, BlobFile)
-    data = blob.read()
-    # do something intresting.
-
-    return len(data)
-```
-</CodeGroup>
-
-{/* TODO: For batched  `pa.Array` UDFs and for `RecordBatch` UDFs, blob columns are dereferenced and are presented as bytes.
-
-```python
-
-``` */}
-
-## Writing Blobs
-
-
-Defining UDFs that write out `Blob`s to a new column is straightforward.   Here we add the standard metadata annotation to the UDF so that Geneva knows to write out Blobs.
-
-For scalar udfs, your udf will return `bytes`, explicitly set the `data_type` to `pa.large_binary()`, and add the `field_metadata` that specifies blob encoding.
+For a scalar UDF, return `bytes`, set `data_type` to `pa.large_binary()`, and add the `field_metadata` that marks the column as blob-encoded:
 
 <CodeGroup>
 ```python Python icon="python"
+import pyarrow as pa
+from geneva import udf
+
 @udf(data_type=pa.large_binary(), field_metadata={"lance-encoding:blob": "true"})
 def generate_blob(text: str, multiplier: int) -> bytes:
-    """UDF that generates blob data by repeating text."""
+    """Generate blob data by repeating text."""
     return (text * multiplier).encode("utf-8")
+
+tbl.add_columns({"blob_output": generate_blob})
+tbl.backfill("blob_output")
 ```
 </CodeGroup>
 
-For `pa.RecordBatch` batched UDFs you the effort is similar:
+A batched (`pa.RecordBatch`) UDF is similar — return a `pa.large_binary()` array:
 
 <CodeGroup>
 ```python Python icon="python"
 @udf(data_type=pa.large_binary(), field_metadata={"lance-encoding:blob": "true"})
 def batch_to_blob(batch: pa.RecordBatch) -> pa.Array:
-    """UDF that converts RecordBatch rows to blob data."""
-    import json
-
+    """Convert each row to blob data."""
     blobs = []
     for i in range(batch.num_rows):
-        # do something that returns bytes
-        blob_data = ...
-        blobs.append(blob_data)
+        text = batch.column("text")[i].as_py()
+        blobs.append(text.encode("utf-8"))
     return pa.array(blobs, type=pa.large_binary())
+```
+</CodeGroup>
+
+The destination table must use data storage version 2.0 or newer:
+
+<CodeGroup>
+```python Python icon="python"
+tbl = db.create_table(
+    "images",
+    data,
+    storage_options={"new_table_data_storage_version": "2.0"},
+)
+```
+</CodeGroup>
+
+### Blob v2
+
+The simplest form is a scalar UDF whose `data_type` is `BlobType()` — return the payload as `bytes` (or `None`):
+
+<CodeGroup>
+```python Python icon="python"
+from lance.blob import BlobType
+from geneva import udf
+
+@udf(data_type=BlobType())
+def render_thumbnail(image_url: str) -> bytes:
+    return make_thumbnail(image_url)
+
+tbl.add_columns({"thumbnail": render_thumbnail})
+tbl.backfill("thumbnail")
+```
+</CodeGroup>
+
+For production pipelines, declare the output as a **struct with a `lance.blob_field(...)` child**. This is the pattern Geneva's large-scale image pipelines use — the struct carries the payload plus any per-row metadata (an error string, dimensions, a content hash, and so on):
+
+<CodeGroup>
+```python Python icon="python"
+import lance
+import pyarrow as pa
+from geneva import udf
+
+result_type = pa.struct(
+    [
+        lance.blob_field("image_bytes"),
+        pa.field("error", pa.string()),
+    ]
+)
+
+@udf(data_type=result_type)
+def download_image(url: str) -> dict:
+    try:
+        return {"image_bytes": fetch(url), "error": None}
+    except Exception as exc:
+        return {"image_bytes": None, "error": str(exc)}
+
+tbl.add_columns({"download": download_image})
+tbl.backfill("download")
+```
+</CodeGroup>
+
+Scalar UDFs return the blob child as inline `bytes` (or `None`); URI-style descriptors like `{"uri": ...}` are not accepted. A batched UDF builds the struct explicitly, using `lance.blob_array(...)` for the blob child:
+
+<CodeGroup>
+```python Python icon="python"
+@udf(data_type=result_type)
+def download_images(batch: pa.RecordBatch) -> pa.Array:
+    payloads, errors = [], []
+    for url in batch.column("url"):
+        payloads.append(fetch(url.as_py()))
+        errors.append(None)
+    return pa.StructArray.from_arrays(
+        [lance.blob_array(payloads), pa.array(errors, type=pa.string())],
+        fields=list(result_type),
+    )
+```
+</CodeGroup>
+
+The destination table must use data storage version 2.2 or newer:
+
+<CodeGroup>
+```python Python icon="python"
+tbl = db.create_table(
+    "images",
+    data,
+    storage_options={"new_table_data_storage_version": "2.2"},
+)
+```
+</CodeGroup>
+
+## Reading blob columns in UDFs
+
+### Blob v1
+
+Blob v1 columns arrive in scalar UDFs as lazy `BlobFile` objects — call `.read()` to fetch the payload:
+
+<CodeGroup>
+```python Python icon="python"
+from lance.blob import BlobFile
+
+@udf(data_type=pa.int64())
+def blob_len(blob_output: BlobFile) -> int:
+    data = blob_output.read()
+    return len(data)
+
+tbl.add_columns({"blob_len": blob_len})
+tbl.backfill("blob_len")
+```
+</CodeGroup>
+
+### Blob v2
+
+Blob v2 payloads arrive as `bytes`. Reference a nested blob with its dotted path via the `(udf, input_columns)` tuple form:
+
+<CodeGroup>
+```python Python icon="python"
+@udf(data_type=pa.int64())
+def payload_len(image: bytes) -> int:
+    return len(image)
+
+tbl.add_columns({"payload_len": (payload_len, ["download.image_bytes"])})
+tbl.backfill("payload_len")
+```
+</CodeGroup>
+
+## Reading blobs back
+
+`Table.take_blobs` returns lazy `BlobFile` handles for both encodings. Use the dotted path for a blob nested in a struct:
+
+<CodeGroup>
+```python Python icon="python"
+# Blob v1 column
+blobs = tbl.take_blobs([0, 1, 2], column="blob_output")
+payloads = [b.read() for b in blobs]
+
+# Blob v2 column nested in a struct
+blobs = tbl.take_blobs([0, 1, 2], column="download.image_bytes")
+payloads = [b.read() for b in blobs]
+```
+</CodeGroup>
+
+For bulk reads of Blob v2 payloads keyed by physical row address, drop down to the Lance dataset:
+
+<CodeGroup>
+```python Python icon="python"
+ds = tbl.to_lance()
+pairs = ds.read_blobs("download.image_bytes", addresses=[0, 1, 2], preserve_order=True)
+payloads = [bytes(payload) for _addr, payload in pairs]
 ```
 </CodeGroup>
 
 ## API Reference
 
-- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator for defining blob-processing functions
-- [Table](https://lancedb.github.io/geneva/api/table/) — `add_columns()`, `backfill()`
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — `@udf` decorator for defining blob-producing and blob-consuming functions
+- [Table](https://lancedb.github.io/geneva/api/table/) — `add_columns()`, `backfill()`, `take_blobs()`
+- [Lance blob guide](https://lancedb.github.io/lance/guide/blob/) — the underlying Blob v1/v2 storage model
