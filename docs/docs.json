@@ -151,7 +151,8 @@
                 "group": "Storage",
                 "pages": [
                   "storage/index",
-                  "storage/configuration"
+                  "storage/configuration",
+                  "storage/monitoring"
                 ]
               }
             ]
