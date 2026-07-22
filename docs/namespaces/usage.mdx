@@ -98,6 +98,10 @@ doesn't exist, or contains data:
 Namespace path components can't be empty. Each component can contain only letters, numbers,
 underscores, hyphens, and periods.
 
+Listing APIs return the immediate children of the requested namespace path. Use `limit` with the
+returned `page_token` to page through large catalogs; pass an empty namespace path (`[]`) when you
+want to list from the root namespace.
+
 ## Namespaces in LanceDB Enterprise
 
 In LanceDB Enterprise deployments, configure namespace-backed federated databases in a TOML file under your deployment's `config` directory.

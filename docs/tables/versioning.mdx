@@ -218,6 +218,16 @@ Deleting a tag only removes the label, not the version it points to. After
 deletion, the underlying table version becomes eligible for cleanup again.
 </Note>
 
+## Branches
+
+Beyond linear history, LanceDB also supports **branches** — isolated, writable
+lines of history forked from `main` (or a specific version). Whereas tags and
+`checkout` give you read-only views of existing versions, a branch has its own
+writable history, making it ideal for experiments, backfills, and migrations
+that you want to keep separate from production reads on `main`.
+
+Branches are covered in their own guide: see [Branches](/tables/branching).
+
 ## Delete Data From the Table
 
 Let's demonstrate how deletions also create new versions:

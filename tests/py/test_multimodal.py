@@ -166,29 +166,67 @@ def test_blob_api_to_pandas(db_path_factory):
     assert len(df_typed) == 2
 
 
-def test_query_to_pandas_kwargs(db_path_factory):
-    db = lancedb.connect(db_path_factory("query_to_pandas_db"))
+@pytest.mark.asyncio
+async def test_query_to_pandas_kwargs(db_path_factory):
     schema = pa.schema([
         pa.field("id", pa.int64()),
         pa.field("vector", pa.list_(pa.float32(), 128)),
+        pa.field(
+            "video",
+            pa.large_binary(),
+            metadata={"lance-encoding:blob": "true"},
+        ),
     ])
-    tbl = db.create_table(
-        "search_demo",
-        data=[
-            {"id": i, "vector": np.random.rand(128).astype(np.float32)}
-            for i in range(10)
-        ],
-        schema=schema,
-        mode="overwrite",
+    data = [
+        {
+            "id": i,
+            "vector": np.random.rand(128).astype(np.float32),
+            "video": f"fake_video_bytes_{i}".encode(),
+        }
+        for i in range(10)
+    ]
+
+    db = lancedb.connect(db_path_factory("query_to_pandas_db"))
+    tbl = db.create_table("search_demo", data=data, schema=schema, mode="overwrite")
+
+    async_db = await lancedb.connect_async(
+        str(db_path_factory("query_to_pandas_async_db"))
     )
+    tbl_async = await async_db.create_table(
+        "search_demo", data=data, schema=schema, mode="overwrite"
+    )
+
     query_vector = np.random.rand(128).astype(np.float32)
 
     # --8<-- [start:query_to_pandas_kwargs]
-    df = (
+    # Plain scan query: blob_mode is supported end to end
+    df_lazy = (
+        tbl.search()
+        .where("id = 1")
+        .select(["id", "video"])
+        .to_pandas(blob_mode="lazy")
+    )
+
+    # Same call shape works on async query builders
+    df_bytes = await (
+        tbl_async.query()
+        .where("id = 1")
+        .select(["id", "video"])
+        .to_pandas(blob_mode="bytes")
+    )
+
+    # Vector / FTS / hybrid queries can't materialize blob columns,
+    # so omit them from the projection
+    df_vec = (
         tbl.search(query_vector)
         .limit(10)
+        .select(["id", "vector"])
         .to_pandas(split_blocks=True, self_destruct=True)
     )
     # --8<-- [end:query_to_pandas_kwargs]
 
-    assert len(df) == 10
+    assert len(df_lazy) == 1
+    assert len(df_bytes) == 1
+    assert df_bytes["video"].iloc[0] == b"fake_video_bytes_1"
+    assert len(df_vec) == 10
+    assert "video" not in df_vec.columns

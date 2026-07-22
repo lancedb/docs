@@ -449,6 +449,38 @@ test("schema evolution snippets (async)", async () => {
     await vectorTable.alterColumns([{ path: "embedding_v2", rename: "embedding" }]);
     // --8<-- [end:alter_vector_column]
     expect(await vectorTable.countRows()).toBe(1);
+
+    const fieldMetadataTable = await db.createTable(
+      "schema_field_metadata_example",
+      [
+        { id: 0, category: "a" },
+        { id: 1, category: "b" },
+      ],
+      { mode: "overwrite" },
+    );
+
+    // --8<-- [start:schema_field_metadata_merge]
+    // Set two metadata keys on the `category` field.
+    const res = await fieldMetadataTable.updateFieldMetadata([
+      { path: "category", metadata: { unit: "label", pii: "false" } },
+    ]);
+    console.log(res.version);
+
+    // Merge: add a new key, delete one via null, keep the rest.
+    await fieldMetadataTable.updateFieldMetadata([
+      { path: "category", metadata: { source: "import", pii: null } },
+    ]);
+    // --8<-- [end:schema_field_metadata_merge]
+
+    // --8<-- [start:schema_field_metadata_replace]
+    await fieldMetadataTable.updateFieldMetadata([
+      {
+        path: "category",
+        metadata: { owner: "search-team" },
+        replace: true,
+      },
+    ]);
+    // --8<-- [end:schema_field_metadata_replace]
   });
 });
 
@@ -814,6 +846,120 @@ test("versioning snippets (async)", async () => {
     const remainingTags = await tags.list();
     expect(remainingTags).toHaveProperty("baseline");
     expect(remainingTags).not.toHaveProperty("with-edits");
+  });
+});
+
+test("branch snippets (async)", async () => {
+  await withTempDirectory(async (databaseDir) => {
+    const db = await lancedb.connect(databaseDir);
+    const table = await db.createTable(
+      "quotes_branches_example",
+      [
+        { id: 1, author: "Lancelot", quote: "My lance never fails." },
+        { id: 2, author: "Arthur", quote: "Long live Camelot!" },
+        { id: 3, author: "Merlin", quote: "Magic always has a price." },
+      ],
+      { mode: "overwrite" },
+    );
+
+    const branches = await table.branches();
+
+    // --8<-- [start:branch_create]
+    // Fork an isolated, writable branch from main's latest version.
+    // `create` returns a table handle scoped to the new branch.
+    const branch = await branches.create("exp");
+    // --8<-- [end:branch_create]
+
+    // --8<-- [start:branch_write]
+    // Writes land on the branch handle only; main is left untouched.
+    await branch.add([{ id: 4, author: "Lancelot", quote: "For the realm!" }]);
+    console.log(await branch.countRows()); // 4 rows on the branch
+    console.log(await table.countRows()); // 3 rows; main is unaffected
+
+    // List every branch, each mapped to its metadata (including its fork point).
+    console.log(await branches.list());
+    // --8<-- [end:branch_write]
+
+    // --8<-- [start:branch_reopen]
+    // Reopen an existing branch by name from the table handle...
+    const checkedOut = await branches.checkout("exp");
+    // ...or open it directly from the database connection.
+    const branchHandle = await db.openTable(
+      "quotes_branches_example",
+      undefined,
+      { branch: "exp" },
+    );
+    console.log(await checkedOut.countRows(), await branchHandle.countRows()); // both 4
+    // --8<-- [end:branch_reopen]
+
+    // --8<-- [start:branch_delete]
+    // Delete the branch and its branch-local history. Data on main is safe.
+    await branches.delete("exp");
+    // --8<-- [end:branch_delete]
+
+    expect(await table.countRows()).toBe(3);
+    expect(await branches.list()).not.toHaveProperty("exp");
+
+    // Setup: a branch with row results that we want to apply to main.
+    const candidate = await branches.create("candidate");
+    await candidate.update({
+      where: "id = 1",
+      values: { quote: "Revised on the branch" },
+    });
+    await candidate.add([
+      { id: 4, author: "Galahad", quote: "The grail awaits." },
+    ]);
+
+    // --8<-- [start:branch_upsert_to_main]
+    // This is a row-level upsert, not a merge of branch histories.
+    // `mergeInsert` updates matching rows and inserts new rows using a stable
+    // unique key. Filter the branch read if you only want to apply some results.
+    const rowsToApply = await candidate.toArrow();
+    await table
+      .mergeInsert("id")
+      .whenMatchedUpdateAll() // update rows that already exist on main
+      .whenNotMatchedInsertAll() // insert rows that are new on the branch
+      .execute(rowsToApply);
+    // --8<-- [end:branch_upsert_to_main]
+
+    expect(await table.countRows()).toBe(4);
+    await branches.delete("candidate");
+
+    // Setup: a larger table with a vector and a text column to index.
+    const products = await db.createTable(
+      "products_branch_index",
+      Array.from({ length: 512 }, (_, i) => ({
+        id: i,
+        vector: Array.from({ length: 4 }, () => Math.random()),
+        text: `product number ${i}`,
+      })),
+      { mode: "overwrite" },
+    );
+    const productBranches = await products.branches();
+
+    // --8<-- [start:branch_index]
+    // Build and validate indexes on a branch before using the configuration on
+    // main.
+    const dev = await productBranches.create("index-dev");
+
+    // A vector (ANN) index and a full-text search index, both branch-scoped.
+    await dev.createIndex("vector", {
+      config: lancedb.Index.ivfPq({
+        distanceType: "cosine",
+        numPartitions: 1,
+        numSubVectors: 2,
+      }),
+    });
+    await dev.createIndex("text", { config: lancedb.Index.fts() });
+
+    // Both indexes live only on the branch; main still has none.
+    console.log((await dev.listIndices()).map((ix) => ix.name)); // branch: two indexes
+    console.log((await products.listIndices()).map((ix) => ix.name)); // main: [] (untouched)
+    // --8<-- [end:branch_index]
+
+    expect(await dev.listIndices()).toHaveLength(2);
+    expect(await products.listIndices()).toHaveLength(0);
+    await productBranches.delete("index-dev");
   });
 });
 

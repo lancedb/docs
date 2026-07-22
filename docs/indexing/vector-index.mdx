@@ -56,6 +56,10 @@ Although the `create_index` API returns immediately, the building of the vector 
 
 Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
 
+Rows appended after an index build remain outside that index until optimization refreshes it. Normal
+search still checks those unindexed rows with a slower fallback path; `fast_search()` skips that
+fallback and searches only indexed rows.
+
 ## Choose the Right Index
 
 Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
@@ -109,6 +113,9 @@ Sometimes you need to configure the index beyond default parameters:
 - `num_partitions`: use index-specific starting points from the section above:
     - HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`): `num_rows // 1,048,576`
     - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
+- `target_partition_size`: alternative IVF sizing knob that asks LanceDB to derive the partition
+  count from a target number of rows per partition. If you set both `num_partitions` and
+  `target_partition_size`, `num_partitions` takes precedence.
 - `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension // 8`. Larger values often improve recall but can slow search.
 
 Let's take a look at a sample request for an IVF index:
@@ -333,16 +340,27 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 
 ## Check Index Status
 
-Vector index creation is fast - typically a few minutes for 1 million vectors with 1536 dimensions. You can check index status in two ways:
+Vector index creation runs in the background and may take some time to complete. While it is ongoing, you can check its status either programmatically through the API or from the **LanceDB Enterprise UI**.
 
-### Option 1: Check the UI
+In the LanceDB Enterprise UI, navigate to your table page - the "Index" column reflects each column's index status: it is blank when no index exists, shows an "in progress" label while the index is being built, and shows the index type once the build completes.
 
-Navigate to your table page - the "Index" column shows index status. It remains blank if no index exists or if creation is in progress.
-
-### Option 2: Use the API
-
-Use `list_indices()` and `index_stats()` to check index status. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
+Programmatically, use `list_indices()` and `index_stats()`. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
 To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_index()` or call `wait_for_index()` on the table.
+
+Each entry returned by `list_indices()` also carries detailed per-index metadata, so you can inspect an index without a follow-up `index_stats()` call. Node.js exposes the same fields in camelCase (`num_indexed_rows` → `numIndexedRows`):
+
+| Field | What it tells you |
+| :--- | :--- |
+| `num_indexed_rows`, `num_unindexed_rows` | Index coverage over the table |
+| `size_bytes` | Total size of the index files on disk |
+| `num_segments`, `index_version` | On-disk layout and format version |
+| `created_at` | Creation time (ms since the Unix epoch in Node.js) |
+| `index_uuid`, `type_url` | Internal identifiers for the index segment |
+| `index_details` | Type-specific details (e.g. IVF partition counts or quantization settings) |
+
+<Note>
+These fields are populated for local and embedded tables. On LanceDB Enterprise remote tables they are returned as `None` / `undefined` until the server response surfaces them.
+</Note>
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -350,7 +368,7 @@ To wait until all data is fully indexed, you can specify the `wait_timeout` para
     </CodeBlock>
 </CodeGroup>
 
-#### Custom Index Names
+## Custom Index Names
 
 The `{column}_idx` suffix is a default convention, not the only supported naming path. Pass `name=...` to `create_index()` to override it — useful when you want to manage multiple indexes on the same column (for example, side-by-side `IVF_PQ` and `IVF_HNSW_SQ` builds) or when you script index replacement by name. Once set, `list_indices()`, `index_stats(name)`, and `wait_for_index([name])` all reference the custom name.
 

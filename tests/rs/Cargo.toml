@@ -10,7 +10,7 @@ arrow-schema = "58.3.0"
 futures = "0.3.31"
 futures-util = "0.3.31"
 lance-namespace = "7.0.0"
-lancedb = { version = "0.30.0", features = ["polars"] }
+lancedb = { version = "0.31.0", features = ["polars"] }
 polars = ">=0.37,<0.40.0"
 polars-arrow = ">=0.37,<0.40.0"
 serde = { version = "1", features = ["derive"] }

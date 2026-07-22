@@ -29,6 +29,9 @@ Accepted Arguments
 
 **Note:** `weight_vector` + `weight_fts` must equal 1.0.
 
+For multivector reranking, input result sets need `_rowid` so LanceDB can identify the same row
+across the ranked lists. Add `.with_row_id(True)` to each vector search before passing the results
+to the reranker.
 
 ## Supported Scores for each query type
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:

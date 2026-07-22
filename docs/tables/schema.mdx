@@ -50,6 +50,12 @@ import {
     PyAlterVectorColumn as AlterVectorColumn,
     TsAlterVectorColumn as TsAlterVectorColumn,
     RsAlterVectorColumn as RsAlterVectorColumn,
+    PySchemaFieldMetadataMerge as SchemaFieldMetadataMerge,
+    TsSchemaFieldMetadataMerge as TsSchemaFieldMetadataMerge,
+    RsSchemaFieldMetadataMerge as RsSchemaFieldMetadataMerge,
+    PySchemaFieldMetadataReplace as SchemaFieldMetadataReplace,
+    TsSchemaFieldMetadataReplace as TsSchemaFieldMetadataReplace,
+    RsSchemaFieldMetadataReplace as RsSchemaFieldMetadataReplace,
 } from '/snippets/tables.mdx';
 
 Schema evolution enables non-breaking modifications to a database table's structure — such as adding columns, altering data types, or dropping fields — to adapt to evolving data requirements without service interruptions. 
@@ -61,11 +67,12 @@ LanceDB supports ACID-compliant schema evolution through granular operations (ad
 
 ## Schema evolution operations
 
-LanceDB supports three primary schema evolution operations:
+LanceDB supports four primary schema evolution operations:
 
 1. **Adding new columns**: Extend your table with additional attributes
 2. **Altering existing columns**: Change column names, data types, or nullability
-3. **Dropping columns**: Remove unnecessary columns from your schema
+3. **Updating field metadata**: Attach or change per-column Arrow metadata
+4. **Dropping columns**: Remove unnecessary columns from your schema
 
 
 <Tip title="Schema Evolution Performance">
@@ -342,6 +349,59 @@ For such cases, use `addColumns` / `add_columns` (with `arrow_cast`), then `drop
 <Warning title="Data Type Changes">
 Changing data types requires rewriting the column data and may be resource-intensive for large tables. Renaming columns or changing nullability is more efficient as it only updates metadata.
 </Warning>
+
+## Update field metadata
+
+Each column in a LanceDB table can carry a small key/value map of Arrow field metadata — useful
+for annotating columns with units, provenance, PII flags, embedding model versions, or any other
+schema-level context your application needs.
+
+Use [`update_field_metadata`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.update_field_metadata)
+in Python, [`updateFieldMetadata`](https://lancedb.github.io/lancedb/js/classes/Table/#updatefieldmetadata)
+in TypeScript/JavaScript, or `update_field_metadata` in Rust to add, change, or remove these
+key/value pairs without rewriting the column data. Each call commits a new table version and returns
+the new `version`.
+
+Each update targets one field by **dot-path**: top-level columns are addressed by name (for
+example `"embedding"`), and nested fields by their full path (for example `"address.zip"`). By
+default, the keys you pass are **merged** into the field's existing metadata — keys you do not
+mention are preserved, and passing `None` (Python) or `null` (TypeScript) deletes a key. Set
+`replace: true` to swap the field's entire metadata map instead of merging.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {SchemaFieldMetadataMerge}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsSchemaFieldMetadataMerge}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsSchemaFieldMetadataMerge}
+    </CodeBlock>
+</CodeGroup>
+
+To overwrite a field's metadata entirely instead of merging, set `replace` to `true`:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {SchemaFieldMetadataReplace}
+    </CodeBlock>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsSchemaFieldMetadataReplace}
+    </CodeBlock>
+
+    <CodeBlock filename="Rust" language="Rust" icon="rust">
+    {RsSchemaFieldMetadataReplace}
+    </CodeBlock>
+</CodeGroup>
+
+<Tip>
+You can pass multiple updates in a single call to change metadata on several fields at once —
+each call commits a single new table version.
+</Tip>
 
 ## Drop columns
 
