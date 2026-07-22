@@ -6,7 +6,7 @@ icon: "chart-line"
 keywords: ["monitoring", "observability", "opentelemetry", "otel", "metrics", "prometheus", "object store"]
 ---
 
-LanceDB emits internal metrics — currently object store request counts, bytes transferred, request latency, retryable errors, and throttles — and can bridge them into any [OpenTelemetry](https://opentelemetry.io/) backend. Use this to watch how your application interacts with S3, GCS, Azure Blob, or the local filesystem in production: spot latency regressions, catch retry storms, and size your storage tier from real workload data.
+LanceDB emits internal metrics (currently object store request counts, bytes transferred, request latency, retryable errors, and throttles) and can bridge them into any [OpenTelemetry](https://opentelemetry.io/) backend. Use this to watch how your application interacts with S3, GCS, Azure Blob, or the local filesystem in production: spot latency regressions, catch retry storms, and size your storage tier from real workload data.
 
 The bridge is available in the Python and TypeScript SDKs. It is a thin wrapper over LanceDB's `metrics` recorder; your application supplies and configures the OpenTelemetry SDK.
 
@@ -34,7 +34,7 @@ The recorder is process-global and pull-based: your configured `MetricReader` co
 
 ## Python
 
-Install LanceDB with the `otel` extra to pull in the OpenTelemetry API, plus an OpenTelemetry SDK of your choice. The SDK is intentionally not bundled — you configure it, its readers, and its exporters however your platform expects.
+Install LanceDB with the `otel` extra to pull in the OpenTelemetry API, plus an OpenTelemetry SDK of your choice. The SDK is intentionally not bundled, so you configure it and its readers and exporters however your platform expects.
 
 ```bash
 pip install "lancedb[otel]" opentelemetry-sdk
@@ -97,10 +97,10 @@ const db = await connect("s3://my-bucket/lancedb");
 
 A few starting points for dashboards and alerts:
 
-- **Request rate by operation** — `rate(lance_object_store_requests_total[1m])` broken down by `operation` shows read vs. write pressure and helps size ingestion vs. serving traffic separately.
-- **Tail latency** — histogram quantiles over `lance_object_store_request_duration_seconds_bucket` catch object store slowdowns before they surface as query timeouts.
-- **Retryable responses** — a rising `lance_object_store_retryable_responses_total` typically means you are being throttled and should back off or shard writes.
-- **In-flight requests** — a growing `lance_object_store_in_flight_requests` gauge without a matching rise in throughput indicates queueing.
+- **Request rate by operation:** `rate(lance_object_store_requests_total[1m])` broken down by `operation` shows read vs. write pressure and helps size ingestion and serving traffic separately.
+- **Tail latency:** histogram quantiles over `lance_object_store_request_duration_seconds_bucket` catch object store slowdowns before they surface as query timeouts.
+- **Retryable responses:** a rising `lance_object_store_retryable_responses_total` typically means you are being throttled and should back off or shard writes.
+- **In-flight requests:** a growing `lance_object_store_in_flight_requests` gauge without a matching rise in throughput indicates queueing.
 
 ## Where to go next
 
