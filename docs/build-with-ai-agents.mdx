@@ -267,28 +267,21 @@ model for the stored text and the search queries.
 
 ### Apply the winning experiment to `main`
 
-Suppose `nomic-embed-text` wins. Ask the agent to apply that result:
+The branch experiments leave you with the results side by side, and they
+deliberately never touch `main`. Once you've picked a winner, apply it to
+`main` yourself by rerunning that experiment's validated transformation
+directly against the `main` table. Rerunning the reviewed operation is the
+reliable path on both OSS and Enterprise: it replays exactly the transformation
+you validated on the branch, and it works the same regardless of how the branch
+evolved.
 
-```text Agent prompt
-The `embed-nomic` experiment won. Use the lancedb skill to apply
-`vector_nomic` to `main`.
+Suppose `nomic-embed-text` wins. Rerun the same Nomic embedding transformation
+you validated on `embed-nomic` against `main` in batches, then call
+`table.optimize()` on OSS. Verify a bounded vector search on `main`, and keep
+the losing branch around until you're confident in the result.
 
-- On LanceDB OSS, rerun the validated Nomic embedding transformation against
-  the main table in batches, then call `table.optimize()`.
-- On LanceDB Enterprise, inspect `table.branches.diff("embed-nomic")`. If the
-  branch satisfies the added-column merge requirements, preview with
-  `merge(..., dry_run=True)` and merge only after the preview is ready.
-  Otherwise, rerun the validated transformation on `main`.
-- Verify a bounded vector search on `main`.
-- Keep the losing branch until I explicitly approve its deletion.
-```
-
-Enterprise branch merge promotes eligible new columns, but it does not replay
-row updates, index changes, or a backfill that spans several commits. With OSS,
-rerun the chosen operation on `main`. See
-[Branches](/tables/branching), especially
-[Compare and merge a branch into `main`](/tables/branching#compare-and-merge-a-branch-into-main),
-for the exact rules.
+See [Branches](/tables/branching) for more on how branches, versions, and tags
+relate.
 
 ## Takeaways
 
@@ -336,5 +329,6 @@ evaluation set, report the comparison, and, if you want, work on an alternate
 branch that's isolated from `main` until you decide you want the new derived
 column in `main`.
 
-On LanceDB Enterprise, eligible added-column changes can be reviewed and merged from a
-branch. See [Branches](/tables/branching) for more information on branching and merge rules.
+Once you've chosen a winner, rerun that validated transformation against `main`
+yourself, on both OSS and Enterprise. See [Branches](/tables/branching) for more
+information on branching.
