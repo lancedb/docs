@@ -552,6 +552,10 @@
       "destination": "/enterprise/benchmarks"
     },
     {
+      "source": "/enterprise/quickstart",
+      "destination": "/quickstart"
+    },
+    {
       "source": "/huggingface/overview",
       "destination": "/integrations/ai/huggingface"
     },
