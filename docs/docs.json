@@ -60,7 +60,8 @@
                   }
                 ]
               },
-              "performance"
+              "performance",
+              "build-with-ai-agents"
             ]
           },
           {
