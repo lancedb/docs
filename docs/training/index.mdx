@@ -58,9 +58,8 @@ for batch in dataloader:
 samples into batches. You can also iterate the dataset directly when you do not need collation.
 
 <Note>
-`StreamingDataset` relies on the permutation API and requires direct access to an embedded LanceDB table. The table
-data can live on local or cloud object storage, but a remote table accessed through the LanceDB Cloud API is not
-supported.
+`StreamingDataset` is built on the permutation API and works with both embedded LanceDB tables and remote tables
+accessed through the LanceDB Cloud API. The underlying table data can live on local disk or cloud object storage.
 </Note>
 
 Use the streaming data loader when the training data does not fit in memory, when you need deterministic global batches
