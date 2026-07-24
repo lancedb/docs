@@ -48,31 +48,36 @@ Indexers handle heavyweight background work such as building indexes, merging in
 
 ```mermaid
 flowchart TB
-    Client[Client application]
-    Remote[Remote table / API boundary]
-
-    subgraph DP[Data plane]
-        QN[Query nodes]
-        PE[Plan executors<br/>cache + distributed execution]
-        IX[Indexers / background workers]
-    end
+    Client[Client applications]
 
     subgraph CP[Control plane]
-        CFG[Configuration, identity,<br/>policy, lifecycle]
+        CFG[Configuration, identity, policy, lifecycle]
     end
 
-    OS[(Object storage<br/>table data, manifests, indexes)]
+    subgraph DP[Data Plane<br/><span style='font-size:0.85em'>Managed or self-hosted</span>]
+        QP[Query planning + routing fleet]
+        PE[Executor + cache fleet]
+        MON[Monitoring + orchestration fleet]
+        WAL[MemWAL fleet]
+        JOBS[Jobs fleet]
 
-    Client -->|Read / write requests| Remote
-    Remote --> QN
-    QN -->|Query sub-plans| PE
-    QN -->|Commits writes| OS
-    PE <-->|Read data| OS
-    IX <-->|Build indexes / compact data| OS
-    QN -.->|Indexing / compaction signals| IX
-    CFG -.->|Govern and configure| QN
-    CFG -.->|Govern and configure| PE
-    CFG -.->|Govern and configure| IX
+        QP -->|Query subplans| PE
+        QP -->|Send state + job requests| MON
+        QP -->|Fresh reads and writes| WAL
+        PE -.->|Send state| MON
+        WAL -.->|Send state| MON
+        MON -->|Indexing, compaction,<br/>backfill, refresh jobs| JOBS
+        JOBS -->|Send state| MON
+    end
+
+    OS[(Object Storage)]
+
+    Client -->|Queries, writes, backfills| DP
+    CFG -.->|Govern and configure| DP
+    PE -->|Read, cache data| OS
+    JOBS -->|Read/write table and feature data| OS
+    MON -.->|Table and cluster state| OS
+    WAL -->|Persist| OS
 ```
 
 ## Remote tables
@@ -111,8 +116,8 @@ Indexing, compaction, and cleanup are intentionally moved off the user request p
 
 In practice, that usually looks like this:
 
-1. Table changes create follow-up signals for indexing, compaction, or cleanup.
-2. A background coordinator agent evaluates the state of the table and decides what should run next.
+1. Table changes create follow-up events that query nodes publish to an event queue for indexing, compaction, or cleanup.
+2. A background coordinator agent consumes those events, evaluates the state of the table, and decides what should run next.
 3. Indexers read the relevant table state from object storage, produce updated artifacts, and write the results back.
 
 This separation is one of the clearest architectural reasons to use LanceDB Enterprise: the same query-serving infrastructure does not have to handle every expensive indexing or compaction task itself.
