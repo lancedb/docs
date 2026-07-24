@@ -48,43 +48,36 @@ Indexers handle heavyweight background work such as building indexes, merging in
 
 ```mermaid
 flowchart TB
-    Client[Client application]
-    Remote[Remote table / API boundary]
-
-    subgraph DP[Data plane]
-        QN[Query nodes<br/>query fleet]
-
-        subgraph RING[Executor cache ring]
-            direction LR
-            PE1[Executor<br/>+ cache]
-            PE2[Executor<br/>+ cache]
-            PE3[Executor<br/>+ cache]
-            PE4[Executor<br/>+ cache]
-            PE1 -.- PE2 -.- PE3 -.- PE4 -.- PE1
-        end
-
-        IX[Indexers / background workers]
-    end
-
-    EQ{{Event queue}}
+    Client[Client applications]
 
     subgraph CP[Control plane]
-        CFG[Configuration, identity,<br/>policy, lifecycle]
+        CFG[Configuration, identity, policy, lifecycle]
     end
 
-    OS[(Object storage<br/>table data, manifests, indexes)]
+    subgraph DP[Data Plane<br/><span style='font-size:0.85em'>Managed or self-hosted</span>]
+        QP[Query planning + routing fleet]
+        PE[Executor + cache fleet]
+        MON[Monitoring + orchestration fleet]
+        WAL[MemWAL fleet]
+        JOBS[Jobs fleet]
 
-    Client -->|Read / write requests| Remote
-    Remote --> QN
-    QN -->|Query sub-plans| RING
-    QN -->|Commits writes| OS
-    RING <-->|Read data| OS
-    IX <-->|Build indexes / compact data| OS
-    QN -->|Indexing / compaction events| EQ
-    EQ -->|Dispatch work| IX
-    CFG -.->|Govern and configure| QN
-    CFG -.->|Govern and configure| RING
-    CFG -.->|Govern and configure| IX
+        QP -->|Query subplans| PE
+        QP -->|Send state + job requests| MON
+        QP -->|Fresh reads and writes| WAL
+        PE -.->|Send state| MON
+        WAL -.->|Send state| MON
+        MON -->|Indexing, compaction,<br/>backfill, refresh jobs| JOBS
+        JOBS -->|Send state| MON
+    end
+
+    OS[(Object Storage)]
+
+    Client -->|Queries, writes, backfills| DP
+    CFG -.->|Govern and configure| DP
+    PE -->|Read, cache data| OS
+    JOBS -->|Read/write table and feature data| OS
+    MON -.->|Table and cluster state| OS
+    WAL -->|Persist| OS
 ```
 
 ## Remote tables
