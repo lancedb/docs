@@ -153,6 +153,14 @@
                   "storage/index",
                   "storage/configuration"
                 ]
+              },
+              {
+                "group": "Build with AI agents",
+                "expanded": true,
+                "pages": [
+                  "build-with-ai-agents",
+                  "agent-branch-experiments"
+                ]
               }
             ]
           },
