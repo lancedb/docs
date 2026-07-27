@@ -196,7 +196,44 @@ For more advanced usage, including random access and file-like reading of blobs,
 Lance format's [blob API documentation](https://lance.org/guide/blob/).
 </Card>
 
-### 3. Convert blob tables to pandas
+### 3. Fetch byte ranges from blobs
+
+When you already know which slices of each blob you need — for example the offset and length of a clip inside a longer video — use `fetch_blob_ranges` to submit every logical range in one call. LanceDB forwards the batch to Lance's blob planner, which validates, groups, coalesces, and schedules the underlying reads while preserving the shape of your request list.
+
+Use it when:
+
+- You have precomputed `(offset, length)` windows in an application-level index (for example a clips table) and want to read many windows across many rows in a single batch.
+- You want to read multiple non-contiguous ranges from the same blob without re-opening a `BlobFile` per range.
+
+Prefer [`BlobFile`](https://lance.org/guide/blob/) for consumers that discover ranges dynamically as they decode, such as PyAV.
+
+Each request is a `(row_id, offset, length)` tuple. Obtain row IDs from a query with `with_row_id(True)`. Requests may repeat or reorder, and the returned `LargeBinaryArray` matches the length and order of the requests. Null blobs produce null slots; valid empty ranges on non-null blobs produce `b""`.
+
+```python Python icon="python"
+# Select a batch of videos and pick a clip range from each row's index
+rows = (
+    table.search()
+    .select(["clips"])
+    .with_row_id(True)
+    .limit(64)
+    .to_arrow()
+    .to_pylist()
+)
+
+requests = []
+for row in rows:
+    clip = sample_clip(row["clips"])
+    requests.append((row["_rowid"], clip["offset"], clip["length"]))
+
+# One batched read; results align 1:1 with `requests`
+chunks = table.fetch_blob_ranges("video", requests)
+```
+
+<Info>
+`fetch_blob_ranges` is available on local Python and Rust tables. Remote tables raise `NotImplementedError` until a remote API is available.
+</Info>
+
+### 4. Convert blob tables to pandas
 
 When you call `to_pandas()` on a local LanceDB table that contains Blob API columns, the `blob_mode` argument controls how those columns materialize. This is available in the Python SDK on local tables; remote tables raise `NotImplementedError`.
 
