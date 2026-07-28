@@ -115,7 +115,10 @@ ds = StreamingDataset(
 Many model training workloads require a transformation step between loading the data and training the model. For
 example, we may need to decode images, tokenize text, or normalize data. A transformation function can be provided
 using the `transform` parameter. Transformations can be expensive, so `StreamingDataset` applies them with a
-`ThreadPoolExecutor` whose worker count equals the number of available CPUs.
+`ThreadPoolExecutor`. By default the worker count equals the number of available CPUs (falling back to one worker
+when the CPU count cannot be determined). Use the `transform_parallelism` parameter to override this limit — for
+example, to cap concurrency on shared machines or to raise it when transforms release the GIL and CPUs are plentiful.
+`transform_parallelism` must be a positive integer.
 
 Transformations are applied to batches, not individual samples, to amortize per-batch overhead. A transformation
 function receives a PyArrow `RecordBatch` and must return an iterable with exactly one output sample for every input
@@ -139,6 +142,24 @@ def normalize(batch: pa.RecordBatch) -> list[dict]:
 ds = StreamingDataset(table, shuffle_seed=42, transform=normalize)
 ```
 </CodeGroup>
+
+To pin the transform pool to a specific size, pass `transform_parallelism`:
+
+<CodeGroup>
+```py Python icon=Python
+ds = StreamingDataset(
+    table,
+    shuffle_seed=42,
+    transform=normalize,
+    transform_parallelism=4,
+)
+```
+</CodeGroup>
+
+<Note>
+`transform_parallelism` also bounds how many raw batches are held in flight for transformation, so a smaller value
+reduces peak memory use at the cost of throughput.
+</Note>
 
 #### DataLoader workers
 
