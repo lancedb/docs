@@ -92,7 +92,7 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 | `stem` | bool | `True` | Apply stemming (`running` → `run`) |
 | `remove_stop_words` | bool | `True` | Drop common stop words |
 | `ascii_folding` | bool | `True` | Normalize accented characters |
-| `custom_stop_words` | list[str] | `None` | Extra stop words to drop in addition to the language defaults. Requires `remove_stop_words=True`. |
+| `custom_stop_words` | list[str] | `None` | Explicit stop-word list that replaces the built-in language list. Requires `remove_stop_words=True`. `None` uses the built-in list; an empty list disables stop-word removal even though it is enabled. |
 | `ngram_min_length` | int | `3` | Minimum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `ngram_max_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `prefix_only` | bool | `False` | Index only prefix n-grams rather than all substrings. Applies only when `base_tokenizer="ngram"`. |
@@ -212,6 +212,8 @@ tokens = lancedb.tokenize(
     lower_case=True,
     stem=True,
     ascii_folding=True,
+    # Optional: replace the built-in stop-word list for `language`.
+    custom_stop_words=["in"],
 )
 ```
 
@@ -224,6 +226,8 @@ const tokens = await tokenize("Running in cafés", {
     lowercase: true,
     stem: true,
     asciiFolding: true,
+    // Optional: replace the built-in stop-word list for `language`.
+    customStopWords: ["in"],
 });
 ```
 
