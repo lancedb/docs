@@ -151,7 +151,16 @@
                 "group": "Storage",
                 "pages": [
                   "storage/index",
-                  "storage/configuration"
+                  "storage/configuration",
+                  "storage/monitoring"
+                ]
+              },
+              {
+                "group": "Build with AI agents",
+                "expanded": true,
+                "pages": [
+                  "build-with-ai-agents",
+                  "agent-branch-experiments"
                 ]
               }
             ]
@@ -266,7 +275,8 @@
                   "integrations/reranking/colbert",
                   "integrations/reranking/jina",
                   "integrations/reranking/openai",
-                  "integrations/reranking/voyageai"
+                  "integrations/reranking/voyageai",
+                  "integrations/reranking/watsonx"
                 ]
               },
               {
@@ -550,6 +560,10 @@
     {
       "source": "/enterprise/performance",
       "destination": "/enterprise/benchmarks"
+    },
+    {
+      "source": "/enterprise/quickstart",
+      "destination": "/quickstart"
     },
     {
       "source": "/huggingface/overview",

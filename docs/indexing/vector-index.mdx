@@ -56,6 +56,10 @@ Although the `create_index` API returns immediately, the building of the vector 
 
 Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
 
+Rows appended after an index build remain outside that index until optimization refreshes it. Normal
+search still checks those unindexed rows with a slower fallback path; `fast_search()` skips that
+fallback and searches only indexed rows.
+
 ## Choose the Right Index
 
 Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
@@ -109,6 +113,9 @@ Sometimes you need to configure the index beyond default parameters:
 - `num_partitions`: use index-specific starting points from the section above:
     - HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`): `num_rows // 1,048,576`
     - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
+- `target_partition_size`: alternative IVF sizing knob that asks LanceDB to derive the partition
+  count from a target number of rows per partition. If you set both `num_partitions` and
+  `target_partition_size`, `num_partitions` takes precedence.
 - `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension // 8`. Larger values often improve recall but can slow search.
 
 Let's take a look at a sample request for an IVF index:

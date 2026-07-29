@@ -38,6 +38,7 @@ from lancedb.embeddings import get_registry
 - `Vector`: Field type for storing vector embeddings
 - `get_registry()`: Access to the embedding function registry. It has all the supported as well as custom embedding functions registered by the user
 - TypeScript uses `lancedb.embedding.getRegistry()` and `lancedb.embedding.LanceSchema()` for the same registry/schema workflow
+- In TypeScript, import the provider module before calling `getRegistry().get(...)`; the provider import is what registers names such as `"huggingface"` or `"openai"`
 
 ## Step 2: Connect to LanceDB
 
@@ -119,6 +120,10 @@ The `table.add()` call automatically:
 - Generates embeddings using your chosen model
 - Stores both the original text and the vector embeddings
 
+If your input already includes the vector column, automatic embedding only runs when that column is
+absent or entirely null for the batch. Partially supplied vectors are treated as manual data, so
+LanceDB preserves them instead of filling only the missing rows.
+
 ## Step 6: Query with Automatic Embedding
 
 Note: On LanceDB Enterprise, the server does not generate embeddings from query text. In the Python remote
@@ -144,3 +149,7 @@ The search process:
 1. Automatically converts your query text to embeddings
 2. Finds the most similar vectors in your table
 3. Returns the matching documents
+
+Automatic text search depends on the table's embedding metadata. If the client cannot reconstruct an
+embedding function from that metadata, compute the query embedding yourself and search with the
+vector directly.

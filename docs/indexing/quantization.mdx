@@ -68,7 +68,7 @@ The full list of parameters to the algorithm are listed below.
 - `distance_type`: Literal["l2", "cosine", "dot"], defaults to "l2"  
   The distance metric to use for similarity comparison. Choose "l2" for Euclidean, "cosine" for cosine similarity, or "dot" for dot product.
 - `num_partitions`: Optional[int], defaults to None  
-  Number of IVF partitions (affects index build time and query accuracy). More partitions can improve recall but may increase build time.
+  Number of IVF partitions (affects index build time and query accuracy). More partitions can improve recall but may increase build time. When unset, LanceDB chooses roughly the square root of the row count.
 - `num_bits`: int, defaults to 1  
   Bits per dimension for quantization (1 is standard RaBitQ). Higher values improve fidelity, mainly at the cost of additional storage.
 - `max_iterations`: int, defaults to 50  
@@ -76,4 +76,4 @@ The full list of parameters to the algorithm are listed below.
 - `sample_rate`: int, defaults to 256  
   Number of samples per partition during training. Higher values may improve accuracy but increase training time.
 - `target_partition_size`: Optional[int], defaults to None  
-  Target number of vectors per partition. Adjust to control partition granularity and memory usage.
+  Target number of vectors per partition. Adjust to control partition granularity and memory usage. If `num_partitions` is also set, `num_partitions` takes precedence.

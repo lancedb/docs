@@ -86,6 +86,11 @@ to `OpenAIEmbeddingFunction::new_with_model` in Rust.
 | API key | `api_key="..."`, environment variables, or `$var:` | `apiKey: "..."`, environment variables, or `$var:` | Constructor argument or environment variable |
 | Device | Provider-specific, for example `device="cuda"` | Provider-specific | Provider-specific |
 
+When ingesting data with an embedding definition, LanceDB only computes the vector column if that
+column is missing from the incoming batch or present but entirely null. If you provide any non-null
+values in the vector column, LanceDB treats the column as user-supplied and does not backfill the
+remaining rows in that batch.
+
 For reusable runtime configuration, the registry also supports `$var:` placeholders in embedding-function config.
 This is useful for provider secrets and environment-specific settings in Python and TypeScript.
 
@@ -126,6 +131,10 @@ maps one source column to one vector column, and the table schema can contain mu
 
 The exact setup differs by SDK, but the underlying pattern is the same: define a distinct source/vector pair
 for each embedding function you want applied during ingest.
+
+In TypeScript, automatic query embedding currently uses the first embedding function stored in the
+table metadata. If a table has multiple embedding definitions and you need to query a specific vector
+column, compute the query embedding explicitly and pass the vector to the search builder.
 
 ## Embedding model providers
 
@@ -186,6 +195,11 @@ For the Python remote client, `table.search("hello")` can take two different pat
 
 If you want explicit vector or hybrid behavior and the client cannot resolve an embedding function from the
 table metadata, generate the query embedding yourself and pass the vector directly.
+
+TypeScript has a similar string-query distinction in `auto` mode: if no embedding providers have been
+registered in the process, `search("text")` falls back to FTS. Once an embedding provider has been
+imported and registered, the client expects table embedding metadata for automatic vector search and
+raises an error if the table has none.
 
 The manual query-embedding flow below works across Enterprise SDKs and is an explicit path you can use when you
 want full control over query-time behavior.

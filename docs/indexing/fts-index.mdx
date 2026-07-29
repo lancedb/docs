@@ -49,6 +49,9 @@ When using async connections (`connect_async`), use `create_index` with the `FTS
 The `create_fts_index` method is not available on `AsyncTable`. Use `create_index` with `FTS` config instead.
 </Note>
 
+The current FTS implementation is Lance-native. Legacy Tantivy-only options, including
+`use_tantivy`, are no longer accepted by the index creation APIs.
+
 ## Nested field paths
 
 FTS indexes can target text leaves inside struct columns by passing a dotted path (for example, `payload.text`). The same path works for [`MatchQuery`](/search/full-text-search) and [`PhraseQuery`](/search/full-text-search), and for the `columns` argument on async `nearest_to_text` queries.
@@ -93,6 +96,7 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 | `ngram_min_length` | int | `3` | Minimum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `ngram_max_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `prefix_only` | bool | `False` | Index only prefix n-grams rather than all substrings. Applies only when `base_tokenizer="ngram"`. |
+| `block_size` | int | `128` | Number of documents per compressed posting block. Supported values are `128` and `256`. Setting this to `256` opts in to the experimental FTS V3 layout. |
 
 <Note title="Key parameters">
 - `max_token_length` can filter out base64 blobs or long URLs.
@@ -113,6 +117,24 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 Model-backed tokenizers such as `jieba/default`, `lindera/ipadic`, and `lindera/ko-dic` require tokenizer model files in Lance's language model home. Lance looks under the default platform data directory for `lance/language_models`, or you can set `LANCE_LANGUAGE_MODEL_HOME` to point to another model root. For example, `jieba/default` is resolved under `<model-home>/jieba/default/...`.
 
 `language` is used by token filters, not by the base tokenizer. Stemming supports Arabic, Danish, Dutch, English, Finnish, French, German, Greek, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian, Spanish, Swedish, Tamil, and Turkish. Built-in stop-word removal supports Danish, Dutch, English, Finnish, French, German, Hungarian, Italian, Norwegian, Portuguese, Russian, Spanish, and Swedish. For other stemming languages, set `remove_stop_words=False` or pass `custom_stop_words`.
+
+### Posting block size
+
+`block_size` controls the number of documents packed into each compressed posting block on disk. The default of `128` matches the current FTS layout and is the right choice for most workloads. Setting it to `256` opts in to the experimental FTS V3 format, which changes how postings are encoded and may introduce breaking changes in future releases. Any other value is rejected at index creation time.
+
+You can set the option through either the synchronous or asynchronous API. In the async Python API, pass it on the `FTS` config, and in the TypeScript API use the camelCase `blockSize` field on `FtsOptions`:
+
+```python Python icon="python"
+from lancedb.index import FTS
+
+await async_table.create_index("text", config=FTS(block_size=256))
+```
+
+```typescript TypeScript icon="square-js"
+await table.createIndex("text", {
+  config: lancedb.Index.fts({ blockSize: 256 }),
+});
+```
 
 ### Phrase Query Configuration
 

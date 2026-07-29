@@ -26,8 +26,12 @@ Accepted Arguments
 ----------------
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
-| `weight` | `float` | `0.7` | The weight to use for the semantic search score. The weight for the full-text search score is `1 - weights`. |
-| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", will return only the `_relevance_score. If "all", will return all scores from the vector and FTS search along with the relevance score. |
+| `weight` | `float` | `0.7` | The weight to use for the semantic search score. The weight for the full-text search score is `1 - weight`. |
+| `fill` | `float` | `1.0` | Score used when a result is missing from one side of the hybrid query. The default strongly penalizes missing vector or FTS matches. |
+| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", returns only `_relevance_score`. If "all", returns all scores from the vector and FTS search along with the relevance score. |
+
+`weight` must be between `0` and `1`. If either the vector or FTS side returns no rows, the reranker
+returns the non-empty side with `_relevance_score` attached rather than failing.
 
 
 ## Supported Scores for each query type

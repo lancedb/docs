@@ -244,6 +244,10 @@ Like the create table and add APIs, the merge insert API will automatically comp
 
 During `merge_insert`, if the input data doesn't contain the source column (i.e., the original field used to generate embeddings, such as text for a text embedding model or `image_uri` for an image model), or if a vector value is already provided, LanceDB skips embedding generation for that row. Embeddings are only auto-generated when that source field is present in the incoming data, **and** the vector field is empty.
 
+Primary keys in LanceDB are metadata used by operations such as `merge_insert`; they are not
+enforced as uniqueness constraints on ordinary writes. Keep using `merge_insert` or your own
+deduplication logic when you need key-based upsert semantics.
+
 ### Update matched rows only
 
 This updates keys that already exist in the target table. Source rows with new keys are ignored.

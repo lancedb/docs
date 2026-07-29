@@ -28,6 +28,10 @@ into a synchronous process by waiting until the index is built.
 
 `wait_for_index(...)` waits for the index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`. It can time out if the table is receiving continuous writes while the build is trying to catch up.
 
+GPU acceleration changes how the vector index is built, not the lifecycle after the build. Rows
+appended later still need `optimize()` before they are part of the index, and `fast_search()` only
+searches indexed rows.
+
 ## Manual GPU indexing in LanceDB OSS
 
 You can use the Python SDK to manually create the `IVF_PQ` index on a GPU. You'll need

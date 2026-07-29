@@ -17,6 +17,8 @@ import {
     PyStorageS3SseKms,
     PyStorageTableTimeout,
     PyStorageTigrisConnect,
+    PyStorageCosConnect,
+    PyStorageGoosefsConnect,
     TsStorageAzureAccount,
     TsStorageAzureSas,
     TsStorageConnectAzure,
@@ -29,6 +31,7 @@ import {
     TsStorageS3SseKms,
     TsStorageTableTimeout,
     TsStorageTigrisConnect,
+    TsStorageGoosefsConnect,
 } from '/snippets/storage.mdx';
 
 When using LanceDB OSS, you can choose where to store your data. The tradeoffs between storage options are covered in the [storage architecture guide](/storage). This page shows how to configure each backend.
@@ -296,3 +299,43 @@ Tigris exposes an S3-compatible API. Configure the endpoint and region:
 </CodeGroup>
 
 Environment variables `AWS_ENDPOINT=https://t3.storage.dev` and `AWS_DEFAULT_REGION=auto` achieve the same configuration.
+
+## Tencent COS
+
+[Tencent Cloud Object Storage (COS)](https://www.tencentcloud.com/products/cos) is the primary object store for workloads running in the China region. Use the `cos://` URI scheme to connect directly to a COS bucket.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyStorageCosConnect}
+    </CodeBlock>
+</CodeGroup>
+
+Supported keys include `secret_id`, `secret_key`, `region`, and `endpoint`. You can also authenticate via the `TENCENTCLOUD_SECRET_ID` and `TENCENTCLOUD_SECRET_KEY` environment variables.
+
+<Note>
+**Availability**
+
+COS is bundled in the Python wheel by default. To use it from Rust or the Node binding, build with the `cos` Cargo feature enabled.
+</Note>
+
+## GooseFS
+
+[GooseFS](https://www.tencentcloud.com/document/product/1424) is Tencent Cloud's distributed cache acceleration layer for COS and S3. It is a common choice when the same hot dataset is read repeatedly, such as vector search and AI training workloads. Connect using the `goosefs://` URI scheme.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {PyStorageGoosefsConnect}
+    </CodeBlock>
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsStorageGoosefsConnect}
+    </CodeBlock>
+</CodeGroup>
+
+GooseFS reads credentials and endpoint configuration from the GooseFS client environment. See the [GooseFS documentation](https://www.tencentcloud.com/document/product/1424) for cluster setup.
+
+<Note>
+**Availability**
+
+GooseFS is bundled by default in the Python wheel and the Node binding. To use it from Rust, build with the `goosefs` Cargo feature enabled.
+</Note>
+

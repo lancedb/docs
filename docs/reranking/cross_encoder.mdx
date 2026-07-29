@@ -26,7 +26,11 @@ Accepted Arguments
 | `model_name` | `str` | `"cross-encoder/ms-marco-TinyBERT-L-6"` | The name of the reranker model to use.|
 | `column` | `str` | `"text"` | The name of the column to use as input to the cross encoder model. |
 | `device` | `str` | `None` | The device to use for the cross encoder model. If None, will use "cuda" if available, otherwise "cpu". |
-| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", will return only the `_relevance_score. If "all" is supported, will return relevance score along with the vector and/or fts scores depending on query type. |
+| `trust_remote_code` | `bool` | `True` | Passed to Sentence Transformers model loading. Set this to `False` when you only want to load models that do not require custom repository code. |
+| `return_score` | `str` | `"relevance"` | Options are "relevance" or "all". The type of score to return. If "relevance", returns only `_relevance_score`. If "all" is supported, returns relevance score along with the vector and/or FTS scores depending on query type. |
+
+The reranker loads the model locally through `sentence-transformers`, so install the local model
+runtime dependencies you need, such as PyTorch and any device-specific acceleration packages.
 
 ## Supported Scores for each query type
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:

@@ -245,7 +245,8 @@ text_query = "flower moon"
 Hybrid queries inherit the same builder API as vector and FTS queries, so the same knobs for filtering, distance bounds, and row identity apply. These compose with `.rerank(...)` and the explicit `.vector()` / `.text()` form shown above.
 
 <Info>
-Always set `.limit(...)` on production hybrid queries. Without an explicit cap, the query builder does not give you a useful top-k contract to tune, and it may materialize more rows than you intended before reranking.
+Always set `.limit(...)` on production hybrid queries. LanceDB's default search limit is 10, but an
+explicit cap gives you a clear top-k contract to tune before reranking.
 </Info>
 
 ### Returning row IDs

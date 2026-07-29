@@ -11,6 +11,10 @@ Because the vector search operates in a dense embedding space and keyword-based 
 in a sparse embedding space, their relevance scores cannot be directly compared.
 Combining results from multiple searches thus requires a reranking step.
 
+Before evaluating hybrid search, build an FTS index on the text column and use a table with embedding
+metadata or explicit query vectors for the vector side. Otherwise the evaluation is measuring setup
+fallbacks or errors rather than the reranker.
+
 ## Reranking strategies
 
 There are two common approaches for reranking search results from multiple sources.

@@ -69,9 +69,10 @@ providers that need an API key live under [integrations](/integrations/reranking
 | `JinaReranker`              | `jina-reranker-v2-base-multilingual`   |
 | `OpenaiReranker`            | `gpt-4-turbo-preview`                  |
 | `VoyageAIReranker`          | No default (model name required)       |
+| `WatsonxReranker`           | `cross-encoder/ms-marco-minilm-l-12-v2`|
 
 The model-based rerankers need their provider package installed, and the hosted ones
-(`CohereReranker`, `JinaReranker`, `OpenaiReranker`, `VoyageAIReranker`) also need an API key, passed
+(`CohereReranker`, `JinaReranker`, `OpenaiReranker`, `VoyageAIReranker`, `WatsonxReranker`) also need an API key, passed
 as an `api_key` argument or set in the provider-specific environment variable.
 
 Rerankers add `_relevance_score` and return rows ordered by descending relevance. Python rerankers

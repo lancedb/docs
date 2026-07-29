@@ -215,6 +215,46 @@ ProjectionExec: expr=[chunk_index@4 as chunk_index, title@5 as title, identifier
 - Remote take operation for 100 results
 - Final projection of required columns
 
+### Distributed metrics on remote tables
+
+<Badge color="red">Enterprise</Badge>
+
+When you call `analyze_plan` against a LanceDB Enterprise table, the query runs across a pool of workers. By default the returned plan aggregates each operator's metrics into a single value, matching the local single-node output. Pass a `distributed_metrics` mode when you need to see how work was split across workers:
+
+| Mode          | What it shows                                                                       | When to use it                                                                                          |
+| :------------ | :---------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
+| `aggregate`   | One summary value per operator (default). Same shape as local `analyze_plan`.       | Everyday performance checks and comparisons against a local plan.                                       |
+| `per_worker`  | Metrics reported separately for each worker that participated in the query.         | Diagnosing stragglers or uneven work distribution across the cluster.                                   |
+| `full`        | Both the aggregate summary and the per-worker breakdown.                            | Deep investigations where you need the totals *and* the per-worker detail in a single output.           |
+
+The parameter only affects remote plans — local queries always return the aggregate output regardless of what you pass.
+
+<CodeGroup>
+```python Python icon="python"
+# Show a per-worker breakdown for a remote query
+plan = (
+    table.search(query_embed)
+    .where("identifier > 0 AND identifier < 1000000")
+    .limit(100)
+    .analyze_plan(distributed_metrics="per_worker")
+)
+print(plan)
+```
+
+```typescript TypeScript icon="square-js"
+// Show a per-worker breakdown for a remote query
+const plan = await table
+    .search(queryEmbed)
+    .where("identifier > 0 AND identifier < 1000000")
+    .limit(100)
+    .analyzePlan("per_worker");
+```
+</CodeGroup>
+
+<Note>
+Use `per_worker` or `full` sparingly — the plan output grows with the size of your worker pool. Stick with the default `aggregate` mode for routine tuning.
+</Note>
+
 ### Key Observations
 
 - Vector search is the primary bottleneck (1,099,508 vector comparisons)
