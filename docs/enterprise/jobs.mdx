@@ -1,0 +1,194 @@
+---
+title: "Manage server-side jobs"
+sidebarTitle: "Server-side jobs"
+description: "Introspect, monitor, and cancel background jobs running on a LanceDB Enterprise cluster from the client."
+icon: "list-check"
+keywords: ["jobs", "background jobs", "indexing", "compaction", "enterprise", "cancel", "status"]
+---
+
+LanceDB Enterprise runs background work — index builds, compaction, column
+refreshes, and other maintenance — outside the request path. The connection
+exposes a small set of methods to list those jobs, describe a specific job,
+watch its lifecycle, and cancel it.
+
+<Note>
+The job APIs are available on connections to **LanceDB Enterprise** clusters.
+On embedded (OSS) connections, these methods raise a `NotSupported` error
+because there is no server orchestrating background work.
+</Note>
+
+## When to use it
+
+Use these APIs when you need to:
+
+- Find a job id after starting an indexing or compaction call and follow its
+  progress from another process.
+- Build a small dashboard or health check that lists in-flight jobs across a
+  cluster.
+- Cancel a long-running job that is no longer needed.
+- Inspect why a job failed by reading its lifecycle history.
+
+For general architecture context on how jobs fit into the Enterprise data
+plane, see [LanceDB Enterprise Architecture](/enterprise/architecture).
+
+## The `Job` handle
+
+Some client calls that trigger server-side work — for example, kicking off an
+index build — return a `Job` handle. A `Job` also comes back from
+[`connection.job(job_id)`](#look-up-a-job-by-id), which is how you rebuild a
+handle from an id you saved earlier.
+
+`Job` supports four operations:
+
+| Method | What it does |
+|:-------|:-------------|
+| `id` | The server-assigned job id. `None` for jobs that ran entirely in the client process. |
+| `status()` | A non-blocking snapshot of the current state: `"running"`, `"finished"`, `"failed"`, or `"cancelled"`. |
+| `wait(timeout)` | Block until the job reaches a terminal state. Raises on failure, cancellation, or timeout. |
+| `cancel()` | Ask the server to cancel the job. No-op if the job is already terminal. |
+
+<Info>
+`status()` is a point-in-time snapshot and does not raise on terminal
+failure or cancellation. Use `wait()` when you want the call to block and
+surface a failure as an exception.
+</Info>
+
+## Look up a job by id
+
+`connection.job(job_id)` rebuilds a `Job` handle from a job id you saved
+earlier — for example, one you persisted from a previous run. The lookup is
+local; the handle only contacts the server when you call `status()`, `wait()`,
+or `cancel()`.
+
+<CodeGroup>
+```python Python icon="python"
+job = db.job("job-1234")
+
+if job.status() == "running":
+    job.wait()
+```
+
+```typescript TypeScript icon="square-js"
+const job = db.job("job-1234");
+
+if ((await job.status()) === "running") {
+  await job.wait();
+}
+```
+</CodeGroup>
+
+## List jobs
+
+`list_jobs` returns a summary of server-side jobs across the tables in the
+database. Each entry includes the job id, the target table, the job type, the
+current lifecycle state, and when the job was created.
+
+<CodeGroup>
+```python Python icon="python"
+for job in db.list_jobs():
+    print(job.job_id, job.table, job.job_type, job.state)
+```
+
+```typescript TypeScript icon="square-js"
+for (const job of await db.listJobs()) {
+  console.log(job.jobId, job.table, job.jobType, job.state);
+}
+```
+</CodeGroup>
+
+Fields on each `JobInfo`:
+
+- `job_id` / `jobId` — the id accepted by `get_job` and `cancel_job`.
+- `table` — the table the job runs against, without URI or namespace.
+- `job_type` / `jobType` — the kind of job (for example, an index build or a
+  compaction).
+- `state` — `"running"`, `"finished"`, `"failed"`, or `"cancelled"`.
+- `created_at_millis` / `createdAtMillis` — creation time as Unix milliseconds.
+
+## Describe a single job
+
+`get_job` returns a richer `JobDescription` for one job, including its
+job-type-specific spec and — if the job failed — a structured failure record.
+It returns `None` (or `null` in TypeScript) when the server has no such job.
+
+<CodeGroup>
+```python Python icon="python"
+description = db.get_job("job-1234")
+if description is None:
+    print("no such job")
+else:
+    print(description.state, description.spec)
+    if description.failure is not None:
+        print("failed:", description.failure)
+```
+
+```typescript TypeScript icon="square-js"
+const description = await db.getJob("job-1234");
+if (description === null) {
+  console.log("no such job");
+} else {
+  console.log(description.state, description.specJson);
+  if (description.failure !== undefined) {
+    console.log("failed:", description.failure);
+  }
+}
+```
+</CodeGroup>
+
+## Cancel a job
+
+`cancel_job` asks the server to cancel a job by id. It returns `true` on
+success and `false` when there is no such job. Cancelling a job that has
+already reached a terminal state is a no-op success.
+
+<CodeGroup>
+```python Python icon="python"
+if db.cancel_job("job-1234"):
+    print("cancellation requested")
+```
+
+```typescript TypeScript icon="square-js"
+if (await db.cancelJob("job-1234")) {
+  console.log("cancellation requested");
+}
+```
+</CodeGroup>
+
+<Warning>
+Cancellation is best-effort. A job may reach a terminal state on its own
+between the time you observe it as running and the time the server processes
+your request.
+</Warning>
+
+## Read job history
+
+`job_history` returns the lifecycle events for a single job — creation,
+state transitions, and any failure details — as one or more Arrow
+`RecordBatch`es (Python) or an Arrow `Table` (TypeScript). Omit the id to
+list history across all jobs.
+
+<CodeGroup>
+```python Python icon="python"
+import pyarrow as pa
+
+batches = db.job_history("job-1234")
+history = pa.Table.from_batches(batches)
+print(history.to_pandas())
+```
+
+```typescript TypeScript icon="square-js"
+const history = await db.jobHistory("job-1234");
+console.log(history.toString());
+```
+</CodeGroup>
+
+Arrow output makes it straightforward to feed job events into your existing
+monitoring pipeline — filter, aggregate, or write the batches to your data
+warehouse without an intermediate conversion.
+
+## Related
+
+- [LanceDB Enterprise Architecture](/enterprise/architecture) — where jobs fit
+  in the data plane.
+- [Indexing](/indexing/index) — the operations that most commonly show up as
+  server-side jobs.
