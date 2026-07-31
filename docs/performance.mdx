@@ -83,6 +83,34 @@ table.add(stream(), write_parallelism=4)
 Each partition becomes its own fragment, so don't over-allocate on a small input — budget one unit of parallelism per ~100K rows or ~1 GB of data as a rule of thumb.
 </Note>
 
+### Bulk ingests into a remote table
+
+<Badge color="red">Enterprise</Badge>
+
+This section applies only to remote tables (`db://` connections). Embedded (local) writes are unaffected.
+
+When you write to a remote LanceDB Enterprise table, the client splits each write partition into one or more HTTP `insert` parts and uploads them under a single upload id. Each part is streamed rather than buffered, so peak memory stays bounded. But each part still has to finish within the client read timeout while the server writes it to object storage, so on very large ingests an oversized part can run past that timeout and surface as:
+
+```text
+lancedb.remote.errors.HttpError: operation timed out
+```
+
+Two environment variables control how parts are cut. Both are picked up automatically by the Python and TypeScript clients, and are the only way to tune this from those SDKs:
+
+| Variable | Default | What it controls |
+|----------|---------|------------------|
+| `LANCE_CLIENT_MAX_BYTES_PER_REQUEST` | 8 GiB | Maximum size of a single insert part, in LZ4-compressed Arrow IPC bytes. Set to `0` to disable splitting and send one request per partition. |
+| `LANCE_CLIENT_MAX_REQUEST_DURATION` | Half the read timeout | Maximum wall-clock time, in whole seconds, that any one insert part may stay open. Set to `0` to disable the time-based cut. |
+
+A part is cut when it hits either limit, whichever comes first. Lower the byte budget when large ingests hit the read timeout; lower the duration when uploads are slow or throttled and the byte budget isn't the limiting factor.
+
+```bash
+export LANCE_CLIENT_MAX_BYTES_PER_REQUEST=1073741824  # 1 GiB
+export LANCE_CLIENT_MAX_REQUEST_DURATION=120          # 2 minutes
+```
+
+Splitting into more parts does not change the final table. The server stages every part under the shared upload id and merges them atomically when the write completes.
+
 ## Indexing
 
 ### Vector indexes
