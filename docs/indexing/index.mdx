@@ -41,16 +41,16 @@ TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
 <Info>
 **Operational checks**
 
-For vector indexes, use the same distance metric when creating the index and searching it. After appends or other writes, use `optimize()` to fold new rows into existing indexes, then check `index_stats(...)` or `wait_for_index(...)` if you need to confirm the index has caught up. `wait_for_index(...)` waits until the named indexes exist and report `num_unindexed_rows == 0`; it can time out if writes keep adding unindexed rows.
+For vector indexes, make sure to use the same distance metric when creating and querying the index. After appends or other writes, use `optimize()` to fold new rows into existing indexes, then check `index_stats(...)` or `wait_for_index(...)` to confirm that the index has caught up. 
+`wait_for_index(...)` waits until the named indexes exist and report `num_unindexed_rows == 0`, and can time out if writes keep adding unindexed rows.
 
-By default, automatic vector indexing creates `IVF_PQ`, and scalar index creation defaults to
-`BTree` unless you pass another scalar index config. `BTree` and `Bitmap` indexes target scalar
-columns, not list columns; use `LabelList` for list containment filters.
+Unless specified otherwise, vector indexing defaults to `IVF_PQ`, and scalar index creation defaults to
+`BTree`. `BTree` and `Bitmap` indexes target scalar columns, not list columns; use `LabelList` for list containment filters.
 </Info>
 
 ### Quantization Types
 
-Vector indexes can use different quantization methods to compress vectors and improve search performance:
+Vector indexes use different quantization methods to compress vectors and improve search performance:
 
 | Quantization | Use Case | Description |
 | :----------- | :------- | :---------- |
@@ -61,7 +61,7 @@ Vector indexes can use different quantization methods to compress vectors and im
 
 ## Understanding the IVF-PQ Index
 
-An ANN (Approximate Nearest Neighbors) index is a data structure that quickly produces an approximate solution to the **k-nearest neighbors (kNN)** problem. 
+An ANN (Approximate Nearest Neighbors) index is a data structure that quickly produces an approximate solution to the **k-Nearest Neighbors (kNN)** problem. 
 It greatly improves upon the runtime of a brute-force kNN search, while admitting a slight decrease in accuracy. LanceDB uses the disk-based indexing technique IVF-PQ, discussed below.
 
 LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
@@ -73,9 +73,10 @@ The implementation provides several parameters to fine-tune the index's size, qu
 
 ### Product Quantization
 
-Quantization is a compression technique used to reduce the dimensionality of an embedding to speed up search.
+Quantization is a compression technique used to speed up search by reducing the dimensionality of an embedding.
 
-Product quantization (PQ) works by dividing a large, high-dimensional vector of size into equally sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
+Product quantization (PQ) first projects each large, high-dimensional vector into equally sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. 
+The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
 
 ![](/static/assets/images/indexing/ivfpq_pq_desc.png)
 
@@ -84,10 +85,10 @@ It's important to remember that quantization is a *lossy process*, i.e., the rec
 As an example, consider starting with 128-dimensional vector consisting of 32-bit floats. Quantizing it to an 8-bit integer vector with 4 dimensions as in the image above, we can significantly reduce memory requirements.
 
 <Note title="Effect of quantization">
-Original: `128 × 32 = 4096` bits
-Quantized: `4 × 8 = 32` bits
+Original: `128 × 32 = 4096` bits. 
+Quantized: `4 × 8 = 32` bits.
 
-Quantization results in a **128x** reduction in memory requirements for each vector in the index, which is substantial.
+In this example, quantization produces a substantial **128x** reduction in the memory requirement for each indexed vector.
 </Note>
 
 ### Inverted File Index (IVF) Implementation
