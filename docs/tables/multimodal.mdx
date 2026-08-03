@@ -219,10 +219,40 @@ blobs = table.fetch_blobs("video", [10, 20, 30])
 `fetch_blobs` is supported on both local and Enterprise remote tables. To list blob columns on a table, call `table.blob_columns()`.
 
 <Info>
-For range reads on remote tables, use `fetch_blobs` to pull the full payload for now — batched range reads (`fetch_blob_ranges`) and file-like handles (`fetch_blob_files`) remain local-only.
+Batched range reads (`fetch_blob_ranges`) remain local-only. For partial or streaming reads on remote tables, use `fetch_blob_files` to open a seekable handle (below).
 </Info>
 
-### 4. Fetch byte ranges from blobs
+### 4. Open seekable blob handles
+
+Use `fetch_blob_files` when you don't want to download the whole blob — for example, to read a media container header, seek to a keyframe, or stream a slice. It returns a list of file-like `BlobFile` handles aligned 1:1 with the input rows; null rows are `None`. Bytes are not read until you call a read method on the handle.
+
+The handle exposes the same API on local and Enterprise remote tables:
+
+- `read_range(offset, length)` — read a specific byte range.
+- `read_up_to(n)` — read up to `n` more bytes from the current position, reusing an open connection for sequential reads.
+- `seek(offset)`, `tell()`, `close()` — position control and cleanup.
+
+On remote tables, the handle is backed by HTTP `Range` requests, so out-of-bounds ranges fail up-front with a validation error and reads never fetch more than they need.
+
+```python Python icon="python"
+hits = (
+    table.search(query_vec)
+    .select(["id", "video"])
+    .limit(5)
+    .to_arrow()
+)
+
+with table.fetch_blob_files("video", hits)[0] as f:
+    header = f.read_range(0, 256)
+    f.seek(keyframe_offset)
+    chunk = f.read_up_to(1 << 20)
+```
+
+<Info>
+Remote support requires a LanceDB Enterprise server on version 0.5.0 or newer. Older servers report `NotSupported` for both `fetch_blob_files` and `fetch_blobs`.
+</Info>
+
+### 5. Fetch byte ranges from blobs
 
 When you already know which slices of each blob you need — for example the offset and length of a clip inside a longer video — use `fetch_blob_ranges` to submit every logical range in one call. LanceDB forwards the batch to Lance's blob planner, which validates, groups, coalesces, and schedules the underlying reads while preserving the shape of your request list.
 
@@ -259,7 +289,7 @@ chunks = table.fetch_blob_ranges("video", requests)
 `fetch_blob_ranges` is available on local Python and Rust tables. Remote tables raise `NotImplementedError` until a remote API is available.
 </Info>
 
-### 5. Convert blob tables to pandas
+### 6. Convert blob tables to pandas
 
 When you call `to_pandas()` on a local LanceDB table that contains Blob API columns, the `blob_mode` argument controls how those columns materialize. This is available in the Python SDK on local tables; remote tables raise `NotImplementedError`.
 
