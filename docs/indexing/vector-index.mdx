@@ -24,7 +24,7 @@ import {
     PyVectorIndexCustomName as VectorIndexCustomName,
 } from '/snippets/indexing.mdx';
 
-You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two kinds of vector indexing algorithms: **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
+You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two vector indexing algorithms: **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
 
 <Info>
 **IVF + HNSW**
@@ -39,13 +39,10 @@ If using LanceDB OSS, you will have to create the vector index manually, by call
 ### Automatic Indexing
 
  <Badge color="red">Enterprise-only</Badge> 
-Vector indexing is managed **automatically** in LanceDB Enterprise. As soon as data is updated, the system updates the index and optimizates it. *This is done asynchronously as a background process*.
-
-When you create a table in LanceDB Enterprise, LanceDB automatically:
-
-- Infers the vector columns from the schema
-- Create an optimized `IVF_PQ` index without manual configuration
-- Automatically configure indexing parameters
+Vector indexing is managed **automatically** in LanceDB Enterprise. When a table is created in LanceDB Enterprise, the system asynchronously updates and optimizes the index as a background process:
+- Infers vector columns from the schema
+- Optimizes the `IVF_PQ` index without manual configuration
+- Automatically manages indexing parameters
 
 The default distance is `l2` (Euclidean).
 
@@ -62,7 +59,7 @@ fallback and searches only indexed rows.
 
 ## Choose the Right Index
 
-Use this table as a quick starting point for choosing the right index type and quantization method for your use case:
+Use this table to choose the right index and quantization type for your use case:
 
 | If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
 | :--- | :--- | :--- | :--- |
