@@ -93,12 +93,22 @@ It's important to remember that quantization is a *lossy process*, i.e., that no
 
 ### Inverted File Index (IVF) Implementation
 
-While PQ helps with reducing the size of the index, IVF primarily addresses search performance. The primary purpose of an inverted file index is to facilitate rapid and effective nearest neighbor search by narrowing down the search space.
+(note: acknowledge pq in here somewhere)
 
-In IVF, the PQ vector space is divided into *Voronoi cells*, which are essentially partitions that consist of all the points in the space that are within a threshold distance of the given region's seed point. These seed points are initialized by running K-means over the stored vectors. The centroids of K-means turn into the seed points which then each define a region. These regions are then are used to create an inverted index that correlates each centroid with a list of vectors in the space, allowing a search to be restricted to just a subset of vectors in the index.
+An IVF is an index that facilitates rapid nearest neighbor searches by drastically reducing the search space.
 
+Given a large set of stored vectors, the algorithm to produce an IVF index first computes a set of *centroids* corresponding to an approximate solution to the $k$-means clustering problem. 
+The centroids are then used to partition the set of vectors as follows: each vector is assigned to the centroid nearest to it in the $\ell_2$ (or user-specified) metric. 
+The set of vectors assigned to a centroid is called its *cluster*. This data is then recorded as an index which identifies each centroid with its cluster.
+
+The following image shows a $2$-dimensional Euclidean space partitioned according to this algorithm. The colored marks denote centroids.
 ![](/static/assets/images/indexing/ivfpq_ivf_desc.webp)
 
+To process a nearest neighbors query, instead of a brute-force comparison of the queried vector to every stored vector, the system can instead search the much-smaller set of *centroids$ 
+for a closest match, then execute a brute-force comparison against its associated cluster. This technique quickly eliminates the vast majority of clusters from the search space. 
+Furthermore, since each centroid is relatively close to points in its cluster, we are likely to produce an approximately correct result.
+
+here vv
 During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
 ![](/static/assets/images/indexing/ivfpq_query_vector.webp)
 
