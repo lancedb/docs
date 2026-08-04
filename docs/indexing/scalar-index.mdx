@@ -27,6 +27,15 @@ LanceDB supports four types of scalar indexes:
 - `LABEL_LIST`: Special index for `List<T>` and `LargeList<T>` columns of primitive values supporting `array_contains_all` and `array_contains_any` queries.
 - `FM`: FM-Index over string or binary columns that accelerates substring search via `contains(col, 'needle')`.
 
+<Tip title="Working with scalar indices">
+Scalar indices serve as a foundational optimization layer, accelerating filtering across diverse search workloads. They can be combined with:
+
+- Vector search (prefilter or post-filter results using metadata)
+- Full-text search (combining keyword matching with structured filters) 
+- SQL scans (optimizing WHERE clauses on scalar columns)
+- Key-value lookups (enabling rapid primary key-based retrievals)
+</Tip>
+
 ## Choosing the Right Index Type
 
 | Data Type                                                       | Filter                                    | Index Type   |

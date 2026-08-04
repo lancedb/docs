@@ -1,7 +1,7 @@
 ---
 title: "Quantization"
 sidebarTitle: "Quantization"
-description: "Learn about quantization in a LanceDB index."
+description: "Use quantization to improve storage requirements and query latency of your LanceDB vector index."
 icon: "compress"
 keywords: ["quantization", "quantize", "rabitq"]
 ---
@@ -23,11 +23,34 @@ todo decide what to do here vv
 
 Use the same distance metric when training and querying the index. For IVF-based indexes, `num_partitions` controls the number of groups and `sample_rate` controls how many training vectors are sampled per partition, so the training sample is roughly `sample_rate * num_partitions`.
 
-## RaBitQ quantization
+##Quantization Techniques
+#### Product Quantization
+
+Quantization is a compression technique used to speed up search by reducing the dimensionality of an embedding.
+
+Product quantization (PQ) first projects each large, high-dimensional vector into equal-sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. 
+The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
+
+![](/static/assets/images/indexing/ivfpq_pq_desc.png)
+
+As an example, consider the above image, which visualizes quantizing a 128-dimensional vector of 32-bit integers into a 4-dimensional vector of 8-bit integers.
+
+<Note title="Effect of quantization">
+Original storage: `128 × 32 = 4096` bits. 
+Quantized storage: `4 × 8 = 32` bits.
+
+In this example, quantization achieves a **128x** reduction in the memory requirement of each indexed vector.
+</Note>
+
+It's important to remember that quantization is a *lossy process*, i.e., that no operation on the reconstructed vector can exactly recover the original vector. 
+
+
+
+### RaBitQ quantization
 
 RaBitQ is a binary quantization method that represents each normalized embedding using **1 bit per dimension**, plus a couple of small corrective scalars. In practice, a 1,024-dimensional `float32` vector that would normally take 4 KB can be compressed to roughly a few hundred bytes with RaBitQ, while still maintaining reasonable recall.
 
-### How RaBitQ works
+#### How RaBitQ works
 
 - Embeddings are grouped around centroids (as in other IVF indexes).
 - Each residual vector is normalized and mapped to the nearest vertex of a randomly rotated hypercube on the unit sphere.
@@ -43,7 +66,7 @@ Compared to `IVF_PQ`, RaBitQ:
 
 For a deeper dive into the theory and some benchmark results, see the blog post: [LanceDB's RaBitQ Quantization for Blazing Fast Vector Search](https://lancedb.com/blog/feature-rabitq-quantization/).
 
-### Using RaBitQ
+#### Using RaBitQ
 
 You can create an RaBitQ-backed vector index by setting `index_type="IVF_RQ"` when calling `create_index`. 
 
@@ -59,6 +82,8 @@ It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to 
 <Warning title="Reading multi-bit indexes across versions">
 Indexes built with `num_bits >= 2` use an updated on-disk layout. Older LanceDB versions cannot read them and will fail with a clear missing-column error rather than returning incorrect results. Existing indexes keep working and upgrade automatically when they are rewritten (for example, during compaction, optimize, or remap). `num_bits=1` indexes are unaffected in both directions.
 </Warning>
+
+###SQ (todo?)
 
 ## API Reference
 
