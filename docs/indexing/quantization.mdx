@@ -19,6 +19,8 @@ LanceDB currently exposes several quantized vector index types, with a range of 
 Different indexing and quantization techniques may be better suited for certain use cases. For example, `IVF_PQ` works well in many cases, but RaBitQ (`IVF_RQ`) allows for more aggressive compression.
 See the ["Choose the Right Index"](/indexing/vector-index#choose-the-right-index) table for further discussion.
 
+todo decide what to do here vv
+
 Use the same distance metric when training and querying the index. For IVF-based indexes, `num_partitions` controls the number of groups and `sample_rate` controls how many training vectors are sampled per partition, so the training sample is roughly `sample_rate * num_partitions`.
 
 ## RaBitQ quantization
