@@ -85,36 +85,12 @@ It greatly improves upon the runtime of a brute-force kNN search, while admittin
 
 LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
 
-### IVF-PQ
+### Inverted File Index (IVF) and IVF-PQ
 
-LanceDB uses **IVF-PQ** indexing, which combines the clustering-based **Inverted File Index (IVF)** with **Product Quantization (PQ)** to efficiently compress embeddings. 
-The implementation provides several parameters to fine-tune the index's size, query throughput, latency, and recall.
+LanceDB uses **IVF-PQ** indexing, which combines the clustering-based **Inverted File Index (IVF)** with [**Product Quantization (PQ)**](/indexing/quantization) to efficiently 
+compress embeddings. We primarily discuss the IVF indexing technique here.
 
-#### Product Quantization
-
-Quantization is a compression technique used to speed up search by reducing the dimensionality of an embedding.
-
-Product quantization (PQ) first projects each large, high-dimensional vector into equal-sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. 
-The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
-
-![](/static/assets/images/indexing/ivfpq_pq_desc.png)
-
-As an example, consider the above image, which visualizes quantizing a 128-dimensional vector of 32-bit integers into a 4-dimensional vector of 8-bit integers.
-
-<Note title="Effect of quantization">
-Original storage: `128 × 32 = 4096` bits. 
-Quantized storage: `4 × 8 = 32` bits.
-
-In this example, quantization achieves a **128x** reduction in the memory requirement of each indexed vector.
-</Note>
-
-It's important to remember that quantization is a *lossy process*, i.e., that no operation on the reconstructed vector can exactly recover the original vector. 
-
-#### Inverted File Index (IVF) Implementation
-
-(note: acknowledge pq in here somewhere)
-
-An IVF is an index that facilitates rapid nearest neighbor searches by drastically reducing the search space.
+An IVF index facilitates rapid nearest neighbor searches by drastically reducing the search space.
 
 Given a large set of stored vectors, the algorithm to produce an IVF index first computes a set of *centroids* corresponding to an approximate solution to the $k$-means clustering problem. 
 The centroids are then used to partition the set of vectors as follows: each vector is assigned to the centroid nearest to it in the $\ell_2$ (or user-specified) metric. 
@@ -131,7 +107,7 @@ here vv
 During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
 ![](/static/assets/images/indexing/ivfpq_query_vector.webp)
 
-### HNSW
+### Hierarchical Navigable Small World (HNSW)
 
 Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. HNSW is one of the most accurate and fastest Approximate Nearest Neighbour search algorithms, It's beneficial in high-dimensional spaces where finding the same nearest neighbor would be too slow and costly.
 
@@ -193,8 +169,6 @@ Then the greedy search routine operates as follows:
 
 
 
-
-
 ## Using Vector Indexes
 
 
@@ -210,7 +184,7 @@ Vector indexing is managed **automatically** in LanceDB Enterprise. When a table
 - Optimizes the `IVF_PQ` index without manual configuration
 - Automatically manages indexing parameters
 
-The default distance is `l2` (Euclidean).
+The default distance is `l2` (the Euclidean $\ell_2$ norm).
 
 <Note>
 You can call `create_index()` with different parameters to create a new index -- this replaces any existing index.
