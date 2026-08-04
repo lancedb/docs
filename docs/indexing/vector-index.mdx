@@ -32,32 +32,7 @@ You can create and manage multiple vector indexes on any Lance dataset. LanceDB 
 In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph. LanceDB supports the unquantized variant `IVF_HNSW_FLAT`, along with quantized variants such as `IVF_HNSW_PQ` and `IVF_HNSW_SQ`. This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
 </Info>
 
-### Manual Indexing
 
-If using LanceDB OSS, you will have to create the vector index manually, by calling `table.create_index()`, and updating the index as new data arrives and tuning its parameters is also a manual process.
-
-### Automatic Indexing
-
- <Badge color="red">Enterprise-only</Badge> 
-Vector indexing is managed **automatically** in LanceDB Enterprise. When a table is created in LanceDB Enterprise, the system asynchronously updates and optimizes the index as a background process:
-- Infers vector columns from the schema
-- Optimizes the `IVF_PQ` index without manual configuration
-- Automatically manages indexing parameters
-
-The default distance is `l2` (Euclidean).
-
-<Note>
-You can call `create_index()` with different parameters to create a new index -- this replaces any existing index.
-Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
-</Note>
-
-Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
-
-Rows appended after an index build remain outside that index until optimization refreshes it. Normal
-search still checks those unindexed rows with a slower fallback path; `fast_search()` skips that
-fallback and searches only indexed rows.
-
-## Choose the Right Index
 
 Use this table to choose the right index and quantization type for your use case:
 
@@ -90,13 +65,171 @@ Start with these values, then tune for your workload:
   - `num_sub_vectors`: start at `dimension // 8`. Increase for better recall, decrease for faster search and smaller indexes.
   - For small dimensions (`dimension <= 256`), `IVF_PQ` is often preferred over `IVF_RQ` for better accuracy at similar query performance.
 
-## Example: Construct an IVF Index
+
+
+<Info>
+**Operational checks**
+
+For vector indexes, make sure to use the same distance metric when creating and querying the index. After appends or other writes, use `optimize()` to fold new rows into existing indexes, then check `index_stats(...)` or `wait_for_index(...)` to confirm that the index has caught up. 
+`wait_for_index(...)` waits until the named indexes exist and report `num_unindexed_rows == 0`, and can time out if writes keep adding unindexed rows.
+
+Unless specified otherwise, vector indexing defaults to `IVF_PQ`, and scalar index creation defaults to
+`BTree`. `BTree` and `Bitmap` indexes target scalar columns, not list columns; use `LabelList` for list containment filters.
+</Info>
+
+
+## Understanding Vector Indexes
+
+An ANN (Approximate Nearest Neighbors) index is a data structure that quickly produces an approximate solution to the **$k$-Nearest Neighbors (kNN)** problem. 
+It greatly improves upon the runtime of a brute-force kNN search, while admitting a slight decrease in accuracy. LanceDB uses the disk-based indexing technique IVF-PQ, discussed below.
+
+LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
+
+### IVF-PQ
+
+LanceDB uses **IVF-PQ** indexing, which combines the clustering-based **Inverted File Index (IVF)** with **Product Quantization (PQ)** to efficiently compress embeddings. 
+The implementation provides several parameters to fine-tune the index's size, query throughput, latency, and recall.
+
+#### Product Quantization
+
+Quantization is a compression technique used to speed up search by reducing the dimensionality of an embedding.
+
+Product quantization (PQ) first projects each large, high-dimensional vector into equal-sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. 
+The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
+
+![](/static/assets/images/indexing/ivfpq_pq_desc.png)
+
+As an example, consider the above image, which visualizes quantizing a 128-dimensional vector of 32-bit integers into a 4-dimensional vector of 8-bit integers.
+
+<Note title="Effect of quantization">
+Original storage: `128 × 32 = 4096` bits. 
+Quantized storage: `4 × 8 = 32` bits.
+
+In this example, quantization achieves a **128x** reduction in the memory requirement of each indexed vector.
+</Note>
+
+It's important to remember that quantization is a *lossy process*, i.e., that no operation on the reconstructed vector can exactly recover the original vector. 
+
+#### Inverted File Index (IVF) Implementation
+
+(note: acknowledge pq in here somewhere)
+
+An IVF is an index that facilitates rapid nearest neighbor searches by drastically reducing the search space.
+
+Given a large set of stored vectors, the algorithm to produce an IVF index first computes a set of *centroids* corresponding to an approximate solution to the $k$-means clustering problem. 
+The centroids are then used to partition the set of vectors as follows: each vector is assigned to the centroid nearest to it in the $\ell_2$ (or user-specified) metric. 
+The set of vectors assigned to a centroid is called its *cluster*. This data is then recorded as an index which identifies each centroid with its cluster.
+
+The following image shows a $2$-dimensional Euclidean space partitioned according to this algorithm. The colored marks denote centroids.
+![](/static/assets/images/indexing/ivfpq_ivf_desc.webp)
+
+To process a nearest neighbors query, instead of a brute-force comparison of the queried vector to every stored vector, the system can instead search the much-smaller set of *centroids$ 
+for a closest match, then execute a brute-force comparison against its associated cluster. This technique quickly eliminates the vast majority of clusters from the search space. 
+Furthermore, since each centroid is relatively close to points in its cluster, we are likely to produce an approximately correct result.
+
+here vv
+During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
+![](/static/assets/images/indexing/ivfpq_query_vector.webp)
+
+### HNSW
+
+Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. HNSW is one of the most accurate and fastest Approximate Nearest Neighbour search algorithms, It's beneficial in high-dimensional spaces where finding the same nearest neighbor would be too slow and costly.
+
+#### Types of ANN Search Algorithms
+
+Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. 
+For example, HNSW is an ANN index that performs well in high-dimensional spaces where other techniques prove too slow and costly.
+
+There are three main types of ANN search algorithms:
+
+* **Tree-based search algorithms**: Use a tree structure to organize and store data points.
+* **Hash-based search algorithms**: Use a specialized geometric hash table to store and manage data points. These algorithms typically focus on theoretical guarantees, and don't usually perform as well as the other approaches in practice.
+* **Graph-based search algorithms**: Use a graph structure to store data points, which can be a bit complex. 
+
+HNSW is a graph-based algorithm. All graph-based search algorithms rely on the idea of a $k$-nearest neighbor (or $k$-approximate nearest neighbor) graph, which we outline below.  
+HNSW also combines this with the ideas behind a classic 1-dimensional search data structure: the skip list.
+
+#### Understanding $k$-Nearest Neighbor Graphs
+
+The $k$-nearest neighbor graph actually predates its use for ANN search. Its construction is quite simple:
+
+* Each vector in the dataset is given an associated vertex.
+* Each vertex has outgoing edges to its k nearest neighbors. That is, the k closest other vertices by Euclidean distance between the two corresponding vectors. This can be thought of as a "friend list" for the vertex.
+* For some applications (including nearest-neighbor search), the incoming edges are also added.
+
+Eventually, it was realized that the following greedy search method over such a graph typically results in good approximate nearest neighbors:
+
+* Given a query vector, start at some fixed "entry point" vertex (e.g. the approximate center node).
+* Look at that vertex's neighbors. If any of them are closer to the query vector than the current vertex, then move to that vertex.
+* Repeat until a local optimum is found.
+
+The above algorithm also generalizes to e.g. top 10 approximate nearest neighbors.
+
+Computing a $k$-nearest neighbor graph is actually quite slow, taking quadratic time in the dataset size. It was quickly realized that near-identical performance can be achieved using a k-approximate nearest neighbor graph. That is, instead of obtaining the $k$-nearest neighbors for each vertex, an approximate nearest neighbor search data structure is used to build much faster.  
+In fact, another data structure is not needed: This can be done "incrementally".
+That is, if you start with a k-ANN graph for n-1 vertices, you can extend it to a k-ANN graph for n vertices as well by using the graph to obtain the k-ANN for the new vertex.
+
+One downside of k-NN and k-ANN graphs alone is that one must typically build them with a large value of k to get decent results, resulting in a large index.
+
+#### Hierarchical Navigable Small Worlds (HNSW)
+
+HNSW builds on k-ANN in two main ways:
+
+* Instead of getting the k-approximate nearest neighbors for a large value of k, it sparsifies the k-ANN graph using a carefully chosen "edge pruning" heuristic, allowing for the number of edges per vertex to be limited to a relatively small constant.
+* The "entry point" vertex is chosen dynamically using a recursively constructed data structure on a subset of the data, similarly to a skip list.
+
+This recursive structure can be thought of as separating into layers:
+
+* At the bottom-most layer, a k-ANN graph on the whole dataset is present.
+* At the second layer, a k-ANN graph on a fraction of the dataset (e.g. 10%) is present.
+* At the Lth layer, a k-ANN graph is present. It is over a (constant) fraction (e.g. 10%) of the vectors/vertices present in the L-1th layer.
+
+Then the greedy search routine operates as follows:
+
+* At the top layer (using an arbitrary vertex as an entry point), use the greedy local search routine on the k-ANN graph to get an approximate nearest neighbor at that layer.
+* Using the approximate nearest neighbor found in the previous layer as an entry point, find an approximate nearest neighbor in the next layer with the same method.
+* Repeat until the bottom-most layer is reached. Then use the entry point to find multiple nearest neighbors (e.g. top 10).
+
+
+
+
+
+
+## Using Vector Indexes
+
+
+### Manual Indexing
+
+If using LanceDB OSS, you will have to create the vector index manually, by calling `table.create_index()`, and updating the index as new data arrives and tuning its parameters is also a manual process.
+
+### Automatic Indexing
+
+ <Badge color="red">Enterprise-only</Badge> 
+Vector indexing is managed **automatically** in LanceDB Enterprise. When a table is created in LanceDB Enterprise, the system asynchronously updates and optimizes the index as a background process:
+- Infers vector columns from the schema
+- Optimizes the `IVF_PQ` index without manual configuration
+- Automatically manages indexing parameters
+
+The default distance is `l2` (Euclidean).
+
+<Note>
+You can call `create_index()` with different parameters to create a new index -- this replaces any existing index.
+Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
+</Note>
+
+Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
+
+Rows appended after an index build remain outside that index until optimization refreshes it. Normal
+search still checks those unindexed rows with a slower fallback path; `fast_search()` skips that
+fallback and searches only indexed rows.
+
+### Example: Construct an IVF Index
 
 In this example, we will create an index for a table containing 1536-dimensional vectors. The index will use IVF_PQ with L2 distance, which is well-suited for high-dimensional vector search. 
 
 Make sure you have enough data in your table (at least a few thousand rows) for effective index training.
 
-### Index Configuration
+#### Index Configuration
 
 Sometimes you need to configure the index beyond default parameters:
 
@@ -124,7 +257,7 @@ Let's take a look at a sample request for an IVF index:
     </CodeBlock>
 </CodeGroup>
 
-### 1. Setup
+#### 1. Setup
 
 Connect to LanceDB and open the table you want to index.
 
@@ -134,7 +267,7 @@ Connect to LanceDB and open the table you want to index.
     </CodeBlock>
 </CodeGroup>
 
-### 2. Construct an IVF Index
+#### 2. Construct an IVF Index
 
 Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. For a vector field nested inside a struct, use dot notation (e.g. `image.embedding`); see [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full syntax. You can switch `index_type` to `IVF_RQ`, `IVF_HNSW_SQ`, or `IVF_HNSW_FLAT` depending on your recall/latency/compression target.
 
@@ -158,7 +291,7 @@ If your vector column lives inside a struct, pass its full dotted path as `vecto
 Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `image.thumbnail.embedding`). The same convention applies to FTS and scalar indexes.
 </Note>
 
-### Async API and Config Objects
+#### Async API and Config Objects
 
 With asynchronous Python connections, create vector indexes with `await table.create_index("vector", config=...)`. The `config` object carries the same index choices you configure in the synchronous API, such as distance metric, partition count, and quantization settings:
 
@@ -180,7 +313,7 @@ Use these Python config classes for the index types shown on this page:
 | `IVF_HNSW_PQ` | `IvfHnswPq` |
 | `IVF_HNSW_SQ` | `IvfHnswSq` |
 
-### 3. Query the IVF Index
+#### 3. Query the IVF Index
 
 Search using a random 1,536-dimensional embedding.
 
@@ -256,9 +389,9 @@ Flat search is $O(n)$ — reserve `bypass_vector_index()` for sampled recall mea
 Multivector indexing currently requires `distance_type="cosine"` — `l2` is rejected at index-creation time. That restriction is why `bypass_vector_index()` is the escape hatch for non-cosine queries on a multivector column: the metric you want at query time cannot be served by the index, so you fall back to a flat scan. See [Multivector Search](/search/multivector-search) for the full rules.
 </Note>
 
-## Example: Construct an HNSW Index
+### Example: Construct an HNSW Index
 
-### Index Configuration
+#### Index Configuration
 
 There are four key parameters to set when constructing an HNSW index:
 
@@ -267,7 +400,7 @@ There are four key parameters to set when constructing an HNSW index:
 - `m`: The number of neighbors to select for each vector in the HNSW graph.
 - `ef_construction`: The number of candidates to evaluate during the construction of the HNSW graph.
 
-### 1. Construct an HNSW Index
+#### 1. Construct an HNSW Index
 
 The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, change `index_type` to `IVF_HNSW_FLAT`.
 
@@ -277,7 +410,7 @@ The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, chang
     </CodeBlock>
 </CodeGroup>
 
-### 2. Query the HNSW Index
+#### 2. Query the HNSW Index
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -285,11 +418,11 @@ The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, chang
     </CodeBlock>
 </CodeGroup>
 
-## Example: Construct a Binary Vector Index
+### Example: Construct a Binary Vector Index
 
 Binary vectors are useful for hash-based retrieval, fingerprinting, or any scenario where data can be represented as bits.
 
-### Index Configuration
+#### Index Configuration
 
 - Store binary vectors as fixed-size binary data (uint8 arrays, with 8 bits per byte). For storage, pack binary vectors into bytes to save space. 
 - Index Type: `IVF_FLAT` is used for indexing binary vectors
@@ -303,7 +436,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
 - Quantized index types (`IVF_PQ`, `IVF_RQ`, `IVF_SQ`, `IVF_HNSW_PQ`, `IVF_HNSW_SQ`) do not accept binary inputs — their `distance_type` is restricted to `l2`, `cosine`, or `dot`.
 </Warning>
 
-### 1. Create Table and Schema
+#### 1. Create Table and Schema
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -311,7 +444,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
     </CodeBlock>
 </CodeGroup>
 
-### 2. Generate and Add Data
+#### 2. Generate and Add Data
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -319,7 +452,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
     </CodeBlock>
 </CodeGroup>
 
-### 3. Construct the Binary Index
+#### 3. Construct the Binary Index
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -327,7 +460,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
     </CodeBlock>
 </CodeGroup>
 
-### 4. Vector Search
+#### 4. Vector Search
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -335,7 +468,7 @@ Binary vectors are useful for hash-based retrieval, fingerprinting, or any scena
     </CodeBlock>
 </CodeGroup>
 
-## Check Index Status
+### Check Index Status
 
 Vector index creation runs in the background and may take some time to complete. While it is ongoing, you can check its status either programmatically through the API or from the **LanceDB Enterprise UI**.
 
@@ -365,7 +498,7 @@ These fields are populated for local and embedded tables. On LanceDB Enterprise 
     </CodeBlock>
 </CodeGroup>
 
-## Custom Index Names
+### Custom Index Names
 
 The `{column}_idx` suffix is a default convention, not the only supported naming path. Pass `name=...` to `create_index()` to override it — useful when you want to manage multiple indexes on the same column (for example, side-by-side `IVF_PQ` and `IVF_HNSW_SQ` builds) or when you script index replacement by name. Once set, `list_indices()`, `index_stats(name)`, and `wait_for_index([name])` all reference the custom name.
 
