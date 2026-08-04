@@ -1,0 +1,376 @@
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800   1) ---
+e7716261 docs/indexing/vector-index.mdx             (Prashanth Rao     2025-12-10 22:00:28 -0500   2) title: "Vector Indexes"
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800   3) sidebarTitle: "Vector Index"
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500   4) description: "Build and optimize LanceDB vector indexes, including IVF, HNSW and binary quantized indexes."
+e7716261 docs/indexing/vector-index.mdx             (Prashanth Rao     2025-12-10 22:00:28 -0500   5) icon: "arrow-up-right-dots"
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800   6) ---
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800   7) import {
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800   8)     PyVectorIndexConfigureIvf as VectorIndexConfigureIvf,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800   9)     PyVectorIndexSetup as VectorIndexSetup,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  10)     PyVectorIndexBuildIvf as VectorIndexBuildIvf,
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400  11)     PyVectorIndexNestedField as VectorIndexNestedField,
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700  12)     PyVectorIndexAsyncConfig as VectorIndexAsyncConfig,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  13)     PyVectorIndexQueryIvf as VectorIndexQueryIvf,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  14)     PyVectorIndexBuildHnsw as VectorIndexBuildHnsw,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  15)     PyVectorIndexQueryHnsw as VectorIndexQueryHnsw,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  16)     PyVectorIndexBinarySchema as VectorIndexBinarySchema,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  17)     PyVectorIndexBinaryAddData as VectorIndexBinaryAddData,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  18)     PyVectorIndexBinaryBuildIndex as VectorIndexBinaryBuildIndex,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  19)     PyVectorIndexBinarySearch as VectorIndexBinarySearch,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  20)     PyVectorIndexCheckStatus as VectorIndexCheckStatus,
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800  21)     PyVectorIndexNprobes as VectorIndexNprobes,
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800  22)     PyVectorIndexDistanceRange as VectorIndexDistanceRange,
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800  23)     PyVectorIndexBypassRecall as VectorIndexBypassRecall,
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800  24)     PyVectorIndexCustomName as VectorIndexCustomName,
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800  25) } from '/snippets/indexing.mdx';
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  26) 
+cd7899c6 docs/indexing/vector-index.mdx             (jasonz-lance      2026-08-04 10:51:31 -0700  27) You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two vector indexing algorithms: **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  28) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  29) <Info>
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  30) **IVF + HNSW**
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  31) 
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800  32) In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph. LanceDB supports the unquantized variant `IVF_HNSW_FLAT`, along with quantized variants such as `IVF_HNSW_PQ` and `IVF_HNSW_SQ`. This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  33) </Info>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  34) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  35) ### Manual Indexing
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  36) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  37) If using LanceDB OSS, you will have to create the vector index manually, by calling `table.create_index()`, and updating the index as new data arrives and tuning its parameters is also a manual process.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800  38) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  39) ### Automatic Indexing
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  40) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  41)  <Badge color="red">Enterprise-only</Badge> 
+cd7899c6 docs/indexing/vector-index.mdx             (jasonz-lance      2026-08-04 10:51:31 -0700  42) Vector indexing is managed **automatically** in LanceDB Enterprise. When a table is created in LanceDB Enterprise, the system asynchronously updates and optimizes the index as a background process:
+cd7899c6 docs/indexing/vector-index.mdx             (jasonz-lance      2026-08-04 10:51:31 -0700  43) - Infers vector columns from the schema
+cd7899c6 docs/indexing/vector-index.mdx             (jasonz-lance      2026-08-04 10:51:31 -0700  44) - Optimizes the `IVF_PQ` index without manual configuration
+cd7899c6 docs/indexing/vector-index.mdx             (jasonz-lance      2026-08-04 10:51:31 -0700  45) - Automatically manages indexing parameters
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  46) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  47) The default distance is `l2` (Euclidean).
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  48) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  49) <Note>
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  50) You can call `create_index()` with different parameters to create a new index -- this replaces any existing index.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800  51) Although the `create_index` API returns immediately, the building of the vector index is asynchronous. To wait until all data is fully indexed, you can specify the `wait_timeout` parameter.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  52) </Note>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  53) 
+fa69074f docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-23 21:09:50 -0400  54) Use the same distance metric for index creation and search. Once a vector index exists, queries use the metric stored with that index. If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`; it can time out if new writes keep arriving.
+fa69074f docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-23 21:09:50 -0400  55) 
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400  56) Rows appended after an index build remain outside that index until optimization refreshes it. Normal
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400  57) search still checks those unindexed rows with a slower fallback path; `fast_search()` skips that
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400  58) fallback and searches only indexed rows.
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400  59) 
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  60) ## Choose the Right Index
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  61) 
+cd7899c6 docs/indexing/vector-index.mdx             (jasonz-lance      2026-08-04 10:51:31 -0700  62) Use this table to choose the right index and quantization type for your use case:
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  63) 
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  64) | If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  65) | :--- | :--- | :--- | :--- |
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800  66) | Highest recall / no quantization | `IVF_HNSW_FLAT` | Uses raw vectors inside the IVF+HNSW structure, avoiding quantization loss. | Around raw vector size plus HNSW graph overhead |
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  67) | Best recall/latency trade-off | `IVF_HNSW_SQ` | Combines IVF partitioning with HNSW graph search for strong quality at low latency. | Typically a little larger than `1/4` of raw size |
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  68) | Maximum compression | `IVF_RQ` | RaBitQ-style quantization with very strong compression. | Around `1/32` of raw size |
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  69) | Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | On small-dimensional vectors, `IVF_PQ` often provides higher accuracy with similar performance compared to `IVF_RQ`. | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) |
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  70) 
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  71) <Warning>
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800  72) If your vector search frequently includes metadata filters (`where(...)`), prefer `IVF_RQ` or `IVF_PQ`. In filtered workloads, HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ` can show higher latency variance.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  73) </Warning>
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  74) 
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  75) Compression ratios are practical rules of thumb and can vary with vector distribution, metric, and configuration.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  76) For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher compression than `IVF_RQ`.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  77) 
+18d34126 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-02-18 17:38:03 -0500  78) ### Index Tuning
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  79) 
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  80) Start with these values, then tune for your workload:
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  81) 
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800  82) - HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`)
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  83)   - `num_partitions`: start at `num_rows // 1,048,576` (rounded to an integer)
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  84)   - Lower `num_partitions` can reduce search latency, but index build may become slower because partitions are larger.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  85)   - `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  86) - `IVF_RQ`
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  87)   - `num_partitions`: start at `num_rows // 4096` (rounded to an integer). This is a strong default for most datasets.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  88) - `IVF_PQ`
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  89)   - `num_partitions`: start at `num_rows // 4096` (rounded to an integer).
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  90)   - `num_sub_vectors`: start at `dimension // 8`. Increase for better recall, decrease for faster search and smaller indexes.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  91)   - For small dimensions (`dimension <= 256`), `IVF_PQ` is often preferred over `IVF_RQ` for better accuracy at similar query performance.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800  92) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  93) ## Example: Construct an IVF Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  94) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800  95) In this example, we will create an index for a table containing 1536-dimensional vectors. The index will use IVF_PQ with L2 distance, which is well-suited for high-dimensional vector search. 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800  96) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800  97) Make sure you have enough data in your table (at least a few thousand rows) for effective index training.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  98) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800  99) ### Index Configuration
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 100) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 101) Sometimes you need to configure the index beyond default parameters:
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 102) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 103) - Index Types:
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800 104)     - `IVF_HNSW_FLAT`: highest recall, with no vector quantization
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800 105)     - `IVF_HNSW_SQ`: best recall/latency trade-off
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800 106)     - `IVF_RQ`: best compression for large, high-dimensional datasets
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800 107)     - `IVF_PQ`: often higher accuracy than `IVF_RQ` for small dimensions (`<= 256`) at similar query performance
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 108) - `metrics`: default is `l2`, other available are `cosine` or `dot`
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 109)     - When using `cosine` similarity, distances range from 0 (identical vectors) to 2 (maximally dissimilar)
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800 110) - `num_partitions`: use index-specific starting points from the section above:
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800 111)     - HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`): `num_rows // 1,048,576`
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800 112)     - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400 113) - `target_partition_size`: alternative IVF sizing knob that asks LanceDB to derive the partition
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400 114)   count from a target number of rows per partition. If you set both `num_partitions` and
+25d7ccd1 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-07-21 13:47:12 -0400 115)   `target_partition_size`, `num_partitions` takes precedence.
+521d2fab docs/indexing/vector-index.mdx             (BubbleCal         2026-02-14 06:56:35 +0800 116) - `num_sub_vectors`: applies to `IVF_PQ`; start with `dimension // 8`. Larger values often improve recall but can slow search.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 117) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 118) Let's take a look at a sample request for an IVF index:
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 119) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 120) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 121) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 122)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 123)     {VectorIndexConfigureIvf}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 124)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 125) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 126) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 127) ### 1. Setup
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 128) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 129) Connect to LanceDB and open the table you want to index.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 130) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 131) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 132)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 133)     {VectorIndexSetup}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 134)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 135) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 136) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 137) ### 2. Construct an IVF Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 138) 
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400 139) Create an `IVF_PQ` index with `cosine` similarity. Specify `vector_column_name` if you use multiple vector columns or non-default names. For a vector field nested inside a struct, use dot notation (e.g. `image.embedding`); see [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full syntax. You can switch `index_type` to `IVF_RQ`, `IVF_HNSW_SQ`, or `IVF_HNSW_FLAT` depending on your recall/latency/compression target.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 140) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 141) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 142)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 143)     {VectorIndexBuildIvf}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 144)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 145) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 146) 
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 147) #### Indexing nested vector fields
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 148) 
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 149) If your vector column lives inside a struct, pass its full dotted path as `vector_column_name`. The same path is used at query time and is what `list_indices()` reports under `columns`:
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 150) 
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400 151) <CodeGroup>
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400 152)     <CodeBlock filename="Python" language="Python" icon="python">
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400 153)     {VectorIndexNestedField}
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400 154)     </CodeBlock>
+a5448bf4 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 17:40:19 -0400 155) </CodeGroup>
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 156) 
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 157) <Note>
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 158) Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `image.thumbnail.embedding`). The same convention applies to FTS and scalar indexes.
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 159) </Note>
+6b265a8f docs/indexing/vector-index.mdx             (mintlify[bot]     2026-05-29 13:49:14 -0400 160) 
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 161) ### Async API and Config Objects
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 162) 
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 163) With asynchronous Python connections, create vector indexes with `await table.create_index("vector", config=...)`. The `config` object carries the same index choices you configure in the synchronous API, such as distance metric, partition count, and quantization settings:
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 164) 
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 165) <CodeGroup>
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 166)     <CodeBlock filename="Python" language="Python" icon="python">
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 167)     {VectorIndexAsyncConfig}
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 168)     </CodeBlock>
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 169) </CodeGroup>
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 170) 
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 171) Use these Python config classes for the index types shown on this page:
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 172) 
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 173) | Index type | Python config class |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 174) | :--- | :--- |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 175) | `IVF_FLAT` | `IvfFlat` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 176) | `IVF_PQ` | `IvfPq` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 177) | `IVF_RQ` | `IvfRq` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 178) | `IVF_SQ` | `IvfSq` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 179) | `IVF_HNSW_FLAT` | `IvfHnswFlat` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 180) | `IVF_HNSW_PQ` | `IvfHnswPq` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 181) | `IVF_HNSW_SQ` | `IvfHnswSq` |
+2b55c1ee docs/indexing/vector-index.mdx             (Prashanth Rao     2026-05-12 11:57:38 -0700 182) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 183) ### 3. Query the IVF Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 184) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 185) Search using a random 1,536-dimensional embedding.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 186) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 187) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 188)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 189)     {VectorIndexQueryIvf}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 190)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 191) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 192) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 193) #### Search Configuration
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 194) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 195) Core knobs available on a vector search call:
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 196) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 197) | Parameter | Description |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 198) | :--- | :--- |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 199) | `limit` | Number of results to return (`k`). |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 200) | `nprobes` | Shorthand that sets both `minimum_nprobes` and `maximum_nprobes` to the same value. LanceDB auto-tunes this by default. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 201) | `minimum_nprobes` | Partitions that are *always* scanned. Higher values raise recall at the cost of latency. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 202) | `maximum_nprobes` | Upper bound on partitions scanned. The partitions above `minimum_nprobes` are only searched if the initial pass does not return enough results — useful for narrow filters. Set to `0` to remove the cap. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 203) | `ef` | HNSW search-time exploration factor. Relevant for `IVF_HNSW_FLAT` and `IVF_HNSW_SQ`; start around `1.5 * k` and increase up to `10 * k` for higher recall. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 204) | `refine_factor` | Reads additional candidates and reranks them in memory to recover recall lost to quantization. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 205) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 206) <Note>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 207) **Filtered queries and adaptive nprobes.** When a `where(...)` filter is active, LanceDB starts by scanning `minimum_nprobes` partitions and only extends toward `maximum_nprobes` if fewer than `limit` rows survive the filter. Setting `minimum_nprobes == maximum_nprobes` (or calling `nprobes(n)`) disables this adaptive behavior and fixes the partition count.
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 208) </Note>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 209) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 210) <CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 211)     <CodeBlock filename="Python" language="Python" icon="python">
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 212)     {VectorIndexNprobes}
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 213)     </CodeBlock>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 214) </CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 215) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 216) Recommended `nprobes` behavior by index type:
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 217) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 218) | Index type | Guidance |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 219) | :--- | :--- |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 220) | `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the auto-tuned `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 221) | `IVF_RQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 222) | `IVF_PQ` | Keep auto-tuned `nprobes`; raise when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 223) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 224) #### Advanced Search Controls
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 225) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 226) These controls are useful for thresholded retrieval, recall measurement, and working around index-level metric constraints.
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 227) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 228) | Method | Description |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 229) | :--- | :--- |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 230) | `distance_range(lower_bound, upper_bound)` | Return only rows whose distance falls within `[lower_bound, upper_bound)`. Either bound is optional. Useful for near-duplicate detection or "close-enough" matching. |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 231) | `bypass_vector_index()` | Skip the ANN index and perform an exhaustive (flat) scan. Primary uses: (1) compute ground-truth results to measure ANN recall@k, and (2) query with a metric the index was not built for (e.g., a non-cosine query on a multivector column). |
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 232) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 233) **Thresholding with `distance_range`:**
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 234) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 235) <CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 236)     <CodeBlock filename="Python" language="Python" icon="python">
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 237)     {VectorIndexDistanceRange}
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 238)     </CodeBlock>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 239) </CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 240) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 241) **Measuring recall with `bypass_vector_index`:**
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 242) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 243) Compare ANN results against a flat-scan ground truth to compute recall@k. This is the standard way to pick `nprobes` for your workload.
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 244) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 245) <CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 246)     <CodeBlock filename="Python" language="Python" icon="python">
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 247)     {VectorIndexBypassRecall}
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 248)     </CodeBlock>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 249) </CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 250) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 251) <Warning>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 252) Flat search is $O(n)$ — reserve `bypass_vector_index()` for sampled recall measurements or small tables, not production queries.
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 253) </Warning>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 254) 
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 255) <Note title="Multivector distance constraint">
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 256) Multivector indexing currently requires `distance_type="cosine"` — `l2` is rejected at index-creation time. That restriction is why `bypass_vector_index()` is the escape hatch for non-cosine queries on a multivector column: the metric you want at query time cannot be served by the index, so you fall back to a flat scan. See [Multivector Search](/search/multivector-search) for the full rules.
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 257) </Note>
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 258) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 259) ## Example: Construct an HNSW Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 260) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 261) ### Index Configuration
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 262) 
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800 263) There are four key parameters to set when constructing an HNSW index:
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 264) 
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800 265) - `index_type`: choose `IVF_HNSW_SQ` for a strong recall/latency/size trade-off, or `IVF_HNSW_FLAT` when you want the IVF+HNSW structure without vector quantization.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 266) - `metric`: The default is `l2` euclidean distance metric. Other available are `dot` and `cosine`.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 267) - `m`: The number of neighbors to select for each vector in the HNSW graph.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 268) - `ef_construction`: The number of candidates to evaluate during the construction of the HNSW graph.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 269) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 270) ### 1. Construct an HNSW Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 271) 
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800 272) The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, change `index_type` to `IVF_HNSW_FLAT`.
+5f8fe230 docs/indexing/vector-index.mdx             (BubbleCal         2026-04-15 13:45:43 +0800 273) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 274) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 275)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 276)     {VectorIndexBuildHnsw}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 277)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 278) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 279) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 280) ### 2. Query the HNSW Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 281) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 282) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 283)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 284)     {VectorIndexQueryHnsw}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 285)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 286) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 287) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 288) ## Example: Construct a Binary Vector Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 289) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 290) Binary vectors are useful for hash-based retrieval, fingerprinting, or any scenario where data can be represented as bits.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 291) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 292) ### Index Configuration
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 293) 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 294) - Store binary vectors as fixed-size binary data (uint8 arrays, with 8 bits per byte). For storage, pack binary vectors into bytes to save space. 
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 295) - Index Type: `IVF_FLAT` is used for indexing binary vectors
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 296) - `metric`: the `hamming` distance is used for similarity search
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 297) - The dimension of binary vectors must be a multiple of 8. For example, a 128-dimensional vector is stored as a uint8 array of size 16.
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 298) 
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 299) <Warning>
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 300) **`IVF_FLAT` + `hamming` is the only supported path for binary vectors.**
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 301) 
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 302) - `hamming` distance is only valid on packed binary (uint8) data; it is rejected on float vector columns.
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 303) - Quantized index types (`IVF_PQ`, `IVF_RQ`, `IVF_SQ`, `IVF_HNSW_PQ`, `IVF_HNSW_SQ`) do not accept binary inputs — their `distance_type` is restricted to `l2`, `cosine`, or `dot`.
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 304) </Warning>
+6c0ccc00 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 16:32:32 +0800 305) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 306) ### 1. Create Table and Schema
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 307) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 308) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 309)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 310)     {VectorIndexBinarySchema}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 311)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 312) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 313) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 314) ### 2. Generate and Add Data
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 315) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 316) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 317)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 318)     {VectorIndexBinaryAddData}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 319)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 320) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 321) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 322) ### 3. Construct the Binary Index
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 323) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 324) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 325)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 326)     {VectorIndexBinaryBuildIndex}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 327)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 328) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 329) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 330) ### 4. Vector Search
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 331) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 332) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 333)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 334)     {VectorIndexBinarySearch}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 335)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 336) </CodeGroup>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 337) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 338) ## Check Index Status
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 339) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 340) Vector index creation runs in the background and may take some time to complete. While it is ongoing, you can check its status either programmatically through the API or from the **LanceDB Enterprise UI**.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 341) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 342) In the LanceDB Enterprise UI, navigate to your table page - the "Index" column reflects each column's index status: it is blank when no index exists, shows an "in progress" label while the index is being built, and shows the index type once the build completes.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 343) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 344) Programmatically, use `list_indices()` and `index_stats()`. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 345) To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_index()` or call `wait_for_index()` on the table.
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 346) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 347) Each entry returned by `list_indices()` also carries detailed per-index metadata, so you can inspect an index without a follow-up `index_stats()` call. Node.js exposes the same fields in camelCase (`num_indexed_rows` → `numIndexedRows`):
+5918c400 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-09 21:55:30 -0800 348) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 349) | Field | What it tells you |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 350) | :--- | :--- |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 351) | `num_indexed_rows`, `num_unindexed_rows` | Index coverage over the table |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 352) | `size_bytes` | Total size of the index files on disk |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 353) | `num_segments`, `index_version` | On-disk layout and format version |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 354) | `created_at` | Creation time (ms since the Unix epoch in Node.js) |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 355) | `index_uuid`, `type_url` | Internal identifiers for the index segment |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 356) | `index_details` | Type-specific details (e.g. IVF partition counts or quantization settings) |
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 357) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 358) <Note>
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 359) These fields are populated for local and embedded tables. On LanceDB Enterprise remote tables they are returned as `None` / `undefined` until the server response surfaces them.
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 360) </Note>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 361) 
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 362) <CodeGroup>
+5cbe87c7 docs/user-guides/indexing/vector-index.mdx (Prashanth Rao     2025-12-09 22:08:27 -0500 363)     <CodeBlock filename="Python" language="Python" icon="python">
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 364)     {VectorIndexCheckStatus}
+250d9baa docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-12-05 14:12:10 -0800 365)     </CodeBlock>
+9f362963 docs/user-guides/indexing/vector-index.mdx (erik-wang-lancedb 2025-11-30 21:12:29 -0800 366) </CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 367) 
+f4100554 docs/indexing/vector-index.mdx             (mintlify[bot]     2026-07-02 14:37:24 -0400 368) ## Custom Index Names
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 369) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 370) The `{column}_idx` suffix is a default convention, not the only supported naming path. Pass `name=...` to `create_index()` to override it — useful when you want to manage multiple indexes on the same column (for example, side-by-side `IVF_PQ` and `IVF_HNSW_SQ` builds) or when you script index replacement by name. Once set, `list_indices()`, `index_stats(name)`, and `wait_for_index([name])` all reference the custom name.
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 371) 
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 372) <CodeGroup>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 373)     <CodeBlock filename="Python" language="Python" icon="python">
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 374)     {VectorIndexCustomName}
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 375)     </CodeBlock>
+7d261e76 docs/indexing/vector-index.mdx             (Prashanth Rao     2026-04-21 15:01:11 +0800 376) </CodeGroup>
