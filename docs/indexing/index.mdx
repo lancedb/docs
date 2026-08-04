@@ -11,14 +11,7 @@ An **index** is a data structure that facilitates efficient scans and lookups on
 - **Full-Text Search Index**: Enables fast keyword-based searches by indexing words and phrases
 - **Scalar Index**: Accelerates filtering and sorting of structured numeric or categorical data (e.g. timestamps, prices)
 
-<Tip title="Working with scalar indices">
-Scalar indices serve as a foundational optimization layer, accelerating filtering across diverse search workloads. They can be combined with:
 
-- Vector search (prefilter or post-filter results using metadata)
-- Full-text search (combining keyword matching with structured filters) 
-- SQL scans (optimizing WHERE clauses on scalar columns)
-- Key-value lookups (enabling rapid primary key-based retrievals)
-</Tip>
 
 ## Supported Indexes
 

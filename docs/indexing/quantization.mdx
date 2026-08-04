@@ -23,8 +23,8 @@ todo decide what to do here vv
 
 Use the same distance metric when training and querying the index. For IVF-based indexes, `num_partitions` controls the number of groups and `sample_rate` controls how many training vectors are sampled per partition, so the training sample is roughly `sample_rate * num_partitions`.
 
-##Quantization Techniques
-#### Product Quantization
+## Quantization Techniques
+### Product Quantization
 
 Quantization is a compression technique used to speed up search by reducing the dimensionality of an embedding.
 
@@ -83,14 +83,14 @@ It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to 
 Indexes built with `num_bits >= 2` use an updated on-disk layout. Older LanceDB versions cannot read them and will fail with a clear missing-column error rather than returning incorrect results. Existing indexes keep working and upgrade automatically when they are rewritten (for example, during compaction, optimize, or remap). `num_bits=1` indexes are unaffected in both directions.
 </Warning>
 
-###SQ (todo?)
+### SQ (todo?)
 
 ## API Reference
 
 The full list of parameters to the algorithm are listed below.
 
 - `distance_type`: Literal["l2", "cosine", "dot"], defaults to "l2"  
-  The distance metric to use for similarity comparison. Choose "l2" for Euclidean, "cosine" for cosine similarity, or "dot" for dot product.
+  The distance metric used in comparison. 
 - `num_partitions`: Optional[int], defaults to None  
   Number of IVF partitions (affects index build time and query accuracy). More partitions can improve recall but may increase build time. When unset, LanceDB chooses roughly the square root of the row count.
 - `num_bits`: int, defaults to 1  
