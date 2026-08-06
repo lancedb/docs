@@ -24,22 +24,23 @@ import {
     PyVectorIndexCustomName as VectorIndexCustomName,
 } from '/snippets/indexing.mdx';
 
-You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two vector indexing algorithms: **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
 
-(todo intro sentence) (todo up here: introduce/define kNN, ANN)
+Vector indexes are a robust tool in facilitating fast nearest-neighbor searches across large datasets. 
+LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with two (todo) advanced techniques that, when combined with [quantization](/indexing/quantization), provide large benefits across a variety of use cases.
 
-<Info>
-**IVF + HNSW**
-
-In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph. LanceDB supports the unquantized variant `IVF_HNSW_FLAT`, along with quantized variants such as `IVF_HNSW_PQ` and `IVF_HNSW_SQ`. This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
-</Info>
-
+<Note>
+This page's discussions assume an ambient dataset of numeric vector types. Vector indexing is not supported for incomparable data types.
+</Note>
 
 ## Understanding Vector Indexes
+todo: intro sentence
+
+You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two vector indexing algorithms: 
+**Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
 
 ### Choosing the Right Index
 
-Use this table to choose the right index and quantization type for your use case:
+Use this table to choose the right index and quantization protocol for your use case:
 
 | If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
 | :--- | :--- | :--- | :--- |
@@ -111,6 +112,15 @@ to query:
 
 
 HNSW ends up needing a lot of memory.
+
+<Info>
+**IVF + HNSW**
+
+In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. 
+What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph. 
+LanceDB supports the unquantized variant `IVF_HNSW_FLAT`, along with quantized variants such as `IVF_HNSW_PQ` and `IVF_HNSW_SQ`. 
+This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
+</Info>
 
 
 ## Using Vector Indexes
@@ -464,9 +474,7 @@ Unless specified otherwise, vector indexing defaults to `IVF_PQ`, and scalar ind
 
 ## Temp (scrap)
 
-LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
 
-Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. 
 
 
 <Note>
