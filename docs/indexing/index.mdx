@@ -5,17 +5,14 @@ description: "Optimize search performance with LanceDB using vector indexes, ful
 icon: "list"
 ---
 
-An **index** is a data structure that facilitates efficient scans and lookups on the embeddings of a given dataset. LanceDB provides a comprehensive suite of indexes to optimize query performance across diverse workloads:
+An **index** is a data structure that facilitates efficient scans and lookups on an embedded dataset. 
+
+## Supported Indexes
+LanceDB provides a comprehensive suite of indexes to optimize performance across different use cases and data types:
 
 - **Vector Index**: Efficiently searches for similar vectors across high-dimensional data (e.g. images, audio, or text embeddings)
 - **Full-Text Search Index**: Enables fast keyword-based searches by indexing words and phrases
-- **Scalar Index**: Accelerates filtering and sorting of structured numeric or categorical data (e.g. timestamps, prices)
-
-
-
-## Supported Indexes
-
-LanceDB provides a comprehensive suite of indexes for different use cases and data types:
+- **Scalar Index**: Accelerates filtering and sorting of structured numeric or categorical data
 
 | Index | Use Case | Description |
 | :--------- | :------- | :---------- |
@@ -27,12 +24,8 @@ LanceDB provides a comprehensive suite of indexes for different use cases and da
 | `LabelList` (Scalar) | List columns (e.g., tags, categories, keywords) requiring `array_contains_all` or `array_contains_any` filters. | Scalar index for `List<T>` and `LargeList<T>` columns of primitive values, using an underlying bitmap index structure to enable fast array membership lookups. |
 | `FM` (Scalar) | String or binary columns that need raw substring search. | FM-Index over `Utf8`, `LargeUtf8`, `Binary`, or `LargeBinary` data for filters such as `contains(path, 'needle')`. Use FTS instead for tokenized word search and BM25 ranking. |
 
-<Note>
-TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
-</Note>
-
 ## Quantization
-LanceDB also supports several different [quantization](/indexing/quantization) methods, used by vector indexes to compress vectors and improve search performance:
+LanceDB also supports several different [quantization](/indexing/quantization) methods, used by vector indexes to compress vectors and reduce storage requirements:
 
 | Quantization | Use Case | Description |
 | :----------- | :------- | :---------- |
