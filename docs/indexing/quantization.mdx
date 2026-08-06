@@ -26,10 +26,6 @@ Use the same distance metric when training and querying the index. For IVF-based
 ## Quantization Techniques
 ### Product Quantization
 
-Quantization is a compression technique used to speed up search by reducing the dimensionality of an embedding.
-
-Product quantization (PQ) first projects each large, high-dimensional vector into equal-sized subvectors. Each subvector is assigned a "reproduction value" that maps to the nearest centroid of points for that subvector. 
-The reproduction values are then assigned to a codebook using unique IDs, which can be used to reconstruct the original vector.
 
 ![](/static/assets/images/indexing/ivfpq_pq_desc.png)
 
