@@ -33,3 +33,7 @@ LanceDB also supports several different [quantization](/indexing/quantization) m
 | `SQ` (Scalar Quantization) | Use when you need faster indexing or when vector dimensions have consistent value ranges. | Quantizes each dimension independently. Simpler than PQ but typically provides less compression. |
 | `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. For `IVF_RQ`, vector dimensions must be divisible by `8`. |
 | `None/Flat` | Use for binary vectors (with `hamming` distance) or when you need maximum recall and have sufficient storage. | No quantization—stores raw vectors. Provides the highest accuracy but requires more storage and memory. |
+
+## temp
+
+LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
