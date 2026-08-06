@@ -26,6 +26,28 @@ Use the same distance metric when training and querying the index. For IVF-based
 ## Quantization Techniques
 ### Product Quantization
 
+To visualize PQ quantization, imagine that our dataset consists of a set $S = \{ v_1, \dots, v_n \} \subset \mathbb{R}^d$ of $n$ vectors in $d$-dimensional space. 
+If each entry of each vector is the same size, for example a `float64`, a naive storage implementation will require $O(nd)$ total bits to store all vectors.
+For large $(n,d)$, this is prohibitively expensive.
+
+Instead, assume we are given a set $C = \{ c_1, \dots, c_k \} \subset \mathbb{R}^d$ of $k$ **centroids**, such that each vector $v_i$ is close to some centroid $c_j$ 
+(i.e. for some $1 \leq j \leq k$, $\| v_i - c_j \|$ is small). We can then use the following efficient storage scheme: for each $1 \leq i \leq n$, instead of storing $v_i$, 
+we simply store the integer $j$, where $c_j$ is the centroid associated to $v_i$. To find the distance $\| q - v_i \|$ for some queried vector $q$, 
+we can recover $c_j$ via a fixed lookup table and simply return $\| q - c_j \|$, which due to the triangle inequality 
+
+$ \| q - v_i \| - \| q - c_j \| \leq \| v_i - c_j \|, $
+
+is an approximately correct response. The storage protocol requires $O(\log _2 k)$ bits per vector, instead of $O(d)$ bits in the naive implementation.
+
+But, how do we obtain the set of $k$ centroids? Let's assume (not unreasonably) that 
+we would like our set of centroids to have a fixed approximation guarantee. That is, for some $\epsilon > 0$, we would like to guarantee that for every $i$, some centroid $c_j$ satisfies 
+$\| v_i - c_j \| < \epsilon$. In the worst case, our dataset could take on a fixed constant $c \in \mathbb{N}$ unique values in each of $d$ dimensions, 
+spaced far apart. (for example, imagine that our data is the set $\{ (2 \epsilon x_1, \dots, 2 \epsilon x_d) : x_i \in \mathbb{N}, 1 \leq x_i \leq c \} \, \forall \, i$).
+In this case, we may need as many as $k \geq \Omega(c^d)$ centroids, meaning each bit would need at least $\log k \geq \Omega(d)$ bits of storage, which is no better than our naive implementation!
+
+
+
+
 
 ![](/static/assets/images/indexing/ivfpq_pq_desc.png)
 
