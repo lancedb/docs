@@ -6,8 +6,8 @@ icon: "compress"
 keywords: ["quantization", "quantize", "rabitq"]
 ---
 
-Quantization compresses high-dimensional vectors into concise representations that admit efficient storage with only a small compromise in search accuracy. 
-Quantization is beneficial when your dataset uses high-dimensional vectors ($512, 768, 1024$ or more dimensions), or when index build time and query latency are crucial.
+**Quantization** compresses vectors into concise representations that admit efficient storage. 
+It is beneficial for high ($512, 768, 1024$ or more)-dimensional datasets, or when index build time and query latency are crucial.
 
 LanceDB currently exposes several quantized vector index types, with a range of options differing in indexing technique (`IVF_*`,`IVF_HNSW_*`) and method of quantization (`PQ`,`RQ`,`SQ`).
 - `IVF_PQ` -- Inverted File index with Product Quantization (default). See the [vector indexing guide](/indexing/vector-index) for `IVF_PQ` examples.
@@ -17,7 +17,7 @@ LanceDB currently exposes several quantized vector index types, with a range of 
 - `IVF_HNSW_PQ` -- IVF partitions with an **HNSW graph per partition** plus **Product Quantization**. Prefer when PQ-level compression matters and you still want HNSW-style in-partition search.
 
 Different indexing and quantization techniques may be better suited for certain use cases. For example, `IVF_PQ` works well in many cases, but RaBitQ (`IVF_RQ`) allows for more aggressive compression.
-See the ["Choose the Right Index"](/indexing/vector-index#choose-the-right-index) table for further discussion.
+See the ["Choosing the Right Index"](/indexing/vector-index#choose-the-right-index) table for further discussion.
 
 todo decide what to do here vv
 
