@@ -85,61 +85,46 @@ imprecise results. To address this, LanceDB exposes the `nprobe` parameter, whic
 
 ### HNSW
 
-The **Hierarchical Navigable Small World (HNSW)** index ... (todo)
+The **Hierarchical Navigable Small World (HNSW)** index ... (todo. to consider: mention skip list?)
 
-Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. 
-For example, HNSW is an ANN index that performs well in high-dimensional spaces where other techniques prove too slow and costly.
-
-HNSW is a graph-based algorithm. All graph-based search algorithms rely on the idea of a $k$-nearest neighbor (or $k$-approximate nearest neighbor) graph, which we outline below.  
-HNSW also combines this with the ideas behind a classic 1-dimensional search data structure: the skip list.
-
-     Understanding $k$-Nearest Neighbor Graphs
-
-The $k$-nearest neighbor graph actually predates its use for ANN search. Its construction is quite simple:
-
+background: kNN graphs: vv
 * Each vector in the dataset is given an associated vertex.
 * Each vertex has outgoing edges to its k nearest neighbors. That is, the k closest other vertices by Euclidean distance between the two corresponding vectors. This can be thought of as a "friend list" for the vertex.
 * For some applications (including nearest-neighbor search), the incoming edges are also added.
 
 Eventually, it was realized that the following greedy search method over such a graph typically results in good approximate nearest neighbors:
-
 * Given a query vector, start at some fixed "entry point" vertex (e.g. the approximate center node).
 * Look at that vertex's neighbors. If any of them are closer to the query vector than the current vertex, then move to that vertex.
 * Repeat until a local optimum is found.
-
 The above algorithm also generalizes to e.g. top 10 approximate nearest neighbors.
 
-Computing a $k$-nearest neighbor graph is actually quite slow, taking quadratic time in the dataset size. It was quickly realized that near-identical performance can be achieved using a k-approximate nearest neighbor graph. That is, instead of obtaining the $k$-nearest neighbors for each vertex, an approximate nearest neighbor search data structure is used to build much faster.  
+
+computing a kNN graph is slow, so we instead use a k-ANN graph:
 In fact, another data structure is not needed: This can be done "incrementally".
-That is, if you start with a k-ANN graph for n-1 vertices, you can extend it to a k-ANN graph for n vertices as well by using the graph to obtain the k-ANN for the new vertex.
-
-One downside of k-NN and k-ANN graphs alone is that one must typically build them with a large value of k to get decent results, resulting in a large index.
-
-     Hierarchical Navigable Small Worlds (HNSW)
+(kANN graph is built iteratively on vertices)
 
 HNSW builds on k-ANN in two main ways:
-
 * Instead of getting the k-approximate nearest neighbors for a large value of k, it sparsifies the k-ANN graph using a carefully chosen "edge pruning" heuristic, allowing for the number of edges per vertex to be limited to a relatively small constant.
 * The "entry point" vertex is chosen dynamically using a recursively constructed data structure on a subset of the data, similarly to a skip list.
 
 This recursive structure can be thought of as separating into layers:
-
 * At the bottom-most layer, a k-ANN graph on the whole dataset is present.
 * At the second layer, a k-ANN graph on a fraction of the dataset (e.g. 10%) is present.
 * At the Lth layer, a k-ANN graph is present. It is over a (constant) fraction (e.g. 10%) of the vectors/vertices present in the L-1th layer.
 
-Then the greedy search routine operates as follows:
-
+to query:
 * At the top layer (using an arbitrary vertex as an entry point), use the greedy local search routine on the k-ANN graph to get an approximate nearest neighbor at that layer.
 * Using the approximate nearest neighbor found in the previous layer as an entry point, find an approximate nearest neighbor in the next layer with the same method.
 * Repeat until the bottom-most layer is reached. Then use the entry point to find multiple nearest neighbors (e.g. top 10).
 
 
+One downside of k-NN and k-ANN graphs alone is that one must typically build them with a large value of k to get decent results, resulting in a large index.
+
 
 
 ## Using Vector Indexes
  (todo introduce)
- 
+
 ### Example: Construct an IVF Index
 
 In this example, we will create an index for a table containing 1536-dimensional vectors. The index will use IVF_PQ with L2 distance, which is well-suited for high-dimensional vector search. 
@@ -489,6 +474,9 @@ Unless specified otherwise, vector indexing defaults to `IVF_PQ`, and scalar ind
 ## Temp (scrap)
 
 LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
+
+Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. 
+
 
 <Note>
 TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
