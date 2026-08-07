@@ -18,6 +18,7 @@
     "family": "Inter"
   },
   "styling": {
+    "latex": true,
     "codeblocks": {
       "theme": {
         "light": "vitesse-light",
