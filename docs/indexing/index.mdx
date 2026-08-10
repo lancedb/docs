@@ -5,9 +5,7 @@ description: "Optimize search performance in LanceDB using vector indexes, full-
 icon: "list"
 ---
 
-Embeddings for a given dataset are made searchable via an **index**. The index is constructed by using data structures that store the embeddings such that it's very efficient to perform scans and lookups on them. 
-
-LanceDB provides a comprehensive suite of indexing strategies to optimize query performance across diverse workloads:
+An **index** is a data structure that facilitates efficient scans and lookups on the embeddings of a given dataset. LanceDB provides a comprehensive suite of indexes to optimize query performance across diverse workloads:
 
 - **Vector Index**: Optimized for searching high-dimensional data (like images, audio, or text embeddings) by efficiently finding the most similar vectors
 - **Full-Text Search Index**: Enables fast keyword-based searches by indexing words and phrases
@@ -63,15 +61,15 @@ Vector indexes can use different quantization methods to compress vectors and im
 
 ## Understanding the IVF-PQ Index
 
-An ANN (Approximate Nearest Neighbors) index is a data structure that represents data in a way that makes it more efficient to search and retrieve. Using an ANN index is faster, but less accurate than kNN or brute force search because, in essence, the index is a lossy representation of the data.
+An ANN (Approximate Nearest Neighbors) index is a data structure that quickly produces an approximate solution to the **k-nearest neighbors (kNN)** problem. 
+It greatly improves upon the runtime of a brute-force kNN search, while admitting a slight decrease in accuracy. LanceDB uses the disk-based indexing technique IVF-PQ, discussed below.
 
-A key distinguishing feature of LanceDB is it uses a disk-based index: IVF-PQ, which is a variant of the Inverted File Index (IVF) that uses Product Quantization (PQ) to compress the embeddings.
-
-LanceDB is fundamentally different from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
+LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
 
 ## IVF-PQ
 
-IVF-PQ is a composite index that combines inverted file index (IVF) and product quantization (PQ). The implementation in LanceDB provides several parameters to fine-tune the index's size, query throughput, latency and recall, which are described later in this section.
+LanceDB uses **IVF-PQ** indexing, which combines the clustering-based **Inverted File Index (IVF)** with **Product Quantization (PQ)** to efficiently compress embeddings. 
+The implementation provides several parameters to fine-tune the index's size, query throughput, latency, and recall.
 
 ### Product Quantization
 
@@ -109,7 +107,8 @@ Approximate Nearest Neighbor (ANN) search is a method for finding data points ne
 
 ### Types of ANN Search Algorithms
 
-Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. HNSW is one of the most accurate and fastest Approximate Nearest Neighbour search algorithms, It's beneficial in high-dimensional spaces where finding the same nearest neighbor would be too slow and costly
+Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. 
+For example, HNSW is an ANN index that performs well in high-dimensional spaces where other techniques prove too slow and costly.
 
 There are three main types of ANN search algorithms:
 
