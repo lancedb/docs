@@ -161,6 +161,57 @@ ds = StreamingDataset(
 reduces peak memory use at the cost of throughput.
 </Note>
 
+#### Handling bad rows
+
+By default, any exception raised by the transform aborts iteration. When your data may contain the occasional bad
+row — for example, nulls or NaNs from incomplete surveys, or corrupt image bytes — use the `on_transform_error`
+parameter to keep training going. It accepts:
+
+- `"raise"` (the default): the exception propagates and iteration stops.
+- `"skip"`: the failing rows are dropped and iteration continues.
+- `"warn"`: like `"skip"`, plus a warning is logged for each failing batch.
+- A callable `handler(exc) -> bool`: return `True` to skip the failing rows, `False` to re-raise. Use this to skip
+  only specific error types (for example, `PIL.UnidentifiedImageError`) while letting unexpected errors surface.
+
+When a batch fails, the transform is re-run on each single-row slice so that only the rows that actually raised are
+dropped. Your transform must therefore be deterministic and must accept batches of any size, including one row.
+Read the running skip count from the `rows_skipped` property.
+
+<CodeGroup>
+```py Python icon=Python
+from PIL import UnidentifiedImageError
+
+def skip_bad_images(exc: Exception) -> bool:
+    return isinstance(exc, UnidentifiedImageError)
+
+ds = StreamingDataset(
+    table,
+    shuffle_seed=42,
+    transform=decode_images,
+    on_transform_error=skip_bad_images,  # or "skip" / "warn"
+)
+
+for sample in ds:
+    train_step(sample)
+
+print(f"dropped {ds.rows_skipped} bad rows")
+```
+</CodeGroup>
+
+<Warning>
+When bad rows are unevenly distributed across splits, each rank's iterator ends at the last cycle where every split
+it owns still has a row. That means one rank's iterator can yield noticeably fewer steps than another rank's in the
+same run. This is safe for asynchronous or single-rank training, but synchronous distributed training (for example,
+ranks that call `all_reduce` every step) can deadlock unless you broadcast a stop signal on `StopIteration`. The
+per-split sample sequence stays deterministic; only the epoch's tail can differ across topologies.
+</Warning>
+
+<Note>
+Prefer the `filter` parameter when bad rows can be expressed as a SQL predicate (for example,
+`"image_bytes IS NOT NULL"`). Filtering happens before splits are built, so every determinism and resumability
+guarantee is fully preserved. Use `on_transform_error` for failures that can't be predicted from a predicate.
+</Note>
+
 #### DataLoader workers
 
 The thread-based transformation model that `StreamingDataset` uses by default is only effective when the transform
@@ -429,6 +480,43 @@ for batch in dataloader:
 exact resume, also use the same table snapshot, `epoch`, `shuffle`, `filter`, and other data-selection settings. The
 `world_size` and number of DataLoader workers may change as long as the split and batch-size divisibility constraints
 still hold.
+
+#### Elastic resume when rows are skipped
+
+When `on_transform_error` drops rows, each rank knows the exact permutation position only for the splits it owns.
+Save one `state_dict` per rank at a checkpoint boundary, then combine them with the `merge_state_dicts` static method
+before resuming. The merge is topology-agnostic: hand the same merged dict to every rank of the next run, regardless
+of whether the world size grew, shrank, or stayed the same.
+
+<CodeGroup>
+```py Python icon=Python
+# --- checkpointing on the old topology ---
+states = all_gather_object(dataset.state_dict())  # collect from every rank
+if rank == 0:
+    torch.save({"dataset_states": states, "model": model.state_dict()}, "ckpt.pt")
+
+# --- resuming on a new topology ---
+checkpoint = torch.load("ckpt.pt")
+merged = StreamingDataset.merge_state_dicts(checkpoint["dataset_states"])
+
+dataset = StreamingDataset(
+    table,
+    num_splits=merged["num_splits"],
+    shuffle_seed=merged["shuffle_seed"],
+    epoch=merged["epoch"],
+    rank=rank,
+    world_size=world_size,          # may differ from the saved run
+    transform=decode_images,
+    on_transform_error="skip",
+)
+dataset.load_state_dict(merged)      # every rank loads the same merged dict
+```
+</CodeGroup>
+
+`merge_state_dicts` raises `ValueError` if the states came from different runs (mismatched `shuffle_seed`,
+`num_splits`, `epoch`, or `samples_consumed_per_split`), so every rank must call `state_dict()` at the same
+global-step boundary. When no rows are ever skipped, merging is a no-op and you can keep using a single per-run
+`state_dict()` as before.
 
 ## Permutations
 
