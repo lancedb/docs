@@ -7,9 +7,8 @@ keywords: ["quantization", "quantize", "rabitq"]
 ---
 
 **Quantization** compresses vectors into concise representations that admit efficient storage. 
-It is beneficial for high ($512, 768, 1024$ or more)-dimensional datasets, or when index build time and query latency are crucial.
-
-LanceDB currently exposes several quantized vector index types, with a range of options differing in indexing technique (`IVF_*`,`IVF_HNSW_*`) and method of quantization (`PQ`,`RQ`,`SQ`).
+LanceDB currently exposes several quantized vector index types, differing in indexing technique (`IVF_*`,`IVF_HNSW_*`) 
+and quantization method (`PQ`,`RQ`,`SQ`).
 - `IVF_PQ` -- Inverted File index with Product Quantization (default). See the [vector indexing guide](/indexing/vector-index) for `IVF_PQ` examples.
 - `IVF_SQ` -- Inverted File index with Scalar Quantization. This is available in Python and Rust; TypeScript does not currently expose `IvfSq`.
 - `IVF_RQ` -- Inverted File index with **RaBitQ** quantization (binary, 1 bit per dimension). Requires vector dimensions divisible by `8`. See [below](#rabitq-quantization) for details.
@@ -26,18 +25,18 @@ Use the same distance metric when training and querying the index. For IVF-based
 ## Quantization Techniques
 ### Product Quantization
 
-To visualize PQ quantization, imagine that our dataset consists of a set $S = \{ v_1, \dots, v_n \} \subset ℝ^d$ of $n$ vectors in $d$-dimensional space. 
-If each entry of each vector is the same size, for example a `float64`, a naive storage implementation will require $O(nd)$ total bits to store all vectors.
+To visualize PQ quantization, imagine a dataset $S = \{ v_1, \dots, v_n \} \subset ℝ^d$ of $n$ vectors in $d$-dimensional space. 
+If vector entries are fixed-size types, for example a `float64`, a naive storage implementation will require $O(nd)$ total bits to store all vectors.
 For large $(n,d)$, this is prohibitively expensive.
 
 <Note>
-In this page, we use the notation $\| \cdot \|$ to denote an arbitrary norm. LanceDB indexes use `l2`, the Euclidean $\ell_2$ norm, by default, but users can also specify custom metrics.
+In this page, $\| \cdot \|$ denotes an arbitrary norm. LanceDB indexes use `l2`, the Euclidean $\ell_2$ norm, by default.
 </Note>
 
 Instead, assume we are given a set $C = \{ c_1, \dots, c_k \} \subset ℝ^d$ of $k$ **centroids**, such that each vector $v_i$ is close to some centroid $c_j$ 
-(some $\| v_i - c_j \|$ is small). Consider the following improved storage scheme: for each $1 \leq i \leq n$, instead of storing $v_i$, 
-we simply store the integer $j$, where $c_j$ is the centroid associated to $v_i$. To find a queried distance $\| q - v_i \|$ for some $q$, 
-we can access $c_j$ via a fixed lookup table and simply return $\| q - c_j \|$, which is a good approximation by the triangle inequality 
+(some $\| v_i - c_j \|$ is small). For each $1 \leq i \leq n$, instead of storing $v_i$, we can now simply
+ store the integer $j$, where $c_j$ is the centroid associated to $v_i$. At query time, to find $\| q - v_i \|$ for some $q$, 
+we can access $c_j$ via a lookup table and simply return $\| q - c_j \|$, which is a good approximation by the triangle inequality 
 
 $$
 \| q - v_i \| - \| q - c_j \| \leq \| v_i - c_j \|. 
@@ -45,16 +44,21 @@ $$
 
 This improved protocol requires $O(\log _2 k)$ bits per vector, instead of the previous $O(d)$ bits.
 
-So, how do we obtain the set of $k$ centroids? Say
-we would like our centroid set to have a constant approximation; that is, for some $\epsilon > 0$, we would like every vector $v_i$ to have some centroid $c_j$ 
-satisfying $\| v_i - c_j \| < \epsilon$. In the worst case, our dataset could take on a fixed constant $c \in ℕ$-many unique values in each of the $d$ dimensions, 
-spaced far apart. In this case, we may need as many as $k \geq \Omega(c^d)$ centroids, meaning each bit would need at least $\log k \geq \Omega(d)$ bits of storage, which is no better than our naive implementation!
+So, what about the set of $k$ centroids? Say we would like to have fixed approximation; 
+that is, for some $\epsilon > 0$, every vector $v_i$ has some centroid $c_j$ 
+with $\| v_i - c_j \| < \epsilon$. In the worst case, our dataset could take on constantly many far-apart values in each of the $d$ dimensions. 
+In this case, we may need as many as $k \geq \Omega(c^d)$ centroids, meaning our lookup table would need
+$n \cdot \log k \geq \Omega(nd)$ bits of storage, which is no better than our naive implementation!
 
 <Note>
-To visualize a worst-case scenario for choosing centroids, consider the set $\{ (3 \epsilon x_1, \dots, 3 \epsilon x_d) : x_i \in ℕ, 1 \leq x_i \leq c \quad \forall \, i \}$.
+Worst-case scenario: consider the set of points corresponding to the $d$-dimensional grid $\{ (3 \epsilon x_1, \dots, 3 \epsilon x_d) : x_i \in ℕ, 1 \leq x_i \leq c \quad \forall \, i \}$.
 </Note>
 
-
+To resolve this problem, product quantization splits each $d$-dimensional vector into $m$ smaller **chunks** of $d / m$ entries each,
+yielding $m$ disjoint datasets $\{ S_k \}_{1 \leq k \leq m}$ where $S_k = \{ v_i^{mk \dots m(k+1)}: 1 \leq i \leq n\}$ stores chunk $k$
+ of each vector. We then use a separate centroid set $C_k$ for each $S_k$, encoding centroids as before.
+ We can store all centroid encodings in the same codebook, so our codebook is now size 
+ $O(n \cdot \log (m \cdot c^{d/m})) = O(nd/m + \log m)$ in the worst case, a drastic improvement.
 
 ![](/static/assets/images/indexing/ivfpq_pq_desc.png)
 
@@ -66,9 +70,6 @@ Quantized storage: `4 × 8 = 32` bits.
 
 In this example, quantization achieves a **128x** reduction in the memory requirement of each indexed vector.
 </Note>
-
-It's important to remember that quantization is a *lossy process*, i.e., that no operation on the reconstructed vector can exactly recover the original vector. 
-
 
 
 ### RaBitQ quantization

@@ -61,24 +61,29 @@ For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher co
 ### IVF-PQ
 
 The **Inverted File-Product Quantization Index (IVF-PQ)** combines the clustering-based **Inverted File Index (IVF)** with [**Product Quantization (PQ)**](/indexing/quantization) to efficiently 
-compress embeddings. We discuss the indexing techniques and algorithms here, deferring discussion of quantization to a later section. For examples of using LanceDB vector indexes, see [Using Vector Indexes](#using-vector-indexes).
+compress embeddings. We discuss only the index here.
 
-An IVF index is a data structure that aims to accelerate nearest neighbor searches by drastically reducing the search space. 
-Given a large set of stored vectors, the LanceDB indexer first computes a set of *centroids* corresponding to an approximate solution to the [$k$-means clustering](https://en.wikipedia.org/wiki/K-means_clustering) problem. 
+An IVF index is a data structure that accelerates ANN searches by drastically reducing the search space. 
+To construct an IVF index, LanceDB first computes a set of *centroids* corresponding to an approximate solution to the 
+[$k$-means clustering](https://en.wikipedia.org/wiki/K-means_clustering) problem. 
+The centroids then partition the dataset as follows: each vector is assigned to the centroid nearest to it in the $\ell_2$ (or user-specified) metric. 
+Each centroid remembers its corresponding set of vectors, called its *cluster* or *partition*. 
+<Frame caption="Example space partitioned by this algorithm, with colored marks denoting centroids.">
+  <img src="/static/assets/images/indexing/ivfpq_ivf_desc.webp" alt="IVF vector-space partitioning" />
+</Frame>
 
-The centroids are then used to partition the set of vectors as follows: each vector is assigned to the centroid nearest to it in the $\ell_2$ (or user-specified) metric. 
-Each centroid is then identified with its corresponding set of vectors, called its *cluster* or *partition*. 
-The following image shows an example geometric space partitioned according to this algorithm. The colored marks denote centroids.
-![](/static/assets/images/indexing/ivfpq_ivf_desc.webp)
+At query time, we can now compare the queried vector to the smaller set of *centroids* 
+for a closest match, then run a brute-force comparison against the resulting cluster. This technique quickly prunes a large search space,
+and since each centroid is close to points in its cluster, we are likely to receive an approximately correct ANN result.
 
-Once constructed, an IVF index admits efficient ANN queries. Instead of a brute-force comparison of a queried vector to every stored vector, we can now search the smaller set of *centroids* 
-for a closest match, then execute a brute-force comparison against its cluster. This technique quickly eliminates most clusters from the search space with a single comparison. 
-Furthermore, since each centroid is close to points in its cluster, we are likely to receive an approximately correct result.
+However, observe that a queried vector may lie near the boundary of $2$ or more clusters.
+In the example below, the true nearest neighbors are scattered across several different clusters; thus, our single-cluster brute force search may return 
+imprecise results. To address this, LanceDB exposes the `nprobe` parameter, which specifies the number of clusters searched (`default = 1`). 
+A high `nprobe` parameter will yield more accurate results at slightly higher runtime.
 
-As an edge case, observe that a queried vector may lie near the boundary of $2$ or more clusters, as shown in the image below.
-In this example, the query's true nearest neighbors may lie scattered across several different clusters; thus, our algorithm, which searches only one such cluster, may return rather 
-imprecise results. To address this, LanceDB exposes the `nprobe` parameter, which specifies the number of clusters searched. A query with higher `nprobe` will require more runtime but yield more accurate results.
-![](/static/assets/images/indexing/ivfpq_query_vector.webp)
+<Frame caption="Edge case for single-cluster brute force.">
+  <img src="/static/assets/images/indexing/ivfpq_query_vector.webp" alt="IVF vector-space partitioning" />
+</Frame>
 
 ### HNSW
 
