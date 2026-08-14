@@ -263,6 +263,38 @@ same call. Declare computed columns in a separate `add_columns` call from
 any evaluated transforms.
 </Info>
 
+### Refresh a computed column
+
+A declared computed column starts empty. Call `refresh_column` (Python and
+Rust) or `refreshColumn` (TypeScript) to evaluate the expression and fill
+every row that still has no value:
+
+<CodeGroup>
+```python Python icon="python"
+result = table.refresh_column("doubled")
+print(result.rows_filled, result.version)
+```
+
+```typescript TypeScript icon="square-js"
+const { rowsFilled, version } = await table.refreshColumn("doubled");
+```
+
+```rust Rust icon="rust"
+let result = table.refresh_column("doubled").await?;
+println!("filled {} rows at version {}", result.rows_filled, result.version);
+```
+</CodeGroup>
+
+The call returns the number of rows it filled and the new table version. Each
+run picks up rows appended since the previous refresh; rows that already have
+a value are left alone, so calling `refresh_column` when nothing new needs
+filling is a no-op that costs one scan of the unfilled rows. Because refresh
+never revisits a filled row, mutating an input after the fact does not change
+the stored value — to recompute, drop the column and declare it again.
+
+Refresh runs on local tables only, and is refused when the table uses an LSM
+write specification.
+
 ## Alter existing columns
 
 You can alter columns using the [`alter_columns`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.alter_columns)
