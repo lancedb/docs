@@ -295,6 +295,36 @@ the stored value — to recompute, drop the column and declare it again.
 Refresh runs on local tables only, and is refused when the table uses an LSM
 write specification.
 
+#### Run the refresh in the background
+
+If you don't want to block on the refresh, call the async variant to get back
+a job handle. The job runs as an in-process task; wait for it or poll its
+status when convenient.
+
+<CodeGroup>
+```python Python icon="python"
+job = table.refresh_column_async("doubled")
+job.wait()
+print(job.status())  # "finished"
+```
+
+```typescript TypeScript icon="square-js"
+const job = await table.refreshColumnAsync("doubled");
+await job.wait();
+console.log(await job.status()); // "finished"
+```
+
+```rust Rust icon="rust"
+let job = table.refresh_column_async("doubled").await?;
+job.wait().await?;
+```
+</CodeGroup>
+
+Invalid input — an unknown column, or one that is not a declared computed
+column — is reported by the submitting call rather than by the job, so you
+learn about mistakes before you start waiting. The returned job may already
+be complete; treat the column as filled only after `wait` returns.
+
 ## Alter existing columns
 
 You can alter columns using the [`alter_columns`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.alter_columns)
