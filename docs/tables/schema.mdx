@@ -253,8 +253,10 @@ the previously computed value in place. To recompute values, drop the column
 and declare it again.
 
 <Info>
-Computed columns are supported on local tables only. LanceDB Enterprise
-rejects a declaration.
+Computed columns work on both local tables and LanceDB Enterprise. On
+Enterprise the declaration is sent to the server, which plans the
+expression against the published contract; refresh runs as a server-side
+backfill job (see the next section).
 </Info>
 
 <Info>
@@ -292,14 +294,17 @@ filling is a no-op that costs one scan of the unfilled rows. Because refresh
 never revisits a filled row, mutating an input after the fact does not change
 the stored value — to recompute, drop the column and declare it again.
 
-Refresh runs on local tables only, and is refused when the table uses an LSM
-write specification.
+The blocking form is refused when the table uses an LSM write specification,
+and is refused on LanceDB Enterprise because a remote refresh runs as a
+server job that does not report a fill count. On Enterprise, submit the
+refresh with the async form below instead.
 
 #### Run the refresh in the background
 
 If you don't want to block on the refresh, call the async variant to get back
-a job handle. The job runs as an in-process task; wait for it or poll its
-status when convenient.
+a job handle. On local tables the job runs as an in-process task; on LanceDB
+Enterprise the call submits a server-side backfill job and returns a handle
+that tracks it. Wait for it or poll its status when convenient.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -324,6 +329,11 @@ Invalid input — an unknown column, or one that is not a declared computed
 column — is reported by the submitting call rather than by the job, so you
 learn about mistakes before you start waiting. The returned job may already
 be complete; treat the column as filled only after `wait` returns.
+
+On LanceDB Enterprise, a successful `wait` also advances the submitting
+table handle's read-freshness baseline so subsequent reads see the refreshed
+rows — unless a `checkout` has pinned the handle to a specific version by the
+time the job completes.
 
 ## Alter existing columns
 
