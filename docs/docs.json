@@ -109,10 +109,10 @@
                 "pages": [
                   "indexing/index",
                   "indexing/vector-index",
+                  "indexing/quantization",
                   "indexing/fts-index",
                   "indexing/scalar-index",
                   "indexing/gpu-indexing",
-                  "indexing/quantization",
                   "indexing/reindexing"
                 ]
               },
