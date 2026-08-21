@@ -97,6 +97,8 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 | `ngram_max_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `prefix_only` | bool | `False` | Index only prefix n-grams rather than all substrings. Applies only when `base_tokenizer="ngram"`. |
 | `block_size` | int | `128` | Number of documents per compressed posting block. Supported values are `128` and `256`. Setting this to `256` opts in to the experimental FTS V3 layout. |
+| `memory_limit` | int | `None` | Total memory budget in MiB for a local FTS build. Divided evenly across workers. Python only, build-only, not persisted with the index, ignored on remote tables. |
+| `num_workers` | int | `None` | Number of workers for a local FTS build. Defaults to about half the available CPU cores. Capped by available compute. Python only, build-only, not persisted with the index, ignored on remote tables. |
 
 <Note title="Key parameters">
 - `max_token_length` can filter out base64 blobs or long URLs.
@@ -134,6 +136,25 @@ await async_table.create_index("text", config=FTS(block_size=256))
 await table.createIndex("text", {
   config: lancedb.Index.fts({ blockSize: 256 }),
 });
+```
+
+### Build resource limits
+
+`memory_limit` and `num_workers` tune the local FTS build stage in the Python API. Use them when you build an FTS index on a large table and need to bound peak memory or match a specific core count.
+
+- `memory_limit` sets the total budget in MiB for the whole build, split evenly across effective workers. If the resulting per-worker budget is too small to make progress, index creation fails with `ValueError: exceeds worker memory limit`.
+- `num_workers` sets build parallelism. Lance defaults to roughly half of the available CPU cores and caps the value at what the host can actually run.
+
+Both settings apply only while the index is being built. They are not stored with the index, do not affect queries, and are ignored on Enterprise remote tables.
+
+```python Python icon="python"
+from lancedb.index import FTS
+
+# Cap the local FTS build at 4 GiB across 4 workers (1 GiB per worker).
+await async_table.create_index(
+    "text",
+    config=FTS(memory_limit=4096, num_workers=4),
+)
 ```
 
 ### Phrase Query Configuration
