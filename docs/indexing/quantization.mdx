@@ -15,62 +15,37 @@ and quantization method (`PQ`,`RQ`,`SQ`).
 - `IVF_HNSW_SQ` -- IVF partitions with an **HNSW graph per partition** plus **Scalar Quantization**. Strong recall/latency/size trade-off for most workloads.
 - `IVF_HNSW_PQ` -- IVF partitions with an **HNSW graph per partition** plus **Product Quantization**. Prefer when PQ-level compression matters and you still want HNSW-style in-partition search.
 
-Different indexing and quantization techniques may be better suited for certain use cases. For example, `IVF_PQ` works well in many cases, but RaBitQ (`IVF_RQ`) allows for more aggressive compression.
+Different indexing and quantization techniques may be better suited for certain use cases. 
 See the ["Choosing the Right Index"](/indexing/vector-index#choose-the-right-index) table for further discussion.
 
 todo decide what to do here vv
 
 Use the same distance metric when training and querying the index. For IVF-based indexes, `num_partitions` controls the number of groups and `sample_rate` controls how many training vectors are sampled per partition, so the training sample is roughly `sample_rate * num_partitions`.
 
-## Quantization Techniques
-### Product Quantization
-
-To visualize PQ quantization, imagine a dataset $S = \{ v_1, \dots, v_n \} \subset ℝ^d$ of $n$ vectors in $d$-dimensional space. 
-If vector entries are fixed-size types, for example a `float64`, a naive storage implementation will require $O(nd)$ total bits to store all vectors.
-For large $(n,d)$, this is prohibitively expensive.
-
 <Note>
 In this page, $\| \cdot \|$ denotes an arbitrary norm. LanceDB indexes use `l2`, the Euclidean $\ell_2$ norm, by default.
 </Note>
 
-Instead, assume we are given a set $C = \{ c_1, \dots, c_k \} \subset ℝ^d$ of $k$ **centroids**, such that each vector $v_i$ is close to some centroid $c_j$ 
-(some $\| v_i - c_j \|$ is small). For each $1 \leq i \leq n$, instead of storing $v_i$, we can now simply
- store the integer $j$, where $c_j$ is the centroid associated to $v_i$. At query time, to find $\| q - v_i \|$ for some $q$, 
-we can access $c_j$ via a lookup table and simply return $\| q - c_j \|$, which is a good approximation by the triangle inequality 
+## Quantization Techniques
+### Product Quantization
 
-$$
-\| q - v_i \| - \| q - c_j \| \leq \| v_i - c_j \|. 
-$$
+To visualize PQ, assume a vector dataset has $d$ dimensions, with a **chunk** of a vector denoting a contiguous block of entries. Imagine that each vector has
+ $m$ disjoint chunks of $d/m$ entries each, where the first chunk represents entries $0$ through $d-1$, the second contains entries $d$ through $2d - 1$, and so on.
 
-This improved protocol requires $O(\log _2 k)$ bits per vector, instead of the previous $O(d)$ bits.
+Now, for each $i$, let $S_i$ represent the set containing chunk $i$ of each vector (entries $(i-1)d$ to $di - 1$).
+For each $S_i$ independently, a small set of **centroids** is computed corresponding to an approximate solution to the $k$-means clustering problem.
 
-So, what about the set of $k$ centroids? Say we would like to have fixed approximation; 
-that is, for some $\epsilon > 0$, every vector $v_i$ has some centroid $c_j$ 
-with $\| v_i - c_j \| < \epsilon$. In the worst case, our dataset could take on constantly many far-apart values in each of the $d$ dimensions. 
-In this case, we may need as many as $k \geq \Omega(c^d)$ centroids, meaning our lookup table would need
-$n \cdot \log k \geq \Omega(nd)$ bits of storage, which is no better than our naive implementation!
+For each original vector in the dataset, every chunk is associated to its nearest centroid; thus, the vector itself is associated with the concatenation of $m$ centroids.
+We then gather all our centroids (from all chunks) into a single lookup table, and for each vector, we store the concatenation of IDs of its corresponding centroids. 
+At query time, we need only to compare each chunk of the queried vector with our set of centroids.
 
-<Note>
-Worst-case scenario: consider the set of points corresponding to the $d$-dimensional grid $\{ (3 \epsilon x_1, \dots, 3 \epsilon x_d) : x_i \in ℕ, 1 \leq x_i \leq c \quad \forall \, i \}$.
-</Note>
+<Frame caption="">
+  <img src="/static/assets/images/indexing/ivfpq_pq_desc.png" alt="IVF vector-space partitioning" />
+</Frame>
 
-To resolve this problem, product quantization splits each $d$-dimensional vector into $m$ smaller **chunks** of $d / m$ entries each,
-yielding $m$ disjoint datasets $\{ S_k \}_{1 \leq k \leq m}$ where $S_k = \{ v_i^{mk \dots m(k+1)}: 1 \leq i \leq n\}$ stores chunk $k$
- of each vector. We then use a separate centroid set $C_k$ for each $S_k$, encoding centroids as before.
- We can store all centroid encodings in the same codebook, so our codebook is now size 
- $O(n \cdot \log (m \cdot c^{d/m})) = O(nd/m + \log m)$ in the worst case, a drastic improvement.
-
-![](/static/assets/images/indexing/ivfpq_pq_desc.png)
-
-As an example, consider the above image, which visualizes quantizing a 128-dimensional vector of 32-bit integers into a 4-dimensional vector of 8-bit integers.
-
-<Note title="Effect of quantization">
-Original storage: `128 × 32 = 4096` bits. 
-Quantized storage: `4 × 8 = 32` bits.
-
-In this example, quantization achieves a **128x** reduction in the memory requirement of each indexed vector.
-</Note>
-
+In the above example, the original vector is split into chunks (subvectors), each of which is associated to a centroid. The stored quantization code for this vector 
+is the concatenation $2 || 1 || 4 || 3$. The original vector required $128$ dimensions $\times 32$-bit integers $ =4096$ bits total,
+which has been compressed to $4$ chunks $\times 8$-bit integers $= 32$ bits of quantized storage.
 
 ### RaBitQ quantization
 
