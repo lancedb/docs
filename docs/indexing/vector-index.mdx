@@ -25,8 +25,8 @@ import {
 } from '/snippets/indexing.mdx';
 
 
-Vector indexes are robust tools in facilitating fast nearest-neighbor searches across large datasets. 
-LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with two (todo) advanced techniques that, when combined with [quantization](/indexing/quantization), provide large benefits across a variety of use cases.
+Vector indexes are robust tools in facilitating fast searches across large datasets. 
+LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with two techniques that, when combined with [quantization](/indexing/quantization), provide benefits across a variety of use cases.
 
 <Note>
 A dataset of numeric vector types is required for vector indexing.
@@ -63,27 +63,28 @@ For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher co
 The **Inverted File-Product Quantization Index (IVF-PQ)** combines the clustering-based **Inverted File Index (IVF)** with [**Product Quantization (PQ)**](/indexing/quantization) to efficiently 
 compress embeddings. We discuss only the index here.
 
-An IVF index is a data structure that accelerates ANN searches by drastically reducing the search space. 
-To construct an IVF index, LanceDB first computes a set of *centroids* corresponding to an approximate solution to the 
+An IVF index accelerates ANN searches by drastically reducing the search space. The index consists of
+a small set of *centroids* corresponding to an approximate solution to the 
 [$k$-means clustering](https://en.wikipedia.org/wiki/K-means_clustering) problem. 
-The centroids then partition the dataset as follows: each vector is assigned to the centroid nearest to it in the $\ell_2$ (or user-specified) metric. 
-Each centroid remembers its corresponding set of vectors, called its *cluster* or *partition*. 
-<Frame caption="Example space partitioned by this algorithm, with colored marks denoting centroids.">
+Each vector remembers its nearest centroid, and each centroid remembers its associated set of vectors, 
+called its *cluster* or *partition*. 
+<Frame caption="Example partition of a geometric space, with colored marks denoting centroids.">
   <img src="/static/assets/images/indexing/ivfpq_ivf_desc.webp" alt="IVF vector-space partitioning" />
 </Frame>
 
-At query time, we can now compare the queried vector to the smaller set of *centroids* 
-for a closest match, then run a brute-force comparison against the resulting cluster. This technique quickly prunes a large search space,
-and since each centroid is close to points in its cluster, we are likely to receive an approximately correct ANN result.
+At query time, we can compare the queried vector to the smaller set of *centroids* (as opposed to the entire dataset)
+for a closest match, then run a brute-force comparison against its resulting cluster. This technique quickly prunes a large search space,
+giving an approximate ANN result.
 
-However, observe that a queried vector may lie near the boundary of $2$ or more clusters.
-In the example below, the true nearest neighbors are scattered across several different clusters; thus, our single-cluster brute force search may return 
-imprecise results. To address this, LanceDB exposes the `nprobe` parameter, which specifies the number of clusters searched (`default = 1`). 
+However, observe that a queried vector may lie near the boundary of $2$ or more clusters; thus, the true nearest neighbors are scattered across several different clusters.
+ To address this, LanceDB exposes the `nprobe` parameter, which specifies the number of clusters searched (`default = 1`). 
 A high `nprobe` parameter will yield more accurate results at slightly higher runtime.
 
 <Frame caption="Edge case for single-cluster brute force.">
   <img src="/static/assets/images/indexing/ivfpq_query_vector.webp" alt="IVF vector-space partitioning" />
 </Frame>
+
+TODO: note default l2 metric
 
 ### HNSW
 
@@ -321,57 +322,6 @@ The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, chang
     {VectorIndexQueryHnsw}
     </CodeBlock>
 </CodeGroup>
-
-### Example: Construct a Binary Vector Index
-
-Binary vectors are useful for hash-based retrieval, fingerprinting, or any scenario where data can be represented as bits.
-
-     Index Configuration
-
-- Store binary vectors as fixed-size binary data (uint8 arrays, with 8 bits per byte). For storage, pack binary vectors into bytes to save space. 
-- Index Type: `IVF_FLAT` is used for indexing binary vectors
-- `metric`: the `hamming` distance is used for similarity search
-- The dimension of binary vectors must be a multiple of 8. For example, a 128-dimensional vector is stored as a uint8 array of size 16.
-
-<Warning>
-**`IVF_FLAT` + `hamming` is the only supported path for binary vectors.**
-
-- `hamming` distance is only valid on packed binary (uint8) data; it is rejected on float vector columns.
-- Quantized index types (`IVF_PQ`, `IVF_RQ`, `IVF_SQ`, `IVF_HNSW_PQ`, `IVF_HNSW_SQ`) do not accept binary inputs — their `distance_type` is restricted to `l2`, `cosine`, or `dot`.
-</Warning>
-
-     1. Create Table and Schema
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBinarySchema}
-    </CodeBlock>
-</CodeGroup>
-
-     2. Generate and Add Data
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBinaryAddData}
-    </CodeBlock>
-</CodeGroup>
-
-     3. Construct the Binary Index
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBinaryBuildIndex}
-    </CodeBlock>
-</CodeGroup>
-
-     4. Vector Search
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBinarySearch}
-    </CodeBlock>
-</CodeGroup>
-
 
 
 ### Manual and Automatic Indexing
