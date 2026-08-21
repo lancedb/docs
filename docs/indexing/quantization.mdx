@@ -27,7 +27,7 @@ In this page, $\| \cdot \|$ denotes an arbitrary norm. LanceDB indexes use `l2`,
 </Note>
 
 ## Quantization Techniques
-### Product Quantization
+### Product Quantization (PQ)
 
 To visualize PQ, assume a vector dataset has $d$ dimensions, with a **chunk** of a vector denoting a contiguous block of entries. Imagine that each vector has
  $m$ disjoint chunks of $d/m$ entries each, where the first chunk represents entries $0$ through $d-1$, the second contains entries $d$ through $2d - 1$, and so on.
@@ -47,7 +47,7 @@ In the above example, the original vector is split into chunks (subvectors), eac
 is the concatenation $2 || 1 || 4 || 3$. The original vector required $128$ dimensions $\times 32$-bit integers $ =4096$ bits total,
 which has been compressed to $4$ chunks $\times 8$-bit integers $= 32$ bits of quantized storage.
 
-### RaBitQ quantization
+### RaBitQ Quantization (RQ)
 
 RaBitQ is a binary quantization method that represents each normalized embedding using **1 bit per dimension**, plus a couple of small corrective scalars. In practice, a 1,024-dimensional `float32` vector that would normally take 4 KB can be compressed to roughly a few hundred bytes with RaBitQ, while still maintaining reasonable recall.
 
@@ -84,7 +84,7 @@ It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to 
 Indexes built with `num_bits >= 2` use an updated on-disk layout. Older LanceDB versions cannot read them and will fail with a clear missing-column error rather than returning incorrect results. Existing indexes keep working and upgrade automatically when they are rewritten (for example, during compaction, optimize, or remap). `num_bits=1` indexes are unaffected in both directions.
 </Warning>
 
-### SQ (todo?)
+### Scalar Quantization (SQ)
 
 ## API Reference
 
