@@ -1,0 +1,174 @@
+---
+title: "Materialized views"
+sidebarTitle: "Materialized views"
+description: "Define derived tables over a source table in LanceDB and keep them fresh with incremental refresh in Python."
+icon: "layer-group"
+keywords: ["materialized view", "refresh", "incremental", "python", "lancedb"]
+---
+
+A materialized view is a table defined by a query over a source table. LanceDB
+records the query in the view's schema at creation time, computes the rows when
+you call `refresh()`, and updates them incrementally as the source changes.
+
+Use a materialized view when you want a persisted, queryable projection of a
+source table, for example a filtered subset, a set of derived columns, or a
+capped sample. Once refreshed, the view is a normal table, so you can search,
+index, and scan it like any other.
+
+<Note>
+Materialized views are available in the LanceDB Python client (sync and async)
+on local databases. Remote (`db://`) connections raise
+`NotImplementedError`.
+</Note>
+
+<Info>
+This page covers the OSS materialized-view API on a plain LanceDB connection.
+If you are looking for Geneva's UDF-driven materialized views used to backfill
+expensive columns, see [Materialized views with UDFs](/geneva/jobs/materialized-views).
+</Info>
+
+## Prerequisites
+
+The source table must have stable row IDs. LanceDB uses them to track which
+source rows a view has already materialized, so incremental refresh can survive
+source compactions.
+
+Enable stable row IDs on the connection before creating the source table.
+Stable row IDs cannot be enabled on a table that already exists.
+
+```python Python icon="python"
+import lancedb
+
+db = lancedb.connect(
+    "./.lancedb",
+    storage_options={"new_table_enable_stable_row_ids": "true"},
+)
+db.create_table(
+    "people",
+    [
+        {"name": "ada", "age": 36},
+        {"name": "kid", "age": 7},
+        {"name": "grace", "age": 85},
+    ],
+)
+```
+
+## Create a view
+
+Call `create_materialized_view(name, source, *, select=None, where=None, limit=None)`
+on the connection.
+
+- `select` accepts column names, `(alias, SQL expression)` pairs, or a dict of
+  the same. A bare column name is quoted as an identifier, so column names with
+  spaces or reserved words work. Omit `select` to project every source column.
+- `where` is a SQL predicate. Only matching source rows appear in the view.
+- `limit` caps the view at that many rows.
+
+The view is created empty. Its query is recorded in the view's schema metadata,
+so reopening the view later does not require any side channel.
+
+```python Python icon="python"
+view = db.create_materialized_view(
+    "adults",
+    "people",
+    select=["name", ("shout", "upper(name)")],
+    where="age >= 18",
+)
+```
+
+## Refresh the view
+
+`refresh()` computes the view from its source. LanceDB picks between two modes:
+
+- **Incremental**: apply only the source rows added, changed, or removed since
+  the last refresh. Chosen when the source's changes can be reconciled into the
+  view.
+- **Rebuild**: recompute the view from scratch. Chosen on the first refresh or
+  when the source has changed in ways incremental refresh cannot reconcile
+  (for example, an update on legacy-storage data).
+
+```python Python icon="python"
+result = view.refresh()
+print(result.mode)          # "rebuild" on first refresh
+print(result.rows_written)  # 2
+```
+
+`refresh()` returns a `RefreshMaterializedViewResult` with:
+
+| Field            | Description                                                    |
+| ---------------- | -------------------------------------------------------------- |
+| `mode`           | `"rebuild"`, `"incremental"`, or `"no_op"` when nothing changed. |
+| `rows_written`   | Rows written by this refresh.                                  |
+| `source_version` | Version of the source table this refresh reflects.             |
+| `version`        | New version of the view.                                       |
+
+Force a full rebuild with `full=True`, or refresh against a specific source
+version with `source_version=`.
+
+```python Python icon="python"
+view.refresh(full=True)
+view.refresh(source_version=7)
+```
+
+Concurrent refreshes of the same view do not duplicate rows. If two refreshes
+plan the same source rows, the second one to commit conflicts and raises
+instead of writing the rows again.
+
+## Query a view
+
+`view.table` is the underlying `LanceTable`. Query, index, and search it like
+any other table.
+
+```python Python icon="python"
+rows = view.table.search().to_list()
+print(sorted(row["shout"] for row in rows))  # ["ADA", "GRACE"]
+```
+
+Writes to the view's underlying table are not blocked, but a rebuild replaces
+them. Treat the view as read-only outside of `refresh()`.
+
+## Open an existing view
+
+`open_materialized_view(name)` returns a handle whose `definition` is read back
+from the stored schema. Opening a table that is not a materialized view raises
+`ValueError`.
+
+```python Python icon="python"
+view = db.open_materialized_view("adults")
+print(view.definition)
+# MaterializedViewDefinition(source_table='people',
+#     projections=[('name', '`name`'), ('shout', 'upper(name)')],
+#     filter='age >= 18', limit=None, inputs=['age', 'name'])
+```
+
+`list_materialized_views()` returns the names of every materialized view in the
+database. It reads every table's schema, so it costs one open per table.
+
+```python Python icon="python"
+db.list_materialized_views()  # ["adults"]
+```
+
+## Async API
+
+The same operations are available on `AsyncConnection`, and return
+`AsyncMaterializedView`. `definition()` and `refresh()` are coroutines.
+
+```python Python icon="python"
+import lancedb
+
+db = await lancedb.connect_async(
+    "./.lancedb",
+    storage_options={"new_table_enable_stable_row_ids": "true"},
+)
+view = await db.create_materialized_view(
+    "shouts",
+    "people",
+    select=[("shout", "upper(name)")],
+)
+result = await view.refresh()
+print(result.mode, result.rows_written)
+
+reopened = await db.open_materialized_view("shouts")
+definition = await reopened.definition()
+print(await db.list_materialized_views())
+```
