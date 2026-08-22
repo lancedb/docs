@@ -200,9 +200,9 @@ below.
 ## Apply branch-tested changes to `main`
 
 <Warning>
-A branch has its own writable history. Outside of the [diff and merge
-APIs](#compare-and-merge-a-branch-into-main) — which are available on
-LanceDB Enterprise and promote added columns only — LanceDB does not reconcile
+A branch has its own writable history. Outside of the [diff and cherry-pick
+APIs](#compare-and-cherry-pick-a-branch-onto-main), which are available on
+LanceDB Enterprise and promote added columns only, LanceDB does not reconcile
 one branch's history with another or detect conflicts between them. To carry
 other accepted work forward, rerun the validated operation against `main` or
 explicitly write selected results to it.
@@ -211,8 +211,8 @@ explicitly write selected results to it.
 How you apply a validated change depends on the type of work:
 
 - **Added columns (Enterprise):** review the branch with `diff`, then promote
-  the new columns onto `main` with `merge`. See
-  [Compare and merge a branch into `main`](#compare-and-merge-a-branch-into-main).
+  the new columns onto `main` with `cherry_pick`. See
+  [Compare and cherry-pick a branch onto `main`](#compare-and-cherry-pick-a-branch-onto-main).
 - **Backfill or transformation:** rerun the validated job against `main`.
 - **Schema change:** apply the same reviewed schema operation to `main`.
 - **Index change:** build the index on `main` using the configuration validated
@@ -254,103 +254,112 @@ newer values with the same key. Read and upsert the whole branch only when that
 overwrite is intentional; otherwise, filter the branch read to the rows you
 intend to apply.
 
-## Compare and merge a branch into `main`
+## Compare and cherry-pick a branch onto `main`
 
 <Badge color="red">Enterprise</Badge>
 
 On LanceDB Enterprise, branches expose two review-and-land calls that let you
 inspect what a branch has changed relative to `main` and then promote its new
-columns onto `main` in place — without reissuing the branch's writes.
+columns onto `main` in place, without reissuing the branch's writes.
 
 <Info>
-`diff` and `merge` are available on Enterprise (remote) tables only. On local
-tables both calls raise `NotSupported`. `merge` currently promotes added
-columns; use the [upsert](#upsert-selected-branch-rows-into-main) or rerun
+`diff` and `cherry_pick` are available on Enterprise (remote) tables only. On
+local tables both calls raise `NotSupported`. `cherry_pick` currently promotes
+added columns (including blob columns) and leaves `main`'s existing columns
+unchanged; use the [upsert](#upsert-selected-branch-rows-into-main) or rerun
 patterns above for row and index changes.
 </Info>
+
+<Note>
+`cherry_pick` replaces the earlier `merge` call on `table.branches`. It's a
+breaking rename: the `merge` name reads like a three-way git merge, but this
+API takes one additive change on a branch and lands it on `main`. Update calls
+that referenced `table.branches.merge(...)` to `table.branches.cherry_pick(...)`,
+and read the failure list from `diff["errors"]` (previously `mergeBlockers`).
+`table.merge_insert` and `Table.merge` are unrelated and unchanged.
+</Note>
 
 ### Diff a branch
 
 `diff` reads the branch and `main`, and returns a summary of what has changed:
 which columns were added, removed, or altered; which indexes were added or
-removed; row-count deltas; and — most importantly — a list of merge blockers
-explaining why the branch cannot currently be merged, if any.
+removed; row-count deltas; and, most importantly, a list of errors explaining
+why the branch cannot currently be cherry-picked, if any.
 
 <CodeGroup>
 ```python Python icon="python"
 diff = table.branches.diff("exp")
 
-print(diff["addedColumns"])       # columns the branch introduced
-print(diff["mergeable"])          # True when there are no blockers
-print(diff["mergeBlockers"])      # list of {"code", "message"} entries
+print(diff["addedColumns"])   # columns the branch introduced
+print(diff["errors"])         # list of {"code", "message"} entries; empty when ready
 ```
 
 ```typescript TypeScript icon="square-js"
 const diff = await table.branches.diff("exp");
 
 console.log(diff.addedColumns);   // columns the branch introduced
-console.log(diff.mergeable);      // true when there are no blockers
-console.log(diff.mergeBlockers);  // array of { code, message } entries
+console.log(diff.errors);         // array of { code, message }; empty when ready
 ```
 </CodeGroup>
 
-Common merge blocker codes include `BaseMoved` (the branch's parent no longer
-matches `main`'s latest), `RowsChanged`, `ColumnRemoved`, `ColumnChanged`,
-`NoMergeableChanges`, `NoColumnChanges`, `InputColumnDependency`, and
-`ParentNotMain`. Newer server codes surface as `Unknown` so older clients
+Common error codes include `BaseMoved` (the branch's parent no longer matches
+`main`'s latest), `RowsChanged`, `RowCountMismatch`, `ColumnRemoved`,
+`ColumnChanged`, `NothingToApply`, `NoColumnChanges`, `InputColumnDependency`,
+and `ParentNotMain`. Newer server codes surface as `Unknown` so older clients
 keep working.
 
-### Merge a branch
+### Cherry-pick a branch
 
-`merge` promotes a branch's added columns onto `main`. It is a review-and-land
-operation: the server re-evaluates the diff at request time, and either lands
-the promotion or rejects it with the same blockers `diff` would report. A
-rejected merge is not an exception — it resolves with `status="rejected"` so
-you can inspect the blockers and decide what to do next.
+`cherry_pick` promotes a branch's added columns onto `main`. It is a
+review-and-land operation: the server re-evaluates the diff at request time,
+and either lands the promotion or rejects it with the same error codes `diff`
+would report. A failed cherry-pick is not an exception. It resolves with
+`status="failed"` and populates `diff.errors` so you can inspect why and decide
+what to do next.
 
 Set `dry_run=True` (Python) or `dryRun: true` (TypeScript) to preview the
-merge without landing it. The result includes a `preview.promoted_columns`
-list showing which columns the merge would (or did) promote.
+cherry-pick without landing it. The result includes a `preview.promotedColumns`
+list showing which columns the cherry-pick would (or did) promote.
 
 <CodeGroup>
 ```python Python icon="python"
-# Preview first — this does not modify main.
-preview = table.branches.merge("exp", dry_run=True)
-print(preview["status"])                   # "ready" | "rejected" | ...
+# Preview first; this does not modify main.
+preview = table.branches.cherry_pick("exp", dry_run=True)
+print(preview["status"])                       # "ready" | "failed" | ...
 print(preview["preview"]["promotedColumns"])
 
-# Land the merge.
-result = table.branches.merge("exp")
-if result["status"] == "merged":
+# Land the cherry-pick.
+result = table.branches.cherry_pick("exp")
+if result["status"] == "cherryPicked":
     print("landed at main version", result["mainVersionAfter"])
-elif result["status"] == "rejected":
-    for blocker in result["diff"]["mergeBlockers"]:
-        print(blocker["code"], blocker["message"])
+elif result["status"] == "failed":
+    for err in result["diff"]["errors"]:
+        print(err["code"], err["message"])
 ```
 
 ```typescript TypeScript icon="square-js"
-// Preview first — this does not modify main.
-const preview = await table.branches.merge("exp", true);
-console.log(preview.status);               // "ready" | "rejected" | ...
+// Preview first; this does not modify main.
+const preview = await table.branches.cherryPick("exp", true);
+console.log(preview.status);                    // "ready" | "failed" | ...
 console.log(preview.preview.promotedColumns);
 
-// Land the merge.
-const result = await table.branches.merge("exp");
-if (result.status === "merged") {
+// Land the cherry-pick.
+const result = await table.branches.cherryPick("exp");
+if (result.status === "cherryPicked") {
   console.log("landed at main version", result.mainVersionAfter);
-} else if (result.status === "rejected") {
-  for (const blocker of result.diff.mergeBlockers) {
-    console.log(blocker.code, blocker.message);
+} else if (result.status === "failed") {
+  for (const err of result.diff.errors) {
+    console.log(err.code, err.message);
   }
 }
 ```
 </CodeGroup>
 
-Possible `status` values are `ready` (returned by `dry_run` when the merge
-would land), `merged` (a real merge that landed), `rejected` (server declined;
-see `diff.mergeBlockers`), `notImplemented`, and `unknown` for forward
-compatibility. Merge requests are not retried on rejection — the response
-carries everything you need to decide next steps.
+Possible `status` values are `ready` (returned by `dry_run` when the
+cherry-pick would land), `cherryPicked` (a real cherry-pick that landed),
+`failed` (server declined; see `diff.errors`), `notImplemented`, and `unknown`
+for forward compatibility. Cherry-pick requests are not retried on failure.
+The response carries everything you need to decide next steps.
 
 ## Build indexes on a branch
 
