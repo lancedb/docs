@@ -95,20 +95,31 @@ transforms data in batches. The `read_batch_size` parameter controls how many ro
 storage request and defaults to `64`.
 
 In addition to batching requests, the prefetching mechanism reads ahead in the background. While one batch is being
-transformed and processed by the GPU, `StreamingDataset` reads subsequent batches. The `prefetch_batches` parameter
-controls how many batches are kept in flight per split and defaults to `4`. A larger value can provide more buffering
-against jittery workloads, but it also increases memory use and I/O concurrency.
+transformed and processed by the GPU, `StreamingDataset` reads subsequent batches. The `io_queue_depth` parameter
+controls how many batches are kept in flight per split at the I/O stage and defaults to `4`. A larger value can
+provide more buffering against jittery workloads, but it also increases memory use and I/O concurrency.
+
+Use the paired `transform_queue_depth` parameter to cap how many transform-result batches accumulate per split in
+the post-transform queue. This applies backpressure when the consumer (for example, a GPU training step) is slower
+than the transform stage, preventing cooked rows from piling up unboundedly. `transform_queue_depth` defaults to
+`None`, meaning no limit; set it to a positive integer to bound peak memory.
 
 <CodeGroup>
 ```py Python icon=Python
 ds = StreamingDataset(
     table,
     shuffle_seed=42,
-    read_batch_size=256,   # rows fetched per LanceDB call per split
-    prefetch_batches=8,    # batches to keep in flight per split
+    read_batch_size=256,        # rows fetched per LanceDB call per split
+    io_queue_depth=8,           # I/O batches in flight per split
+    transform_queue_depth=4,    # cooked batches buffered per split
 )
 ```
 </CodeGroup>
+
+<Note>
+The older `prefetch_batches` keyword is still accepted as an alias for `io_queue_depth` but is deprecated and logs
+a warning. Update calls to use `io_queue_depth` (and, if useful, `transform_queue_depth`) instead.
+</Note>
 
 ### Transformation
 
