@@ -409,6 +409,87 @@ exact resume, also use the same table snapshot, `epoch`, `shuffle`, `filter`, an
 `world_size` and number of DataLoader workers may change as long as the split and batch-size divisibility constraints
 still hold.
 
+#### Checkpointing with multiple DataLoader workers
+
+The plain `torch.utils.data.DataLoader` only produces a safe checkpoint when `num_workers=0`. With `num_workers > 0`,
+PyTorch runs `StreamingDataset.__iter__` in separate worker processes and prefetches batches ahead of the trainer, so
+the counters on the parent dataset do not reflect what the trainer has actually consumed. Calling `state_dict()` on the
+parent in that setup raises `RuntimeError` and points you at `StreamingDataLoader`.
+
+Use `StreamingDataLoader` when you want multi-worker prefetch and exact resumability. It carries a state snapshot
+alongside every internal batch and commits it to the parent `StreamingDataset` only when that batch is returned to the
+trainer. The trainer receives the same collated batch it would receive from a standard `DataLoader`.
+
+<CodeGroup>
+```py Python icon=Python
+from lancedb.streaming import StreamingDataset, StreamingDataLoader
+
+dataset = StreamingDataset(
+    table,
+    num_splits=48,
+    shuffle_seed=42,
+    epoch=current_epoch,
+    rank=rank,
+    world_size=world_size,
+)
+dataloader = StreamingDataLoader(
+    dataset,
+    batch_size=batch_size,
+    num_workers=4,
+)
+
+for step, batch in enumerate(dataloader):
+    train_step(batch)
+
+    if (step + 1) % checkpoint_interval == 0:
+        torch.save(
+            {"model": model.state_dict(), "dataset": dataset.state_dict()},
+            f"checkpoint_{step + 1}.pt",
+        )
+```
+</CodeGroup>
+
+`StreamingDataLoader` accepts the same arguments as `torch.utils.data.DataLoader` with a few restrictions:
+
+- `dataset` must be a `StreamingDataset` (subclasses that override `__iter__` are not supported).
+- `in_order=True` is required so that consumer-committed checkpoints stay deterministic.
+- `persistent_workers=True` is not supported, because prefetched worker copies cannot be restored from parent-committed state.
+- `drop_last=True` is not supported, because incomplete tails discarded by worker replicas cannot be checkpointed topology-independently.
+
+With more than one worker, call `state_dict()` at a complete logical step boundary where every split assigned to the
+rank has the same consumed-sample count. Calling it mid-step raises `RuntimeError` asking you to consume more batches
+first.
+
+#### Resuming across different topologies
+
+When training across ranks, each rank owns its own subset of splits and only its own splits have exact progress. To
+resume on a different `world_size`, collect the `state_dict()` from every rank of the previous run and merge them with
+`StreamingDataset.merge_state_dicts` before calling `load_state_dict()` on the new run. The merge is topology-agnostic:
+pass the full list of per-rank states in, and hand the identical merged dict to every rank of the resumed job,
+regardless of whether the topology grew, shrank, or stayed the same.
+
+<CodeGroup>
+```py Python icon=Python
+# On each rank of the previous run:
+state = dataset.state_dict()
+# ...gather `state` from every rank into a single list `states` (for example
+# via torch.distributed all-gather or by saving one file per rank).
+
+merged = StreamingDataset.merge_state_dicts(states)
+
+# On each rank of the resumed run (world_size may differ):
+dataset = StreamingDataset(
+    table,
+    num_splits=merged["num_splits"],
+    shuffle_seed=merged["shuffle_seed"],
+    epoch=merged["epoch"],
+    rank=rank,
+    world_size=new_world_size,
+)
+dataset.load_state_dict(merged)
+```
+</CodeGroup>
+
 ## Permutations
 
 In more complicated scenarios, you may want the flexibility to shuffle, split, and select data without using the full
