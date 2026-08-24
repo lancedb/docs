@@ -26,7 +26,7 @@ import {
 
 
 Vector indexes are robust tools in facilitating fast searches across large datasets. 
-LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with two techniques that, when combined with [quantization](/indexing/quantization), provide benefits across a variety of use cases.
+LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with several techniques that provide benefits across a variety of use cases.
 
 <Note>
 A dataset of numeric vector types is required for vector indexing.
@@ -34,33 +34,23 @@ A dataset of numeric vector types is required for vector indexing.
 
 ## Choosing the Right Index
 
-todo: define all LanceDB supported quantized indexes, exhaustive list.
+LanceDB vector indexes are combined with several [quantization](/indexing/quantization) techniques to admit efficient storage.
+The following table lists provided quantized vector indexes and their common use cases:
 
--state: all are combinations of an index and a quantization technique. indexes discussed here, quantization in nother tab.
-
--then: exposit IVF, HNSW- 2 disclaimers (in overview, description) of HNSW not top-level
-
--then: examples of using same IVF, HNSW_quantizeds tuff.
-
-
-
-Use this table to choose the right index and quantization protocol for your use case:
-
-| If your top priority is... | Use this index | Why | Typical compressed size vs. raw vectors |
+| If your top priority is... | Use this index | Why | Approx. compression ratio |
 | :--- | :--- | :--- | :--- |
-| Highest recall / no quantization | `IVF_HNSW_FLAT` | Uses raw vectors inside the IVF+HNSW structure, avoiding quantization loss. | Around raw vector size plus HNSW graph overhead |
-| Best recall/latency trade-off | `IVF_HNSW_SQ` | Combines IVF partitioning with HNSW graph search for strong quality at low latency. | Typically a little larger than `1/4` of raw size |
-| Maximum compression | `IVF_RQ` | RaBitQ-style quantization with very strong compression. | Around `1/32` of raw size |
-| Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | On small-dimensional vectors, `IVF_PQ` often provides higher accuracy with similar performance compared to `IVF_RQ`. | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) |
+| Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | IVF indexing with product quantization | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) |
+| Maximum compression | `IVF_RQ` | IVF indexing with RaBitQ quantization | Around `1/32` of raw size | 
+|   | `IVF_SQ` | IVF indexing with scalar quantization | Varies | 
+|  | `IVF_HNSW_PQ` | IVF-HNSW indexing with product quantization | Varies |
+| Best recall/latency trade-off | `IVF_HNSW_SQ` | IVF-HNSW indexing with scalar | Typically a little larger than `1/4` of raw size |
+| Highest recall / no quantization | `IVF_HNSW_FLAT` | IVF-HNSW indexing with no quantization | Around raw vector size plus HNSW graph overhead |
+|  | `IVF_FLAT` | IVF indexing with no quantization | Varies |
+
 
 <Warning>
-If your vector search frequently includes metadata filters (`where(...)`), prefer `IVF_RQ` or `IVF_PQ`. In filtered workloads, HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ` can show higher latency variance.
+If your vector search frequently includes metadata filters (`where(...)`), use `IVF_RQ` or `IVF_PQ`. In filtered workloads, HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ` can show higher latency variance.
 </Warning>
-
-Compression ratios are practical rules of thumb and can vary with vector distribution, metric, and configuration.
-For small dimensions, choose `IVF_PQ` for accuracy, not for guaranteed higher compression than `IVF_RQ`.
-
-
 
 ## Understanding Vector Indexes
 todo: intro sentence
@@ -70,12 +60,9 @@ You can create and manage multiple vector indexes on any Lance dataset. LanceDB 
 
 
 
-### IVF-PQ
+### IVF
 
-The **Inverted File-Product Quantization Index (IVF-PQ)** combines the clustering-based **Inverted File Index (IVF)** with [**Product Quantization (PQ)**](/indexing/quantization) to efficiently 
-compress embeddings. We discuss only the index here.
-
-An IVF index accelerates ANN searches by drastically reducing the search space. The index consists of
+The **Inverted File Index (IVF)** accelerates ANN searches by drastically reducing the search space. The index consists of
 a small set of *centroids* corresponding to an approximate solution to the 
 [$k$-means clustering](https://en.wikipedia.org/wiki/K-means_clustering) problem. 
 Each vector remembers its nearest centroid, and each centroid remembers its associated set of vectors, 
@@ -148,7 +135,7 @@ This combines IVF's scalability with HNSW's higher-recall ANN search within part
     - `IVF_PQ`: often higher accuracy than `IVF_RQ` for small dimensions (`<= 256`) at similar query performance
 - `metrics`: default is `l2`, other available are `cosine` or `dot`
     - When using `cosine` similarity, distances range from 0 (identical vectors) to 2 (maximally dissimilar)
-- `num_partitions`: use index-specific starting points from the section above:
+- `num_partitions`: use index-specific starting points:
     - HNSW-backed IVF indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`): `num_rows // 1,048,576`
     - `IVF_RQ` and `IVF_PQ`: `num_rows // 4096`
 - `target_partition_size`: alternative IVF sizing knob that asks LanceDB to derive the partition
@@ -351,7 +338,6 @@ Be careful to use the same distance metric during index creation and search (`l2
 
 <Note>
 If you need to confirm an async build or refresh is finished, `wait_for_index(...)` waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`. 
-It can time out if new writes keep arriving.
 </Note>
 
 <Note>
@@ -368,7 +354,6 @@ Vector index creation runs in the background and may take some time to complete.
 In the LanceDB Enterprise UI, navigate to your table page - the "Index" column reflects each column's index status: it is blank when no index exists, shows an "in progress" label while the index is being built, and shows the index type once the build completes.
 
 Programmatically, use `list_indices()` and `index_stats()`. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
-To wait until all data is fully indexed, you can specify the `wait_timeout` parameter on `create_index()` or call `wait_for_index()` on the table.
 
 Each entry returned by `list_indices()` also carries detailed per-index metadata, so you can inspect an index without a follow-up `index_stats()` call. Node.js exposes the same fields in camelCase (`num_indexed_rows` → `numIndexedRows`):
 
@@ -404,9 +389,12 @@ The `{column}_idx` suffix is a default convention, not the only supported naming
 <Info>
 **Operational checks**
 
-For vector indexes, make sure to use the same distance metric when creating and querying the index. After appends or other writes, use `optimize()` to fold new rows into existing indexes, then check `index_stats(...)` or `wait_for_index(...)` to confirm that the index has caught up. 
-`wait_for_index(...)` waits until the named indexes exist and report `num_unindexed_rows == 0`, and can time out if writes keep adding unindexed rows.
-
-Unless specified otherwise, vector indexing defaults to `IVF_PQ`, and scalar index creation defaults to
-`BTree`. `BTree` and `Bitmap` indexes target scalar columns, not list columns; use `LabelList` for list containment filters.
+After appends or other writes, use `optimize()` to fold new rows into existing indexes.
+Unless specified otherwise, vector indexing defaults to `IVF_PQ`. 
 </Info>
+
+
+### temp 
+
+
+-then: exposit IVF, HNSW- 2 disclaimers (in overview, description) of HNSW not top-level
