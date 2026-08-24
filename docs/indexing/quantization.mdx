@@ -6,29 +6,13 @@ icon: "compress"
 keywords: ["quantization", "quantize", "rabitq"]
 ---
 
-**Quantization** compresses vectors into concise representations that admit efficient storage. 
-LanceDB currently exposes several quantized vector index types, differing in indexing technique (`IVF_*`,`IVF_HNSW_*`) 
-and quantization method (`PQ`,`RQ`,`SQ`).
-- `IVF_PQ` -- Inverted File index with Product Quantization (default). See the [vector indexing guide](/indexing/vector-index) for `IVF_PQ` examples.
-- `IVF_SQ` -- Inverted File index with Scalar Quantization. This is available in Python and Rust; TypeScript does not currently expose `IvfSq`.
-- `IVF_RQ` -- Inverted File index with **RaBitQ** quantization (binary, 1 bit per dimension). Requires vector dimensions divisible by `8`. See [below](#rabitq-quantization) for details.
-- `IVF_HNSW_SQ` -- IVF partitions with an **HNSW graph per partition** plus **Scalar Quantization**. Strong recall/latency/size trade-off for most workloads.
-- `IVF_HNSW_PQ` -- IVF partitions with an **HNSW graph per partition** plus **Product Quantization**. Prefer when PQ-level compression matters and you still want HNSW-style in-partition search.
-
-Different indexing and quantization techniques may be better suited for certain use cases. 
-See the ["Choosing the Right Index"](/indexing/vector-index#choose-the-right-index) table for further discussion.
-
-todo decide what to do here vv
-
-Use the same distance metric when training and querying the index. For IVF-based indexes, `num_partitions` controls the number of groups and `sample_rate` controls how many training vectors are sampled per partition, so the training sample is roughly `sample_rate * num_partitions`.
-
-<Note>
-In this page, $\| \cdot \|$ denotes an arbitrary norm. LanceDB indexes use `l2`, the Euclidean $\ell_2$ norm, by default.
-</Note>
+**Quantization** is used in LanceDB to efficiently compress and store vector indexes. We discuss only the quantization techniques here;
+discussion of LanceDB vector indexes and quantized vector indexes can be found [here](/indexing/vector-index).
 
 ## Quantization Techniques
-### Product Quantization (PQ)
+LanceDB provides $3$ distinct quantization techniques: Product Quantization (PQ), RaBitQ Quantization (RQ), and Scalar Quantization (SQ).
 
+### Product Quantization (PQ)
 To visualize PQ, assume a vector dataset has $d$ dimensions, with a **chunk** of a vector denoting a contiguous block of entries. Imagine that each vector has
  $m$ disjoint chunks of $d/m$ entries each, where the first chunk represents entries $0$ through $d-1$, the second contains entries $d$ through $2d - 1$, and so on.
 
