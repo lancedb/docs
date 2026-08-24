@@ -44,8 +44,19 @@ handle from an id you saved earlier.
 |:-------|:-------------|
 | `id` | The server-assigned job id. `None` for jobs that ran entirely in the client process. |
 | `status()` | A non-blocking snapshot of the current state: `"running"`, `"finished"`, `"failed"`, or `"cancelled"`. |
-| `wait(timeout)` | Block until the job reaches a terminal state. Raises on failure, cancellation, or timeout. |
+| `wait(timeout)` | Block until the job reaches a terminal state. Returns the endpoint's typed result and raises on failure, cancellation, or timeout. |
 | `cancel()` | Ask the server to cancel the job. No-op if the job is already terminal. |
+
+### Typed results
+
+In Python, `Job` is generic on the endpoint's result type — for example,
+`refresh_column_async` returns `Job[RefreshColumnResult]`, and `job.wait()`
+resolves to a `RefreshColumnResult` with the row counts and the source and
+published table versions. Jobs that have no meaningful terminal payload return
+`None` from `wait()`.
+
+The TypeScript API keeps `wait()` resolving to `void` today; use `getJob` or
+`jobHistory` to retrieve terminal payloads from the server.
 
 <Info>
 `status()` is a point-in-time snapshot and does not raise on terminal
@@ -185,6 +196,24 @@ console.log(history.toString());
 Arrow output makes it straightforward to feed job events into your existing
 monitoring pipeline — filter, aggregate, or write the batches to your data
 warehouse without an intermediate conversion.
+
+## Example: refresh a computed column
+
+`refresh_column_async` on a table returns a `Job` whose typed result carries
+the row counts and versions produced by the refresh. This is the most common
+way you will see a typed job payload in Python today.
+
+<CodeGroup>
+```python Python icon="python"
+job = table.refresh_column_async("doubled")
+result = job.wait()
+
+print(result.rows_filled, "rows filled at version", result.version)
+```
+</CodeGroup>
+
+On a no-op refresh (nothing to fill), the local backend reports no published
+version.
 
 ## Related
 
