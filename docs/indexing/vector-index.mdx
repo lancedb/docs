@@ -49,7 +49,6 @@ If your vector search frequently includes metadata filters (`where(...)`), use `
 </Warning>
 
 ## Understanding Vector Indexes
-todo: intro sentence
 
 You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two vector indexing algorithms: 
 **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
@@ -79,8 +78,6 @@ A high `nprobe` parameter will yield more accurate results at slightly higher ru
   <img src="/static/assets/images/indexing/ivfpq_query_vector.webp" alt="IVF vector-space partitioning" />
 </Frame>
 
-TODO: note default l2 metric
-
 ### HNSW
 {/*
 The **Hierarchical Navigable Small World (HNSW)** index ... (todo. to consider: mention skip list?)
@@ -106,21 +103,12 @@ This section demonstrates how to configure, build, and search LanceDB vector ind
 
 Parameters that apply to every LanceDB quantized index type. Pick an `index_type` using the table in [Choosing the Right Index](#choosing-the-right-index) above.
 
-- `metric`: default is `l2`, other available are `cosine` or `dot`
-    - When using `cosine` distance, values range from $0$ (identical) to $2$ (maximally dissimilar)
-- `num_partitions`: when left unset, LanceDB automatically chooses roughly `sqrt(num_rows)`.
-- `target_partition_size`: an alternative IVF sizing knob that derives the partition count from a target number of rows per partition, instead of a partition count directly. Defaults to `8192` for IVF-family indexes (`IVF_FLAT`, `IVF_SQ`, `IVF_PQ`, `IVF_RQ`) and `1,048,576` for IVF-HNSW-family indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`) — HNSW graphs are far more memory-intensive to train, so each partition is kept much larger to limit how many separate graphs get built. If both `num_partitions` and `target_partition_size` are set, `num_partitions` takes precedence.
-- `num_sub_vectors`: applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if the dimension isn't evenly divisible by 16). Larger values often improve recall but can slow search.
-
-##### Async API and Config Objects
-
-With asynchronous Python connections, create vector indexes with `await table.create_index("vector", config=...)`. The `config` object carries the same index choices you configure in the synchronous API, such as distance metric, partition count, and quantization settings — pass an instance of the Python config class from the table in [Choosing the Right Index](#choosing-the-right-index) above:
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexAsyncConfig}
-    </CodeBlock>
-</CodeGroup>
+| Parameter | Description |
+| :--- | :--- |
+| `metric` | Default is `l2`, other available are `cosine` or `dot`. `cosine` distances range from `0` (identical) to `2` (maximally dissimilar). |
+| `num_partitions` | When left unset, LanceDB automatically chooses roughly `sqrt(num_rows)`. |
+| `target_partition_size` | An alternative IVF sizing knob that derives the partition count from a target number of rows per partition, instead of a partition count directly. Defaults to `8192` for IVF-family indexes (`IVF_FLAT`, `IVF_SQ`, `IVF_PQ`, `IVF_RQ`) and `1,048,576` for IVF-HNSW-family indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`) — HNSW graphs are far more memory-intensive to train, so each partition is kept much larger to limit how many separate graphs get built. If both `num_partitions` and `target_partition_size` are set, `num_partitions` takes precedence. |
+| `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if the dimension isn't evenly divisible by 16). Larger values often improve recall but can slow search. |
 
 #### Search-time Parameters
 
@@ -185,20 +173,33 @@ Flat search is $O(n)$ — reserve `bypass_vector_index()` for sampled recall mea
 Multivector indexing currently requires `distance_type="cosine"` — `l2` is rejected at index-creation time. That restriction is why `bypass_vector_index()` is the escape hatch for non-cosine queries on a multivector column: the metric you want at query time cannot be served by the index, so you fall back to a flat scan. See [Multivector Search](/search/multivector-search) for the full rules.
 </Note>
 
-### IVF Indexes
+#### Async API and Config Objects
 
-This example creates an `IVF_PQ` index for a table of vectors under `cosine` similarity. To start, connect to LanceDB and open the table. 
-Specify `vector_column_name` if you use multiple vector columns or non-default names. For a vector field nested inside a struct, use dot notation (e.g. `image.embedding`); see [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full syntax. You can switch `index_type` to `IVF_RQ`, `IVF_HNSW_SQ`, or `IVF_HNSW_FLAT` depending on your recall/latency/compression target.
+With asynchronous Python connections, create vector indexes with `await table.create_index("vector", config=...)`. The `config` object carries the same build-time choices described above, such as distance metric, partition count, and quantization settings — pass an instance of the Python config class from the table in [Choosing the Right Index](#choosing-the-right-index):
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBuildIvf}
+    {VectorIndexAsyncConfig}
     </CodeBlock>
 </CodeGroup>
 
-#### Indexing nested vector fields
+### IVF Indexes
 
-If your vector column lives inside a struct, pass its full dotted path as `vector_column_name`. The same path is used at query time and is what `list_indices()` reports under `columns`:
+This example creates an `IVF_PQ` index for a table of vectors under `cosine` similarity, then queries it with a random 1,536-dimensional embedding. Specify `vector_column_name` if you use multiple vector columns or non-default names. You can also switch `index_type` to `IVF_RQ` here without changing anything else.
+
+Partition sizing follows the general `num_partitions`/`target_partition_size` guidance above. The only IVF-specific knob is `num_sub_vectors` (`IVF_PQ` only): increase for better recall, decrease for faster search and smaller indexes.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexBuildIvf + VectorIndexQueryIvf}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
+</Note>
+
+For a vector field nested inside a struct, pass its full dotted path as `vector_column_name` (e.g. `image.embedding`) — the same path is used at query time and is what `list_indices()` reports under `columns`. See [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full path syntax.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -207,56 +208,24 @@ If your vector column lives inside a struct, pass its full dotted path as `vecto
 </CodeGroup>
 
 <Note>
-Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `image.thumbnail.embedding`). The same convention applies to FTS and scalar indexes.
-</Note>
-
-#### Recommended defaults
-
-Partition sizing follows the general `num_partitions`/`target_partition_size` guidance above. The only IVF-specific knob is:
-
-- `num_sub_vectors` (`IVF_PQ` only): increase for better recall, decrease for faster search and smaller indexes.
-- For small dimensions (`dimension <= 256`), `IVF_PQ` is often preferred over `IVF_RQ` for better accuracy at similar query performance.
-
-#### Querying an IVF Index
-
-Search using a random 1,536-dimensional embedding.
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexQueryIvf}
-    </CodeBlock>
-</CodeGroup>
-
-<Note>
-TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
+Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `image.thumbnail.embedding`).
 </Note>
 
 ### IVF-HNSW Indexes
 
-Beyond the general build-time parameters above, two additional parameters are specific to constructing an HNSW graph:
+Beyond the general build-time parameters above, two additional parameters are specific to IVF-HNSW indexes:
 
-- `m`: The number of neighbors to select for each vector in the HNSW graph.
-- `ef_construction`: The number of candidates to evaluate during the construction of the HNSW graph.
+| Parameter | Description |
+| :--- | :--- |
+| `m` | The number of neighbors to select for each vector in the HNSW graph. |
+| `ef_construction` | The number of candidates to evaluate during the construction of the HNSW graph. Start at `150`; increase for better recall, decrease for faster indexing. |
 
-The snippet below uses `IVF_HNSW_SQ`. If you want the unquantized variant, change `index_type` to `IVF_HNSW_FLAT`.
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBuildHnsw}
-    </CodeBlock>
-</CodeGroup>
-
-#### Recommended defaults
-
-Partition sizing follows the general `num_partitions`/`target_partition_size` guidance above. The only HNSW-specific knob is:
-
-- `ef_construction`: start at `150`; increase for better recall, decrease for faster indexing.
-
-#### Querying an IVF-HNSW Index
+Partition sizing follows the general `num_partitions`/`target_partition_size` guidance above.
+The snippet below builds and queries an `IVF_HNSW_SQ` index. 
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexQueryHnsw}
+    {VectorIndexBuildHnsw + VectorIndexQueryHnsw}
     </CodeBlock>
 </CodeGroup>
 
@@ -268,7 +237,7 @@ In LanceDB Enterprise, vector indexes are managed **automatically**. The system 
 - Optimizes `IVF_PQ` storage without manual input
 - Infers vector columns from the schema
 
- <Badge color="gray">Open-Source</Badge> LanceDB OSS users can manually create vector indexes by calling `table.create_index()`. LanceDB also provides an interface to tune parameters manually as data changes — see the recommended defaults in the IVF and IVF-HNSW sections above.
+ <Badge color="gray">Open-Source</Badge> LanceDB OSS users can manually create vector indexes by calling `table.create_index()`. LanceDB also provides an interface to tune parameters manually as data changes — see the IVF and IVF-HNSW sections above for index-specific tuning guidance.
 
 <Note>
 You can call `create_index()` to create a new index (this replaces existing indexes).
