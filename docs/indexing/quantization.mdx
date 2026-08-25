@@ -33,40 +33,27 @@ which has been compressed to $4$ chunks $\times 8$-bit integers $= 32$ bits of q
 
 ### RaBitQ Quantization (RQ)
 
-RaBitQ is a binary quantization method that represents each normalized embedding using **1 bit per dimension**, plus a couple of small corrective scalars. In practice, a 1,024-dimensional `float32` vector that would normally take 4 KB can be compressed to roughly a few hundred bytes with RaBitQ, while still maintaining reasonable recall.
+RaBitQ is an advanced quantization technique that outperforms PQ in several ways.
+It needs no codebook to train, estimates distances very quickly at query-time, 
+and crucially, quantizes each vector in (with some small overhead) just **one bit per dimension!** 
+In practice, RaBitQ compresses a $1024$-dimensional `float32` vector into just a few hundred bytes, while maintaining good recall.
 
-#### How RaBitQ works
-
-- Embeddings are grouped around centroids (as in other IVF indexes).
-- Each residual vector is normalized and mapped to the nearest vertex of a randomly rotated hypercube on the unit sphere.
-- The sign pattern of that vector is stored as bits (1 bit per dimension).
-- Two small corrective factors are stored:
-  1. The distance from the original vector to its centroid
-  2. The dot product between the normalized vector and its quantized version
-
-Compared to `IVF_PQ`, RaBitQ:
-- Avoids training expensive PQ codebooks
-- Builds indexes faster and handles updates more easily
-- Maintains or improves recall at high dimensionality under the same storage budget
-
-For a deeper dive into the theory and some benchmark results, see the blog post: [LanceDB's RaBitQ Quantization for Blazing Fast Vector Search](https://lancedb.com/blog/feature-rabitq-quantization/).
+The inner workings of RaBitQ quantization are rather mathematically dense. It generates a quantization codebook by 
+applying a uniformly random, approximately distance-preserving orthogonal transformation of the vertices of the $d$-dimensional hypercube, 
+where $d$ is the dimensionality of the dataset. We defer the details, and an elegant theoretical error bound, to [the original paper.](https://arxiv.org/pdf/2405.12497)
 
 #### Using RaBitQ
+Use RaBitQ quantization by selecting quantized index types ending in the suffix `RQ`. For example, call `create_index` with `index_type="IVF_RQ"`. 
+Note that when using `IVF_RQ`, the dimension of the dataset should be a multiple of `8`.
 
-You can create an RaBitQ-backed vector index by setting `index_type="IVF_RQ"` when calling `create_index`. 
-
-<Note title="Dimension requirement">
-When using `IVF_RQ`, the dimension of vectors must be a multiple of `8`.
-</Note>
-
-`num_bits` controls how many bits per dimension are used:
-
-1 bit is the classic RaBitQ setting. You can set it to 2, 4, or 8 bits to improve fidelity for better precision or recall — the main trade-off is additional storage for the extra bits per dimension, with only a modest increase in query-time compute.
-It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to how you would do in `IVF_PQ`.
+`num_bits` determines how many bits are used to quantize each dimension.
+`1` is the standard RaBitQ setting. Increase to `2`, `4`, or `8` bits to achieve better recall for additional storage and query-time compute.
 
 <Warning title="Reading multi-bit indexes across versions">
-Indexes built with `num_bits >= 2` use an updated on-disk layout. Older LanceDB versions cannot read them and will fail with a clear missing-column error rather than returning incorrect results. Existing indexes keep working and upgrade automatically when they are rewritten (for example, during compaction, optimize, or remap). `num_bits=1` indexes are unaffected in both directions.
+RaBitQ-quantized indexes computed with `num_bits >= 2` use a newer on-disk layout, and cannot be read by some older LanceDB versions. 
 </Warning>
+
+See this [blog post](https://lancedb.com/blog/feature-rabitq-quantization/) for further discussion and benchmarking of LanceDB's RaBitQ implementation.
 
 ### Scalar Quantization (SQ)
 
