@@ -496,3 +496,17 @@ In more complicated scenarios, you may want the flexibility to shuffle, split, a
 iterable streaming data loader. In these cases, use `Permutation`, the lower-level class on which `StreamingDataset`
 is built. A `Permutation` defines a custom ordering of the data and supports map-style access through `__getitem__()`
 and batched access through `__getitems__()`.
+
+### Base table version pinning
+
+A `Permutation` is pinned to the version of the base table at the time it was built, and every read (including reads
+from a `StreamingDataset` that wraps it, and every DataLoader worker after a `fork`) resolves against that pinned
+version. This makes iteration deterministic across compactions and worker forks: the permutation only addresses rows
+that existed when it was built, and rows appended to the base table afterwards are not visible through the existing
+permutation.
+
+<Note>
+To include newly appended rows, build a new `Permutation` (and rebuild any `StreamingDataset` that depends on it)
+against the updated table. Permutations written before this behavior shipped carry no pinned version and continue to
+read as they did before.
+</Note>
