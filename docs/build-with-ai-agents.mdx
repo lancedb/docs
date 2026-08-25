@@ -1,9 +1,9 @@
 ---
-title: "Tutorial: Use the LanceDB agent skill"
-sidebarTitle: "LanceDB agent skill"
-description: "Install the LanceDB skill and use an AI coding agent to quickly build a multimodal ingestion pipeline."
+title: "Tutorial: Use the LanceDB agent plugin"
+sidebarTitle: "LanceDB agent plugin"
+description: "Install the LanceDB plugin and use an AI coding agent to quickly build a multimodal ingestion pipeline."
 icon: "robot"
-keywords: ["AI agents", "agent skills", "multimodal", "Pydantic", "branches", "embeddings"]
+keywords: ["AI agents", "agent plugins", "multimodal", "Pydantic", "branches", "embeddings"]
 ---
 
 import {
@@ -12,51 +12,72 @@ import {
   PyCamelotOssIngestion,
 } from '/snippets/build_with_ai_agents.mdx';
 
-The LanceDB agent skill gives coding agents a maintained reference for the
+The LanceDB agent plugin gives coding agents a maintained reference for the
 Python and TypeScript APIs. It also covers portable OSS and Enterprise code,
-ingestion performance, and branch operations. Install it in your project:
+ingestion performance, and branch operations. It ships as the `lancedb` plugin in
+the [lancedb-agent-plugins](https://github.com/lancedb/lancedb-agent-plugins)
+repository, which is also a plugin marketplace. Install it with your agent's
+plugin manager:
+
+<CodeGroup>
+```text Claude Code
+/plugin marketplace add lancedb/lancedb-agent-plugins
+/plugin install lancedb@lancedb
+```
+
+```bash Codex icon="terminal"
+codex plugin marketplace add lancedb/lancedb-agent-plugins
+codex plugin add lancedb@lancedb
+```
+
+```bash Other agents icon="terminal"
+npx plugins add lancedb/lancedb-agent-plugins
+```
+</CodeGroup>
+
+The [`plugins`](https://www.npmjs.com/package/plugins) installer shown under
+**Other agents** is a cross-tool option. It detects which agent CLIs are on your
+`PATH` — Cursor, GitHub Copilot CLI, VS Code, Grok Build, and Kimi Code, as well
+as Claude Code and Codex — and installs through each one's native plugin system.
+
+The plugin supplements the agent's training data with current LanceDB
+instructions. To pick up later revisions, refresh the marketplace:
+
+<CodeGroup>
+```text Claude Code
+/plugin marketplace update lancedb
+```
+
+```bash Codex icon="terminal"
+codex plugin marketplace upgrade
+```
+
+```bash Other agents icon="terminal"
+npx plugins add lancedb/lancedb-agent-plugins
+```
+</CodeGroup>
+
+<Accordion title="Where the plugin gets installed">
+Each plugin manager clones the repository, reads its marketplace manifest to find
+the `lancedb` plugin, and hands the plugin to the agent's own plugin store rather
+than copying files into your project. Claude Code and Codex keep it under
+`~/.claude/plugins` and `~/.codex/plugins` respectively, so the plugin is available
+in every project on the machine.
+
+The `npx plugins` installer defaults to the same user-wide scope. Pass
+`--scope project` to record the plugin in the current repository instead, so that
+everyone working in it gets the same plugin, or `-t <target>` to install for a
+single agent rather than every one it detects:
 
 ```bash
-# Install the lancedb skill
-npx skills add lancedb/lancedb
-
-# Update the skill
-npx skills update lancedb
+npx plugins add lancedb/lancedb-agent-plugins --scope project -t cursor
 ```
 
-The skill supplements the agent's training data with current LanceDB
-instructions.
-
-The installer downloads the
-[`lancedb` skills plugin](https://github.com/lancedb/lancedb/tree/main/plugins/lancedb) and makes it
-available to the agents you select. The installation directory depends on the
-agent client. Universal agents typically use `.agents/skills`.
-
-<Accordion title="Track your skills via a lockfile">
-The installer also creates or updates `skills-lock.json`. This file records
-where the skill came from, its path in the source repository, and a hash of the
-installed content.
-
-```json
-{
-  "version": 1,
-  "skills": {
-    "lancedb": {
-      "source": "lancedb/lancedb",
-      "sourceType": "github",
-      "skillPath": "plugins/lancedb/skills/lancedb/SKILL.md",
-      "computedHash": "..."
-    }
-  }
-}
-```
-Commit the lockfile if you want skill updates to go through code review. Before
-committing a new hash, inspect the changes to `SKILL.md` and its reference
-files. The repository history will then show which snapshot each revision used.
-
+Not every agent supports project scope; `npx plugins targets` lists what it
+found and what each target supports.
 </Accordion>
 
-## Get started with the LanceDB agent skill
+## Get started with the LanceDB agent plugin
 
 This tutorial uses the Camelot dataset from the [quickstart](/quickstart), with
 a portrait added for each character. Each LanceDB row contains validated
@@ -106,17 +127,17 @@ Each JSON record has this shape:
 ```
 
 JSON input may have missing fields, unexpected fields, or values of the wrong
-type. The LanceDB skill tells the agent to validate each record with strict
+type. The LanceDB plugin tells the agent to validate each record with strict
 Pydantic models before writing it.
 
 After the agent writes the pipeline, inspect the schema, batching, and write
-path rather than assuming it followed the skill correctly.
+path rather than assuming it followed the plugin's guidance correctly.
 
 ### 2. Prompt your agent to build the pipeline
 
 Install the Python packages used by the example:
 
-```bash icon=terminal
+```bash icon="terminal"
 uv init
 uv add lancedb pyarrow pydantic
 ```
@@ -129,7 +150,7 @@ in a local `.env` file, and point the agent to it.
 LANCEDB_URI=db://your_project_name
 LANCEDB_API_KEY=your_api_key_here
 LANCEDB_REGION=us-east-1
-LANCEDB_HOST_OVERRIDE=https://hostname@ip_address
+LANCEDB_HOST_OVERRIDE=https://your-enterprise-endpoint.com
 ```
 
 If you're using LanceDB OSS, no connection settings are required, as it runs as an
@@ -137,23 +158,24 @@ embedded retrieval library. A simple prompt like this should work:
 
 ```text Agent prompt
 # If using OSS
-Use the lancedb skill to ingest the dataset in `data/` into a LanceDB
+Use the lancedb plugin to ingest the dataset in `data/` into a LanceDB
 OSS table.
 
 # If using enterprise
-Use the lancedb skill to ingest the dataset in `data/` into a LanceDB
+Use the lancedb plugin to ingest the dataset in `data/` into a LanceDB
 Enterprise table using the connection information in `.env`.
 ```
 
-Agents that scan `.agents/skills` should find the skill automatically. If your
-agent does not find it automatically, simply ask it to use the `lancedb` skill in the prompt.
+Because the plugin is registered with the agent's own plugin system, the agent
+should pick it up on its own once you restart the session. If it does not,
+simply ask it to use the `lancedb` plugin in the prompt, as shown above.
 
 That should be enough! The agent will create `ingest_multimodal.py`, or similar.
-The following sections inspect the script to verify that it follows the skill's guidance.
+The following sections inspect the script to verify that it follows the plugin's guidance.
 
 #### Data validation
 
-The skill encourages the agent to validate each record with Pydantic before writing it.
+The plugin encourages the agent to validate each record with Pydantic before writing it.
 The agent should ideally define a schema for the table and a nested schema for the
 `stats` field.
 
@@ -167,8 +189,8 @@ and validated the JSON before adding it to the table.
 #### Batched ingestion
 
 Naively calling `table.add()` once per row is slow, and is considered an anti-pattern
-in LanceDB. The skill encourages the agent to collect incoming rows into batches and
-write them with a single `table.add()` call. When you use the skill, the agent should
+in LanceDB. The plugin encourages the agent to collect incoming rows into batches and
+write them with a single `table.add()` call. When you use the plugin, the agent should
 produce something like this:
 
 <CodeBlock filename="ingest_multimodal.py" language="Python" icon="python">
@@ -181,7 +203,7 @@ to `batch_size` rows at a time, providing an iterable of batches for the ingesti
 shown next.
 
 #### Table maintenance
-For LanceDB OSS, the skill instructs the agent to call
+For LanceDB OSS, the plugin instructs the agent to call
 `table.optimize()` after the ingestion loop. This compacts small fragments, cleans up
 old versions according to the retention policy, and incorporates new data into indexes.
 
@@ -189,7 +211,7 @@ old versions according to the retention policy, and incorporates new data into i
   {PyCamelotOssIngestion}
 </CodeBlock>
 
-If you're using LanceDB Enterprise, the skill mentions that this step is not needed
+If you're using LanceDB Enterprise, the plugin mentions that this step is not needed
 because LanceDB Enterprise handles maintenance automatically.
 
 
@@ -222,14 +244,14 @@ The example in this tutorial was small, but similar ideas apply to other workflo
 Give the agent the data source, the constraints it must respect, and the
 artifacts it should return.
 
-The skill supplies LanceDB-specific guidance, but it's the user's responsibility to
+The plugin supplies LanceDB-specific guidance, but it's the user's responsibility to
 ensure the output makes sense for the application.
 
-### Try the skill with your own dataset
+### Try the plugin with your own dataset
 
-The skills shown in this tutorial should generalize reasonably well to other use cases.
-If you find any issues, open [an issue](https://github.com/lancedb/lancedb/issues) on GitHub,
-clearly describing the intended behavior.
+The plugin shown in this tutorial should generalize reasonably well to other use cases.
+If you find any issues, open [an issue](https://github.com/lancedb/lancedb-agent-plugins/issues)
+on GitHub, clearly describing the intended behavior.
 
 You can choose OSS or Enterprise based on how the work will run:
 
