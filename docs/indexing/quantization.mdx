@@ -1,7 +1,7 @@
 ---
 title: "Quantization"
 sidebarTitle: "Quantization"
-description: "Use quantization to improve storage requirements and query latency of your LanceDB vector index."
+description: "Use quantization efficiently store your LanceDB vector index."
 icon: "compress"
 keywords: ["quantization", "quantize", "rabitq"]
 ---
@@ -56,7 +56,12 @@ RaBitQ-quantized indexes computed with `num_bits >= 2` use a newer on-disk layou
 See this [blog post](https://lancedb.com/blog/feature-rabitq-quantization/) for further discussion and benchmarking of LanceDB's RaBitQ implementation.
 
 ### Scalar Quantization (SQ)
+Scalar quantization quantizes each entry of a vector independently, by simply replacing it with the closest of a pre-defined set of values. 
+In practice, it often uses $8$ bits per dimension of a vector, and supports very fast encoding and decoding.
 
+For example, suppose we know all vector entires across our dataset lie in the range $[-128 \times 10^5, 127 \times 10^5]$. 
+In this case, we could quantize a given value $v$ as an $8$-bit representation of the integer $j$, where $j \times 10^5$ is the closest value to $v$
+among all integral multiples $\{j \times 10^5: -128 \leq j \leq 127 \}$.
 ## API Reference
 
 The full list of parameters to the algorithm are listed below.
