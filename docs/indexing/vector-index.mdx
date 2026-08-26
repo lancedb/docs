@@ -107,6 +107,8 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | `num_partitions` | When left unset, targets roughly `sqrt(num_rows)`. |
 | `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition. Defaults to `8192 = 2^13` for IVF-family indexes and `1,048,576 = 2^20` for IVF-HNSW-family indexes. `num_partitions` takes precedence over `target_partition_size`. |
 | `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if not a multiple of 16). Larger values produce better recall and slower search. |
+| `max_iterations` | Maximum number of k-means training iterations, for every IVF/HNSW index type. Default `50`. Increase for larger datasets or to improve training quality. |
+| `sample_rate` | Number of training samples per partition, for every IVF/HNSW index type. Default `256`. Higher values increase both accuracy and training time. |
 
 #### Search-time Parameters
 
@@ -181,9 +183,8 @@ admits the same build-time parameters described above — pass an instance of a 
 
 ### IVF Indexes
 
-This example creates an `IVF_PQ` index for a table of vectors under `cosine` similarity, then queries it with a random 1,536-dimensional embedding. Specify `vector_column_name` if you use multiple vector columns or non-default names. You can also switch `index_type` to `IVF_RQ` here without changing anything else.
-
-Partition sizing follows the general `num_partitions`/`target_partition_size` guidance above. The only IVF-specific knob is `num_sub_vectors` (`IVF_PQ` only): increase for better recall, decrease for faster search and smaller indexes.
+This example creates and queries an `IVF_PQ` index for a table of vectors with respect to `cosine` similarity. 
+Specify `vector_column_name` if you use multiple vector columns or non-default names. 
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -229,20 +230,18 @@ The snippet below builds and queries an `IVF_HNSW_SQ` index.
 
  <Badge color="red">Enterprise-only</Badge> 
 In LanceDB Enterprise, vector indexes are managed **automatically**. The system asynchronously updates and optimizes indexes as a background process:
-- Automatically manages indexing parameters
-- Optimizes `IVF_PQ` storage without manual input
+- Automatically manages indexing parameters and storage
 - Infers vector columns from the schema
 
- <Badge color="gray">Open-Source</Badge> LanceDB OSS users can manually create vector indexes by calling `table.create_index()`. LanceDB also provides an interface to tune parameters manually as data changes — see the IVF and IVF-HNSW sections above for index-specific tuning guidance.
+ <Badge color="gray">Open-Source</Badge> 
+ LanceDB OSS users can manually create vector indexes by calling `table.create_index()`. 
+ See the above sections for guidance on manually tuning index parameters as data changes.
 
 <Note>
-You can call `create_index()` to create a new index (this replaces existing indexes).
-`create_index()` returns immediately, but the vector index builds asynchronously. To wait until all data is indexed, specify the `wait_timeout` parameter, or call `wait_for_index(...)` afterward — it waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`.
+`create_index()` returns immediately, but the vector index builds asynchronously. 
+To wait until all data is indexed, specify the `wait_timeout` parameter, or call `wait_for_index(...)` afterward — 
+it waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`.
 </Note>
-
-<Warning>
-Be careful to use the same distance metric during index creation and search. 
-</Warning>
 
 <Note>
 Rows appended after an initial index build remain outside the index until refreshed manually (OSS) or automatically (Enterprise). Normal
@@ -250,17 +249,23 @@ search still checks those unindexed rows with a slower fallback path; `fast_sear
 fallback and searches only indexed rows.
 </Note>
 
+<Info>
+**Operational checks**
+
+After appends or other writes, use `optimize()` to fold new rows into existing indexes.
+</Info>
 #### Check Index Status
 
-Vector index creation runs in the background and may take some time to complete. While it is ongoing, you can check its status either programmatically through the API or from the **LanceDB Enterprise UI**.
+Vector index creation runs in the background and may take some time to complete. 
+While it is ongoing, you can check its status through the API or the **LanceDB Enterprise UI**.
 
 In the LanceDB Enterprise UI, navigate to your table page - the "Index" column reflects each column's index status: it is blank when no index exists, shows an "in progress" label while the index is being built, and shows the index type once the build completes.
 
-Programmatically, use `list_indices()` and `index_stats()`. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
+To check status programmatically, use `list_indices()` and `index_stats()`. **By default**, the index name is formed by appending `_idx` to the column name (e.g., a `keywords_embeddings` column produces `keywords_embeddings_idx`). Note that `list_indices()` only returns information after the index is fully built.
 
 Each entry returned by `list_indices()` also carries detailed per-index metadata, so you can inspect an index without a follow-up `index_stats()` call. Node.js exposes the same fields in camelCase (`num_indexed_rows` → `numIndexedRows`):
 
-| Field | What it tells you |
+| Parameter | Description |
 | :--- | :--- |
 | `num_indexed_rows`, `num_unindexed_rows` | Index coverage over the table |
 | `size_bytes` | Total size of the index files on disk |
@@ -269,9 +274,6 @@ Each entry returned by `list_indices()` also carries detailed per-index metadata
 | `index_uuid`, `type_url` | Internal identifiers for the index segment |
 | `index_details` | Type-specific details (e.g. IVF partition counts or quantization settings) |
 
-<Note>
-These fields are populated for local and embedded tables. On LanceDB Enterprise remote tables they are returned as `None` / `undefined` until the server response surfaces them.
-</Note>
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -279,9 +281,14 @@ These fields are populated for local and embedded tables. On LanceDB Enterprise 
     </CodeBlock>
 </CodeGroup>
 
+
+<Note>
+These fields are populated for local and embedded tables. On LanceDB Enterprise remote tables they are returned as `None` / `undefined` until the server response surfaces them.
+</Note>
 #### Custom Index Names
 
-The `{column}_idx` suffix is a default convention, not the only supported naming path. Pass `name=...` to `create_index()` to override it — useful when you want to manage multiple indexes on the same column (for example, side-by-side `IVF_PQ` and `IVF_HNSW_SQ` builds) or when you script index replacement by name. Once set, `list_indices()`, `index_stats(name)`, and `wait_for_index([name])` all reference the custom name.
+The `{column}_idx` suffix is the default naming convetion. 
+Pass `name=...` to `create_index()` to override it. Once set, the custom name will be reflected in `list_indices()`, `index_stats(name)`, and `wait_for_index([name])`.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -289,9 +296,4 @@ The `{column}_idx` suffix is a default convention, not the only supported naming
     </CodeBlock>
 </CodeGroup>
 
-<Info>
-**Operational checks**
 
-After appends or other writes, use `optimize()` to fold new rows into existing indexes.
-Unless specified otherwise, vector indexing defaults to `IVF_PQ`. 
-</Info>

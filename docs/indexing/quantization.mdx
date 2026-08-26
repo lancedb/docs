@@ -5,6 +5,9 @@ description: "Use quantization efficiently store your LanceDB vector index."
 icon: "compress"
 keywords: ["quantization", "quantize", "rabitq"]
 ---
+import {
+    PyQuantizationCustomParams as QuantizationCustomParams,
+} from '/snippets/indexing.mdx';
 
 **Quantization** is used in LanceDB to efficiently compress and store vector indexes. We discuss only the quantization techniques here;
 discussion of LanceDB vector indexes and quantized vector indexes can be found [here](/indexing/vector-index).
@@ -62,19 +65,18 @@ In practice, it often uses $8$ bits per dimension of a vector, and supports very
 For example, suppose we know all vector entires across our dataset lie in the range $[-128 \times 10^5, 127 \times 10^5]$. 
 In this case, we could quantize a given value $v$ as an $8$-bit representation of the integer $j$, where $j \times 10^5$ is the closest value to $v$
 among all integral multiples $\{j \times 10^5: -128 \leq j \leq 127 \}$.
-## API Reference
 
-The full list of parameters to the algorithm are listed below.
+## Quantization API Reference
 
-- `distance_type`: `Literal["l2", "cosine", "dot"]`. Default: `"l2"`  
-  The distance metric used in comparison. 
-- `num_partitions`: `Optional[int]`. Default: `None`  
-  Number of IVF partitions (clusters). High `num_partitions` increases both recall and build time. When unset, LanceDB chooses roughly the square root of the row count.
-- `num_bits`: `int`. Default: `1`  
-  Bits per dimension for quantization (`1` corresponds to RaBitQ). Higher values improve fidelity, mainly at the cost of additional storage.
-- `max_iterations`: `int`. Default: `50`  
-  Maximum number of iterations for training the quantizer. Increase for larger datasets or to improve quantization quality.
-- `sample_rate`: `int`. Default: `256`  
-  Number of samples per partition during training. Higher values increase both accuracy and training time.
-- `target_partition_size`: `Optional[int]`. Default: `None`  
-  Target number of vectors per partition. Adjust to control partition granularity and memory usage. If `num_partitions` is also set, `num_partitions` takes precedence.
+
+| Parameter | Description |
+| :--- | :--- |
+| `num_bits` | Bits per dimension for quantization. Only applies to `IVF_PQ`/`IVF_HNSW_PQ` (default `8`) and `IVF_RQ` (default `1`, RaBitQ) — not used by `IVF_FLAT`/`IVF_SQ`/`IVF_HNSW_FLAT`/`IVF_HNSW_SQ`. Higher values improve accuracy at the cost of additional storage. |
+
+`max_iterations` and `sample_rate` also affect quantizer training, but since they apply to every IVF/HNSW index type (not just quantized ones), they're documented as general [Build-time Parameters](/indexing/vector-index#build-time-parameters) instead. All three are passed as keyword arguments to `create_index`, alongside `index_type`:
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {QuantizationCustomParams}
+    </CodeBlock>
+</CodeGroup>
