@@ -6,18 +6,18 @@ icon: "list"
 ---
 
 An **index** is a data structure that facilitates efficient scans and lookups on an embedded dataset. 
-
-## Supported Indexes
 LanceDB provides a comprehensive suite of indexes to optimize performance across different use cases and data types:
 
 - **Vector Index**: Efficiently searches for similar vectors across high-dimensional data (e.g. images, audio, or text embeddings)
 - **Full-Text Search Index**: Enables fast keyword-based searches by indexing words and phrases
 - **Scalar Index**: Accelerates filtering and sorting of structured numeric or categorical data
 
+## Supported Indexes
+
 | Index | Use Case | Description |
 | :--------- | :------- | :---------- |
-| `IVF` (Vector) | Large-scale vector search with configurable accuracy/speed trade-offs. Supports binary vectors with hamming distance. | Inverted File Index—a partition-based approximate nearest neighbor algorithm that groups similar vectors into partitions for efficient search.<br />Distance metrics: $\ell_2$ `cosine` `dot` `hamming`<br />Quantizations: `None/Flat` `PQ` `SQ` `RQ`|
-| `IVF_HNSW` (Vector) | Large-scale vector search requiring both high recall and efficient partitioning. Combines the scalability of IVF with the search quality of HNSW. | Hybrid index combining IVF partitioning with HNSW graphs built within each partition. Provides improved search quality over pure IVF while maintaining scalability.<br />Distance metrics: $\ell_2$ `cosine` `dot`<br />Quantizations: `None/Flat` `SQ` `PQ`|
+| `IVF` (Vector) | Large-scale vector search with configurable accuracy/speed trade-offs. | Inverted File Index—a partition-based approximate nearest neighbor algorithm that groups similar vectors into partitions for efficient search. <br />**Quantizations**: `None/Flat` `PQ` `SQ` `RQ`|
+| `IVF_HNSW` (Vector) | Large-scale vector search requiring both high recall and efficient partitioning. Combines the scalability of IVF with the search quality of HNSW. | Hybrid index combining IVF partitioning with HNSW graphs in each partition. Provides improved search quality over pure IVF while maintaining scalability.<br />**Quantizations**: `None/Flat` `SQ` `PQ`|
 | `FTS` (Full-text search) | String columns (e.g., title, description, content) requiring keyword-based search with BM25 ranking. | Full-text search index using BM25 ranking algorithm. Tokenizes text with configurable tokenization, stemming, stop word removal, and language-specific processing. |
 | `BTree` (Scalar) | Numeric, temporal, and string columns with mostly distinct values. Best for selective equality, inequality, and range predicates. | Sorted index storing sorted copies of scalar columns with block headers in a btree cache. Header entries map to blocks of rows (4096 rows per block) for efficient disk reads. |
 | `Bitmap` (Scalar) | Low-cardinality columns with few thousand or fewer distinct values. Accelerates equality and range filters. | Stores a bitmap for each distinct value in the column, with one bit per row indicating presence. Memory-efficient for low-cardinality data. |
@@ -25,15 +25,11 @@ LanceDB provides a comprehensive suite of indexes to optimize performance across
 | `FM` (Scalar) | String or binary columns that need raw substring search. | FM-Index over `Utf8`, `LargeUtf8`, `Binary`, or `LargeBinary` data for filters such as `contains(path, 'needle')`. Use FTS instead for tokenized word search and BM25 ranking. |
 
 ## Quantization
-LanceDB also supports several different [quantization](/indexing/quantization) methods, used by vector indexes to compress vectors and reduce storage requirements:
+LanceDB also supports several [quantization](/indexing/quantization) methods, used by vector indexes to compress vectors and reduce storage requirements:
 
 | Quantization | Use Case | Description |
 | :----------- | :------- | :---------- |
 | `PQ` (Product Quantization) | Default choice for most vector search scenarios. Use when you need to balance index size and recall. | Divides vectors into subvectors and quantizes each subvector independently. Provides a good balance between compression ratio and search accuracy. |
-| `SQ` (Scalar Quantization) | Use when you need faster indexing or when vector dimensions have consistent value ranges. | Quantizes each dimension independently. Simpler than PQ but typically provides less compression. |
 | `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. For `IVF_RQ`, vector dimensions must be divisible by `8`. |
+| `SQ` (Scalar Quantization) | Use when you need faster indexing or when vector dimensions have consistent value ranges. | Quantizes each dimension independently. Simpler than PQ but typically provides less compression. |
 | `None/Flat` | Use for binary vectors (with `hamming` distance) or when you need maximum recall and have sufficient storage. | No quantization—stores raw vectors. Provides the highest accuracy but requires more storage and memory. |
-
-## temp
-
-LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
