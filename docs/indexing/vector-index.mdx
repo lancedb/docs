@@ -31,9 +31,11 @@ LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with several t
 ## Choosing the Right Index
 
 LanceDB vector indexes are combined with several [quantization](/indexing/quantization) techniques to admit efficient storage.
-The following table lists provided quantized vector indexes and their common use cases:
+The following table lists provided quantized vector indexes and their common use cases. You can specify index type manually in
+Lance with `index_type`.
 
-| If your top priority is... | Use this index | Why | Approx. compression ratio | Python config class |
+
+| If your priority is... | Use this index | Why | Approx. compression ratio | Python config class |
 | :--- | :--- | :--- | :--- | :--- |
 | Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | IVF indexing with product quantization | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) | `IvfPq` |
 | Maximum compression | `IVF_RQ` | IVF indexing with RaBitQ quantization | Around `1/32` of raw size | `IvfRq` |
@@ -50,10 +52,8 @@ If your vector search frequently includes metadata filters (`where(...)`), use `
 
 ## Understanding Vector Indexes
 
-You can create and manage multiple vector indexes on any Lance dataset. LanceDB offers two vector indexing algorithms: 
+LanceDB offers two vector indexes, which can be created on any numeric Lance dataset: 
 **Inverted File (IVF)** and **Hierarchical Navigable Small World (HNSW)**.
-
-
 
 ### IVF
 
@@ -87,32 +87,31 @@ Coming soon!
 <Info>
 **IVF + HNSW**
 
-In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a sub-index inside IVF partitions. 
-What this means in practice is that vectors are first partitioned by IVF, then each selected partition is searched using an HNSW graph. 
-LanceDB supports the unquantized variant `IVF_HNSW_FLAT`, along with quantized variants such as `IVF_HNSW_PQ` and `IVF_HNSW_SQ`. 
-This combines IVF's scalability with HNSW's higher-recall ANN search within partitions.
+In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a substructure which 
+further indexes the selected vectors inside each IVF partition. 
+This combines the scalability of IVF with the high recall of HNSW.
+LanceDB supports quantized indexes `IVF_HNSW_FLAT`, `IVF_HNSW_PQ`, and `IVF_HNSW_SQ`. 
 </Info>
 
 
 ## Using Vector Indexes
-This section demonstrates how to configure, build, and search LanceDB vector indexes.
+Learn how to configure, build, and search LanceDB vector indexes.
 
 ### Configuration
 
 #### Build-time Parameters
 
-Parameters that apply to every LanceDB quantized index type. Pick an `index_type` using the table in [Choosing the Right Index](#choosing-the-right-index) above.
-
+These parameters apply to every LanceDB quantized index type. 
 | Parameter | Description |
 | :--- | :--- |
-| `metric` | Default is `l2`, other available are `cosine` or `dot`. `cosine` distances range from `0` (identical) to `2` (maximally dissimilar). |
+| `metric` | Default is `l2`, others available are `cosine` or `dot`. 
 | `num_partitions` | When left unset, LanceDB automatically chooses roughly `sqrt(num_rows)`. |
 | `target_partition_size` | An alternative IVF sizing knob that derives the partition count from a target number of rows per partition, instead of a partition count directly. Defaults to `8192` for IVF-family indexes (`IVF_FLAT`, `IVF_SQ`, `IVF_PQ`, `IVF_RQ`) and `1,048,576` for IVF-HNSW-family indexes (`IVF_HNSW_FLAT`, `IVF_HNSW_SQ`, `IVF_HNSW_PQ`) — HNSW graphs are far more memory-intensive to train, so each partition is kept much larger to limit how many separate graphs get built. If both `num_partitions` and `target_partition_size` are set, `num_partitions` takes precedence. |
 | `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if the dimension isn't evenly divisible by 16). Larger values often improve recall but can slow search. |
 
 #### Search-time Parameters
 
-Core knobs and controls available on a vector search call:
+Knobs available on a vector search call:
 
 | Parameter | Description |
 | :--- | :--- |
@@ -125,17 +124,7 @@ Core knobs and controls available on a vector search call:
 | `distance_range(lower_bound, upper_bound)` | Return only rows whose distance falls within `[lower_bound, upper_bound)`. Either bound is optional. Useful for near-duplicate detection or "close-enough" matching. |
 | `bypass_vector_index()` | Skip the ANN index and perform an exhaustive (flat) scan. Primary uses: (1) compute ground-truth results to measure ANN recall@k, and (2) query with a metric the index was not built for (e.g., a non-cosine query on a multivector column). |
 
-<Note>
-**Filtered queries and adaptive nprobes.** When a `where(...)` filter is active, LanceDB starts by scanning `minimum_nprobes` partitions and only extends toward `maximum_nprobes` if fewer than `limit` rows survive the filter. Setting `minimum_nprobes == maximum_nprobes` (or calling `nprobes(n)`) disables this adaptive behavior and fixes the partition count.
-</Note>
-
-<CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexNprobes}
-    </CodeBlock>
-</CodeGroup>
-
-Recommended `nprobes` behavior by index type:
+We recommend the following `nprobes` behavior by index type:
 
 | Index type | Guidance |
 | :--- | :--- |
@@ -143,9 +132,20 @@ Recommended `nprobes` behavior by index type:
 | `IVF_RQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
 | `IVF_PQ` | Keep auto-tuned `nprobes`; raise when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`. |
 
-##### Thresholding and Recall Measurement
+An example of a vector search exercising several of the above parameters.
 
-These controls are useful for thresholded retrieval, recall measurement, and working around index-level metric constraints.
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {VectorIndexNprobes}
+    </CodeBlock>
+</CodeGroup>
+
+<Note>
+**Filtered queries and adaptive nprobes.** When a `where(...)` filter is active, LanceDB initially scans `minimum_nprobes` 
+partitions and uses a wider scan if sufficiently few rows are found. 
+Set `minimum_nprobes == maximum_nprobes` or call `nprobes(n)` to instead fix the partition count.
+</Note>
+There are also several search-time controls for thresholded retrieval, recall measurement, and working around index-level metric constraints.
 
 **Thresholding with `distance_range`:**
 
@@ -155,19 +155,16 @@ These controls are useful for thresholded retrieval, recall measurement, and wor
     </CodeBlock>
 </CodeGroup>
 
-**Measuring recall with `bypass_vector_index`:**
+**Using `bypass_vector_index`:**
 
-Compare ANN results against a flat-scan ground truth to compute recall@k. This is the standard way to pick `nprobes` for your workload.
+Use `bypass_vector_index` to compute an exact **kNN** result. Compare with ANN results to compute **recall@k**. 
+Recall that exact queries may be prohibitively slow on production scales.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
     {VectorIndexBypassRecall}
     </CodeBlock>
 </CodeGroup>
-
-<Warning>
-Flat search is $O(n)$ — reserve `bypass_vector_index()` for sampled recall measurements or small tables, not production queries.
-</Warning>
 
 <Note title="Multivector distance constraint">
 Multivector indexing currently requires `distance_type="cosine"` — `l2` is rejected at index-creation time. That restriction is why `bypass_vector_index()` is the escape hatch for non-cosine queries on a multivector column: the metric you want at query time cannot be served by the index, so you fall back to a flat scan. See [Multivector Search](/search/multivector-search) for the full rules.
