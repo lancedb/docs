@@ -403,6 +403,24 @@ You can pass multiple updates in a single call to change metadata on several fie
 each call commits a single new table version.
 </Tip>
 
+### Canonical metadata keys
+
+You can use any string as a metadata key. By convention, LanceDB treats keys prefixed with
+`lancedb:` as canonical. LanceDB Enterprise displays these keys in the UI, and agents can rely
+on finding this information in a consistent place. Use them when they fit your use case:
+
+| Key | Purpose | Example |
+| --- | --- | --- |
+| `lancedb:description` | Human-readable description of the field. | `"CLIP embedding of the product image"` |
+| `lancedb:tag:<name>` | User-defined key/value tag, where the suffix names the tag category. | `"lancedb:tag:model": "clip"` |
+| `lancedb:logical-column` | Groups related columns into one logical column. For example, `feature_v1` and `feature_v2` might belong to the same logical column. | `"lancedb:logical-column": "feature"` |
+| `lancedb:status` | Life cycle state of the column: `production`, `candidate`, `deprecated`, or `archived`. | `"lancedb:status": "production"` |
+
+<Note>
+These keys are conventions, not enforced constraints. LanceDB does not validate their values,
+but following the conventions keeps your tables consistent with Enterprise tooling.
+</Note>
+
 ## Drop columns
 
 You can remove columns using the [`drop_columns`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.drop_columns)
