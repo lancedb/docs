@@ -429,7 +429,16 @@ deprecated in favor of `db.listTables()`.
 
 Treat the `pageToken` as opaque. Do not construct or parse it. A page can hold
 fewer entries than `limit` and still not be the last one, so keep going until
-the response no longer carries a `pageToken`:
+the response no longer carries a `pageToken`.
+
+<Warning>
+`listTables` and `list_tables` return tables in an arbitrary, backend-defined
+order, not lexicographical order. If you need a stable alphabetical listing
+with `startAfter` semantics, use the deprecated `tableNames` in TypeScript or
+`table_names` in Rust, which retain that behavior.
+</Warning>
+
+Walk the pages until the response no longer carries a `pageToken`:
 
 ```typescript TypeScript icon="square-js"
 const names: string[] = [];
