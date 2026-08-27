@@ -21,6 +21,7 @@ import {
     PyBasicVectorSearchQ2,
     PyBasicVectorSearchQ3,
     PyBasicVectorSearchQ4,
+    PyBasicSortPolars,
     PyBasicDeleteRows,
     PyBasicAddData,
     PyBasicAddColumns,
@@ -534,10 +535,9 @@ You can also sort the results after converting them to a Polars DataFrame.
 In TypeScript/Rust, you can sort the
 returned array in application code.
 
-```python Python icon="python"
-# Sort Polars DataFrame by power in descending order
-print(r1.sort("power", descending=True).limit(5))
-```
+<CodeBlock filename="Python" language="Python">
+{PyBasicSortPolars}
+</CodeBlock>
 
 | name | role | description | power |
 | --- | --- | --- | --- |

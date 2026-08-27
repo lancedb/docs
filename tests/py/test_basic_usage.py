@@ -158,6 +158,14 @@ def test_basic_usage(db_path_factory):
     print(r4)
     # --8<-- [end:basic_vector_search_q4]
 
+    # --8<-- [start:basic_sort_polars]
+    # Sort Polars DataFrame by power in descending order
+    print(r4.sort("power", descending=True).limit(5))
+    # --8<-- [end:basic_sort_polars]
+    sorted_power = r4.sort("power", descending=True)["power"].to_list()
+    assert sorted_power == sorted(sorted_power, reverse=True)
+    assert sorted_power[0] == 4.0
+
     # --8<-- [start:basic_drop_columns]
     table.drop_columns(["power"])
     # --8<-- [end:basic_drop_columns]

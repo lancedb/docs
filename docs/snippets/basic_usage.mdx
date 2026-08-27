@@ -24,6 +24,8 @@ export const PyBasicImports = "import json\n\nimport lancedb\nimport pandas as p
 
 export const PyBasicOpenTable = "table = db.open_table(\"camelot\")\n";
 
+export const PyBasicSortPolars = "# Sort Polars DataFrame by power in descending order\nprint(r4.sort(\"power\", descending=True).limit(5))\n";
+
 export const PyBasicVectorSearch = "query_vector = [0.03, 0.85, 0.61, 0.90]\nresult = table.search(query_vector).limit(5).to_polars()\nprint(result)\n";
 
 export const PyBasicVectorSearchQ1 = "# Who are the characters similar to  \"wizard\"?\nquery_vector_1 = [0.03, 0.85, 0.61, 0.90]\nr1 = (\n    table.search(query_vector_1)\n    .limit(5)\n    .select([\"name\", \"role\", \"description\"])\n    .to_polars()\n)\nprint(r1)\n";
