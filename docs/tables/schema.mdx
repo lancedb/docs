@@ -265,6 +265,46 @@ same call. Declare computed columns in a separate `add_columns` call from
 any evaluated transforms.
 </Info>
 
+#### Declare several computed columns at once
+
+You can declare more than one computed column in a single `add_columns` call.
+Each column joins the schema the next one resolves against, so later
+declarations in the same call can reference earlier ones in dependency order:
+
+<CodeGroup>
+```python Python icon="python"
+table.add_columns(
+    computed={
+        "doubled": "x * 2",
+        "doubled_plus_one": "doubled + 1",
+    }
+)
+```
+
+```typescript TypeScript icon="square-js"
+await table.addColumns({
+  computed: [
+    { name: "doubled", valueSql: "x * 2" },
+    { name: "doubled_plus_one", valueSql: "doubled + 1" },
+  ],
+});
+```
+
+```rust Rust icon="rust"
+table
+    .add_columns()
+    .computed("doubled", "x * 2")
+    .computed("doubled_plus_one", "doubled + 1")
+    .execute()
+    .await?;
+```
+</CodeGroup>
+
+The batch is planned and committed as one operation. Order is dependency
+order: a declaration can only reference columns that appear before it in the
+same call, and referencing a column declared later fails as an unknown
+column.
+
 ### Refresh a computed column
 
 A declared computed column starts empty. Call `refresh_column` (Python and
@@ -293,6 +333,13 @@ a value are left alone, so calling `refresh_column` when nothing new needs
 filling is a no-op that costs one scan of the unfilled rows. Because refresh
 never revisits a filled row, mutating an input after the fact does not change
 the stored value — to recompute, drop the column and declare it again.
+
+Refresh dependencies in order. If a computed column reads another computed
+column, refresh the input first: refreshing a dependent while its input still
+has rows to fill is refused and names the input column. Otherwise the
+dependent would bake the input's placeholder null into rows the input's
+refresh has not reached yet, and the fill-once contract would keep those
+values in place.
 
 The blocking form is refused when the table uses an LSM write specification,
 and is refused on LanceDB Enterprise because a remote refresh runs as a
