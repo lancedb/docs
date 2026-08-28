@@ -128,8 +128,7 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | Index type | Guidance |
 | :--- | :--- |
 | `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the auto-tuned `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
-| `IVF_RQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
-| `IVF_PQ` | Keep auto-tuned `nprobes`; raise when recall is insufficient. Often preferred over `IVF_RQ` when `dimension <= 256`. |
+| `IVF_RQ`, `IVF_PQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
 
 An example of a vector search exercising several of the above parameters.
 
