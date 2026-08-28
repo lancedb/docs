@@ -71,7 +71,7 @@ for a closest match, then run a brute-force comparison against its resulting clu
 giving an approximate ANN result.
 
 However, observe that a queried vector may lie near the boundary of $2$ or more clusters; thus, the true nearest neighbors are scattered across several different clusters.
- To address this, LanceDB exposes the `nprobe` parameter, which specifies the number of clusters searched (`default = 1`). 
+ To address this, LanceDB exposes the `nprobes` parameter, which specifies the number of clusters searched (`default = 1`). 
 A high `nprobe` parameter will yield more accurate results at slightly higher runtime.
 
 <Frame caption="Edge case for single-cluster brute force.">
