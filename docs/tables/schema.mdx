@@ -305,6 +305,18 @@ order: a declaration can only reference columns that appear before it in the
 same call, and referencing a column declared later fails as an unknown
 column.
 
+#### Reference blob columns
+
+An expression can read a [Blob API](/tables/multimodal) column: refresh
+materializes the referenced blob input as `LargeBinary` payload bytes before
+evaluating the expression. Directly projecting a blob column preserves its
+blob semantics on the output — the new column inherits the source's blob
+metadata and is stored through the same encoding path. Any other expression
+produces an ordinary Arrow-typed column, even when it reads a blob input.
+
+Blob-aware computed columns are available on local tables. Support on LanceDB
+Enterprise ships once the server planner rollout completes.
+
 ### Refresh a computed column
 
 A declared computed column starts empty. Call `refresh_column` (Python and
