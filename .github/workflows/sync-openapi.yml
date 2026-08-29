@@ -1,8 +1,11 @@
 name: Sync OpenAPI Spec
 
+# The weekly schedule and the auto-merge step are suspended for the duration of
+# the documentation migration, during which no automation may write to `main`
+# unattended. Run this manually when the spec needs syncing; it opens a pull
+# request for a human to merge. Restore both when the migration completes.
+
 on:
-  schedule:
-    - cron: "0 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -43,21 +46,3 @@ jobs:
             Syncs `docs/api-reference/rest/openapi.yml` from `lance-format/lance-namespace` (`docs/src/rest.yaml`).
           branch: "chore/sync-openapi"
           delete-branch: true
-
-      - name: Wait for checks and merge
-        if: steps.cpr.outputs.pull-request-number != ''
-        env:
-          GH_TOKEN: ${{ secrets.DOCS_BOT_TOKEN }}
-        run: |
-          set -euo pipefail
-          pr="${{ steps.cpr.outputs.pull-request-number }}"
-          # Give the pull_request workflow a moment to register checks before watching.
-          for i in $(seq 1 10); do
-            if gh pr checks "$pr" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then break; fi
-            sleep 15
-          done
-          gh pr checks "$pr" -R "$GITHUB_REPOSITORY" --watch --fail-fast --interval 30
-          # --admin bypasses the "require status check" base-branch policy on the
-          # immediate merge. Safe here: checks are already confirmed green above, and
-          # the bot token (admin) only ever merges this one bot-generated sync PR.
-          gh pr merge "$pr" -R "$GITHUB_REPOSITORY" --squash --delete-branch --admin
