@@ -43,7 +43,7 @@ Lance with `index_type`.
 |  | `IVF_HNSW_PQ` | IVF-HNSW indexing with product quantization | Varies | `IvfHnswPq` |
 | Best recall/latency trade-off | `IVF_HNSW_SQ` | IVF-HNSW indexing with scalar | Typically a little larger than `1/4` of raw size | `IvfHnswSq` |
 | Highest recall / no quantization | `IVF_HNSW_FLAT` | IVF-HNSW indexing with no quantization | Around raw vector size plus HNSW graph overhead | `IvfHnswFlat` |
-|  | `IVF_FLAT` | IVF indexing with no quantization | Varies | `IvfFlat` |
+|  | `IVF_FLAT` | IVF indexing with no quantization | `1` | `IvfFlat` |
 
 
 <Warning>
@@ -61,20 +61,20 @@ The **Inverted File Index (IVF)** accelerates ANN searches by drastically reduci
 a small set of *centroids* corresponding to an approximate solution to the 
 [$k$-means clustering](https://en.wikipedia.org/wiki/K-means_clustering) problem. 
 Each vector remembers its nearest centroid, and each centroid remembers its associated set of vectors, 
-called its *cluster* or *partition*. 
+called its *partition*. 
 <Frame caption="Example partition of a geometric space, with colored marks denoting centroids.">
   <img src="/static/assets/images/indexing/ivfpq_ivf_desc.webp" alt="IVF vector-space partitioning" />
 </Frame>
 
 At query time, we can compare the queried vector to the smaller set of *centroids* (as opposed to the entire dataset)
-for a closest match, then run a brute-force comparison against its resulting cluster. This technique quickly prunes a large search space,
+for a closest match, then run a brute-force comparison against its resulting partition. This technique quickly prunes a large search space,
 giving an approximate ANN result.
 
-However, observe that a queried vector may lie near the boundary of $2$ or more clusters; thus, the true nearest neighbors are scattered across several different clusters.
- To address this, LanceDB exposes the `nprobes` parameter, which specifies the number of clusters searched (`default = 1`). 
+However, observe that a queried vector may lie near the boundary of $2$ or more partitions; thus, the true nearest neighbors are scattered across several different partitions.
+ To address this, LanceDB exposes the `nprobes` parameter, which specifies the number of partitions searched. 
 A high `nprobes` parameter will yield more accurate results at slightly higher runtime.
 
-<Frame caption="Edge case for single-cluster brute force.">
+<Frame caption="Edge case for single-partition brute force.">
   <img src="/static/assets/images/indexing/ivfpq_query_vector.webp" alt="IVF vector-space partitioning" />
 </Frame>
 
