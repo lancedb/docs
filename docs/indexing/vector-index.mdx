@@ -105,7 +105,7 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | :--- | :--- |
 | `metric` | Default is `l2`, others available are `cosine` and `dot`. 
 | `num_partitions` | The number of IVF partitions constructed (corresponds to the $k$ in $k$-means clustering). Targets roughly `sqrt(num_rows)` by default. |
-| `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition. Defaults to `8192 = 2^13` for IVF-family indexes and `1,048,576 = 2^20` for IVF-HNSW-family indexes. `num_partitions` takes precedence over `target_partition_size`. |
+| `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition. Defaults to `8192 = 2^13` for IVF-family indexes and `1,048,576 = 2^20` for IVF-HNSW-family indexes. `num_partitions` takes precedence over `target_partition_size` if both are set. |
 | `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if not a multiple of 16). Larger values produce better recall and slower search. |
 | `max_iterations` | Maximum number of k-means training iterations, for every IVF/HNSW index type. Default `50`. Increase for larger datasets or to improve training quality. |
 | `sample_rate` | Number of k-means training samples per partition, for every IVF/HNSW index type. Default `256`. Higher values increase both accuracy and training time. |
@@ -203,10 +203,6 @@ For a vector field nested inside a struct, pass its full dotted path as `vector_
     {VectorIndexNestedField}
     </CodeBlock>
 </CodeGroup>
-
-<Note>
-Nested paths follow Lance field-path semantics: dot-separate each struct field from root to leaf (for example, `image.thumbnail.embedding`).
-</Note>
 
 ### IVF-HNSW Indexes
 
