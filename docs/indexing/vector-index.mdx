@@ -104,7 +104,7 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | Parameter | Description |
 | :--- | :--- |
 | `metric` | Default is `l2`, others available are `cosine` and `dot`. 
-| `num_partitions` | When left unset, targets roughly `sqrt(num_rows)`. |
+| `num_partitions` | The number of IVF partitions constructed (corresponds to the $k$ in $k$-means clustering). Targets roughly `sqrt(num_rows)` by default. |
 | `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition. Defaults to `8192 = 2^13` for IVF-family indexes and `1,048,576 = 2^20` for IVF-HNSW-family indexes. `num_partitions` takes precedence over `target_partition_size`. |
 | `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if not a multiple of 16). Larger values produce better recall and slower search. |
 | `max_iterations` | Maximum number of k-means training iterations, for every IVF/HNSW index type. Default `50`. Increase for larger datasets or to improve training quality. |
@@ -130,13 +130,14 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the auto-tuned `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
 | `IVF_RQ`, `IVF_PQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
 
-An example of a vector search exercising several of the above parameters.
 
 <Note>
 **Filtered queries and adaptive `nprobes`.** When a `where(...)` filter is active, LanceDB initially scans `minimum_nprobes` 
 partitions and uses a wider scan if sufficiently few rows are found. 
 Set `minimum_nprobes == maximum_nprobes` or call `nprobes(n)` to instead fix the partition count.
 </Note>
+
+Here is an example of a vector search exercising several of the above parameters.
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -145,7 +146,7 @@ Set `minimum_nprobes == maximum_nprobes` or call `nprobes(n)` to instead fix the
 </CodeGroup>
 
 
-There are also advanced search-time controls for thresholded retrieval, recall measurement, and working around index-level metric constraints.
+LanceDB also supports advanced search-time controls for thresholded retrieval, recall measurement, and working around index-level metric constraints.
 
 **Thresholding with `distance_range`:**
 
