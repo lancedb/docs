@@ -14,6 +14,8 @@ discussion of LanceDB vector indexes and quantized vector indexes can be found [
 
 ## Quantization Techniques
 LanceDB provides $3$ distinct quantization techniques: Product Quantization (PQ), RaBitQ Quantization (RQ), and Scalar Quantization (SQ).
+Recall that all quantizations perform **lossy** compression, in that they irreversibly lose some degree of precision in order to 
+compactly store an index.
 
 ### Product Quantization (PQ)
 To visualize PQ, assume a vector dataset has $d$ dimensions, with a **chunk** of a vector denoting a contiguous block of entries. Imagine that each vector has
@@ -39,7 +41,7 @@ which has been compressed to $4$ chunks $\times 8$-bit integers $= 32$ bits of q
 RaBitQ is an advanced quantization technique that outperforms PQ in several ways.
 It needs no codebook to train, estimates distances very quickly at query-time, 
 and crucially, quantizes each vector in (with some small overhead) just **one bit per dimension!** 
-In practice, RaBitQ compresses a $1024$-dimensional `float32` vector into just a few hundred bytes, while maintaining good recall.
+In practice, RaBitQ compresses a $1024$-dimensional `float32` vector into just a few thousand bits, while maintaining good recall.
 
 The inner workings of RaBitQ quantization are rather mathematically dense. It generates a quantization codebook by 
 applying a uniformly random, approximately distance-preserving orthogonal transformation of the vertices of the $d$-dimensional hypercube, 
@@ -47,7 +49,7 @@ where $d$ is the dimensionality of the dataset. We defer the details, and an ele
 
 #### Using RaBitQ
 Use RaBitQ quantization by selecting quantized index types ending in the suffix `RQ`. For example, call `create_index` with `index_type="IVF_RQ"`. 
-Note that when using `IVF_RQ`, the dimension of the dataset should be a multiple of `8`.
+Note that when using `IVF_RQ`, the dimension of the dataset must be a multiple of `8`.
 
 `num_bits` determines how many bits are used to quantize each dimension.
 `1` is the standard RaBitQ setting. Increase to `2`, `4`, or `8` bits to achieve better recall for additional storage and query-time compute.
