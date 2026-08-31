@@ -79,18 +79,33 @@ A high `nprobes` parameter will yield more accurate results at slightly higher r
 </Frame>
 
 ### HNSW
-{/*
-The **Hierarchical Navigable Small World (HNSW)** index ... (todo. to consider: mention skip list?)
-*/}
-Coming soon!
+**Hierarchical Navigable Small World (HNSW)** constructs a layered graph hierarchy on the vector set, with edges representing distances. 
+We can visualize an HNSW index as a vertical stack of graphs, with the top layer having very few edges and
+each other layer having a multiplicative factor more edges than the layer above it.
 
+High layers of a HNSW hierarchy represent sparse, higher-distance networks, and lower layers represent finer, lower-distance networks. 
+To query a vector $q$, the index proceeds iteratively through layers, first finding $q$'s nearest neighbor in the graph, then proceeding recursively
+through the induced subhierarchy until the lowest layer is reached.
+
+<Frame caption="HNSW hierarchy: sparse network at the top layer, fine network at the bottom.">
+  <img src="/static/assets/images/indexing/hnsw_layered_graph.png" alt="HNSW layered graph hierarchy" />
+</Frame>
+
+To visualize this process, imagine that you must drive your car from San Francisco to a specific house in Boston. Initially, you must first drive thousands of miles
+on the interstate freeway I-90 E. Eventually, you merge onto the Massachusetts Turnpike, the center
+of the greater Boston highway system. From there, you use a series of increasingly smaller, narrower roads within the city (Charles River Bridge, St. Paul St,
+Thatcher St) before finally reaching the house. 
+
+A key observation is that you must initially travel far distances through long-distance road networks 
+(the interstate freeway system), before proceeding to finer and finer road networks (greater Boston highway system, central Brookline neighborhood connectors) before finally reaching
+your destination. This iterative series of road networks mimics the layered graph traversals performed by a HNSW query.
 <Info>
 **IVF + HNSW**
 
 In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a substructure which 
 further indexes the selected vectors inside each IVF partition. 
 This combines the scalability of IVF with the high recall of HNSW.
-LanceDB supports quantized indexes `IVF_HNSW_FLAT`, `IVF_HNSW_PQ`, and `IVF_HNSW_SQ`. 
+LanceDB supports IVF-HNSW-based quantized indexes `IVF_HNSW_FLAT`, `IVF_HNSW_PQ`, and `IVF_HNSW_SQ`. 
 </Info>
 
 
