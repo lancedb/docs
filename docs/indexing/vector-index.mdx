@@ -133,7 +133,7 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 
 <Note>
 **Filtered queries and adaptive `nprobes`.** When a `where(...)` filter is active, LanceDB initially scans `minimum_nprobes` 
-partitions and uses a wider scan if sufficiently few rows are found. 
+partitions and uses a wider scan if too few rows are found. 
 Set `minimum_nprobes == maximum_nprobes` or call `nprobes(n)` to instead fix the partition count.
 </Note>
 
