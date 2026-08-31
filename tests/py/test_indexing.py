@@ -63,6 +63,7 @@ def test_vector_index_build_ivf(tmp_db):
     table.create_index(
         metric="cosine",
         vector_column_name="keywords_embeddings",
+        index_type="IVF_PQ",
     )
     # --8<-- [end:vector_index_build_ivf]
 
@@ -292,6 +293,25 @@ def test_vector_index_hnsw(tmp_db):
 
     df = table.search(np.random.random((16))).limit(2).to_pandas()
     assert len(df) == 2
+
+
+def test_quantization_custom_params(tmp_db):
+    table = tmp_db.create_table(
+        "quantization-custom-params",
+        _make_vector_rows(256, 64),
+        mode="overwrite",
+    )
+
+    # --8<-- [start:quantization_custom_params]
+    table.create_index(
+        index_type="IVF_RQ",
+        num_bits=2,
+        max_iterations=100,
+        sample_rate=512,
+    )
+    # --8<-- [end:quantization_custom_params]
+
+    assert table.list_indices()
 
 
 def test_vector_index_binary(tmp_db):
