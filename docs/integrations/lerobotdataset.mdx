@@ -18,6 +18,17 @@ What that buys you:
 
 - **Train from object storage with a true global shuffle.** Lance reads random frames in place from S3, GCS, HF Hub or HF Storage Buckets, fetching only the byte ranges each batch needs. Upstream's no-download path is a buffered stream: on DROID (27.6M frames) a 230 GB buffer still shuffles 0.15% of the dataset, while Lance shuffles 100% in about 36 GB, at the same throughput, with a first batch in 13 s instead of 7 minutes.
 - **Keep the GPUs fed without burning cores.** Lance plans whole batches (one table read, one blob fetch, decoders reused) instead of one frame per call. On DROID that is 6x upstream's map-style throughput at equal workers, and it clears an 8xH100 node's ~880 samples/s demand from local disk at 16 workers. From object storage the budget is bandwidth: about 2.7 GB/s, under a quarter of one 100 GbE link.
+- **Measured end to end** (8xH100, SmolVLA on DROID, lerobot's default `num_workers=4`):
+
+| configuration | shuffle | samples/s | GPU data wait | wall clock |
+|---|---|---|---|---|
+| Lance, S3, nothing downloaded | global, all 27.6M frames | 572 | 1.3% | 252 s |
+| Lance, local NVMe | global, all 27.6M frames | 584 | 1.0% | 215 s |
+| upstream, local NVMe, after a 412 GB download | global | 362 | 40.2% | 396 s |
+| upstream streaming (the no-download path) | windowed, 0.004% | does not run today | | |
+
+The first row is the point: a full global shuffle, read in place from object storage, with the GPUs idle 1.3% of the time. Upstream reaches parity locally by doubling dataloader workers, so the durable difference is CPU cost and the download; the streaming path currently cannot train a multi-GPU language-conditioned policy at all (no per-rank sharding, and batch dispatch rejects the task strings a VLA needs).
+
 - **The training copy is also a database.** Every tabular feature of every frame is one query away, with scalar indexes on `episode_index`, `task_index` and `video_key` built at conversion time. Curation, search, enrichment and EDA run against the same tables the trainer reads.
 
 ## Install
