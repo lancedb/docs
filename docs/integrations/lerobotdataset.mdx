@@ -1,94 +1,94 @@
 ---
 title: "LeRobotDataset"
 sidebarTitle: "LeRobotDataset"
-description: "Use Lance-backed LeRobotDataset loaders and LanceDB to inspect, filter, and train on robotics datasets from the Hugging Face Hub."
+description: "Train LeRobot policies straight from object storage, and curate, search and visualize robotics datasets as Lance tables."
+keywords: ["lerobot", "robotics", "droid", "training", "dataloader"]
 ---
 
 import {
   PyFrameworksLerobotFilterFrames,
-  PyFrameworksLerobotLancedbImageDataset,
-  PyFrameworksLerobotLancedbVideoDataset,
+  PyFrameworksLerobotLoad,
   PyFrameworksLerobotOpenLanceTables,
+  PyFrameworksLerobotTrainReady,
 } from '/snippets/integrations.mdx';
 
-[LeRobot](https://huggingface.co/docs/lerobot/index) is Hugging Face's open-source robotics stack for collecting data, training policies, running simulations, and sharing robotics datasets and models on the Hub.
+[LeRobot](https://huggingface.co/docs/lerobot/index) is Hugging Face's open-source robotics stack. Since [lerobot#4363](https://github.com/huggingface/lerobot/pull/4363), `lerobot` reads Lance-formatted datasets natively: the same `LeRobotDataset` class, the same items, the same training pipeline, selected automatically by `"storage_format": "lance"` in the dataset's metadata. No subclasses, no wrapper library.
 
-[LeRobotDataset v3.0](https://huggingface.co/docs/lerobot/lerobot-dataset-v3) standardizes robot learning data across sensorimotor time series, actions, multi-camera video, and task metadata. Its v3 layout stores high-frequency tabular signals in Parquet, visual streams as MP4 shards, and metadata that reconstructs episode-level views from larger files.
+What that buys you:
 
-Lance pairs well with LeRobot when you need high-performance random access, lazy multimodal blob reads, and a single table interface for curation, search, and training data preparation. The `lerobot-lancedb` package ships Lance-backed `LeRobotDataset` subclasses, and LanceDB can open Lance-formatted LeRobot datasets on the Hub directly through `hf://` URIs.
+- **Train from object storage with a true global shuffle.** Lance reads random frames in place from S3, GCS, HF Hub or HF Storage Buckets, fetching only the byte ranges each batch needs. Upstream's no-download path is a buffered stream: on DROID (27.6M frames) a 230 GB buffer still shuffles 0.15% of the dataset, while Lance shuffles 100% in about 36 GB, at the same throughput, with a first batch in 13 s instead of 7 minutes.
+- **Keep the GPUs fed without burning cores.** Lance plans whole batches (one table read, one blob fetch, decoders reused) instead of one frame per call. On DROID that is 6x upstream's map-style throughput at equal workers, and it clears an 8xH100 node's ~880 samples/s demand from local disk at 16 workers. From object storage the budget is bandwidth: about 2.7 GB/s, under a quarter of one 100 GbE link.
+- **The training copy is also a database.** Every tabular feature of every frame is one query away, with scalar indexes on `episode_index`, `task_index` and `video_key` built at conversion time. Curation, search, enrichment and EDA run against the same tables the trainer reads.
 
 ## Install
 
 ```bash
-pip install lancedb lance lerobot-lancedb
+pip install "lerobot[lancedb]"   # the reader, inside lerobot itself
+pip install lerobot-lancedb      # the converter
 ```
 
-## Use Lance-backed LeRobotDataset loaders
+## Convert a dataset
 
-`LeRobotLanceDataset` is useful when your Lance-backed dataset stores decoded image observations. It's a drop-in replacement for `LeRobotDataset`, so existing policy training code keeps working with the usual PyTorch dataset and dataloader patterns.
+Any LeRobot v3.0 dataset, from the Hub or a local directory:
+
+```bash
+lerobot-lance-convert --repo-id lerobot/pusht --out ./pusht-lance
+```
+
+The output keeps `meta/` unchanged and adds three Lance tables (`frames`, `videos`, `meta`). Videos are stored as blobs without re-encoding, so items are bit-identical to the source. `lerobot-lance-doctor` audits the result, and regularly finds problems in the source itself: the DROID repo, for example, carries 44% orphaned rows that filename-based tooling never notices.
+
+Host the result anywhere: an HF dataset repo (`hf upload`, tag it `v3.0`), an HF Storage Bucket (`hf buckets sync`), or any object store (`aws s3 sync`).
+
+## Load and train
+
+Same class, every location:
 
 <CodeBlock filename="Python" language="Python" icon="python">
-  {PyFrameworksLerobotLancedbImageDataset}
+  {PyFrameworksLerobotLoad}
 </CodeBlock>
 
-For datasets that store camera observations as MP4 video segments, use `LeRobotLanceVideoDataset` instead.
+An explicit `root` URI works for any object store: `LeRobotDataset("lerobot/pusht", root="s3://my-bucket/pusht-lance")`. Remote roots materialize only `meta/` locally; data is fetched per batch. Everything in the LeRobot training stack works unchanged, including temporal windows and `DataLoader`:
 
 <CodeBlock filename="Python" language="Python" icon="python">
-  {PyFrameworksLerobotLancedbVideoDataset}
+  {PyFrameworksLerobotTrainReady}
 </CodeBlock>
 
-<Info>
-Use the image loader for Lance-backed repos that store image frames. Use the video loader for MP4-backed LeRobot datasets such as `lance-format/lerobot-pusht-lance`.
-</Info>
+Or through the CLI, including held-out evaluation on a remote dataset, which requires random access and is therefore unique to the Lance path:
 
-## Open LeRobot Lance tables with LanceDB
+```bash
+lerobot-train \
+  --dataset.repo_id=my-org/my-bucket/pusht-lance \
+  --dataset.repo_type=bucket \
+  --dataset.eval_split=0.02 \
+  --policy.type=act
+```
 
-Lance-formatted LeRobot datasets published by `lance-format` expose each `.lance` file under `data/` as a LanceDB table. The PushT dataset, for example, has `frames`, `episodes`, and `videos` tables.
+## Visualize TB-scale datasets in Foxglove
+
+```bash
+lerobot-dataset-viz --repo-id lance-format/pusht-lance --episode-index 3 --display-mode foxglove
+```
+
+Connect the Foxglove app to `ws://localhost:8765` and scrub. This serves the episode on demand from wherever the dataset lives: scrubbing an episode of the 373 GB DROID from S3 transfers a few MB, only the frames on screen. No MCAP export, no download.
+
+## Query, curate, enrich
+
+The frames table is a LanceDB table like any other:
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLerobotOpenLanceTables}
 </CodeBlock>
 
-Opening the tables directly is handy for inspecting schemas, counting rows, sampling metadata, or building curation workflows before any data reaches the training loop.
-
-## Filter a frame window
-
-Most robotics workflows want a deterministic slice by `episode_index`, `frame_index`, or task metadata long before training begins. LanceDB filters those rows without touching the video blobs.
+Filter with SQL over any feature, using the indexes built at conversion:
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLerobotFilterFrames}
 </CodeBlock>
 
-With the filtered set in hand, you can materialize a smaller local LanceDB database, add derived columns, attach embeddings, or build vector and scalar indexes for faster repeated access.
+From here it is standard LanceDB: add columns (embeddings, quality scores, corrected labels) to a TB-scale dataset in place without touching the videos, build vector or full-text indexes over task strings, and drop bad episodes from training with `episodes=[...]` instead of rewriting files. The training reader ignores columns it does not know about, so enrichment and training share one copy of the data.
 
-## Example Lance-formatted LeRobot datasets
+<Info>
+Lance datasets are read-only in LeRobot by design: record and edit in the default format, then convert. The default Parquet/MP4 format on buckets remains streaming-only; map-style remote access is specific to the Lance format.
+</Info>
 
-<CardGroup cols={2}>
-  <Card title="LeRobot PushT" href="/datasets/lerobot-pusht">
-    A Lance-formatted version of `lerobot/pusht` with frame, episode, and video tables.
-  </Card>
-  <Card title="LeRobot X-VLA Soft-Fold" href="/datasets/lerobot-xvla-soft-fold">
-    A multi-camera robotics dataset packaged as Lance tables for frame-level and episode-level access.
-  </Card>
-</CardGroup>
-
-## More resources
-
-<CardGroup cols={2}>
-  <Card title="LeRobotDataset v3.0" href="https://huggingface.co/docs/lerobot/lerobot-dataset-v3">
-    Hugging Face's guide to the v3 dataset layout, streaming, transforms, and migration.
-  </Card>
-  <Card title="lerobot-lancedb" href="https://lancedb.github.io/lerobot-lancedb/">
-    API documentation for the Lance-backed LeRobotDataset implementations.
-  </Card>
-</CardGroup>
-
-## When to use each interface
-
-| Interface | Best for |
-|:---|:---|
-| `LeRobotDataset` | Standard LeRobot training loops and policy code |
-| `LeRobotLanceDataset` | Drop-in training on Lance-backed image datasets |
-| `LeRobotLanceVideoDataset` | Drop-in training on Lance-backed video datasets |
-| LanceDB | Interactive inspection, filtering, curation, search, indexing, and materializing subsets |
-| `lance.dataset(...)` | Lower-level schema, fragment, index, and blob access |
+Public examples to try everything above: [`lance-format/pusht-lance`](https://huggingface.co/datasets/lance-format/pusht-lance) and friends under the [`lance-format`](https://huggingface.co/lance-format) org.
