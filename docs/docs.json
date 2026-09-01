@@ -518,6 +518,10 @@
   },
   "redirects": [
     {
+      "source": "/hybrid-search",
+      "destination": "/search/hybrid-search"
+    },
+    {
       "source": "/integrations/reranking/rrf",
       "destination": "reranking/rrf"
     },
