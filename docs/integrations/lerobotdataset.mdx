@@ -17,7 +17,7 @@ import {
 What that buys you:
 
 - **Train from object storage with a true global shuffle.** Lance reads random frames in place from S3, GCS, HF Hub or HF Storage Buckets, fetching only the byte ranges each batch needs. Upstream's no-download path is a buffered stream: on DROID (27.6M frames) a 230 GB buffer still shuffles 0.15% of the dataset, while Lance shuffles 100% in about 36 GB, at the same throughput, with a first batch in 13 s instead of 7 minutes.
-- **Keep the GPUs fed without burning cores.** Lance plans whole batches (one table read, one blob fetch, decoders reused) instead of one frame per call. On DROID that is 6x upstream's map-style throughput at equal workers, and it clears an 8xH100 node's ~880 samples/s demand from local disk at 16 workers. From object storage the budget is bandwidth: about 2.7 GB/s, under a quarter of one 100 GbE link.
+- **Keep the GPUs fed without burning cores.** Lance plans whole batches (one table read, one blob fetch, decoders reused) instead of one frame per call. On DROID that is 6x upstream's map-style throughput at equal workers, which is why 4 dataloader workers per rank keep 8xH100 fed where upstream needs 8. From object storage the budget is bandwidth, and it is modest: well under a quarter of one 100 GbE link at current per-sample cost.
 - **Measured end to end** (8xH100, SmolVLA on DROID, lerobot's default `num_workers=4`):
 
 | configuration | shuffle | samples/s | GPU data wait | wall clock |
