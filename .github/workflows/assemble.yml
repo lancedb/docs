@@ -1,0 +1,117 @@
+name: Assemble
+
+# The published site is assembled from the roots declared in `assemble.yaml`
+# rather than served straight from this repository. This workflow proves the
+# assembler changes nothing observable, and on `main` publishes the result to the
+# `assembled` branch that Mintlify serves.
+#
+# The invariant checked on every pull request is:
+#
+#     mint export (assembled tree)  ==  mint export (docs/ directly)
+#
+# Both sides are exported from the same commit in the same run, so the check
+# cannot go stale the way a stored baseline can.
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Serialize pushes to main: two runs force-pushing `assembled` would race.
+  group: assemble-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Mintlify CLI
+        run: npm install -g mint
+
+      # The OpenAPI spec is tracked at a release tag, not a commit. If the two
+      # have drifted the site would document something that was never released.
+      - name: Check the OpenAPI spec matches its release
+        run: make check-spec
+
+      - name: Assemble
+        run: make assemble
+
+      - name: Check links in the assembled tree
+        working-directory: build/site
+        run: mint broken-links
+
+      # The assembler must not change what readers see. Export the assembled
+      # tree and the source tree, then compare. `compare_exports.py` normalizes
+      # the per-build UUIDs Mintlify regenerates each run, and quarantines only
+      # reference pages that failed to generate request examples at all.
+      - name: Export the assembled tree
+        working-directory: build/site
+        run: mint export --output "$RUNNER_TEMP/assembled.zip"
+
+      - name: Export the source tree
+        working-directory: docs
+        run: mint export --output "$RUNNER_TEMP/direct.zip"
+
+      - name: Compare
+        run: |
+          python3 scripts/compare_exports.py \
+            "$RUNNER_TEMP/direct.zip" "$RUNNER_TEMP/assembled.zip"
+
+      - name: Upload the assembled tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: assembled-site
+          path: build/site
+          retention-days: 7
+
+  publish:
+    name: Publish to the assembled branch
+    needs: assemble
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the assembled tree
+        uses: actions/download-artifact@v4
+        with:
+          name: assembled-site
+          path: site
+
+      # `assembled` holds generated output only and is never hand-edited, so it
+      # carries a single commit rather than a history worth preserving. Mintlify
+      # serves this branch; repointing it is how cutover and rollback happen.
+      - name: Push
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd site
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "assemble ${GITHUB_SHA:0:7}"
+          git push -q --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            HEAD:refs/heads/assembled
+          echo "published $(git rev-parse --short HEAD) to assembled from ${GITHUB_SHA:0:7}"

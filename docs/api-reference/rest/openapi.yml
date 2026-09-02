@@ -29,6 +29,11 @@ info:
     Lance REST Namespace implementation, which defines a complete REST server that can work with Lance datasets.
     See https://lance.org/format/namespace/rest for more details.
 servers:
+  # A concrete URL must come first. Documentation renderers and API consoles
+  # substitute no variables when every server is templated, so they cannot build
+  # a request URL and render an error in place of each endpoint's code samples.
+  - url: http://localhost:2333
+    description: Default local server
   - url: "{scheme}://{host}:{port}/{basePath}"
     description: Generic server URL with all parts configurable
     variables:
@@ -1124,11 +1129,16 @@ paths:
       - $ref: "#/components/parameters/branch"
       - name: "on"
         in: query
-        description: Lance field path to use for matching rows. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
+        description: Lance field paths to use for matching rows. Repeat the parameter once per field to match on a composite key; a row matches only when every listed field is equal. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
         required: true
+        style: form
+        explode: true
         schema:
-          type: string
-          minLength: 1
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
       - name: "when_matched_update_all"
         in: query
         description: Update all columns when rows match
@@ -1183,7 +1193,7 @@ paths:
       description: |
         Performs a merge insert (upsert) operation on table `id`.
         This operation updates existing rows
-        based on a matching column and inserts new rows that don't match.
+        based on one or more matching columns and inserts new rows that don't match.
         It returns the number of rows inserted and updated.
 
         For tables that have been declared but not yet created on storage
@@ -1194,7 +1204,7 @@ paths:
         REST namespace uses Arrow IPC stream as the request body.
         It passes in the `MergeInsertIntoTableRequest` information in the following way:
         - `id`: pass through path parameter of the same name
-        - `on`: pass through query parameter of the same name
+        - `on`: pass through query parameter of the same name, repeated once per field path
         - `when_matched_update_all`: pass through query parameter of the same name
         - `when_matched_update_all_filt`: pass through query parameter of the same name
         - `when_not_matched_insert_all`: pass through query parameter of the same name
@@ -1579,7 +1589,8 @@ paths:
       operationId: AlterTableBackfillColumns
       description: |
         Trigger an asynchronous backfill job for a computed column on table `id`.
-        The column must be a virtual (UDF-backed) column. Returns a job ID for tracking.
+        The column must be a virtual (UDF-backed) column or a computed column
+        declared with an expression binding. Returns a job ID for tracking.
       requestBody:
         required: true
         content:
@@ -3021,6 +3032,16 @@ components:
         transaction_id:
           type: string
           description: Optional transaction identifier
+        num_inserted_rows:
+          type: integer
+          format: int64
+          description: Number of rows inserted
+          minimum: 0
+        version:
+          type: integer
+          format: int64
+          description: The commit version associated with the operation
+          minimum: 0
 
     MergeInsertIntoTableRequest:
       type: object
@@ -3040,9 +3061,12 @@ components:
           description: |
             Branch to target. When not specified, the main branch is used.
         "on":
-          description: Lance field path to use for matching rows. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
-          type: string
-          minLength: 1
+          description: Lance field paths to use for matching rows. Multiple fields form a composite match key; a row matches only when every listed field is equal. Nested fields use dot-separated segments; use backtick-quoted segments for literal dots and double backticks inside quoted segments. Use canonical full paths for display and errors; leaf names alone only identify top-level fields; invalid or unresolved paths should return InvalidInput or TableColumnNotFound.
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
         when_matched_update_all:
           description: Update all columns when rows match
           type: boolean
@@ -3378,6 +3402,46 @@ components:
         distance_type:
           type: string
           description: Distance metric type for vector indexes (e.g., l2, cosine, dot)
+        num_partitions:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the number of IVF partitions. Applies to all IVF index types.
+        num_sub_vectors:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the number of PQ sub-vectors. Applies to IVF_PQ only.
+        num_bits:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the number of bits used by the quantizer.
+        sample_rate:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the per-partition sample rate used during IVF training.
+        max_iterations:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the maximum number of IVF k-means training iterations.
+        target_partition_size:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the target partition size. Alternative to num_partitions.
+        m:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the number of edges per node in the HNSW graph. Applies to HNSW index types.
+        ef_construction:
+          type: integer
+          nullable: true
+          minimum: 1
+          description: Optional vector index parameter for the number of candidates evaluated during HNSW graph construction. Applies to HNSW index types.
         with_position:
           type: boolean
           nullable: true
@@ -5248,12 +5312,27 @@ components:
           type:
             - string
             - "null"
-          description: SQL expression for the column (optional if virtual_column is specified)
+          description: |-
+            SQL expression for the column (optional if virtual_column or computed
+            is specified). Evaluated once over existing rows; nothing is stored,
+            so rows appended later read null.
+        computed:
+          type:
+            - string
+            - "null"
+          description: |-
+            SQL expression declaring a maintained computed column (optional if
+            expression or virtual_column is specified). The column is added
+            all-null with the expression persisted as its binding in field
+            metadata; its type and input columns are inferred from the
+            expression. Rows are filled by backfill, never at declaration.
         virtual_column:
           oneOf:
             - type: "null"
             - $ref: "#/components/schemas/AddVirtualColumnEntry"
-          description: Virtual column definition (optional if expression is specified)
+          description: |-
+            Virtual column definition (optional if expression or computed is
+            specified)
 
     AddVirtualColumnEntry:
       type: object
