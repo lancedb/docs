@@ -1,0 +1,37 @@
+# Assembler configuration.
+#
+# The site is built from one or more content roots rather than published
+# directly from this repository. Today there is a single root — this repo's own
+# `docs/` — and the assembled output is byte-identical to it. Later phases add
+# roots without changing the program:
+#
+#   A3  the open-source pages move to lancedb/lancedb, added here as a second
+#       `reference` root
+#   A5  the Enterprise overlays land in sophon, added as an `overlay` root whose
+#       fragments merge onto reference anchors
+#
+# Adding a root is an edit to this file, not to scripts/assemble.py. That is the
+# point of keeping it declarative.
+
+output: build/site
+
+roots:
+  - name: oss
+    path: docs
+    role: reference
+
+# Generated inputs the assembler owns rather than trusting a bot to commit.
+#
+# The REST reference is generated from the Lance Namespace OpenAPI spec. It is
+# tracked at a *release tag*, not a commit: the site should document something
+# that was released. `make sync-spec` writes the released spec into the tree and
+# CI fails if the two have drifted, so the pin cannot rot silently.
+#
+# v0.12.0 is the first release carrying the fix for the broken request examples
+# (lance-format/lance-namespace#362). Anything older renders "A valid request
+# URL is required to generate request examples" on most endpoint pages.
+openapi:
+  repo: lance-format/lance-namespace
+  release: v0.12.0
+  source: docs/src/spec.yaml
+  dest: docs/api-reference/rest/openapi.yml
