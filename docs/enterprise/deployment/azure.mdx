@@ -8,7 +8,7 @@ icon: "cloud"
 
 LanceDB Enterprise can be deployed on Azure using Azure Kubernetes Service (AKS) with Azure Blob Storage for data persistence and Azure Private Link for secure connectivity.
 
-## General Architecture Overview
+## General Architecture Overview {#general-architecture-overview}
 
 ```mermaid
 graph TB
@@ -47,14 +47,14 @@ graph TB
     style WI fill:#e6f4ea,stroke:#66bb6a,stroke-width:2px,color:#1d3a1f
 ```
 
-### Key Components
+### Key Components {#key-components}
 
 - **LanceDB architecture** is deployed in an AKS cluster within its own VPC
 - **Client applications** connect to the cluster securely using Azure Private Link
 - **AKS cluster** is granted Azure Blob Storage read/write permissions using Azure Workload Identity
 - **Azure EventHub** can be used as the message queue by LanceDB Enterprise for internal message communication (alternative: self-hosted Kafka cluster in AKS)
 
-## Read Path Architecture
+## Read Path Architecture {#read-path-architecture}
 
 ```mermaid
 graph LR
@@ -84,14 +84,14 @@ graph LR
     style BS fill:#e0f2f1,stroke:#26a69a,color:#09312d
 ```
 
-### Read Path Flow
+### Read Path Flow {#read-path-flow}
 
 1. **Client Application** sends query request through Private Link
 2. **Query Nodes** receive and process the request
 3. **Plan Executors** optimize and execute the query using distributed data cache to speed up read queries
 4. **Azure Blob Storage** stores data and indices in Lance, while Plan Executors maintain distributed cache for performance
 
-## Write Path Architecture
+## Write Path Architecture {#write-path-architecture}
 
 ```mermaid
 graph LR
@@ -131,13 +131,13 @@ graph LR
     style BS fill:#e0f2f1,stroke:#26a69a,color:#09312d
 ```
 
-### Write Path Flow
+### Write Path Flow {#write-path-flow}
 
 Query nodes write data and indices synchronously to Azure Blob Storage in Lance data format while asynchronously sending data modification events to Azure EventHub (or self-hosted Kafka cluster). These write events are processed by the Lance Agent, which launches indexing pods or data optimization pods to optimize data for better read performance.
 
-## Deployment Options
+## Deployment Options {#deployment-options}
 
-### Storage Architecture Support
+### Storage Architecture Support {#storage-architecture-support}
 
 ```mermaid
 graph TB
@@ -162,21 +162,21 @@ graph TB
     style SA3 fill:#e0f2f1,stroke:#26a69a,color:#09312d
 ```
 
-### Deployment Models
+### Deployment Models {#deployment-models}
 
 LanceDB Enterprise supports three deployment models on Azure:
 
-#### 1. Fully Managed Service
+#### 1\. Fully Managed Service {#1-fully-managed-service}
 - **Infrastructure and storage** in LanceDB's Azure account
 - **Complete management** by LanceDB team
 - **Simplest setup** for customers
 
-#### 2. BYOC (Bring Your Own Cloud)
+#### 2\. BYOC (Bring Your Own Cloud) {#2-byoc-bring-your-own-cloud}
 - **Infrastructure and storage** in customer's Azure account
 - **Fully Managed by LanceDB** 
 - **Full control** over data residency
 
-#### 3. Hybrid - Bring Your Own Container
+#### 3\. Hybrid - Bring Your Own Container {#3-hybrid-bring-your-own-container}
 - **Infrastructure** in LanceDB's account
 - **Storage containers** in customer's account
 

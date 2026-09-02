@@ -11,7 +11,7 @@ what order. For a more complete solution, LanceDB also provides a streaming data
 This PyTorch `IterableDataset` adapts the lower-level `Permutation` API and adds prefetching, elastic determinism,
 resumability, and multithreaded transformations.
 
-## Basic data loading
+## Basic data loading {#basic-data-loading}
 
 Most model training frameworks iterate through data in batches and feed this data into the model. This process is
 often referred to as **data loading**. The simplest way to load data into a model is to iterate a LanceDB table in
@@ -67,7 +67,7 @@ across cluster sizes, or when you want filtering and prefetching to happen befor
 Use `Permutation` directly when you need map-style random access instead. Only one iterator can be active on a
 `StreamingDataset` instance at a time; create a separate instance for each concurrent consumer.
 
-## Advanced data loading
+## Advanced data loading {#advanced-data-loading}
 
 The `StreamingDataset` wraps a LanceDB `Table` and, by default, adds prefetching and conversion from Arrow to Python.
 It can also handle more advanced scenarios. To explain these, consider a model trained with stochastic gradient
@@ -86,7 +86,7 @@ will use the following PyTorch terms:
 
 Other concepts, such as read batch size and `num_workers`, are introduced in the relevant sections below.
 
-### Prefetching
+### Prefetching {#prefetching}
 
 PyTorch datasets were originally built around in-memory structures like a Pandas DataFrame. When they are iterated,
 they yield a single sample at a time. This makes sense for a simple in-memory structure, but accessing data on object
@@ -110,7 +110,7 @@ ds = StreamingDataset(
 ```
 </CodeGroup>
 
-### Transformation
+### Transformation {#transformation}
 
 Many model training workloads require a transformation step between loading the data and training the model. For
 example, we may need to decode images, tokenize text, or normalize data. A transformation function can be provided
@@ -140,7 +140,7 @@ ds = StreamingDataset(table, shuffle_seed=42, transform=normalize)
 ```
 </CodeGroup>
 
-#### DataLoader workers
+#### DataLoader workers {#dataloader-workers}
 
 The thread-based transformation model that `StreamingDataset` uses by default is only effective when the transform
 function releases the GIL. This is true for many Python scientific libraries, including NumPy, PyArrow, and
@@ -215,7 +215,7 @@ are cumulative across iterations of the same dataset instance; because work runs
 can exceed wall-clock time. The queue depths report rows currently waiting in the pipeline, and the progress counters
 reflect the latest iterator snapshot.
 
-### Filtering data
+### Filtering data {#filtering-data}
 
 By default, the streaming data loader includes all rows and columns. LanceDB is a columnar database that also supports
 efficient random access. Reducing the number of columns you load has a direct impact on I/O performance. Reducing the
@@ -237,7 +237,7 @@ ds = StreamingDataset(
 ```
 </CodeGroup>
 
-### Shuffling rows
+### Shuffling rows {#shuffling-rows}
 
 By default, `StreamingDataset` sets `shuffle=True` and randomly assigns rows to splits. This helps prevent the model
 from learning artifacts from storage order. Set `shuffle=False` to divide rows into splits sequentially, which is
@@ -286,7 +286,7 @@ ds = StreamingDataset(
 ```
 </CodeGroup>
 
-### Data splits and elasticity
+### Data splits and elasticity {#data-splits-and-elasticity}
 
 `StreamingDataset` partitions the permutation into a fixed number of equal-sized groups called splits. Each rank gets
 a contiguous group of splits, and each DataLoader worker gets a contiguous subgroup of its rank's splits. Samples are
@@ -338,7 +338,7 @@ for sample in ds:
 ```
 </CodeGroup>
 
-### Checkpointing and resumability
+### Checkpointing and resumability {#checkpointing-and-resumability}
 
 Model training is expensive, and failures can occur partway through a run. A model checkpoint is not enough for an
 exact resume: the streaming data loader must also continue from the same position. `StreamingDataset.state_dict()`
@@ -409,7 +409,7 @@ exact resume, also use the same table snapshot, `epoch`, `shuffle`, `filter`, an
 `world_size` and number of DataLoader workers may change as long as the split and batch-size divisibility constraints
 still hold.
 
-#### Checkpointing with multiple DataLoader workers
+#### Checkpointing with multiple DataLoader workers {#checkpointing-with-multiple-dataloader-workers}
 
 The plain `torch.utils.data.DataLoader` only produces a safe checkpoint when `num_workers=0`. With `num_workers > 0`,
 PyTorch runs `StreamingDataset.__iter__` in separate worker processes and prefetches batches ahead of the trainer, so
@@ -460,7 +460,7 @@ With more than one worker, call `state_dict()` at a complete logical step bounda
 rank has the same consumed-sample count. Calling it mid-step raises `RuntimeError` asking you to consume more batches
 first.
 
-#### Resuming across different topologies
+#### Resuming across different topologies {#resuming-across-different-topologies}
 
 When training across ranks, each rank owns its own subset of splits and only its own splits have exact progress. To
 resume on a different `world_size`, collect the `state_dict()` from every rank of the previous run and merge them with
@@ -490,14 +490,14 @@ dataset.load_state_dict(merged)
 ```
 </CodeGroup>
 
-## Permutations
+## Permutations {#permutations}
 
 In more complicated scenarios, you may want the flexibility to shuffle, split, and select data without using the full
 iterable streaming data loader. In these cases, use `Permutation`, the lower-level class on which `StreamingDataset`
 is built. A `Permutation` defines a custom ordering of the data and supports map-style access through `__getitem__()`
 and batched access through `__getitems__()`.
 
-### Base table version pinning
+### Base table version pinning {#base-table-version-pinning}
 
 A `Permutation` is pinned to the version of the base table at the time it was built, and every read (including reads
 from a `StreamingDataset` that wraps it, and every DataLoader worker after a `fork`) resolves against that pinned

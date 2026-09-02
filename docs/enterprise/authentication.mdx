@@ -13,7 +13,7 @@ LanceDB Enterprise supports two ways for clients to authenticate against a `db:/
 
 OAuth is the recommended option when you want to rotate credentials centrally, plug into an existing identity provider, or run on Azure with managed identities so no secret material lives on the client.
 
-## API key
+## API key {#api-key}
 
 Pass the API key from your Enterprise tenant on `connect`. This works with both the synchronous and asynchronous Python clients, as well as TypeScript and Rust.
 
@@ -28,7 +28,7 @@ db = lancedb.connect(
 )
 ```
 
-## OAuth
+## OAuth {#oauth}
 
 The async Python client and the TypeScript client can obtain bearer tokens from an OIDC issuer and attach them to every request. Token acquisition, caching, and refresh are handled inside the client — your application code only provides the configuration.
 
@@ -36,7 +36,7 @@ The async Python client and the TypeScript client can obtain bearer tokens from 
 In Python, OAuth is supported through `lancedb.connect_async`. The synchronous `connect` entry point continues to use API key authentication for `db://` URIs. In TypeScript, `lancedb.connect` accepts `oauthConfig` directly.
 </Info>
 
-### Supported flows
+### Supported flows {#supported-flows}
 
 `OAuthFlowType` selects how the client acquires tokens:
 
@@ -45,7 +45,7 @@ In Python, OAuth is supported through `lancedb.connect_async`. The synchronous `
 | Client Credentials | `OAuthFlowType.CLIENT_CREDENTIALS` | `OAuthFlowType.ClientCredentials` | Service-to-service / machine-to-machine. Requires a client ID and client secret registered with your identity provider. |
 | Azure Managed Identity | `OAuthFlowType.AZURE_MANAGED_IDENTITY` | `OAuthFlowType.AzureManagedIdentity` | Workloads running on Azure compute (VMs, AKS, App Service, Container Apps). Tokens are fetched from the Azure IMDS endpoint, so no client secret is stored on the client. |
 
-### Configure OAuth
+### Configure OAuth {#configure-oauth}
 
 Build an OAuth config and pass it on connect. Use `oauth_config` in Python and `oauthConfig` in TypeScript.
 
@@ -122,7 +122,7 @@ const oauthConfig: OAuthConfig = {
 ```
 </CodeGroup>
 
-### Configuration reference
+### Configuration reference {#configuration-reference}
 
 The same configuration is available in both SDKs. Python uses `snake_case` field names; TypeScript uses `camelCase`.
 

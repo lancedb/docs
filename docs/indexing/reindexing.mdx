@@ -14,7 +14,7 @@ As data is being added and a reindex operation is running, LanceDB will combine 
 
 Rather than dropping an existing index entirely and reindexing from scratch, LanceDB supports **incremental indexing**.
 
-## Incremental Reindexing
+## Incremental Reindexing {#incremental-reindexing}
 
 You can manually trigger an incremental indexing operation on updated data
 using the `optimize()` method on a table.
@@ -42,7 +42,7 @@ The benefit of using LanceDB Enterprise is that it automates the reindexing proc
 and operates continuously in the background, minimizing the impact on latency under high loads.
 In OSS, you must manually manage the reindexing cadence based on your data growth and performance needs.
 
-## Disk utilization
+## Disk utilization {#disk-utilization}
 
 Compaction by itself does not immediately free disk space, and can temporarily increase it because new
 compacted files are written before old-version files are deleted. Disk space is reclaimed when old versions

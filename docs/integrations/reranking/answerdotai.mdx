@@ -20,8 +20,7 @@ This integration uses [AnswersDotAI's rerankers](https://github.com/AnswerDotAI/
   </CodeBlock>
 </CodeGroup>
 
-Accepted Arguments
-----------------
+## Accepted Arguments {#accepted-arguments}
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `model_type` | `str` | `"colbert"` | The type of model to use. Supported model types can be found here: https://github.com/AnswerDotAI/rerankers. |
@@ -31,22 +30,22 @@ Accepted Arguments
 
 
 
-## Supported Scores for each query type
+## Supported Scores for each query type {#supported-scores-for-each-query-type}
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:
 
-### Hybrid Search
+### Hybrid Search {#hybrid-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |
 | `all` | ❌ Not Supported | Results have vector(`_distance`) and FTS(`score`) along with Hybrid Search score(`_relevance_score`). |
 
-### Vector Search
+### Vector Search {#vector-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |
 | `all` | ✅ Supported | Results have vector(`_distance`) along with Hybrid Search score(`_relevance_score`). |
 
-### FTS Search
+### FTS Search {#fts-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |

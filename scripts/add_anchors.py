@@ -39,6 +39,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html as html_module
 import re
 import sys
 import tempfile
@@ -56,6 +57,26 @@ FENCE_RE = re.compile(r"^\s*```")
 # 117 headings across 17 pages start this way. Escaping the period keeps the
 # rendered text and the id identical; the backslash does not reach the output.
 LEADING_NUMBER_RE = re.compile(r"^(\d+)\. (?=\S)")
+# Eleven h2s in the reranking pages are Setext -- text over a rule of dashes --
+# rather than ATX. Mintlify renders them with ids like any other heading, so a
+# parser that only saw ATX would consume the rendered ids out of order and give
+# every later heading on the page the wrong anchor: plausible names silently
+# attached to the wrong sections. They are rewritten to ATX, which renders
+# identically and makes the anchor syntax uniform.
+SETEXT_UNDERLINE_RE = re.compile(r"^-{3,}\s*$")
+# Mintlify emits heading ids down to h4 and no further. The eight h5 headings in
+# the corpus -- all API method names on integrations/ai/langchain.mdx -- render
+# with no id at all, so there is no existing anchor to preserve and nothing for
+# an overlay to have been written against. They are left alone rather than given
+# an invented anchor, which would also change the rendered HTML.
+MAX_ANCHORED_LEVEL = 4
+# Mintlify keeps `&` in an auto-generated id but strips it from an explicit
+# `{#anchor}`, so `observability-&-performance` cannot be written down: any
+# anchor we set changes the id and breaks links to it. Five headings across the
+# corpus join two words with an ampersand. They keep their generated id and go
+# without an explicit anchor; if A5 ever needs to attach to one, reword the
+# heading then rather than silently move it now.
+UNWRITABLE_IN_ANCHOR = "&"
 FRONTMATTER_DELIM = "---"
 
 # Inline markup to strip before deriving a name, so `## Use \`add_columns()\``
@@ -98,7 +119,11 @@ def rendered_ids(export: Path) -> dict[str, list[str]]:
             if rel == ".":
                 rel = "index"
             found = [
-                anchor
+                # Unescape: an id containing `&` appears in the HTML as `&amp;`,
+                # and writing that back verbatim produced `...-amp-...`, changing
+                # the id on five pages whose headings join two words with an
+                # ampersand.
+                html_module.unescape(anchor)
                 for _level, anchor in HEADING_ID_RE.findall(
                     page.read_text(encoding="utf-8", errors="replace")
                 )
@@ -107,6 +132,20 @@ def rendered_ids(export: Path) -> dict[str, list[str]]:
             ]
             ids[rel] = found
         return ids
+
+
+def take_anchor(path: Path, available: list[str], used: set[str], index: int) -> str:
+    """Consume the next rendered id, in document order."""
+    if index >= len(available):
+        raise SystemExit(
+            f"{path}: more headings in source than rendered ids "
+            f"({index + 1} > {len(available)}); re-run mint export"
+        )
+    anchor = available[index]
+    if anchor in used:
+        raise SystemExit(f"{path}: rendered id {anchor!r} appears twice")
+    used.add(anchor)
+    return anchor
 
 
 def anchor_file(
@@ -119,9 +158,9 @@ def anchor_file(
     lines = path.read_text(encoding="utf-8").split("\n")
     out: list[str] = []
     used: set[str] = set()
-    added = existing = 0
+    added = existing = skipped = unwritable = 0
+    unwritable_ids: list[str] = []
     sample: list[str] = []
-    consumed = 0
 
     in_fence = False
     in_frontmatter = False
@@ -144,6 +183,23 @@ def anchor_file(
             out.append(line)
             continue
 
+        # A Setext h2 is the *previous* line plus this rule. Detect it when the
+        # underline arrives, rewrite the pair as ATX, and drop the rule.
+        if (
+            SETEXT_UNDERLINE_RE.match(line)
+            and out
+            and out[-1].strip()
+            and not out[-1].lstrip().startswith(("#", "-", "|", "<", ":"))
+            and "|" not in out[-1]
+        ):
+            heading_text = out.pop().strip()
+            anchor = take_anchor(path, available, used, len(used) + unwritable)
+            added += 1
+            if len(sample) < 3:
+                sample.append(f"{heading_text[:44]}  ->  {{#{anchor}}}  (setext)")
+            out.append(f"## {heading_text} {{#{anchor}}}")
+            continue
+
         match = HEADING_RE.match(line)
         if not match:
             out.append(line)
@@ -155,24 +211,38 @@ def anchor_file(
             out.append(line)
             continue
 
+        if len(match.group("hashes")) > MAX_ANCHORED_LEVEL:
+            skipped += 1
+            out.append(line)
+            continue
+
         # Take the id the site already renders for this heading. Falling back to
         # a derived slug would reintroduce exactly the divergence this avoids, so
         # a missing id is an error rather than a guess.
-        if consumed >= len(available):
-            raise SystemExit(
-                f"{path}: more headings in source than rendered ids "
-                f"({consumed + 1} > {len(available)}); re-run mint export"
-            )
-        anchor = available[consumed]
-        consumed += 1
-        if anchor in used:
-            raise SystemExit(f"{path}: rendered id {anchor!r} appears twice")
-        used.add(anchor)
+        anchor = available[len(used) + unwritable] if len(used) + unwritable < len(available) else None
+        if anchor is not None and UNWRITABLE_IN_ANCHOR in anchor:
+            unwritable += 1
+            unwritable_ids.append(anchor)
+            out.append(line)
+            continue
+        anchor = take_anchor(path, available, used, len(used) + unwritable)
         added += 1
         if len(sample) < 3:
             sample.append(f"{match.group('text')[:44]}  ->  {{#{anchor}}}")
         text = LEADING_NUMBER_RE.sub(r"\1\\. ", match.group("text"))
         out.append(f"{match.group('hashes')} {text} {{#{anchor}}}")
+
+    # Anchors are assigned by position, so a count mismatch means every anchor
+    # after the divergence is attached to the wrong section. Fail rather than
+    # write plausible-looking nonsense.
+    if unwritable_ids:
+        print(f"{path}: left unanchored, id not writable: {', '.join(unwritable_ids)}")
+    if added + existing + unwritable != len(available):
+        raise SystemExit(
+            f"{path}: {added + existing + unwritable} headings accounted for but "
+            f"{len(available)} rendered ids — anchors would be misaligned"
+            + (f" ({skipped} deeper than h{MAX_ANCHORED_LEVEL} skipped)" if skipped else "")
+        )
 
     if apply and added:
         path.write_text("\n".join(out), encoding="utf-8")

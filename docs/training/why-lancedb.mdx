@@ -17,7 +17,7 @@ pin versions, and read batches without rewriting the original data.
 
 LanceDB gives these stages one platform, so curation, feature engineering, retrieval, and training stay connected.
 
-## A connected data lifecycle
+## A connected data lifecycle {#a-connected-data-lifecycle}
 
 Training pipelines usually need more than a pile of files. They need curation, derived features, reproducible splits,
 fast random access, and a clean path into frameworks such as PyTorch. LanceDB keeps these pieces connected through
@@ -42,7 +42,7 @@ the same table model, whether you organize a workflow as one table or several re
   </Step>
 </Steps>
 
-## Lance as the foundation
+## Lance as the foundation {#lance-as-the-foundation}
 
 LanceDB is built on [Lance](https://lance.org/), an open-source lakehouse format designed for multimodal AI data.
 The table below highlights the Lance features that enable the multimodal lakehouse on top.
@@ -56,7 +56,7 @@ The table below highlights the Lance features that enable the multimodal lakehou
 | **Versioning** | Reproduce experiments against the same table snapshot, even as the dataset evolves. |
 | **Search and filtering** | Find and materialize useful training slices directly from the table. |
 
-## Search inside training workflows
+## Search inside training workflows {#search-inside-training-workflows}
 
 Search is not limited to QA systems, agents, or production retrieval apps. It is also a practical way to inspect,
 curate, and improve training data:
@@ -69,7 +69,7 @@ curate, and improve training data:
 In LanceDB, retrieval and training workflows can operate over the same multimodal tables instead of forcing teams to
 manage separate data systems for each stage.
 
-## Projects using LanceDB for training workflows
+## Projects using LanceDB for training workflows {#projects-using-lancedb-for-training-workflows}
 
 <CardGroup cols={1}>
   <Card
@@ -100,7 +100,7 @@ In the world-model ecosystem, [stable-worldmodel](https://github.com/galilai-gro
 LanceDB and Lance provide the multimodal data layer that keeps raw observations, annotations, features, and training
 access patterns in one format instead of scattering them across task-specific stores.
 
-## Next steps
+## Next steps {#next-steps}
 
 <CardGroup cols={2}>
   <Card title="Data loading and shuffles" icon="boxes-stacked" href="/training/">

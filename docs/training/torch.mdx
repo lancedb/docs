@@ -7,7 +7,7 @@ icon: fire
 
 LanceDB provides a seamless integration with PyTorch for training and inference. This allows you to use LanceDB as a backend for your PyTorch models, and to use PyTorch for training and inference. You can use LanceDB to store your data, and PyTorch to train your models.
 
-## Quickstart
+## Quickstart {#quickstart}
 
 The `Table` class in LanceDB implements a contract for a PyTorch
 [Dataset](https://docs.pytorch.org/docs/stable/data.html#torch.utils.data.Dataset).
@@ -41,7 +41,7 @@ permutation = Permutation.identity(table)
 dataloader = torch.utils.data.DataLoader(permutation)
 ```
 
-## Output Formats
+## Output Formats {#output-formats}
 
 By default, a `Table` data loader will emit Arrow data. `collate_fn` is PyTorch's batching hook: PyTorch calls it to
 turn the fetched items into one batch. PyTorch's default collate function only knows how to combine tensors, NumPy
@@ -61,7 +61,7 @@ the Arrow data in different ways.  The `arrow` and `polars` formats will always 
 `pandas`, and `torch_col` formats will also avoid data copies in most cases.  The `python`, `python_col`, and
 `torch` formats will all require at least one full copy of the data and are the slowest options.
 
-### Using the torch_col format with a torch data loader
+### Using the torch_col format with a torch data loader {#using-the-torch_col-format-with-a-torch-data-loader}
 
 The `torch_col` format is the most efficient way to convert from Arrow to a `torch.Tensor`.  It will convert the
 entire Arrow batch to a _column-major_ `torch.Tensor`.  In other words, given C columns and R rows, the resulting
@@ -86,7 +86,7 @@ dataloader = torch.utils.data.DataLoader(permutation, collate_fn=lambda x: x)
 
 This will now output a single two-dimensional tensor for each batch.
 
-## Selecting columns
+## Selecting columns {#selecting-columns}
 
 By default, the `Table` class will return all columns in the table when used as input to PyTorch. If you only need
 a subset of columns, you can significantly reduce your I/O requirements by selecting only the columns you need.  The
@@ -104,7 +104,7 @@ for batch in dataloader:
     print(batch.schema)
 ```
 
-## Using multiple DataLoader workers
+## Using multiple DataLoader workers {#using-multiple-dataloader-workers}
 
 Set `num_workers > 0` to read from LanceDB in multiple PyTorch worker processes. LanceDB tables and `Permutation` objects are picklable, so each worker reopens the table after it starts.
 
@@ -129,7 +129,7 @@ dataloader = torch.utils.data.DataLoader(
 )
 ```
 
-### Remote tables in DataLoader workers
+### Remote tables in DataLoader workers {#remote-tables-in-dataloader-workers}
 
 Remote LanceDB Enterprise tables (`db://...`) work the same way: workers reopen the table from the pickled connection state.
 
@@ -158,7 +158,7 @@ dataloader = torch.utils.data.DataLoader(
 This sends the connection state, including the API key, to each worker. Use a connection factory if credentials should be loaded inside the worker or your `client_config` contains a non-serializable `header_provider`.
 </Note>
 
-### Providing a custom connection factory
+### Providing a custom connection factory {#providing-a-custom-connection-factory}
 
 `Permutation.with_connection_factory` lets each worker reopen the base table with custom logic. The factory takes the table name, returns a LanceDB table, and must be picklable.
 

@@ -10,7 +10,7 @@ As you dive deeper into LanceDB, it helps to separate two ideas:
 - A **table** is where your data lives and is queried.
 - A **namespace** is how groups of tables are organized and resolved at the catalog level.
 
-## Understanding tables
+## Understanding tables {#understanding-tables}
 
 A table is the core data abstraction in LanceDB: a structured dataset with schema, indexes, and versioned updates.
 What changes between deployments is how that table is addressed and accessed.
@@ -25,7 +25,7 @@ The mental model below clarifies table types by connection mode:
 From an application perspective, both expose a familiar table API: create/open tables, mutate rows, and query data.
 The main difference is where resolution and execution happen (directly against storage vs through a remote catalog service).
 
-## Semantic difference between tables and namespaces
+## Semantic difference between tables and namespaces {#semantic-difference-between-tables-and-namespaces}
 
 The easiest way to think about this is:
 - A **table** answers: "What data do I store and query?"

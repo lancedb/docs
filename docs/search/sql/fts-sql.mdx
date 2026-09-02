@@ -17,13 +17,13 @@ LanceDB provides support for full-text search via SQL queries using the `fts()` 
 
 The SQL `fts()` table function expects exactly two string literals: the table name and the JSON FTS query. Build the JSON query in your application, pass it as a SQL string literal, and keep filtering, grouping, or joining in the surrounding SQL.
 
-## Table Setup
+## Table Setup {#table-setup}
 
 First, set up your FlightSQL client connection. See [SQL Queries documentation](/search/sql) for detailed client setup instructions.
 
 For the examples below, we assume you have a `run_query()` helper function that executes SQL and returns results.
 
-### Creating the Table
+### Creating the Table {#creating-the-table}
 
 Create a table with text data:
 
@@ -40,7 +40,7 @@ run_query("""
 ```
 </CodeGroup>
 
-### Inserting Data
+### Inserting Data {#inserting-data}
 
 Insert sample documents:
 
@@ -62,7 +62,7 @@ run_query("""
 ```
 </CodeGroup>
 
-### Creating FTS Index
+### Creating FTS Index {#creating-fts-index}
 
 Create a full-text search index on the text column:
 
@@ -84,7 +84,7 @@ CREATE INDEX ON my_docs USING fts (text) WITH (with_position = true)
 
 Without position information, phrase queries will not work. See the [Phrase Queries](#phrase-queries) section below for details.
 
-## Basic Full-Text Search
+## Basic Full-Text Search {#basic-full-text-search}
 
 Use the `fts()` UDTF in SQL queries with JSON-formatted search queries:
 
@@ -135,9 +135,9 @@ LIMIT 5
 - `_score` uses the BM25 ranking algorithm to measure relevance
 </Info>
 
-## Advanced Query Types
+## Advanced Query Types {#advanced-query-types}
 
-### Fuzzy Search
+### Fuzzy Search {#fuzzy-search}
 
 Fuzzy search allows you to find matches even when the search terms contain typos:
 
@@ -165,7 +165,7 @@ print(result.to_pandas())
 ```
 </CodeGroup>
 
-### Phrase Queries
+### Phrase Queries {#phrase-queries}
 
 Search for exact phrases in documents:
 
@@ -193,7 +193,7 @@ CREATE INDEX ON my_docs USING fts (text) WITH (with_position = true)
 ```
 </CodeGroup>
 
-#### Phrase Queries with Slop
+#### Phrase Queries with Slop {#phrase-queries-with-slop}
 
 Allow some flexibility in phrase matching with the `slop` parameter:
 
@@ -213,11 +213,11 @@ result = run_query(f"""
 ```
 </CodeGroup>
 
-### Boolean Queries
+### Boolean Queries {#boolean-queries}
 
 Combine multiple queries using boolean logic:
 
-#### AND Queries
+#### AND Queries {#and-queries}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -235,7 +235,7 @@ result = run_query(f"""
 ```
 </CodeGroup>
 
-#### OR Queries
+#### OR Queries {#or-queries}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -262,7 +262,7 @@ print(result.to_pandas())
 ```
 </CodeGroup>
 
-### Boost Queries
+### Boost Queries {#boost-queries}
 
 Control relevance by boosting or demoting certain terms:
 
@@ -286,7 +286,7 @@ result = run_query(f"""
 ```
 </CodeGroup>
 
-### Multi-Match Queries
+### Multi-Match Queries {#multi-match-queries}
 
 Search across multiple columns simultaneously:
 
@@ -306,7 +306,7 @@ result = run_query(f"""
 ```
 </CodeGroup>
 
-#### Multi-Match with Field Boosting
+#### Multi-Match with Field Boosting {#multi-match-with-field-boosting}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -324,7 +324,7 @@ result = run_query(f"""
 ```
 </CodeGroup>
 
-## Combining FTS with SQL
+## Combining FTS with SQL {#combining-fts-with-sql}
 
 FTS queries can be combined with standard SQL features like WHERE clauses, GROUP BY, and JOINs:
 
@@ -345,11 +345,11 @@ result = run_query(f"""
 ```
 </CodeGroup>
 
-## Query Parameters Reference
+## Query Parameters Reference {#query-parameters-reference}
 
 For detailed information about query parameters and options for `MatchQuery`, `PhraseQuery`, `BoostQuery`, and `MultiMatchQuery`, see the [Full-Text Search documentation](/search/full-text-search/).
 
-## Related Documentation
+## Related Documentation {#related-documentation}
 
 - [Full-text search](/search/full-text-search/) - Learn about FTS capabilities and query types
 - [SQL queries](/search/sql) - General SQL query documentation

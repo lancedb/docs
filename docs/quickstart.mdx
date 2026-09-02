@@ -52,7 +52,7 @@ features, you'll work with the same underlying table and search primitives.
 
 Let's get started in just a few steps!
 
-## 1. Install LanceDB
+## 1\. Install LanceDB {#1-install-lancedb}
 
 Install LanceDB in your client SDK.
 
@@ -77,7 +77,7 @@ cargo add lancedb
 ```
 </CodeGroup>
 
-### Python pre-release builds
+### Python pre-release builds {#python-pre-release-builds}
 
 To pick up the latest features and bug fixes
 before the next stable release, install a pre-release from LanceDB's Fury index.
@@ -118,7 +118,7 @@ The two packages share the same `lancedb/` namespace and conflict at install tim
 uninstall the other first (`pip uninstall lancedb && pip install lancedb-compat`).
 </Accordion>
 
-## 2. Connect to a LanceDB database
+## 2\. Connect to a LanceDB database {#2-connect-to-a-lancedb-database}
 
 LanceDB supports several URI patterns to connect to a database.
 
@@ -126,7 +126,7 @@ LanceDB supports several URI patterns to connect to a database.
 - A `db://...` URI (when using LanceDB Enterprise)
 - An object storage URI: `s3://...`, `gs://...`, or `az://...` (when connecting directly from the client SDK)
 
-### Connect via local directory path
+### Connect via local directory path {#connect-via-local-directory-path}
 
 The simplest way to begin is to use LanceDB as an embedded library. Import LanceDB in your
 client SDK of choice and point to a local directory path.
@@ -152,7 +152,7 @@ client SDK of choice and point to a local directory path.
 </CodeGroup >
 
 
-### Connect via object storage URIs
+### Connect via object storage URIs {#connect-via-object-storage-uris}
 
 You can also connect directly to object storage from the client SDK:
 
@@ -177,7 +177,7 @@ You can also connect directly to object storage from the client SDK:
 For credentials, endpoints, and provider-specific options, see
 [Configuring storage](/storage/configuration).
 
-### Connect to LanceDB Enterprise
+### Connect to LanceDB Enterprise {#connect-to-lancedb-enterprise}
 
 If you're using LanceDB Enterprise, you can connect to the remote database using the
 `db://` URI along with the API key, region, and cluster endpoint you received from the
@@ -211,7 +211,7 @@ endpoint, [contact the LanceDB team](mailto:contact@lancedb.com).
 To learn more about `RemoteTable` semantics and how Enterprise differs operationally from
 embedded LanceDB, see the [Enterprise overview](/enterprise).
 
-## 3. Create a new table
+## 3\. Create a new table {#3-create-a-new-table}
 
 Let's create a small table of characters from the kingdom of Camelot. Each row stores source text,
 metadata, structured fields, and a vector embedding in the same LanceDB table.
@@ -274,7 +274,7 @@ with the appropriate schema and ingests the data.
     </CodeBlock>
 </CodeGroup >
 
-## 4. Semantic search
+## 4\. Semantic search {#4-semantic-search}
 
 Search is a useful capability for all kinds of AI data pipelines. Below, we do a vector similarity
 search for samples similar to a "_wise magical advisor_" (transforming the natural language query to
@@ -313,7 +313,7 @@ to be used downstream in your application.
   </CodeBlock>
 </Accordion>
 
-## 5. Curation
+## 5\. Curation {#5-curation}
 
 Searching for relevant results can be more useful when combined with metadata filters.
 In this tiny example, we filter to examples with high `magic` stats.
@@ -335,7 +335,7 @@ In this tiny example, we filter to examples with high `magic` stats.
 When working with large datasets, it's common to use the same pattern to filter on quality labels,
 train/eval splits, numeric fields, categorical values, timestamp windows, or generated tags and labels.
 
-## 6. Add a derived feature
+## 6\. Add a derived feature {#6-add-a-derived-feature}
 
 Feature engineering is the process of cleaning up your data and creating new signals that
 help your model learn, make better predictions, or your agent retrieve more useful information.
@@ -382,7 +382,7 @@ Next, you can query a compact view of the new feature:
 The same workflow is used for data preparation tasks when adding derived features, cached model signals, review scores, or dataset
 quality indicators.
 
-## 7. Store multimodal data
+## 7\. Store multimodal data {#7-store-multimodal-data}
 
 Multimodal data is a first-class citizen in LanceDB. Binary data (image, audio, video, etc.) is
 stored as blobs or inline Arrow binary types in a LanceDB column, and they benefit from the same
@@ -424,14 +424,14 @@ These snippets load the local image file and store the bytes in an `image` colum
 
 For more examples, see the [multimodal data](/tables/multimodal) section.
 
-## Code
+## Code {#code}
 
 See the full code for these examples (including helper functions) in the
 `quickstart` file for the appropriate client language in the
 [files provided in the repo](https://github.com/lancedb/docs/tree/main/tests).
 
 
-## What's next?
+## What's next? {#what’s-next}
 
 You've learned how to install LanceDB, connect, create one table for AI data, retrieve related
 examples, curate with metadata, add a derived feature, and represent multimodal records. These same

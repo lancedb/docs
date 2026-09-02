@@ -14,11 +14,11 @@ This guide provides a technical analysis of multivector search for high-precisio
 
 To reproduce the work below, see the code [here](https://github.com/lancedb/research/tree/main/multivector-needle-haystack-bench).
 
-## The Dataset
+## The Dataset {#the-dataset}
 
 This task is different from benchmarks like BEIR, which focus on text-based doc retrieval, finding the most relevant documents from a large collection. Here, we want *intra-document localization*, where the goal is to find a precise piece of information within a single, dense document, in a multimodal setting.
 
-### The Task: The Document Haystack Dataset
+### The Task: The Document Haystack Dataset {#the-task-the-document-haystack-dataset}
 
 Our benchmark is built on the **[AmazonScience/document-haystack](https://huggingface.co/datasets/AmazonScience/document-haystack)** dataset, which contains 25 visually complex source documents (e.g., financial reports, academic papers). To create a rigorous test, our evaluation follows a per-document methodology:
 
@@ -41,18 +41,18 @@ What is the secret object #3 in the document?
 The intention of this task is to find the page which has the text needle that answers this questions
 
 
-## Models and Architectures
+## Models and Architectures {#models-and-architectures}
 
 Our testbed includes a baseline single-vector model and a family of advanced multivector models. 
 
-### Single-Vector (Bi-Encoder) Baseline: `openai/clip-vit-base-patch32`
+### Single-Vector (Bi-Encoder) Baseline: `openai/clip-vit-base-patch32` {#single-vector-bi-encoder-baseline-openai/clip-vit-base-patch32}
 
 A bi-encoder maps an entire piece of content (a query, a document page) to a *single* vector. The search process is simple: pre-compute one vector for every page, and at query time, find the page vector closest to the query vector.
 
 *   **Strength:** Speed and simplicity.
 *   **Weakness:** This creates an **information bottleneck**. All the nuanced details, keywords, and semantic relationships on a page must be compressed into a single, fixed-size vector. For finding a needle, this is like trying to describe a specific person's face using only one word.
 
-### Multi-vector (Late-Interaction) Models
+### Multi-vector (Late-Interaction) Models {#multi-vector-late-interaction-models}
 
 Multi-vector models, pioneered by ColBERT, take a different approach. Instead of one vector per page, they generate a *set of vectors* for each page—one for every token (or image patch).
 
@@ -61,12 +61,12 @@ Multi-vector models, pioneered by ColBERT, take a different approach. Instead of
 
 ![](/static/assets/images/search/multivector/multivector-4.png)
 
-## Different Retrieval Strategies Used
+## Different Retrieval Strategies Used {#different-retrieval-strategies-used}
 
 A full multivector search is powerful but computationally intensive. Here are five strategies for managing it, complete with LanceDB implementation details.
 
 
-### 1. `base`: The Gold Standard (Full Multi-vector Search)
+### 1\. `base`: The Gold Standard (Full Multi-vector Search) {#1-base-the-gold-standard-full-multi-vector-search}
 
 This is the pure, baseline late-interaction search. It offers the highest potential for accuracy by considering every token.
 
@@ -96,7 +96,7 @@ tbl.add([{"page_num": 1, "vector": multi_token_embeddings.tolist()}])
 results = tbl.search(query_multi_vector).limit(5).to_list()
 ```
 
-### 2. `flatten`: Mean Pooling
+### 2\. `flatten`: Mean Pooling {#2-flatten-mean-pooling}
 
 This strategy "flattens" the set of token vectors into a single vector by averaging them. This transforms the search into a standard, fast approximate nearest neighbor (ANN) search.
 
@@ -119,11 +119,11 @@ query_mean_vector = query_multi_vector.mean(axis=0)
 results = tbl_flat.search(query_mean_vector).limit(5).to_list()
 ```
 
-### 3. `max_pooling`
+### 3\. `max_pooling` {#3-max_pooling}
 
 This is a variation of `flatten`. `max_pooling` takes the element-wise max across all token vectors instead of the mean. The implementation is identical to `flatten`, just with a different aggregation method (`.max(axis=0)`).
 
-### 4. `flatten and multivector rerank`: The Hybrid "Optimization"
+### 4\. `flatten and multivector rerank`: The Hybrid "Optimization" {#4-flatten-and-multivector-rerank-the-hybrid-“optimization”}
 
 This two-stage strategy aims for the best of both worlds. First, use a fast, pooled-vector search to find a set of promising candidates. Then, run the full, accurate multivector search on *only* those candidates.
 
@@ -164,7 +164,7 @@ final_results = tbl_rerank.search(query_multi_vector, vector_column_name="vector
                           .to_list()
 ```
 
-### 5. `hierarchical token pooling`: Compressing the Haystack
+### 5\. `hierarchical token pooling`: Compressing the Haystack {#5-hierarchical-token-pooling-compressing-the-haystack}
 
 This is an indexing-time strategy that aims to reduce the storage footprint and computational cost of multivector search by reducing the number of vectors per document. Instead of using every token vector, it clusters semantically similar tokens together and replaces them with a single, averaged vector.
 
@@ -200,11 +200,11 @@ tbl_hierarchical.add([{"page_num": 1, "vector": pooled_embeddings.tolist()}])
 results = tbl_hierarchical.search(query_multi_vector).limit(5).to_list()
 ```
 
-## The Results
+## The Results {#the-results}
 
 For a "needle in a haystack" task, retrieval accuracy is the primary metric of success. The benchmark results reveal a significant performance gap between the full multivector search strategy and common optimization techniques.
 
-### Baseline Performance: Single-Vector Bi-Encoder
+### Baseline Performance: Single-Vector Bi-Encoder {#baseline-performance-single-vector-bi-encoder}
 
 First, we establish a baseline using a standard single-vector bi-encoder model, `openai/clip-vit-base-patch32`. This represents a common approach to semantic search but, as the data shows, is ill-suited for this task's precision requirements.
 
@@ -214,7 +214,7 @@ First, we establish a baseline using a standard single-vector bi-encoder model, 
 
 With a Hit@20 rate of just under 12%, the baseline model struggles to reliably locate the correct page. This performance level is insufficient for applications requiring high precision.
 
-### Multi-vector Model Performance
+### Multi-vector Model Performance {#multi-vector-model-performance}
 
 We now examine the performance of multivector models using different strategies. The following table compares the `base` (full multivector), `flatten` (mean pooling), and `rerank` (hybrid) strategies across several late-interaction models.
 
@@ -234,7 +234,7 @@ We now examine the performance of multivector models using different strategies.
 
 The data shows a consistent pattern: the `base` strategy outperforms all other techniques. The flattned pooling and reranking strategies perform no better than the single-vector baseline. However, hierarchical token pooling seems like a decent alternative to base considering speed vs accuracy tradeoff. Let's look at the numbers in detail.
 
-### In-Depth Analysis of Pooling Strategies
+### In-Depth Analysis of Pooling Strategies {#in-depth-analysis-of-pooling-strategies}
 
 To further understand the failure of optimization techniques, we compared different methods for pooling token vectors into a single vector: `mean` (`flatten`), `max`.
 
@@ -255,7 +255,7 @@ All flattened pooling methods perform poorly, confirming that the aggregation of
 3.  **`hierarchical token pooling`:** By clustering and pooling tokens at indexing time, it reduces the number of vectors per page (in our case, by a factor of 4). This intelligently compresses the data, while preserving enough token-level detail in multivector setting. It achieves a **Hit@20 of 91.6%**, only slightly behind the `base` strategy's 95.5%, but is significantly faster.
 4.  **`base` multivector Search:** The vanilla, un-optimized `base` multivector search remains the most accurate strategy. Preserving every token vector provides the highest guarantee of finding the needle, but this comes at the highest computational cost.
 
-### Latency:
+### Latency: {#latency}
 
 ![](/static/assets/images/search/multivector/multivector-6.png)
 
@@ -270,11 +270,11 @@ The "optimizations" are not all created equal. While simple pooling is fast, its
 | `base` (Most Accurate) | 0.668 s | **95.5%** |
 _Latency reported is as seen on NVIDIA H100 GPUs_
 
-## Practical Considerations
+## Practical Considerations {#practical-considerations}
 
 The accuracy of `base` multivector search is impressive, but its computational intensity has historically limited its use.  `hierarchical token pooling` as a viable strategy creates a new, practical sweet spot on the accuracy-latency curve, making high-precision search accessible for a wider range of applications.
 
-### Search Latency and Computational Complexity
+### Search Latency and Computational Complexity {#search-latency-and-computational-complexity}
 
 
 As the benchmark data shows, the search latency for `base` multivector search is orders of magnitude higher than for single-vector (or pooled-vector) search. It's important to note that the reported ~670ms latency is an average from per-document evaluations. In this benchmark, each of the 25 documents is processed independently. All pages from a single document's variants (ranging from 5 to 200 pages) are ingested into a temporary table, resulting in a table size of approximately **1,230 rows (pages)** per evaluation. The search is performed on this table, and then the table is discarded. This highlights a significant performance cost even on a relatively small, per-document scale. This stems from a fundamental difference in computational complexity:
@@ -282,7 +282,7 @@ As the benchmark data shows, the search latency for `base` multivector search is
 *   **Modern ANN Search (for single vectors):** Algorithms like HNSW (Hierarchical Navigable Small World) provide sub-linear search times, often close to `O(log N)`, where `N` is the number of items in the index. This allows them to scale to billions of vectors with millisecond-level latency.
 *   **Late-Interaction Search (Multi-vector):** The search process is far more intensive. For each query, it must compute similarity scores between query tokens and the tokens of many candidate documents. The complexity is closer to `O(M * Q * D)`, where `M` is the number of candidate documents to score, `Q` is the number of query tokens, and `D` is the average number of tokens per document. `Hierarchical token pooling` directly attacks this problem by reducing `D`, leading to a significant reduction in search latency.
 
-### When to Use Multi-Vector Search
+### When to Use Multi-Vector Search {#when-to-use-multi-vector-search}
 
 Given these constraints, the choice of strategy depends on the specific requirements of the application.
 
@@ -290,7 +290,7 @@ Given these constraints, the choice of strategy depends on the specific requirem
 *   **For a Balance of Precision and Performance (`hierarchical token pooling`):** This is the ideal choice for many applications. It makes high-precision search practical for larger datasets and more interactive use cases where the sub-second latency of the `base` search may be too high. It significantly lowers the barrier to entry for adopting multivector search. It should still not be seen as a drop-in replacement for ANN, as it still requires more computational resources than single-vector search.
 *   **For General-Purpose Document Retrieval (`flatten` / single-vector):** For large-scale retrieval where understanding the "gist" is sufficient or where in cases where large-context text-based models suffice, single-vector search remains the most practical and scalable solution.
 
-## Appendix: Full Benchmark Results
+## Appendix: Full Benchmark Results {#appendix-full-benchmark-results}
 
 The full benchmark results are shown below.
 

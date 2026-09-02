@@ -11,9 +11,9 @@ multiple search techniques.
 
 For detailed examples, look at this [Python Notebook](https://colab.research.google.com/github/lancedb/vectordb-recipes/blob/main/examples/saas_examples/python_notebook/Hybrid_search.ipynb) or the [**TypeScript Example**](https://github.com/lancedb/vectordb-recipes/tree/main/examples/saas_examples/ts_example/hybrid-search)
 
-## Example: Hybrid Search
+## Example: Hybrid Search {#example-hybrid-search}
 
-### 1. Setup
+### 1\. Setup {#1-setup}
 Import the necessary libraries and dependencies for working with LanceDB, OpenAI embeddings, and reranking.
 
 <CodeGroup>
@@ -32,7 +32,7 @@ import { Utf8 } from "apache-arrow";
 ```
 </CodeGroup>
 
-### 2. Connect to LanceDB
+### 2\. Connect to LanceDB {#2-connect-to-lancedb}
 Establish a connection to your LanceDB instance, with different options for Enterprise setups or open source.
 
 <Badge color="green">OSS</Badge>
@@ -87,7 +87,7 @@ const db = await lancedb.connect(uri, {
 
 
 
-### 3. Configure Embedding Model
+### 3\. Configure Embedding Model {#3-configure-embedding-model}
 Set up the any embedding model that will convert text into vector representations for semantic search.
 
 <CodeGroup>
@@ -128,7 +128,7 @@ const table = await db.createEmptyTable(tableName, documentSchema, {
 ```
 </CodeGroup>
 
-### 5. Add Data
+### 5\. Add Data {#5-add-data}
 Insert sample documents into your table, which will be used for both semantic and keyword search.
 
 <CodeGroup>
@@ -154,7 +154,7 @@ console.log(`Created table: ${tableName} with ${data.length} rows`);
 ```
 </CodeGroup>
 
-### 6. Build Full Text Index
+### 6\. Build Full Text Index {#6-build-full-text-index}
 Create a full-text search index on the text column to enable keyword-based search capabilities.
 
 <CodeGroup>
@@ -172,7 +172,7 @@ await waitForIndex(table as any, "text_idx");
 ```
 </CodeGroup>
 
-### 7. Set Reranker [Optional]
+### 7\. Set Reranker [Optional] {#7-set-reranker-optional}
 Initialize the reranker that will combine and rank results from both semantic and keyword search. By default, lancedb uses RRF reranker, but you can choose other rerankers like `Cohere`, `CrossEncoder`, or others lister in integrations section.
 
 <CodeGroup>
@@ -185,7 +185,7 @@ const reranker = await lancedb.rerankers.RRFReranker.create();
 ```
 </CodeGroup>
 
-### 8. Hybrid Search
+### 8\. Hybrid Search {#8-hybrid-search}
 Perform a hybrid search query that combines semantic similarity with keyword matching, using the specified reranker to merge and rank the results.
 
 <CodeGroup>
@@ -223,7 +223,7 @@ console.log(hybridResults);
 ```
 </CodeGroup>
 
-### 9. Hybrid Search - Explicit Vector and Text Query pattern
+### 9\. Hybrid Search - Explicit Vector and Text Query pattern {#9-hybrid-search-explicit-vector-and-text-query-pattern}
 You can also pass the vector and text query explicitly. This is useful if you're not using the embedding API or if you're using a separate embedder service.
 
 <CodeGroup>
@@ -240,7 +240,7 @@ text_query = "flower moon"
 ```
 </CodeGroup>
 
-## Query controls
+## Query controls {#query-controls}
 
 Hybrid queries inherit the same builder API as vector and FTS queries, so the same knobs for filtering, distance bounds, and row identity apply. These compose with `.rerank(...)` and the explicit `.vector()` / `.text()` form shown above.
 
@@ -249,7 +249,7 @@ Always set `.limit(...)` on production hybrid queries. LanceDB's default search 
 explicit cap gives you a clear top-k contract to tune before reranking.
 </Info>
 
-### Returning row IDs
+### Returning row IDs {#returning-row-ids}
 
 Pass `with_row_id(True)` (Python) or `withRowId()` (TypeScript) to include the internal `_rowid` column in the results. This is useful for joining hybrid results back to a primary table, or for deduping across multiple queries:
 
@@ -275,7 +275,7 @@ const results = await table
 ```
 </CodeGroup>
 
-### Bounding vector distance
+### Bounding vector distance {#bounding-vector-distance}
 
 `distance_range(lower, upper)` (Python) and `distanceRange(lower, upper)` (TypeScript) constrain the vector half of the hybrid query to the half-open interval `[lower, upper)`. This is helpful when you want to cap how far semantic candidates can drift from the query vector before reranking:
 
@@ -302,7 +302,7 @@ const results = await table
 
 Either bound can be omitted to leave that side unbounded.
 
-### Prefilter vs. postfilter
+### Prefilter vs. postfilter {#prefilter-vs-postfilter}
 
 When the query carries a metadata filter via `where(...)`, you can choose whether the filter runs before or after the vector and FTS sub-queries. **Prefiltering** (the default) applies `where` to the candidate set before scoring, which is usually what you want — it shrinks the working set and benefits from any scalar indexes on the filter columns. **Postfiltering** runs the filter on the already-ranked top-k from each sub-query; this can be faster when the filter is non-selective or unindexed, but it may return fewer than `limit` rows because some of the top-k may be filtered out.
 
@@ -343,7 +343,7 @@ await table.query()
 
 The choice gets baked into both sub-queries, so the vector and FTS halves see the filter applied the same way. Use [`explain_plan`](/search/optimize-queries#analyzing-non-vector-queries) on a hybrid query to see whether the filter pushed into the scan or ran as a separate `FilterExec` step.
 
-## More on Reranking 
+## More on Reranking {#more-on-reranking}
 
 You can perform hybrid search in LanceDB by combining the results of semantic and full-text search via a reranking algorithm of your choice. LanceDB comes with [**built-in rerankers**](https://docs.lancedb.com/reranking) and you can implement your own **custom reranker** as well. 
 

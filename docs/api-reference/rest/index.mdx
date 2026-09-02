@@ -15,7 +15,7 @@ additional endpoints for managing tables and data.
 If you have specific needs or questions about the Enterprise REST API Namespace,
 please [contact us](mailto:support@lancedb.com).
 
-## Authentication
+## Authentication {#authentication}
 
 <Badge color="red">Enterprise</Badge>
 
@@ -24,7 +24,7 @@ must be encoded as JSON or Arrow RPC.
 
 To authenticate to the Enterprise REST API, you need the endpoint for your deployment and a valid API key for that deployment.
 
-### Get your Enterprise credentials
+### Get your Enterprise credentials {#get-your-enterprise-credentials}
 
 1. Obtain the following values from your LanceDB administrator or the LanceDB team that provisioned your Enterprise deployment:
    - an API key
@@ -41,7 +41,7 @@ export LANCEDB_DATABASE="your-database-name"
 
 3. If your Enterprise deployment is private, connect through the private network endpoint provided for your deployment. For example, Azure Private Link deployments commonly use a private IP or an internal DNS name as the endpoint.
 
-### Verify authentication
+### Verify authentication {#verify-authentication}
 
 4. Check that you can reach the deployment and list tables:
 

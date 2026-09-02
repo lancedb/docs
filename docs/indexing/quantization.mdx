@@ -24,11 +24,11 @@ Two axes are being combined here: whether partitions are searched flatly or via 
 
 Use the same distance metric when training the index and running queries against it. For IVF-based indexes, `num_partitions` controls the number of groups and `sample_rate` controls how many training vectors are sampled per partition, so the training sample is roughly `sample_rate * num_partitions`.
 
-## RaBitQ quantization
+## RaBitQ quantization {#rabitq-quantization}
 
 RaBitQ is a binary quantization method that represents each normalized embedding using **1 bit per dimension**, plus a couple of small corrective scalars. In practice, a 1,024-dimensional `float32` vector that would normally take 4 KB can be compressed to roughly a few hundred bytes with RaBitQ, while still maintaining reasonable recall.
 
-### How RaBitQ works
+### How RaBitQ works {#how-rabitq-works}
 
 - Embeddings are grouped around centroids (as in other IVF indexes).
 - Each residual vector is normalized and mapped to the nearest vertex of a randomly rotated hypercube on the unit sphere.
@@ -44,7 +44,7 @@ Compared to `IVF_PQ`, RaBitQ:
 
 For a deeper dive into the theory and some benchmark results, see the blog post: [LanceDB's RaBitQ Quantization for Blazing Fast Vector Search](https://lancedb.com/blog/feature-rabitq-quantization/).
 
-### Using RaBitQ
+### Using RaBitQ {#using-rabitq}
 
 You can create an RaBitQ-backed vector index by setting `index_type="IVF_RQ"` when calling `create_index`. 
 
@@ -61,7 +61,7 @@ It's also possible to tune the number of IVF partitions in `IVF_RQ`, similar to 
 Indexes built with `num_bits >= 2` use an updated on-disk layout. Older LanceDB versions cannot read them and will fail with a clear missing-column error rather than returning incorrect results. Existing indexes keep working and upgrade automatically when they are rewritten (for example, during compaction, optimize, or remap). `num_bits=1` indexes are unaffected in both directions.
 </Warning>
 
-## API Reference
+## API Reference {#api-reference}
 
 The full list of parameters to the algorithm are listed below.
 

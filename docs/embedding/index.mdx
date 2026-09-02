@@ -34,7 +34,7 @@ that automatically generates vector embeddings during data ingestion. Automatic 
 generation is available in LanceDB OSS, with SDK-specific query ergonomics. The API abstracts
 embedding generation, allowing you to focus on your application logic.
 
-## Embedding Registry
+## Embedding Registry {#embedding-registry}
 
 You can get a supported embedding function from the registry, and then use it in your table schema. 
 Once configured, the embedding function will automatically generate embeddings when you insert data
@@ -55,7 +55,7 @@ while Rust examples typically compute query embeddings explicitly before vector 
     </CodeBlock>
 </CodeGroup>
 
-### Using an embedding function
+### Using an embedding function {#using-an-embedding-function}
 
 Create an embedding function before you attach it to table or schema metadata. Python and TypeScript fetch
 provider implementations from the embedding registry, while Rust constructs the provider embedding function
@@ -123,7 +123,7 @@ For non-sensitive settings such as inference device selection, you can also use 
 
 Find the full list of arguments for each provider in the [integrations](/integrations/embedding) section.
 
-## Multiple embedding columns
+## Multiple embedding columns {#multiple-embedding-columns}
 
 A single table can include more than one embedding definition when you want to store multiple semantic views
 of the same data, or generate embeddings from different source columns. In practice, each embedding definition
@@ -136,11 +136,11 @@ In TypeScript, automatic query embedding currently uses the first embedding func
 table metadata. If a table has multiple embedding definitions and you need to query a specific vector
 column, compute the query embedding explicitly and pass the vector to the search builder.
 
-## Embedding model providers
+## Embedding model providers {#embedding-model-providers}
 
 LanceDB supports most popular embedding providers.
 
-### Text embeddings
+### Text embeddings {#text-embeddings}
 
 | Provider | Model ID | Default Model |
 |----------|----------|---------------|
@@ -150,7 +150,7 @@ LanceDB supports most popular embedding providers.
 | Cohere | `cohere` | `embed-english-v3.0` |
 | ... | ... | ... |
 
-### Multimodal embedding
+### Multimodal embedding {#multimodal-embedding}
 
 | Provider | Model ID | Supported Inputs |
 |----------|----------|------------------|
@@ -160,7 +160,7 @@ LanceDB supports most popular embedding providers.
 
 You can find all supported embedding models in the [integrations](/integrations/embedding) section.
 
-## Embeddings in LanceDB Enterprise
+## Embeddings in LanceDB Enterprise {#embeddings-in-lancedb-enterprise}
 <Badge color="red">Enterprise</Badge>
 
 In LanceDB Enterprise, embedding generation during data ingestion is client-side and the resulting vectors are
@@ -171,7 +171,7 @@ The Enterprise server does not currently generate embeddings from query text on 
 query-time embedding happens on the client side.
 </Info>
 
-### How string queries are interpreted
+### How string queries are interpreted {#how-string-queries-are-interpreted}
 
 For the Python remote client, `table.search("hello")` can take two different paths:
 
@@ -218,7 +218,7 @@ want full control over query-time behavior.
     </CodeBlock>
 </CodeGroup>
 
-## Custom Embedding Functions
+## Custom Embedding Functions {#custom-embedding-functions}
 
 You can always implement your own embedding function:
 - Python/TypeScript: subclass `TextEmbeddingFunction` (text) or `EmbeddingFunction` (multimodal).
