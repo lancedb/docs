@@ -86,6 +86,7 @@
                   "tables/update",
                   "tables/versioning",
                   "tables/branching",
+                  "tables/materialized-views",
                   "tables/consistency"
                 ]
               },
