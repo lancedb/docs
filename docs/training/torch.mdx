@@ -58,10 +58,54 @@ with one of the transform formats described below.
 
 To address this, the `Permutation` class provides a set of builtin transform functions that can be applied to map
 the Arrow data in different ways.  The `arrow` and `polars` formats will always avoid data copies.  However, `numpy`,
-`pandas`, and `torch_col` formats will also avoid data copies in most cases.  The `python`, `python_col`, and
-`torch` formats will all require at least one full copy of the data and are the slowest options.
+`pandas`, and `torch_col` formats will also avoid data copies in most cases.  The `python`, `python_col`, `torch`,
+and `torch_row` formats will all require at least one full copy of the data and are the slowest options.
 
-### Using the torch_col format with a torch data loader
+### Torch formats
+
+`Permutation` supports three torch formats. They differ in the shape of the per-row and per-batch output, and in
+whether they compose with PyTorch's default `DataLoader` collate function.
+
+| Format | `__getitems__` output | Default `DataLoader` collate |
+|---|---|---|
+| `"torch"` | list of `{col: tensor}` dicts, one per row | `{col: tensor(B,)}` — column-keyed batched dict |
+| `"torch_row"` | list of 1-D tensors, one per row (`tensor(n_cols,)`) | `tensor(B, n_cols)` — batched 2-D tensor |
+| `"torch_col"` | single 2-D column-major tensor `tensor(n_cols, R)` | Requires `collate_fn=lambda x: x` |
+
+Pick the format that matches how your training loop wants to consume batches:
+
+- Use `"torch"` when you want to access columns by name in the training loop. This matches the shape produced by
+  HuggingFace's `Dataset.set_format("torch")` and works with the default `DataLoader` collate.
+- Use `"torch_row"` when you want each batch to be a single 2-D tensor and don't need column names.
+- Use `"torch_col"` when you want the most efficient (usually zero-copy) conversion and are willing to provide a
+  custom collate function.
+
+<Warning>
+The default output of `with_format("torch")` changed in a recent release. It now returns per-row dicts of tensors
+so PyTorch's default `DataLoader` collate stacks them into `{col: tensor(B,)}`. To keep the previous behavior —
+where the default collate produced a single `tensor(B, n_cols)` — switch to `with_format("torch_row")`.
+</Warning>
+
+#### Using the torch format with a torch data loader
+
+`"torch"` is the most convenient option when you want to reference columns by name in your training loop. Each row
+is a `{col: tensor}` dict, and PyTorch's default collate function stacks them into a dict of batched tensors.
+
+```py Python icon=Python
+from lancedb.permutation import Permutation
+
+permutation = Permutation.identity(table).with_format("torch")
+dataloader = torch.utils.data.DataLoader(permutation, batch_size=32)
+
+for batch in dataloader:
+    # batch is {"col_a": tensor(32,), "col_b": tensor(32,), ...}
+    ...
+```
+
+Column dtypes are preserved end-to-end. This format requires a data copy per row, so use `"torch_col"` when
+throughput matters more than column-name access.
+
+#### Using the torch_col format with a torch data loader
 
 The `torch_col` format is the most efficient way to convert from Arrow to a `torch.Tensor`.  It will convert the
 entire Arrow batch to a _column-major_ `torch.Tensor`.  In other words, given C columns and R rows, the resulting
@@ -73,9 +117,8 @@ TypeError: stack(): argument 'tensors' (position 1) must be tuple of Tensors, no
 ```
 
 This error occurs because the default collation function does not currently expect a single two-dimensional tensor.
-It expects a list of tensors which it will then stack.  This is what is output by the `torch` format but that format
-requires a data copy.  To avoid this error, and avoid data copies, you will need to provide a custom collation function
-in addition to specifying the `torch_col` format.
+It expects a list of tensors which it will then stack.  To avoid this error, and avoid data copies, you will need
+to provide a custom collation function in addition to specifying the `torch_col` format.
 
 ```py Python icon=Python 
 from lancedb.permutation import Permutation
