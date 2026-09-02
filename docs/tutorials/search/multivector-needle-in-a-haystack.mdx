@@ -118,7 +118,7 @@ query_mean_vector = query_multi_vector.mean(axis=0)
 results = tbl_flat.search(query_mean_vector).limit(5).to_list()
 ```
 
-### 3\. `max_pooling` {#3-max_pooling}
+### 3\. Max pooling {#3-max-pooling}
 
 This is a variation of `flatten`. `max_pooling` takes the element-wise max across all token vectors instead of the mean. The implementation is identical to `flatten`, just with a different aggregation method (`.max(axis=0)`).
 
