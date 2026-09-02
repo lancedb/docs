@@ -114,7 +114,44 @@ Filter with SQL over any feature, using the indexes built at conversion:
   {PyFrameworksLerobotFilterFrames}
 </CodeBlock>
 
-From here it is standard LanceDB: add columns (embeddings, quality scores, corrected labels) in place without touching the videos, build vector or full-text indexes over task strings, and drop bad episodes from training with `episodes=[...]` instead of rewriting files. The reader ignores columns it does not know, so enrichment and training share one copy of the data.
+From here it is standard LanceDB. The examples below are from our DROID walkthrough, all on the table the trainer reads.
+
+**Feature engineering** is a column declaration. With [Geneva](/geneva/udfs/udfs), the score is a Python function over existing columns; declaring it costs nothing and backfilling runs in parallel:
+
+```python
+@udf(data_type=pa.float32(), input_columns=["action_joint_velocity"])
+def jerk_score(v):                      # per-frame motion roughness
+    ...
+
+tbl.add_columns({"jerk_score": jerk_score})   # nothing computed yet
+tbl.backfill("jerk_score", concurrency=8)     # 610,403 rows in 16.7 s
+```
+
+Embeddings work the same way, reading frames straight from the video blobs in the same table:
+
+```python
+@udf(data_type=pa.list_(pa.float32(), 768), num_gpus=1,
+     input_columns=["episode_index", "frame_index"])
+class EmbedFromBlob:                    # SigLIP2 loads once per worker
+    def __call__(self, episode_index, frame_index):
+        blob = self.videos.take_blobs("video_bytes", indices=[vrow])[0]
+        frame = VideoDecoder(blob).get_frames_at([pos]).data[0]
+        ...
+```
+
+**Search** is an index on those columns: a vector index over the embeddings built in 29.7 s across 27.6M rows, a full-text index over the instructions in 7.0 s, queries in 10 to 54 ms.
+
+**Curation** is one query across all of it. Semantic search with a predicate on the derived score, no join, no second system:
+
+```python
+tbl.search(vec("a gripper closing on an object"), vector_column_name="emb_siglip2") \
+   .where("jerk_score > 1.2875")        # the roughest 1% of frames
+   .limit(4)
+```
+
+**EDA** is a scan of the tabular columns: a pass over all 27.6M rows reads 2.52 GB in 190 s and decodes no video.
+
+Then drop what you found from training with `episodes=[...]` instead of rewriting files. The reader ignores columns it does not know, and the table is versioned, so curation and training share one copy of the data at a version you can reopen.
 
 <Info>
 Lance datasets are read-only in LeRobot: record and edit in the default format, then convert.
