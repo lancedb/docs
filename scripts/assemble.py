@@ -75,6 +75,7 @@ class Resolved:
 
     files: dict[str, tuple[Root, Path]] = field(default_factory=dict)
     overlays: dict[str, tuple[Root, Path]] = field(default_factory=dict)
+    excluded: list[str] = field(default_factory=list)
 
 
 def load_config(path: Path = CONFIG_PATH) -> Config:
@@ -117,6 +118,14 @@ def resolve(config: Config) -> Resolved:
             if not src.is_file():
                 continue
             rel = src.relative_to(root.path).as_posix()
+            # Editor and tooling configuration lives beside the content but is
+            # not content. Excluding it here rather than letting the publish step
+            # drop it keeps the assembled tree and the published tree identical:
+            # `actions/upload-artifact` skips hidden files by default, which
+            # silently removed docs/.cursor/ from the first published build.
+            if any(part.startswith(".") for part in rel.split("/")):
+                resolved.excluded.append(rel)
+                continue
             target = resolved.overlays if root.role == "overlay" else resolved.files
             if rel in target:
                 other = target[rel][0]
@@ -437,6 +446,10 @@ def main() -> int:
     except ValueError:
         where = config.output
     print(f"assembled {count} files from {roots} into {where}")
+    if resolved.excluded:
+        # Named rather than counted: a silently dropped file is what this
+        # exclusion exists to prevent.
+        print(f"excluded (not site content): {', '.join(sorted(resolved.excluded))}")
     return 0
 
 
