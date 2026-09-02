@@ -79,6 +79,13 @@ jobs:
         with:
           name: assembled-site
           path: build/site
+          # Without this the upload silently drops dot-prefixed paths, so the
+          # published branch would be missing files the assembler produced —
+          # docs/.cursor/ went missing from the first published build that way.
+          # The assembler must publish what it assembled, editor config included:
+          # deciding a file is "not really content" is how a byte-comparability
+          # guarantee turns into a list of exceptions.
+          include-hidden-files: true
           retention-days: 7
 
   publish:
