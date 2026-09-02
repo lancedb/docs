@@ -1,5 +1,10 @@
 name: Docs Check
 
+# The REST API spec is tracked in-repo at the release pinned in `assemble.yaml`
+# and enforced by `make check-spec` in the Assemble workflow. This job used to
+# overwrite it from lance-namespace@main before checking links, which meant it
+# validated a spec the site would never publish.
+
 on:
   pull_request:
     branches:
@@ -16,22 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout lance-namespace (upstream spec)
-        uses: actions/checkout@v4
-        with:
-          repository: lance-format/lance-namespace
-          ref: main
-          path: lance-namespace
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Copy lance-namespace REST API spec
-        run: |
-          set -euo pipefail
-          test -s lance-namespace/docs/src/spec.yaml
-          cp lance-namespace/docs/src/spec.yaml docs/api-reference/rest/openapi.yml
 
       - name: Install Mintlify CLI
         run: npm install -g mintlify@latest

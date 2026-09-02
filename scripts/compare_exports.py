@@ -157,7 +157,11 @@ def main() -> int:
         else:
             print("  (within jitter, not a signal)")
 
-        equivalent = not (real_diffs or only_base or only_new)
+        # The spec fix is pinned, so every reference page should generate its
+        # request examples. A quarantined page now means the reference has
+        # regressed rather than that it was never working -- fail instead of
+        # noting it.
+        equivalent = not (real_diffs or only_base or only_new or quarantined)
         print("\nVERDICT:", "EQUIVALENT" if equivalent else "DIFFERENT")
         if quarantined and equivalent:
             print(

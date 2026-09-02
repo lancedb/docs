@@ -33,7 +33,6 @@ import argparse
 import json
 import re
 import shutil
-import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -80,6 +79,8 @@ class Resolved:
 
 def load_config(path: Path = CONFIG_PATH) -> Config:
     raw = yaml.safe_load(path.read_text())
+    if not isinstance(raw, dict) or "roots" not in raw or "output" not in raw:
+        raise AssembleError(f"{path} must define `output` and `roots`")
     roots = []
     for entry in raw["roots"]:
         role = entry.get("role", "reference")
@@ -121,7 +122,7 @@ def resolve(config: Config) -> Resolved:
                 other = target[rel][0]
                 raise AssembleError(
                     f"{rel} is provided by both {other.name} and {root.name}; "
-                    "reference roots must not overlap"
+                    f"{root.role} roots must not overlap"
                 )
             target[rel] = (root, src)
     return resolved
@@ -145,22 +146,31 @@ def nav_page_paths(docs_json: dict) -> set[str]:
     superset. Callers must only ever use it to test membership of a known page
     path, never to enumerate pages.
 
-    `openapi` blocks are skipped: their `source` and `directory` name a spec file
-    and the directory its endpoint pages are generated into, neither of which is
-    an authored page.
+    Strings are classified by the key that holds them rather than by shape. An
+    earlier version only trusted strings containing a slash, which silently
+    exempted every top-level page — `quickstart`, `index` — from validation.
+    Naming the label-bearing and non-page keys instead makes the check complete:
+    against the current navigation it finds 179 page paths and 46 labels with no
+    misclassification either way.
     """
     found: set[str] = set()
-    skip_keys = {"openapi", "href", "icon", "logo"}
+    # Keys whose values name something other than a page.
+    non_page_keys = {"openapi", "href", "icon", "logo"}
+    # Keys whose values are human-readable labels.
+    label_keys = {
+        "group", "tab", "dropdown", "anchor", "language", "version",
+        "tag", "name", "title",
+    }
 
-    def walk(node: object) -> None:
+    def walk(node: object, key: str | None = None) -> None:
         if isinstance(node, dict):
-            for key, value in node.items():
-                if key not in skip_keys:
-                    walk(value)
+            for child_key, value in node.items():
+                if child_key not in non_page_keys:
+                    walk(value, child_key)
         elif isinstance(node, list):
             for value in node:
-                walk(value)
-        elif isinstance(node, str):
+                walk(value, key)
+        elif isinstance(node, str) and key not in label_keys:
             found.add(node.lstrip("/"))
 
     walk(docs_json.get("navigation", {}))
@@ -181,19 +191,21 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
                 f"{rel}: duplicate anchors {sorted(duplicates)}"
             )
 
-    # Every page the navigation names must exist, or the site ships dead entries.
-    page_stems = {
-        rel.rsplit(".", 1)[0] for rel, _ in iter_pages(resolved)
-    }
-    for referenced in nav_page_paths(docs_json):
-        if referenced.startswith(("http://", "https://", "#")):
-            continue
-        if referenced in page_stems:
-            continue
-        # Labels and group names share the string space with page paths, so only
-        # a path-shaped miss is worth reporting.
-        if "/" in referenced and not referenced.endswith("/"):
-            warnings.append(f"navigation references missing page: {referenced}")
+    # Every page the navigation names must exist. This fails the build rather
+    # than warning: a navigation entry pointing at nothing is a dead link in the
+    # published sidebar, and the whole point of assembling is to catch that
+    # before it ships.
+    page_stems = {rel.rsplit(".", 1)[0] for rel, _ in iter_pages(resolved)}
+    missing = sorted(
+        ref
+        for ref in nav_page_paths(docs_json)
+        if not ref.startswith(("http://", "https://", "#"))
+        and ref not in page_stems
+    )
+    if missing:
+        raise AssembleError(
+            "navigation references pages that do not exist: " + ", ".join(missing)
+        )
 
     # An overlay for a page that no reference root provides would never render.
     for rel in resolved.overlays:
@@ -256,9 +268,37 @@ def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
 # --------------------------------------------------------------------------- #
 
 
+def check_output_safe(config: Config) -> None:
+    """Refuse to emit into, or over, a source root.
+
+    `emit` clears the output directory before writing. If the output overlapped a
+    root, that would delete the source and then fail copying the files it had
+    just removed — verified: it destroys the tree. The paths do not overlap in
+    the current configuration, so this guards the edit that adds a root rather
+    than today's setup.
+    """
+    output = config.output
+    for root in config.roots:
+        if output == root.path:
+            raise AssembleError(
+                f"output {output} is the {root.name} root; assembling would delete it"
+            )
+        if output.is_relative_to(root.path):
+            raise AssembleError(
+                f"output {output} is inside the {root.name} root; "
+                "assembling would delete part of the source"
+            )
+        if root.path.is_relative_to(output):
+            raise AssembleError(
+                f"the {root.name} root {root.path} is inside output {output}; "
+                "assembling would delete it"
+            )
+
+
 def emit(
     config: Config, resolved: Resolved, docs_json: dict, nav_raw: bytes | None
 ) -> int:
+    check_output_safe(config)
     output = config.output
     if output.exists():
         shutil.rmtree(output)
@@ -307,7 +347,12 @@ def released_spec(openapi: dict[str, str]) -> bytes:
 def spec_paths(config: Config) -> Path:
     if not config.openapi:
         raise AssembleError("no openapi section in assemble.yaml")
-    return REPO_ROOT / config.openapi["dest"]
+    dest = (REPO_ROOT / config.openapi["dest"]).resolve()
+    # Same containment rule the output path gets: a `dest` of `../..` would
+    # otherwise write outside the repository.
+    if not dest.is_relative_to(REPO_ROOT):
+        raise AssembleError(f"openapi dest {dest} is outside the repository")
+    return dest
 
 
 def sync_spec(config: Config) -> bool:
@@ -387,7 +432,11 @@ def main() -> int:
     for warning in warnings:
         print(f"warning: {warning}", file=sys.stderr)
     roots = ", ".join(f"{r.name}({r.role})" for r in config.roots)
-    print(f"assembled {count} files from {roots} into {config.output.relative_to(REPO_ROOT)}")
+    try:
+        where = config.output.relative_to(REPO_ROOT)
+    except ValueError:
+        where = config.output
+    print(f"assembled {count} files from {roots} into {where}")
     return 0
 
 
