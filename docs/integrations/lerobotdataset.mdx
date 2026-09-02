@@ -27,7 +27,7 @@ What that buys you:
 | upstream, local NVMe, after a 412 GB download | global | 362 | 40.2% | 396 s |
 | upstream streaming (the no-download path) | windowed, 0.004% | does not run today | | |
 
-- **The training copy is also a database.** Every tabular feature of every frame is one query away, with scalar indexes on `episode_index`, `task_index` and `video_key` built at conversion time. Curation, search, enrichment and EDA run against the same tables the trainer reads.
+- **The training table is also the index.** Parquet has row groups and statistics but no secondary indexes, so finding frames instead of scanning them usually means a second system per question: a vector database for embeddings, a search service for instructions, a feature store for scores, each holding its own copy of the truth. With Lance those are columns and indexes on the table the DataLoader reads: scalar indexes on `episode_index`, `task_index` and `video_key` built at conversion, vector and full-text indexes over embedding and instruction columns, derived scores added in place. One query spans all of them, at a pinned version the trainer can reopen.
 
 ## Install
 
