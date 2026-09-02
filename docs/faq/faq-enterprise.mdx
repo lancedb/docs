@@ -11,7 +11,7 @@ support staff will get back to you.
 
 ### Architecture and Fault Tolerance {#architecture-and-fault-tolerance}
 
-#### What's the impact of losing each component (query node, indexer, etc.) in the LanceDB stack? {#what’s-the-impact-of-losing-each-component-query-node-indexer-etc-in-the-lancedb-stack}
+#### What is the impact of losing each component (query node, indexer, etc.) in the LanceDB stack? {#what-is-the-impact-of-losing-each-component-query-node-indexer-etc-in-the-lancedb-stack}
 LanceDB Enterprise employs component-level replication to ensure fault tolerance and 
 continuous operations. While the system remains fully functional during replica 
 failures, transient performance impacts (e.g., elevated latency or reduced throughput) 
@@ -39,7 +39,7 @@ replicas will handle all the traffic until the failed replica comes back online.
 
 ### Consistency {#consistency}
 
-#### How is strong/weak consistency configured in the enterprise stack? {#how-is-strong/weak-consistency-configured-in-the-enterprise-stack}
+#### How is strong and weak consistency configured in the enterprise stack? {#how-is-strong-and-weak-consistency-configured-in-the-enterprise-stack}
 By default, LanceDB Enterprise operates in strong consistency mode. 
 Once a write is successfully acknowledged, a new Lance dataset version manifest 
 file is created. Subsequent reads always load the latest manifest file to 
@@ -85,7 +85,7 @@ We have various metrics set up for monitoring each component in the LanceDB stac
 
 Please contact the LanceDB team for the comprehensive list of monitoring metrics.
 
-#### How do I integrate LanceDB's monitoring metrics with my monitoring dashboard? {#how-do-i-integrate-lancedb’s-monitoring-metrics-with-my-monitoring-dashboard}
+#### How do I integrate LanceDB monitoring metrics with my monitoring dashboard? {#how-do-i-integrate-lancedb-monitoring-metrics-with-my-monitoring-dashboard}
 LanceDB uses Prometheus for metrics collection and OpenTelemetry (OTel) to export such
 metrics with data enrichment. The LanceDB team will work with you to integrate the 
 monitoring metrics with your preferred dashboard.

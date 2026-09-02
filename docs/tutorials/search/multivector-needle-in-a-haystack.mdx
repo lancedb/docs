@@ -45,8 +45,7 @@ The intention of this task is to find the page which has the text needle that an
 
 Our testbed includes a baseline single-vector model and a family of advanced multivector models. 
 
-### Single-Vector (Bi-Encoder) Baseline: `openai/clip-vit-base-patch32` {#single-vector-bi-encoder-baseline-openai/clip-vit-base-patch32}
-
+### Single-Vector (Bi-Encoder) Baseline: CLIP ViT-Base-Patch32 {#single-vector-bi-encoder-baseline-clip-vit-base-patch32}
 A bi-encoder maps an entire piece of content (a query, a document page) to a *single* vector. The search process is simple: pre-compute one vector for every page, and at query time, find the page vector closest to the query vector.
 
 *   **Strength:** Speed and simplicity.
@@ -123,8 +122,7 @@ results = tbl_flat.search(query_mean_vector).limit(5).to_list()
 
 This is a variation of `flatten`. `max_pooling` takes the element-wise max across all token vectors instead of the mean. The implementation is identical to `flatten`, just with a different aggregation method (`.max(axis=0)`).
 
-### 4\. `flatten and multivector rerank`: The Hybrid "Optimization" {#4-flatten-and-multivector-rerank-the-hybrid-“optimization”}
-
+### 4\. `flatten and multivector rerank`: The Hybrid Optimization {#4-flatten-and-multivector-rerank-the-hybrid-optimization}
 This two-stage strategy aims for the best of both worlds. First, use a fast, pooled-vector search to find a set of promising candidates. Then, run the full, accurate multivector search on *only* those candidates.
 
 **LanceDB Implementation:**

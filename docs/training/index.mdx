@@ -166,7 +166,7 @@ By default, `StreamingDataset` serializes enough table state to reopen the table
 setup, pass a picklable `connection_factory` callable that accepts a table name and returns an open table. This avoids
 serializing connection credentials into worker state.
 
-### Observability & performance
+### Observability and performance {#observability-and-performance}
 
 Optimizing data loader performance is tricky because it can be difficult to locate the bottleneck. What is often
 blamed on I/O can be a CPU bottleneck in the transform stage, or vice versa. To help distinguish them,
