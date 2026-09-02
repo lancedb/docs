@@ -16,10 +16,10 @@ import {
 
 What you get:
 
-- **Train from object storage while keeping your GPUs fed.** Lance reads random frames straight from S3, GCS, the HF Hub or HF Storage Buckets, fetching only the bytes each batch needs, so every batch is a global shuffle over the whole dataset. Upstream's no-download path streams through a buffer and shuffles only inside it: on DROID (27.6M frames) a 230 GB buffer covers 0.15% of the data. Lance shuffles all of it in 36 GB.
-- **Fewer CPU cores per GPU.** Lance plans a whole batch at once (one table read, one blob fetch, decoders reused) instead of fetching one frame per call. 4 dataloader workers per GPU keep 8xH100 fed; upstream needs 8. Throughput in samples/s, 8 workers, batch 64. Lance and upstream local both do a global shuffle; upstream streaming can only shuffle inside its buffer:
+- **Train from object storage while keeping your GPUs fed.** Lance reads random frames straight from S3, GCS, the HF Hub or HF Storage Buckets, fetching only the bytes each batch needs, so every batch is a global shuffle over the whole dataset. Upstream's no-download path reads the dataset roughly in order and can only mix the frames it has seen most recently, so each batch comes from a handful of episodes rather than the whole dataset. On DROID (27.6M frames), even keeping 230 GB of recent frames in memory covers 0.15% of the data. Lance shuffles all of it in 36 GB.
+- **Fewer CPU cores per GPU.** Lance plans a whole batch at once (one table read, one blob fetch, decoders reused) instead of fetching one frame per call. 4 dataloader workers per GPU keep 8xH100 fed; upstream needs 8. Throughput in samples/s, 8 workers, batch 64. Lance and upstream local both draw every batch from the whole dataset; upstream streaming reads in order and mixes only recently seen frames, so those two columns are not the same job:
 
-| dataset | frames | cameras | Lance, S3 (global shuffle) | upstream, local (global shuffle) | same job | upstream, streaming (windowed shuffle) | vs streaming |
+| dataset | frames | cameras | Lance, S3 (global shuffle) | upstream, local (global shuffle) | same job | upstream, streaming (recent frames only) | vs streaming |
 |---|---|---|---|---|---|---|---|
 | DROID | 27,630,375 | 3 | 2,258.5 | 346.7 | 6.5x | 898.6 | 1.7x |
 | berkeley_rpt | 392,578 | 1 | 1,740.6 | 1,209.9 | 1.4x | 274.5 | 6.3x |
