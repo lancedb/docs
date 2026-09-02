@@ -338,6 +338,61 @@ for sample in ds:
 ```
 </CodeGroup>
 
+### Sequence packing for language model pre-training
+
+Language model pre-training typically requires fixed-length token blocks rather than variable-length documents. Set
+`pack_sequences=<block_length>` to have `StreamingDataset` concatenate tokenized documents into contiguous blocks of
+that length. Each item is a dictionary with two `(pack_sequences,)` `torch.long` tensors: `input_ids` (the tokens) and
+`doc_ids` (a per-position document index within the block, suitable for building block-diagonal attention masks or
+resetting position ids at document boundaries).
+
+Packing is required to be used with a single integer-list column. When packing is enabled, you must also set:
+
+- `eos_id`: the separator token id appended after every document.
+- `pad_id`: the padding token id used to complete blocks when a split runs out of real tokens. This id must be
+  reserved for padding, because padding positions retain the preceding document's `doc_id`. Mask padding using
+  `input_ids == pad_id` rather than treating `doc_ids` as a padding mask.
+- `blocks_per_epoch`: the total number of packed blocks emitted globally per epoch. Must be divisible by
+  `num_splits`, and every logical split emits exactly `blocks_per_epoch / num_splits` blocks. Splits that exhaust
+  their tokens early emit padded blocks through this fixed budget, which keeps ranks in sync and makes the packed
+  stream independent of rank and worker topology. Tokens beyond the budget are left out of the epoch. Pass
+  `"auto"` to estimate a budget from a bounded token-count sample; the estimate is approximate and emits a warning.
+
+Sequence packing cannot be combined with a `transform`.
+
+<CodeGroup>
+```py Python icon=Python
+from lancedb.streaming import StreamingDataset
+
+ds = StreamingDataset(
+    table,
+    shuffle=False,
+    columns=["tokens"],
+    num_splits=8,
+    pack_sequences=2048,        # emit 2048-token blocks
+    eos_id=tokenizer.eos_id,
+    pad_id=tokenizer.pad_id,
+    blocks_per_epoch=100_000,   # must be divisible by num_splits
+)
+
+for block in ds:
+    input_ids = block["input_ids"]           # shape (2048,)
+    doc_ids = block["doc_ids"]               # shape (2048,)
+    padding_mask = input_ids == tokenizer.pad_id
+    train_step(input_ids, doc_ids, padding_mask)
+```
+</CodeGroup>
+
+<Note>
+`doc_ids` labels document segments, including continuations across block boundaries. It is not a padding mask:
+padding positions inherit the preceding document's id (or `0` in an all-padding block), so always mask padding
+using the reserved `pad_id`.
+</Note>
+
+Packing state (consumed documents, emitted blocks, buffered tokens, and document boundaries per split) is captured
+by `state_dict()` and restored by `load_state_dict()`, so packed runs resume exactly even after a change in
+`world_size` or `num_workers`.
+
 ### Checkpointing and resumability
 
 Model training is expensive, and failures can occur partway through a run. A model checkpoint is not enough for an
