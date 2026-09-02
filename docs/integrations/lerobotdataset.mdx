@@ -17,7 +17,7 @@ import {
 What that buys you:
 
 - **Train from object storage with a true global shuffle.** Lance reads random frames in place from S3, GCS, HF Hub or HF Storage Buckets, fetching only the byte ranges each batch needs. Upstream's no-download path is a buffered stream: on DROID (27.6M frames) a 230 GB buffer still shuffles 0.15% of the dataset, while Lance shuffles 100% in about 36 GB, at the same throughput, with a first batch in 13 s instead of 7 minutes.
-- **Keep the GPUs fed without burning cores.** Lance plans whole batches (one table read, one blob fetch, decoders reused) instead of one frame per call. On DROID that is 6x upstream's map-style throughput at equal workers, which is why 4 dataloader workers per rank keep 8xH100 fed where upstream needs 8. From object storage the budget is bandwidth, and it is modest: well under a quarter of one 100 GbE link at current per-sample cost.
+- **Keep the GPUs fed without burning cores.** Lance plans whole batches (one table read, one blob fetch, decoders reused) instead of one frame per call. On DROID that is 6x upstream's map-style throughput at equal workers, which is why 4 dataloader workers per rank keep 8xH100 fed where upstream needs 8. Across eight public teleop datasets the edge runs 1.2x (one camera) to 6.5x (DROID), and on multi-camera sets Lance reading from a same-region bucket outruns upstream reading the same data from local NVMe (816 vs 294 samples/s on aloha_mobile_cabinet). From object storage the budget is bandwidth, and it is modest: well under a quarter of one 100 GbE link at current per-sample cost.
 - **Measured end to end** (8xH100, SmolVLA on DROID, lerobot's default `num_workers=4`):
 
 | configuration | shuffle | samples/s | GPU data wait | wall clock |
@@ -27,7 +27,7 @@ What that buys you:
 | upstream, local NVMe, after a 412 GB download | global | 362 | 40.2% | 396 s |
 | upstream streaming (the no-download path) | windowed, 0.004% | does not run today | | |
 
-The first row is the point: a full global shuffle, read in place from object storage, with the GPUs idle 1.3% of the time. Upstream reaches parity locally by doubling dataloader workers, so the durable difference is CPU cost and the download; the streaming path currently cannot train a multi-GPU language-conditioned policy at all (no per-rank sharding, and batch dispatch rejects the task strings a VLA needs).
+The first row is the point: a full global shuffle, read in place from object storage, with the GPUs idle 1.3% of the time. Upstream reaches parity locally by doubling dataloader workers, so the durable difference is CPU cost and the download; the streaming path currently cannot train a multi-GPU language-conditioned policy at all (no per-rank sharding, and batch dispatch rejects the task strings a VLA needs). Most hub datasets also publish a single parquet shard, which caps streaming at one worker regardless of how many you ask for.
 
 - **The training copy is also a database.** Every tabular feature of every frame is one query away, with scalar indexes on `episode_index`, `task_index` and `video_key` built at conversion time. Curation, search, enrichment and EDA run against the same tables the trainer reads.
 
@@ -46,7 +46,7 @@ Any LeRobot v3.0 dataset, from the Hub or a local directory:
 lerobot-lance-convert --repo-id lerobot/pusht --out ./pusht-lance
 ```
 
-The output keeps `meta/` unchanged and adds three Lance tables (`frames`, `videos`, `meta`). Videos are stored as blobs without re-encoding, so items are bit-identical to the source. `lerobot-lance-doctor` audits the result, and regularly finds problems in the source itself: the DROID repo, for example, carries 44% orphaned rows that filename-based tooling never notices.
+The output keeps `meta/` unchanged and adds three Lance tables (`frames`, `videos`, `meta`). Videos are stored as blobs without re-encoding, so items are bit-identical to the source and conversion is close to a file copy: 392,578 frames (berkeley_rpt) convert in 10 seconds, DROID's 27.6M in 34 minutes. `lerobot-lance-doctor` audits the result, and regularly finds problems in the source itself: the DROID repo carries 44% orphaned rows that filename-based tooling never notices, and three of eight public datasets we converted have frame-count defects that only random access exposes (shuffled reads crash on any reader, upstream included).
 
 Host the result anywhere: an HF dataset repo (`hf upload`, tag it `v3.0`), an HF Storage Bucket (`hf buckets sync`), or any object store (`aws s3 sync`).
 
