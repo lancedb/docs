@@ -16,10 +16,10 @@ import {
 
 What you get:
 
-- **Train from object storage while keeping your GPUs fed.** Lance reads random frames straight from S3, GCS, the HF Hub or HF Storage Buckets, fetching only the bytes each batch needs, so every batch is a global shuffle over the whole dataset. Upstream's no-download path reads the dataset roughly in order and can only mix the frames it has seen most recently, so each batch comes from a handful of episodes rather than the whole dataset. On DROID (27.6M frames), even keeping 230 GB of recent frames in memory covers 0.15% of the data. Lance shuffles all of it in 36 GB.
-- **Fewer CPU cores per GPU.** Lance plans a whole batch at once (one table read, one blob fetch, decoders reused) instead of fetching one frame per call. 4 dataloader workers per GPU keep 8xH100 fed; upstream needs 8. Throughput in samples/s, 8 workers, batch 64. Lance and upstream local both draw every batch from the whole dataset; upstream streaming reads in order and mixes only recently seen frames, so those two columns are not the same job:
+- **Train from object storage while keeping your GPUs fed.** Lance reads random frames straight from S3, GCS, the HF Hub or HF Storage Buckets, fetching only the bytes each batch needs, so every batch is a global shuffle over the whole dataset. Upstream's no-download path uses a reservoir shuffle: it reads the dataset roughly in order and draws each batch from a pool of recently seen frames, so a batch comes from a handful of episodes rather than the whole dataset. On DROID (27.6M frames), even keeping 230 GB of recent frames in memory covers 0.15% of the data. Lance shuffles all of it in 36 GB.
+- **Fewer CPU cores per GPU.** Lance plans a whole batch at once (one table read, one blob fetch, decoders reused) instead of fetching one frame per call. 4 dataloader workers per GPU keep 8xH100 fed; upstream needs 8. Throughput in samples/s, 8 workers, batch 64. Lance and upstream local both draw every batch from the whole dataset. Upstream streaming does a reservoir shuffle: it reads the dataset in order, keeps a pool of the last thousand or so frames, and draws each batch from that pool, so a batch mixes a few episodes rather than the whole dataset. Those two columns are not the same job:
 
-| dataset | frames | cameras | Lance, S3 (global shuffle) | upstream, local (global shuffle) | same job | upstream, streaming (recent frames only) | vs streaming |
+| dataset | frames | cameras | Lance, S3 (global shuffle) | upstream, local (global shuffle) | same job | upstream, streaming (reservoir shuffle) | vs streaming |
 |---|---|---|---|---|---|---|---|
 | DROID | 27,630,375 | 3 | 2,258.5 | 346.7 | 6.5x | 898.6 | 1.7x |
 | berkeley_rpt | 392,578 | 1 | 1,740.6 | 1,209.9 | 1.4x | 274.5 | 6.3x |
@@ -88,11 +88,17 @@ lerobot-train \
 
 ## Visualize TB-scale datasets in Foxglove
 
+LeRobot's dataset viewer can serve an episode to [Foxglove](https://foxglove.dev) over its WebSocket protocol ([lerobot#4542](https://github.com/huggingface/lerobot/pull/4542)), and with a Lance dataset it works wherever the data lives:
+
 ```bash
 lerobot-dataset-viz --repo-id lance-format/pusht-lance --episode-index 3 --display-mode foxglove
 ```
 
-Connect the Foxglove app to `ws://localhost:8765` and scrub. Episodes are served on demand from wherever the dataset lives: scrubbing one episode of the 373 GB DROID from S3 moves a few MB. No MCAP export, no download.
+Open the Foxglove app, connect to `ws://localhost:8765`, and scrub. Cameras, joint state and actions show up as topics you can lay out however you like:
+
+![Foxglove showing episode 7 of DROID served from S3: three camera panels and the joint state, scrubbed to 19.4 s](/static/assets/images/integrations/lerobot-foxglove-droid.png)
+
+Frames are fetched as you scrub, so looking at one episode of the 373 GB DROID from S3 moves a few MB, not the dataset. No MCAP export, no download, and nothing new to install on the dataset side: this is the same reader the trainer uses.
 
 ## Query, curate, enrich
 
