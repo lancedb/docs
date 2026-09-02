@@ -27,8 +27,6 @@ What that buys you:
 | upstream, local NVMe, after a 412 GB download | global | 362 | 40.2% | 396 s |
 | upstream streaming (the no-download path) | windowed, 0.004% | does not run today | | |
 
-The first row is the point: a full global shuffle, read in place from object storage, with the GPUs idle 1.3% of the time. Upstream reaches parity locally by doubling dataloader workers, so the durable difference is CPU cost and the download; the streaming path currently cannot train a multi-GPU language-conditioned policy at all (no per-rank sharding, and batch dispatch rejects the task strings a VLA needs). Most hub datasets also publish a single parquet shard, which caps streaming at one worker regardless of how many you ask for.
-
 - **The training copy is also a database.** Every tabular feature of every frame is one query away, with scalar indexes on `episode_index`, `task_index` and `video_key` built at conversion time. Curation, search, enrichment and EDA run against the same tables the trainer reads.
 
 ## Install
