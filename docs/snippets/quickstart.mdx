@@ -54,7 +54,7 @@ export const TsQuickstartVectorSearch1 = "// Search for examples similar to a \"
 
 export const TsQuickstartVectorSearch2 = "// Search for examples similar to a \"powerful sorceress\"\nqueryVector = [0.3, 0.9, 0.6, 0.8];\n\nconst results = await table.search(queryVector).limit(2).toArray();\nconsole.table(results);\n";
 
-export const RsQuickstartAddFeature = "table\n    .add_columns(\n        NewColumnTransform::SqlExpressions(vec![(\n            \"power_score\".to_string(),\n            \"cast(((stats.strength + stats.magic + stats.leadership + stats.wisdom) / 4.0) as float)\"\n                .to_string(),\n        )]),\n        None,\n    )\n    .await\n    .unwrap();\n";
+export const RsQuickstartAddFeature = "table\n    .add_columns()\n    .transform(NewColumnTransform::SqlExpressions(vec![(\n        \"power_score\".to_string(),\n        \"cast(((stats.strength + stats.magic + stats.leadership + stats.wisdom) / 4.0) as float)\"\n            .to_string(),\n    )]))\n    .execute()\n    .await\n    .unwrap();\n";
 
 export const RsQuickstartCreateTable = "let schema = characters_schema();\nlet table = db\n    .create_table(\"characters\", characters_to_reader(schema.clone(), &data))\n    .mode(CreateTableMode::Overwrite)\n    .execute()\n    .await\n    .unwrap();\n";
 
