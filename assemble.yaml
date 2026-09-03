@@ -1,35 +1,29 @@
 # Assembler configuration.
 #
-# The site is built from one or more content roots rather than published
-# directly from this repository. Today there is a single root — this repo's own
-# `docs/` — and the assembled output is byte-identical to it. Later phases add
-# roots without changing the program:
+# The published site is built from several content roots. The first `reference`
+# root owns the navigation and ships a complete `docs.json`, so it can also be
+# served on its own with `mint dev` — that is how a contributor previews the
+# open-source documentation without this repository at all. Every other root
+# contributes a `docs.nav.json` fragment, whose tabs are merged by name.
 #
-#   A3  the open-source pages move to lancedb/lancedb, added here as a second
-#       `reference` root
-#   A5  the Enterprise overlays land in sophon, added as an `overlay` root whose
-#       fragments merge onto reference anchors
-#
-# Adding a root is an edit to this file, not to scripts/assemble.py. That is the
-# point of keeping it declarative.
+# A5 adds sophon as an `overlay` root, whose Enterprise fragments merge onto
+# reference anchors. That is a config edit, not a code change.
 
-output: build/site
+output: ${ASSEMBLE_OUTPUT:-build/site}
 
 roots:
-  - name: oss
+  # Open-source pages, and the navigation for the whole site. Override the path
+  # with LANCEDB_DOCS_ROOT when the checkout is somewhere else; CI sets it.
+  - name: lancedb
+    path: ${LANCEDB_DOCS_ROOT:-../lancedb/docs/web}
+    role: reference
+
+  # What this repository still owns: the Geneva pages until Stage G replaces
+  # them, the generated dataset cards, and the OpenAPI spec.
+  - name: build
     path: docs
     role: reference
 
-# Generated inputs the assembler owns rather than trusting a bot to commit.
-#
-# The REST reference is generated from the Lance Namespace OpenAPI spec. It is
-# tracked at a *release tag*, not a commit: the site should document something
-# that was released. `make sync-spec` writes the released spec into the tree and
-# CI fails if the two have drifted, so the pin cannot rot silently.
-#
-# v0.12.0 is the first release carrying the fix for the broken request examples
-# (lance-format/lance-namespace#362). Anything older renders "A valid request
-# URL is required to generate request examples" on most endpoint pages.
 openapi:
   repo: lance-format/lance-namespace
   release: v0.12.0
