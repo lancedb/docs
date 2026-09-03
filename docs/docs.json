@@ -70,8 +70,7 @@
               "training/index",
               "training/torch",
               "training/object-detection",
-              "training/vlm-finetuning",
-              "integrations/lerobotdataset"
+              "training/vlm-finetuning"
             ]
           },
           {
@@ -447,6 +446,12 @@
       {
         "tab": "Use Cases",
         "groups": [
+          {
+            "group": "Robotics",
+            "pages": [
+              "integrations/lerobotdataset"
+            ]
+          },
           {
             "group": "World Models",
             "pages": [
