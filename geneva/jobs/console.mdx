@@ -1,0 +1,52 @@
+---
+title: Geneva Console
+sidebarTitle: Console
+description: 
+icon: computer
+---
+
+The Geneva Console provides a web-based interface for monitoring and managing Geneva jobs, clusters, and manifests.
+
+![geneva-console](/static/assets/images/geneva/console_screenshot.png)
+
+## Why a Geneva Console?
+
+- Collaboration: The console helps multiple people work together. Individual jobs can be run in a notebook or workflow, but to collaborate on jobs, it helps to be able to see everything that's running on a given database.
+- History: See what has run in the past and diagnose any problems with your jobs.
+- Shared resources: The console stores definitions of clusters and manifests, so you can easily tell what resources you want to use to run your job.
+
+## Getting Started
+
+The Geneva console is installed with the Geneva Helm chart; [contact LanceDB](https://lancedb.com/contact/) for access to the Helm chart.
+
+1. Install or upgrade the Geneva Helm chart (see [Helm Deployment](/geneva/deployment/helm/)).
+2. In your web browser, connect to the Geneva Console UI using the external ingress/load balancer URI configured in your deployment.
+3. **Backup (no external ingress):** if your deployment doesn't expose the console via ingress or a load balancer, forward port 3000 from the `geneva-console-ui` service and open `http://localhost:3000`:
+```bash
+kubectl port-forward -n lancedb svc/geneva-console-ui 3000:3000
+```
+(Use `-n` to specify the namespace you installed the Helm chart into. We advise `lancedb`.)
+4. When prompted, enter your bucket and database, like:
+```
+s3://my-bucket/my-db
+```
+
+## What's in the Console?
+
+### Jobs Overview
+The heart of the console is an overview of all jobs that are running on a given database. See each job's status, progress, timing, and initiator.
+
+### Job Details
+Click on a job's ID to get more details, especially events that have happened in a job's life cycle, and metrics such as number of workers, rows, and fragments written.
+
+### Clusters
+See the Geneva clusters that you have defined to run jobs. Because clusters can be reused by name, this view can help you run a new job with the same resource constraints as a previous job.
+
+### Manifests
+See the Manifests you've defined and what packages/dependencies they contain. As with clusters, manifests are reusable, so it's easy to start a new job with the same dependencies as an old one by just specifying the manifest name.
+
+## API Reference
+
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — `get_job()`, `list_jobs()`, `list_clusters()`, `list_manifests()`
+- [Cluster](https://lancedb.github.io/geneva/api/cluster/) — `GenevaCluster` and cluster configuration classes
+- [Manifest](https://lancedb.github.io/geneva/api/manifest/) — `GenevaManifest` and manifest builder classes

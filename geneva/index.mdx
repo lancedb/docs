@@ -1,0 +1,71 @@
+---
+title: "Multimodal Feature Engineering with Geneva"
+sidebarTitle: Overview
+description: "Learn how to do multimodal feature engineering in LanceDB Enterprise to transform raw data into meaningful features for AI models."
+icon: layer-group
+keywords: ["geneva", "feature engineering", "add features"]
+---
+
+<Badge color="red">Enterprise-only</Badge>
+
+When working with multimodal data at scale, [LanceDB Enterprise](/enterprise) makes it easy
+to define, extract, and transform raw data into useful information and features for your
+AI applications. LanceDB Enterprise's _Multimodal Feature Engineering_ package is designed to improve
+the productivity of AI engineers operating at immense scale.
+
+With an API designed to leverage LanceDB's optimized data storage and retrieval, it
+streamlines prototyping extraction and transformation tasks, performing experiments, exploring your
+data, scaling up execution, and moving to production.
+
+LanceDB Multimodal Feature Engineering enables researchers to seamlessly transition from
+experiments in local notebooks to fully-managed distributed job execution on datasets with
+billions of rows.
+
+<Card>
+Feature Engineering and the `geneva` Python package are currently only available as part of
+[LanceDB Enterprise](/enterprise). Please [contact us](mailto:contact@lancedb.com) if you're interested
+in scaling up your feature engineering workloads for your AI and multimodal use cases.
+</Card>
+
+The `geneva` package uses Python [User Defined Functions (UDFs)](/geneva/udfs/udfs) to define features
+as columns in a Lance dataset. Adding a feature is straightforward:
+
+<Steps>
+  <Step>
+  Prototype your Python function in your favorite environment.
+  </Step>
+  <Step>
+  Wrap the function with a small UDF decorator (see [UDFs](/geneva/udfs/udfs)).
+  </Step>
+  <Step>
+  Register the UDF as a virtual column using `Table.add_columns()`.
+  </Step>
+  <Step>
+  (Optional, advanced) Override where the job runs — see [Advanced Execution Contexts](/geneva/jobs/contexts). On LanceDB Enterprise, distributed job execution is fully managed, so most users can skip this step.
+  </Step>
+  <Step>
+  Trigger a `backfill` operation (see [Backfilling](/geneva/jobs/backfilling/)).
+  </Step>
+</Steps>
+
+<Tip>
+You can build your Python feature generator function in an IDE or a notebook using your project's Python versions and dependencies. `geneva` will automate much of the dependency and version management needed to move from prototype to scale and production.
+</Tip>
+
+Ready to write your first feature? Head to [Getting Started](/geneva/getting-started).
+
+## Continue learning
+
+Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:
+
+- **Get started**: [Getting Started](/geneva/getting-started) · [What is Feature Engineering?](/geneva/overview/) · [End-to-end example](/geneva/end-to-end)
+- **UDFs**: [Using UDFs](/geneva/udfs/udfs) · [Blob helpers](/geneva/udfs/blobs/) · [Error handling](/geneva/udfs/error_handling) · [Advanced configuration](/geneva/udfs/advanced-configuration) 
+- **Jobs**: [Job execution overview](/geneva/jobs/) · [Backfilling](/geneva/jobs/backfilling/) · [Materialized views](/geneva/jobs/materialized-views/) · [Startup optimizations](/geneva/jobs/startup/) · [Advanced job configuration](/geneva/jobs/advanced-job-configuration/) · [Advanced execution contexts](/geneva/jobs/contexts/) · [Geneva console](/geneva/jobs/console) · [Performance](/geneva/jobs/performance/)
+- **Deployment**: [Deployment overview](/geneva/deployment/) · [Helm deployment](/geneva/deployment/helm/) · [Troubleshooting](/geneva/deployment/troubleshooting/)
+
+## API Reference
+
+- [`geneva.connect()`](https://lancedb.github.io/geneva/api/) — connect to a Geneva database
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — manage tables, views, jobs, clusters, and manifests
+- [Table](https://lancedb.github.io/geneva/api/table/) — add columns, backfill, search, and manage table data
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — define user-defined functions for feature computation

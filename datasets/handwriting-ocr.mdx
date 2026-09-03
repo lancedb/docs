@@ -1,0 +1,267 @@
+---
+title: "Handwriting OCR"
+sidebarTitle: "Handwriting OCR"
+description: "This Lance-formatted version of the Doctor's Handwritten Prescription BD dataset contains 4,680 cropped PNG images of handwritten medicine names from Bangladesh. Each row keeps the original image bytes with the medicine and generic-name labels…"
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/handwriting-ocr"
+>
+Source dataset card and downloadable files for `lance-format/handwriting-ocr`.
+</Card>
+
+This Lance-formatted version of the [Doctor's Handwritten Prescription BD dataset](https://www.kaggle.com/datasets/mamun1113/doctors-handwritten-prescription-bd-dataset) contains 4,680 cropped PNG images of handwritten medicine names from Bangladesh. Each row keeps the original image bytes with the medicine and generic-name labels, plus deterministic search metadata derived from those labels. The dataset contains three source-preserved splits: train, validation, and test.
+
+> [!NOTE]
+> **Training note:** The same samples appear repeatedly because a model (during training) should learn from multiple *different handwritten crops* of the same medicine, because they capture different writers, pen strokes, sizes, and image quality. The dataset would need to be shuffled and sampled appropriately before running downstream training tasks
+
+## Key features
+
+- **Original inline PNG bytes** in `image`, with no image folders or sidecar files required.
+- **Three preserved splits**: 3,120 training, 780 validation, and 780 test examples.
+- **Medicine annotations**: 78 medicine names mapped to 15 generic names.
+- **Built-in text retrieval** over `searchable_summary`, with scalar indices matching the companion OCR retrieval project.
+
+## Splits
+
+| Split | Rows | Source directory |
+|---|---:|---|
+| `train` | 3,120 | `Training` |
+| `validation` | 780 | `Validation` |
+| `test` | 780 | `Testing` |
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `string` | Stable split-qualified row identifier |
+| `image` | `large_binary` | Original inline PNG bytes |
+| `medicine_name` | `string` | Source medicine-name label |
+| `generic_name` | `string` | Source generic-name label |
+| `normalized_text` | `string` | Deterministic normalization of `medicine_name` |
+| `category` | `string` | `medication` for every source row |
+| `is_medical` | `bool` | `true` for every source row |
+| `needs_human_review` | `bool` | `false`; this conversion does not run OCR confidence assessment |
+| `searchable_summary` | `string` | Label-derived text: `Medication mention: <medicine> (<generic>)` |
+| `source_dataset` | `string` | Upstream Kaggle dataset identifier |
+| `split` | `string` | Original source split name: `Training`, `Validation`, or `Testing` |
+| `image_filename` | `string` | Original PNG filename within the source split |
+
+`normalized_text`, `category`, `is_medical`, `needs_human_review`, and `searchable_summary` are deterministic conversion metadata. They are not OCR or clinical-model predictions.
+
+## Pre-built indices
+
+- `INVERTED` (FTS) on `searchable_summary`
+- `BTREE` on `id`
+- `BITMAP` on `category`
+- `BITMAP` on `needs_human_review`
+
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets through the standard Hugging Face `datasets` interface when you want a streaming sample or your pipeline already uses `Dataset` / `IterableDataset`.
+
+```python
+import datasets
+
+hf_ds = datasets.load_dataset(
+    "lance-format/handwriting-ocr",
+    split="train",
+    streaming=True,
+)
+for row in hf_ds.take(3):
+    print(row["medicine_name"], row["generic_name"])
+```
+
+## Load with LanceDB
+
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the downloaded dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, and Versioning examples below.
+
+```python
+import lancedb
+
+db = lancedb.connect("./data")
+tbl = db.open_table("train")
+print(len(tbl))
+```
+
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with lower-level APIs. Use it to inspect the schema, fragments, and pre-built indices.
+
+```python
+import lance
+
+ds = lance.dataset("./data/train.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+> **Tip - for production use, download locally first.** Streaming from the Hub works for exploration, but repeated random access and training are faster against a local copy:
+> ```bash
+> hf download lance-format/handwriting-ocr --repo-type dataset --local-dir ./handwriting-ocr
+> ```
+> Then run the examples below from `./handwriting-ocr`, where `./data` contains the downloaded Lance splits.
+
+## Search
+
+The bundled full-text index makes medicine and generic-name lookups efficient without an embedding model. `searchable_summary` combines the two labels, so a text query can return the matching word image and its annotations in one bounded result set.
+
+```python
+import lancedb
+
+db = lancedb.connect("./data")
+tbl = db.open_table("train")
+
+hits = (
+    tbl.search("Paracetamol")
+    .select(["id", "medicine_name", "generic_name", "searchable_summary"])
+    .limit(10)
+    .to_list()
+)
+for row in hits:
+    print(row["medicine_name"], "-", row["generic_name"])
+```
+
+The FTS index operates on label-derived text, not a transcription produced from the image. It is useful for inspecting the handwritten examples associated with known medicine or generic names.
+
+## Curate
+
+Filters produce small, explicit candidate sets for experiments. The example selects a bounded set of Paracetamol examples while avoiding image bytes until a later step needs them.
+
+```python
+import lancedb
+
+db = lancedb.connect("./data")
+tbl = db.open_table("train")
+
+candidates = (
+    tbl.search()
+    .where("generic_name = 'Paracetamol'")
+    .select(["id", "image_filename", "medicine_name", "generic_name"])
+    .limit(100)
+    .to_list()
+)
+```
+
+This list can be reviewed directly, saved as an experiment manifest, or used as the input to an annotation or training workflow.
+
+## Evolve
+
+Lance can append new columns without rewriting the original images or annotations. For example, a local copy can add a flag for a specific generic name using a SQL expression, then merge independently produced labels by `id`.
+
+> **Note**: Mutations require a local copy. The examples in this card assume the dataset was downloaded into the current directory, as shown above.
+
+```python
+import lancedb
+import pyarrow as pa
+
+db = lancedb.connect("./data")
+tbl = db.open_table("train")
+
+tbl.add_columns({"is_paracetamol": "generic_name = 'Paracetamol'"})
+
+review_labels = pa.table({
+    "id": ["train_00000"],
+    "review_status": ["reviewed"],
+})
+tbl.merge(review_labels, on="id")
+```
+
+The source columns and pre-built indices remain intact. New labels become available to queries as soon as the write commits.
+
+## Train
+
+Projection lets a training loop read only the columns it needs. The image bytes and medicine label below are projected through a standard PyTorch `DataLoader`; fields added later do not add read cost unless selected.
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("./data")
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["image", "medicine_name"])
+loader = DataLoader(train_ds, batch_size=64, shuffle=True, num_workers=4)
+
+for batch in loader:
+    # Decode PNG bytes and train an OCR or classification model.
+    ...
+```
+
+This keeps the original image representation available for training while avoiding unrelated columns on each epoch.
+
+## Versioning
+
+Every Lance mutation creates a version, so the table history can identify the exact split and annotation state used by a retrieval service or experiment. The downloaded dataset can list its history and create tags for reproducible local workflows.
+
+```python
+import lancedb
+
+db = lancedb.connect("./data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+
+tbl.tags.create("labels-v1", tbl.version)
+```
+
+A pinned version or tag keeps retrieval and training tied to a known dataset state even as review labels or derived columns are added later.
+
+## Materialize a subset
+
+Use a filtered query to materialize a compact local LanceDB table for writes or intensive training. The query streams matching rows and projected columns without materializing the full result set in Python memory.
+
+```python
+import lancedb
+
+source_db = lancedb.connect("./data")
+source_tbl = source_db.open_table("train")
+
+batches = (
+    source_tbl.search()
+    .where("generic_name = 'Paracetamol'")
+    .select(["id", "image", "medicine_name", "generic_name", "searchable_summary"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./paracetamol-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting local table can replace `./data` in the Evolve, Train, and Versioning examples when a compact writable subset is sufficient.
+
+## Citation
+
+Please cite both the upstream dataset and the associated research paper:
+
+```bibtex
+@inproceedings{mia2024deep,
+  title={A Deep Neural Network Approach with Pioneering Local Dataset to Recognize Doctor's Handwritten Prescription in Bangladesh},
+  author={Mia, Abdur Rahim and Chowdhury, Mohammad Abdullah-Al-Sajid and Mamun, Abdullah Al and Ruddra, Aurunave Mollik and Tanny, Nawshin Tabassum},
+  booktitle={2024 International Conference on Advances in Computing, Communication, Electrical, and Smart Systems},
+  pages={1--6},
+  year={2024},
+  publisher={IEEE},
+  doi={10.1109/iCACCESS61735.2024.10499631}
+}
+```
+
+Source dataset: [Mamun1113, Doctor's Handwritten Prescription BD dataset](https://www.kaggle.com/datasets/mamun1113/doctors-handwritten-prescription-bd-dataset). Associated paper: [IEEE Xplore](https://ieeexplore.ieee.org/document/10499631).
+
+## License
+
+The upstream Kaggle metadata identifies the database license as [Open Database License (ODbL) v1.0](https://opendatacommons.org/licenses/odbl/1.0/) and states that the contents are copyright the original authors. The upstream page also describes the dataset as free for educational and research use. Downstream users should review the upstream dataset page and publication, satisfy the ODbL obligations, and obtain any additional permissions needed for their intended use.

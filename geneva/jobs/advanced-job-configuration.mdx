@@ -1,0 +1,157 @@
+---
+title: Advanced Job Configuration
+sidebarTitle: Advanced job configuration
+description: Pin the dependency manifest a transform's distributed job runs with using @udf, @chunker, and @udtf.
+icon: sliders
+---
+
+<Badge color="red">Enterprise-only</Badge>
+
+On LanceDB Enterprise, backfill and refresh jobs run on a managed, distributed execution
+environment configured at deployment time:
+
+- the **default cluster** — the compute pool jobs run on, and
+- the **default manifest** — the Python dependency environment (image and packages) the
+  distributed workers run with.
+
+These defaults are set in the [LanceDB Helm chart](/geneva/deployment/helm) and cover most
+workloads. When a transform needs dependencies that differ from the deployment default, pin a
+**manifest** on the transform itself, as described below.
+
+<Note>
+To override the **cluster** a job runs on — for example to route an embedding backfill to a
+GPU pool — see [Advanced Execution Contexts](/geneva/jobs/contexts).
+</Note>
+
+## Pinning a dependency manifest
+
+A manifest pins the Python image and packages the distributed workers run with. Build one with
+the manifest builders, then attach it to your transform with the `manifest=` argument on
+`@udf`, `@chunker`, or `@udtf`. The manifest is snapshotted into the column (or view) metadata
+when the transform is registered, so every backfill or refresh of that transform uses it
+automatically — there is no per-call manifest argument to remember.
+
+<Note>
+**Manifests are immutable at the column / view level.** When a transform is registered, its
+manifest is snapshotted onto the column (or view) metadata. Changing the deployment-default
+manifest — or the `GenevaManifest` object in your code — does **not** affect existing columns
+or views: they keep using the snapshot taken at creation time. To move a column or view to a
+new manifest, re-point it to a new (or updated) UDF / chunker / UDTF — for example with
+`alter_columns()` for a column, or by recreating the view.
+</Note>
+
+```python
+import pyarrow as pa
+from typing import Iterator, NamedTuple
+from geneva import udf, chunker, udtf
+from geneva.manifest import GenevaManifest
+
+# Build a manifest that pins the dependencies these transforms need
+embed_manifest = (
+    GenevaManifest.create_pip("embedding-deps")
+    .pip(["sentence-transformers==3.3.1", "torch==2.5.1"])
+    .build()
+)
+```
+
+### `@udf(manifest=...)`
+
+Pin dependencies for a 1:1 computed column:
+
+```python
+@udf(data_type=pa.list_(pa.float32(), 384), manifest=embed_manifest)
+def embed(text: str) -> list[float]:
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+    return model.encode(text, normalize_embeddings=True).tolist()
+
+tbl.add_columns({"embedding": embed})
+tbl.backfill("embedding")   # the backfill job runs with embed_manifest
+```
+
+### `@chunker(manifest=...)`
+
+Pin dependencies for a 1:N [chunker](/geneva/udfs/scalar-udtfs) (scalar UDTF):
+
+```python
+class Chunk(NamedTuple):
+    chunk_index: int
+    chunk_text: str
+
+@chunker(manifest=embed_manifest)
+def split_document(text: str) -> Iterator[Chunk]:
+    for i, part in enumerate(text.split("\n\n")):
+        yield Chunk(chunk_index=i, chunk_text=part)
+
+view = db.create_udtf_view("chunks", source=tbl.search(None), udtf=split_document)
+view.refresh()   # the refresh job runs with embed_manifest
+```
+
+### `@udtf(manifest=...)`
+
+Pin dependencies for an N:M [batch UDTF](/geneva/udfs/batch-udtfs):
+
+```python
+@udtf(
+    output_schema=pa.schema([
+        pa.field("label", pa.string()),
+        pa.field("count", pa.int64()),
+    ]),
+    manifest=embed_manifest,
+)
+def group_stats(source) -> Iterator[pa.RecordBatch]:
+    df = source.to_pandas()
+    agg = df.groupby("label").size().reset_index(name="count")
+    yield pa.RecordBatch.from_pandas(agg)
+
+view = db.create_udtf_view("summaries", source=tbl.search(None), udtf=group_stats)
+view.refresh()   # the refresh job runs with embed_manifest
+```
+
+## Capturing your local environment for testing
+
+When iterating locally, you often want the workers to run with the *exact* packages from your
+current environment rather than a curated pip list. `Connection.capture_local_environment()`
+zips your workspace (and, optionally, your site-packages), uploads the archives through the
+connection, and returns a ready-to-use `GenevaManifest` you can attach to a transform with
+`manifest=`.
+
+```python
+import os
+import pyarrow as pa
+import geneva
+from geneva import udf
+
+db = geneva.connect(
+    uri="db://my-db",
+    host_override=os.getenv("LANCEDB_URI"),
+    api_key=os.getenv("LANCEDB_API_KEY"),
+)
+
+# Capture the local workspace; rely on the worker image for site-packages
+manifest = db.capture_local_environment(skip_site_packages=True)
+
+@udf(data_type=pa.string(), manifest=manifest)
+def shout(text: str) -> str:
+    return text.upper()
+
+tbl = db.open_table("my_table")
+tbl.add_columns({"shout": shout})
+tbl.backfill("shout")   # workers run with your captured environment
+```
+
+Pass `skip_site_packages=False` (the default) to also upload your local site-packages.
+
+## Manifest resolution
+
+For a given transform, the manifest is resolved in this order (first match wins):
+
+1. The manifest pinned on the transform via `@udf` / `@chunker` / `@udtf` `manifest=`.
+2. For a materialized view, the manifest snapshotted on the view when it was created.
+3. The deployment-default manifest from the [LanceDB Helm chart](/geneva/deployment/helm).
+
+<Note>
+The `manifest=` argument applies to managed enterprise (`db://`) jobs. For direct
+object-storage or local-filesystem connections, configure the dependency environment
+explicitly with an [Advanced Execution Context](/geneva/jobs/contexts) instead.
+</Note>

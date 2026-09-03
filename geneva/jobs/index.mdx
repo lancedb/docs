@@ -1,0 +1,50 @@
+---
+title: Geneva Jobs
+sidebarTitle: Job execution
+description: Learn about Geneva's job execution framework for distributed feature engineering workflows.
+---
+
+Geneva provides a comprehensive job execution framework for distributed feature engineering workflows. This section covers the different types of jobs and execution contexts available in Geneva.
+
+## Job Types
+
+### [Backfilling](/geneva/jobs/backfilling/)
+Trigger distributed jobs to populate column values in your LanceDB table using UDFs. Learn about filtered backfills and incremental updates.
+
+### [Materialized Views](/geneva/jobs/materialized-views/)
+Create declarative materialized views to manage batch updates of expensive operations. Optimize data layouts for training and simplify orchestration.
+
+### [Startup Optimizations](/geneva/jobs/startup/)
+Optimize job and session startup times for faster interactive development and production workflows. Learn about caching, pre-warming, and performance tuning.
+
+## Execution Contexts
+
+### [Advanced Execution Contexts](/geneva/jobs/contexts/)
+Understand how Geneva automatically packages and deploys your Python execution environment to worker nodes for distributed execution.
+
+### [Geneva Console](/geneva/jobs/console/)
+Set up and access the Geneva Console for monitoring and managing Geneva jobs, clusters, and execution contexts.
+
+## Key Features
+
+- **Distributed Processing**: Scale feature computation across multiple nodes
+- **Checkpointing**: Resume jobs from failures without losing progress
+- **Incremental Updates**: Only process new or modified data
+- **Distributed Execution**: Run jobs on Kubernetes or standalone compute clusters
+- **Environment Management**: Automatic dependency packaging and deployment
+
+## Getting Started
+
+1. **Choose your execution context** based on your infrastructure
+2. **Define your UDFs** for feature computation
+3. **Trigger backfill operations** to populate your data
+4. **Monitor performance** and optimize based on usage patterns
+
+For detailed information about each job type and execution context, explore the documentation in this section.
+
+## API Reference
+
+- [Table](https://lancedb.github.io/geneva/api/table/) — `backfill()`, `backfill_async()`, `refresh()`, `plan_backfill()`, `plan_refresh()`, and other job-triggering methods
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — `get_job()`, `list_jobs()`, `context()`, and `local_ray_context()`
+- [Cluster](https://lancedb.github.io/geneva/api/cluster/) — configure KubeRay and local Ray execution backends
+- [Manifest](https://lancedb.github.io/geneva/api/manifest/) — package Python environments for remote workers
