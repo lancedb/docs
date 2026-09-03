@@ -11,25 +11,6 @@ At a high level, it helps to think of LanceDB Enterprise as a set of layers that
 
 This architecture matters because enterprise workloads are rarely shaped like a single benchmark. Some need thousands of concurrent queries. Others need large-scale ingestion, continuous indexing, or strict operational boundaries between user traffic and background work. LanceDB Enterprise is designed so those workloads do not all compete for the same machine, disk, or process.
 
-```mermaid
-flowchart TB
-    RT[Remote tables]
-
-    subgraph DP[Data plane]
-        QS[Query serving]
-        IX[Indexers]
-    end
-
-    CP[Control plane]
-    OS[(Object storage)]
-
-    RT --> DP
-    DP --> OS
-    IX --> OS
-    CP -.->|Govern and configure| DP
-    CP -.->|Govern and configure| IX
-```
-
 ## Compute-storage separation
 
 In LanceDB Enterprise, storage and compute are deliberately decoupled. Table data and index artifacts live in object storage, while query-serving and background workers read from and write to that shared durable layer. This means compute can be replaced, scaled, or specialized without making any individual node the owner of the dataset.
