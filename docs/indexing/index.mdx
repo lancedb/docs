@@ -20,7 +20,7 @@ Scalar indices serve as a foundational optimization layer, accelerating filterin
 - Key-value lookups (enabling rapid primary key-based retrievals)
 </Tip>
 
-## Supported Index Types
+## Supported Index Types {#supported-index-types}
 
 LanceDB provides a comprehensive suite of indexing strategies for different data types and use cases:
 
@@ -48,7 +48,7 @@ By default, automatic vector indexing creates `IVF_PQ`, and scalar index creatio
 columns, not list columns; use `LabelList` for list containment filters.
 </Info>
 
-### Quantization Types
+### Quantization Types {#quantization-types}
 
 Vector indexes can use different quantization methods to compress vectors and improve search performance:
 
@@ -59,19 +59,19 @@ Vector indexes can use different quantization methods to compress vectors and im
 | `RQ` (RabitQ Quantization) | Use when you need maximum compression or have specific per-dimension requirements. | Per-dimension quantization using a RabitQ codebook. Provides fine-grained control over compression per dimension. For `IVF_RQ`, vector dimensions must be divisible by `8`. |
 | `None/Flat` | Use for binary vectors (with `hamming` distance) or when you need maximum recall and have sufficient storage. | No quantization—stores raw vectors. Provides the highest accuracy but requires more storage and memory. |
 
-## Understanding the IVF-PQ Index
+## Understanding the IVF-PQ Index {#understanding-the-ivf-pq-index}
 
 An ANN (Approximate Nearest Neighbors) index is a data structure that quickly produces an approximate solution to the **k-nearest neighbors (kNN)** problem. 
 It greatly improves upon the runtime of a brute-force kNN search, while admitting a slight decrease in accuracy. LanceDB uses the disk-based indexing technique IVF-PQ, discussed below.
 
 LanceDB differs from other vector databases in that it is built on top of [Lance](https://github.com/lancedb/lance), an open-source columnar data format designed for performant ML workloads and fast random access. Due to the design of Lance, LanceDB's indexing philosophy adopts a primarily *disk-based* indexing philosophy.
 
-## IVF-PQ
+## IVF-PQ {#ivf-pq}
 
 LanceDB uses **IVF-PQ** indexing, which combines the clustering-based **Inverted File Index (IVF)** with **Product Quantization (PQ)** to efficiently compress embeddings. 
 The implementation provides several parameters to fine-tune the index's size, query throughput, latency, and recall.
 
-### Product Quantization
+### Product Quantization {#product-quantization}
 
 Quantization is a compression technique used to reduce the dimensionality of an embedding to speed up search.
 
@@ -90,7 +90,7 @@ Quantized: `4 × 8 = 32` bits
 Quantization results in a **128x** reduction in memory requirements for each vector in the index, which is substantial.
 </Note>
 
-### Inverted File Index (IVF) Implementation
+### Inverted File Index (IVF) Implementation {#inverted-file-index-ivf-implementation}
 
 While PQ helps with reducing the size of the index, IVF primarily addresses search performance. The primary purpose of an inverted file index is to facilitate rapid and effective nearest neighbor search by narrowing down the search space.
 
@@ -101,11 +101,11 @@ In IVF, the PQ vector space is divided into *Voronoi cells*, which are essential
 During query time, depending on where the query lands in vector space, it may be close to the border of multiple Voronoi cells, which could make the top-k results ambiguous and span across multiple cells. To address this, the IVF-PQ introduces the `nprobe` parameter, which controls the number of Voronoi cells to search during a query. The higher the `nprobe`, the more accurate the results, but the slower the query.
 ![](/static/assets/images/indexing/ivfpq_query_vector.webp)
 
-## HNSW Index Implementation
+## HNSW Index Implementation {#hnsw-index-implementation}
 
 Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. HNSW is one of the most accurate and fastest Approximate Nearest Neighbour search algorithms, It's beneficial in high-dimensional spaces where finding the same nearest neighbor would be too slow and costly.
 
-### Types of ANN Search Algorithms
+### Types of ANN Search Algorithms {#types-of-ann-search-algorithms}
 
 Approximate Nearest Neighbor (ANN) search is a method for finding data points near a given point in a dataset, though not always the exact nearest one. 
 For example, HNSW is an ANN index that performs well in high-dimensional spaces where other techniques prove too slow and costly.
@@ -119,7 +119,7 @@ There are three main types of ANN search algorithms:
 HNSW is a graph-based algorithm. All graph-based search algorithms rely on the idea of a k-nearest neighbor (or k-approximate nearest neighbor) graph, which we outline below.  
 HNSW also combines this with the ideas behind a classic 1-dimensional search data structure: the skip list.
 
-### Understanding k-Nearest Neighbor Graphs
+### Understanding k-Nearest Neighbor Graphs {#understanding-k-nearest-neighbor-graphs}
 
 The k-nearest neighbor graph actually predates its use for ANN search. Its construction is quite simple:
 
@@ -141,7 +141,7 @@ That is, if you start with a k-ANN graph for n-1 vertices, you can extend it to 
 
 One downside of k-NN and k-ANN graphs alone is that one must typically build them with a large value of k to get decent results, resulting in a large index.
 
-### Hierarchical Navigable Small Worlds (HNSW)
+### Hierarchical Navigable Small Worlds (HNSW) {#hierarchical-navigable-small-worlds-hnsw}
 
 HNSW builds on k-ANN in two main ways:
 

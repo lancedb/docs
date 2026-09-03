@@ -25,14 +25,14 @@ LangChain streamlines these stages (in figure above) by providing pre-built comp
 
 Integration of **Langchain** with **LanceDB** enables applications to retrieve the most relevant data by comparing query vectors against stored vectors, facilitating effective information retrieval. It results in better and context aware replies and actions by the LLMs.
 
-## Quick Start
+## Quick Start {#quick-start}
 You can load your document data using langchain's loaders, for this example we are using `TextLoader` and `OpenAIEmbeddings` as the embedding model.
 
 <CodeBlock filename="Python" language="Python" icon="python">
   {PyFrameworksLangchainQuickStart}
 </CodeBlock>
 
-## Documentation
+## Documentation {#documentation}
 In the above example `LanceDB` vector store class object is created using `from_documents()` method  which is a `classmethod` and returns the initialized class object. 
 
 You can also use `LanceDB.from_texts(texts: List[str],embedding: Embeddings)` class method.  
@@ -61,7 +61,7 @@ The exhaustive list of parameters for `LanceDB` vector store are :
   {PyFrameworksLangchainVectorStoreConfig}
 </CodeBlock>
 
-### Methods 
+### Methods {#methods}
 
 ##### `add_texts()`
 

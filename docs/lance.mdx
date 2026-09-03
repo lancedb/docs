@@ -23,7 +23,7 @@ instead of moving data across separate storage, search, feature, and training sy
   Visit the Lance format documentation to learn more about its design, features, and how it enables the multimodal lakehouse.
 </Card>
 
-## Capabilities of the Lance format
+## Capabilities of the Lance format {#capabilities-of-the-lance-format}
 
 Capability | What it enables
 --- | ---
@@ -35,7 +35,7 @@ Versioned tables | Reproduce experiments, restore previous states, and tie downs
 Hybrid search and indexing | Combine vector search, full-text search, and scalar filters on the same dataset with Lance indexes.
 Open lakehouse interoperability | Build on object storage and connect Lance tables to open engines such as PyTorch, Ray, Spark, Trino, DuckDB and Polars.
 
-## Key concepts
+## Key concepts {#key-concepts}
 
 The following concepts are core to the Lance format:
 
@@ -52,7 +52,7 @@ The following concepts are core to the Lance format:
 </Steps>
 
 
-### Data versioning
+### Data versioning {#data-versioning}
 
 Data in Lance tables are versioned -- this helps keep LanceDB scalable and consistent.
 We do not immediately blow away old versions when creating new ones because other clients might be
@@ -63,7 +63,7 @@ Each version contains metadata and just the new/updated data in your transaction
 versions, they aren't 100 duplicates of the same data. However, they do have 100x the metadata overhead
 of a single version, which can result in slower queries.
 
-### Data compaction
+### Data compaction {#data-compaction}
 
 As you insert more data, your dataset will grow and you'll need to perform compaction to maintain query
 throughput (i.e., keep latencies down to a minimum). Compaction is the process of merging fragments
@@ -80,7 +80,7 @@ Compaction focuses on read performance, not immediate disk reclamation. During c
 new compacted files while older files are still referenced by previous table versions. This means disk
 usage can increase temporarily until old versions are cleaned up.
 
-### Data deletion and recovery
+### Data deletion and recovery {#data-deletion-and-recovery}
 
 Although Lance allows you to delete rows from a dataset, it does not actually delete the data immediately.
 It simply marks the row as deleted in the `DataFile` that represents a fragment.

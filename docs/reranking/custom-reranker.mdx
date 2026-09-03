@@ -20,7 +20,7 @@ The Python base class exposes hybrid, vector-only, and FTS-only rerank hooks. Ty
 currently expose the custom reranker interface for hybrid reranking. In Rust, a custom reranker must
 also satisfy the trait bounds `Debug + Send + Sync`.
 
-## Interface
+## Interface {#interface}
 
 The `Reranker` base interface comes with a `merge_results()` method that can be used to combine the
 results of semantic and full-text search. This is a vanilla merging algorithm that simply concatenates
@@ -79,7 +79,7 @@ class MyReranker(Reranker):
 ```
 </CodeGroup>
 
-## Example
+## Example {#example}
 
 As an example, let's build custom reranker that enhances the Cohere Reranker by accepting a filter
 query, and accepts any other `CohereReranker` params as `kwargs`.

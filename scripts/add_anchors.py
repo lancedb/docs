@@ -1,0 +1,297 @@
+"""
+Give every section heading a stable anchor.
+
+An anchor is the identity a section keeps when it is reworded or moved, and the
+key Enterprise overlays attach to from A5: an overlay says "put this after
+`{#branch-create}`" and must still land correctly after someone rewrites the
+heading above it. Heading-derived slugs cannot do that — they change with the
+text — so the anchor is written down once and then never regenerated.
+
+That "never regenerated" is the whole point, and it shapes this script:
+
+  * headings that already carry an anchor are left exactly as they are, so
+    re-running is safe and an anchor edited by hand survives;
+  * names come from the ids the site *already renders*, not from a slug rule of
+    our own. That is what keeps every existing deep link working: a reader's
+    bookmark to `#what's-next` must still resolve afterwards. Deriving the name
+    independently looked equivalent and was not — Mintlify keeps a curly
+    apostrophe in the id where a naive slug turns it into a hyphen, so
+    `tables/index` would have silently changed its anchor.
+
+    Names are still readable, because Mintlify derives them from the heading
+    text too. They are simply frozen at today's value rather than recomputed:
+    a later reworded heading keeps the original anchor, and that divergence is
+    the point, not drift.
+
+Fenced code blocks are skipped: a `## comment` inside a shell example is not a
+heading.
+
+The rendered ids come from a `mint export` bundle, so run one first:
+
+    cd docs && mint export --output /tmp/site.zip
+
+Usage:
+
+    python scripts/add_anchors.py --export /tmp/site.zip docs/tables
+    python scripts/add_anchors.py --export /tmp/site.zip --check docs/tables
+"""
+
+from __future__ import annotations
+
+import argparse
+import html as html_module
+import re
+import sys
+import tempfile
+import zipfile
+from pathlib import Path
+
+# `## Heading`, capturing any existing `{#anchor}` so it can be preserved.
+HEADING_RE = re.compile(
+    r"^(?P<hashes>#{2,6})\s+(?P<text>.+?)(?:\s+\{#(?P<anchor>[^}]+)\})?\s*$"
+)
+FENCE_RE = re.compile(r"^\s*```")
+# `### 1. Setup` renders with its number until an explicit `{#anchor}` is added,
+# at which point Mintlify re-parses the text and treats the number as an ordered
+# list marker, silently dropping it from the heading and the table of contents.
+# 117 headings across 17 pages start this way. Escaping the period keeps the
+# rendered text and the id identical; the backslash does not reach the output.
+LEADING_NUMBER_RE = re.compile(r"^(\d+)\. (?=\S)")
+# Eleven h2s in the reranking pages are Setext -- text over a rule of dashes --
+# rather than ATX. Mintlify renders them with ids like any other heading, so a
+# parser that only saw ATX would consume the rendered ids out of order and give
+# every later heading on the page the wrong anchor: plausible names silently
+# attached to the wrong sections. They are rewritten to ATX, which renders
+# identically and makes the anchor syntax uniform.
+SETEXT_UNDERLINE_RE = re.compile(r"^-{3,}\s*$")
+# Mintlify emits heading ids down to h4 and no further. The eight h5 headings in
+# the corpus -- all API method names on integrations/ai/langchain.mdx -- render
+# with no id at all, so there is no existing anchor to preserve and nothing for
+# an overlay to have been written against. They are left alone rather than given
+# an invented anchor, which would also change the rendered HTML.
+MAX_ANCHORED_LEVEL = 4
+# Mintlify keeps `&` in an auto-generated id but strips it from an explicit
+# `{#anchor}`, so `observability-&-performance` cannot be written down: any
+# anchor we set changes the id and breaks links to it. Five headings across the
+# corpus join two words with an ampersand. They keep their generated id and go
+# without an explicit anchor; if A5 ever needs to attach to one, reword the
+# heading then rather than silently move it now.
+UNWRITABLE_IN_ANCHOR = "&"
+FRONTMATTER_DELIM = "---"
+
+# Inline markup to strip before deriving a name, so `## Use \`add_columns()\``
+# becomes `use-add-columns` rather than carrying backticks into the anchor.
+INLINE_CODE_RE = re.compile(r"`([^`]*)`")
+LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+JSX_RE = re.compile(r"<[^>]+>")
+NON_SLUG_RE = re.compile(r"[^a-z0-9]+")
+
+
+def slugify(text: str) -> str:
+    text = LINK_RE.sub(r"\1", text)
+    text = INLINE_CODE_RE.sub(r"\1", text)
+    text = JSX_RE.sub(" ", text)
+    text = NON_SLUG_RE.sub("-", text.lower()).strip("-")
+    return text or "section"
+
+
+HEADING_ID_RE = re.compile(r'<h([2-6])[^>]*\bid="([^"]+)"')
+
+
+def rendered_ids(export: Path) -> dict[str, list[str]]:
+    """Map page path -> heading ids, in document order, from a mint export.
+
+    Mintlify emits an id on every heading. Reusing those ids as anchors is what
+    makes the pass invisible to readers and safe for existing links.
+    """
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        if export.is_dir():
+            root = export
+        else:
+            with zipfile.ZipFile(export) as zf:
+                zf.extractall(root)
+        ids: dict[str, list[str]] = {}
+        for page in root.rglob("index.html"):
+            rel = page.parent.relative_to(root).as_posix()
+            # The site root renders to index.html at the top level; everything
+            # else keeps its full path, including a page literally named index.
+            if rel == ".":
+                rel = "index"
+            found = [
+                # Unescape: an id containing `&` appears in the HTML as `&amp;`,
+                # and writing that back verbatim produced `...-amp-...`, changing
+                # the id on five pages whose headings join two words with an
+                # ampersand.
+                html_module.unescape(anchor)
+                for _level, anchor in HEADING_ID_RE.findall(
+                    page.read_text(encoding="utf-8", errors="replace")
+                )
+                # React-generated ids are per-build noise, not heading slugs.
+                if not anchor.startswith("_R_")
+            ]
+            ids[rel] = found
+        return ids
+
+
+def take_anchor(path: Path, available: list[str], used: set[str], index: int) -> str:
+    """Consume the next rendered id, in document order."""
+    if index >= len(available):
+        raise SystemExit(
+            f"{path}: more headings in source than rendered ids "
+            f"({index + 1} > {len(available)}); re-run mint export"
+        )
+    anchor = available[index]
+    if anchor in used:
+        raise SystemExit(f"{path}: rendered id {anchor!r} appears twice")
+    used.add(anchor)
+    return anchor
+
+
+def anchor_file(
+    path: Path, docs_root: Path, ids: dict[str, list[str]], apply: bool
+) -> tuple[int, int, list[str]]:
+    """Return (added, existing, sample) for one page."""
+    page = str(path.relative_to(docs_root)).removesuffix(".mdx")
+    available = list(ids.get(page, []))
+
+    lines = path.read_text(encoding="utf-8").split("\n")
+    out: list[str] = []
+    used: set[str] = set()
+    added = existing = skipped = unwritable = 0
+    unwritable_ids: list[str] = []
+    sample: list[str] = []
+
+    in_fence = False
+    in_frontmatter = False
+    for index, line in enumerate(lines):
+        # Frontmatter opens on the very first line and is not content.
+        if index == 0 and line.strip() == FRONTMATTER_DELIM:
+            in_frontmatter = True
+            out.append(line)
+            continue
+        if in_frontmatter:
+            if line.strip() == FRONTMATTER_DELIM:
+                in_frontmatter = False
+            out.append(line)
+            continue
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+
+        # A Setext h2 is the *previous* line plus this rule. Detect it when the
+        # underline arrives, rewrite the pair as ATX, and drop the rule.
+        if (
+            SETEXT_UNDERLINE_RE.match(line)
+            and out
+            and out[-1].strip()
+            and not out[-1].lstrip().startswith(("#", "-", "|", "<", ":"))
+            and "|" not in out[-1]
+        ):
+            heading_text = out.pop().strip()
+            anchor = take_anchor(path, available, used, len(used) + unwritable)
+            added += 1
+            if len(sample) < 3:
+                sample.append(f"{heading_text[:44]}  ->  {{#{anchor}}}  (setext)")
+            out.append(f"## {heading_text} {{#{anchor}}}")
+            continue
+
+        match = HEADING_RE.match(line)
+        if not match:
+            out.append(line)
+            continue
+
+        if match.group("anchor"):
+            used.add(match.group("anchor"))
+            existing += 1
+            out.append(line)
+            continue
+
+        if len(match.group("hashes")) > MAX_ANCHORED_LEVEL:
+            skipped += 1
+            out.append(line)
+            continue
+
+        # Take the id the site already renders for this heading. Falling back to
+        # a derived slug would reintroduce exactly the divergence this avoids, so
+        # a missing id is an error rather than a guess.
+        anchor = available[len(used) + unwritable] if len(used) + unwritable < len(available) else None
+        if anchor is not None and UNWRITABLE_IN_ANCHOR in anchor:
+            unwritable += 1
+            unwritable_ids.append(anchor)
+            out.append(line)
+            continue
+        anchor = take_anchor(path, available, used, len(used) + unwritable)
+        added += 1
+        if len(sample) < 3:
+            sample.append(f"{match.group('text')[:44]}  ->  {{#{anchor}}}")
+        text = LEADING_NUMBER_RE.sub(r"\1\\. ", match.group("text"))
+        out.append(f"{match.group('hashes')} {text} {{#{anchor}}}")
+
+    # Anchors are assigned by position, so a count mismatch means every anchor
+    # after the divergence is attached to the wrong section. Fail rather than
+    # write plausible-looking nonsense.
+    if unwritable_ids:
+        print(f"{path}: left unanchored, id not writable: {', '.join(unwritable_ids)}")
+    if added + existing + unwritable != len(available):
+        raise SystemExit(
+            f"{path}: {added + existing + unwritable} headings accounted for but "
+            f"{len(available)} rendered ids — anchors would be misaligned"
+            + (f" ({skipped} deeper than h{MAX_ANCHORED_LEVEL} skipped)" if skipped else "")
+        )
+
+    if apply and added:
+        path.write_text("\n".join(out), encoding="utf-8")
+    return added, existing, sample
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    parser.add_argument("paths", nargs="+", type=Path, help="files or directories")
+    parser.add_argument(
+        "--export",
+        type=Path,
+        required=True,
+        help="mint export zip or directory supplying the rendered heading ids",
+    )
+    parser.add_argument(
+        "--docs-root", type=Path, default=Path("docs"), help="docs root for page paths"
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="report headings without an anchor and exit non-zero if any remain",
+    )
+    args = parser.parse_args()
+
+    targets: list[Path] = []
+    for path in args.paths:
+        targets.extend(sorted(path.rglob("*.mdx")) if path.is_dir() else [path])
+
+    ids = rendered_ids(args.export)
+    total_added = total_existing = 0
+    for target in targets:
+        added, existing, sample = anchor_file(
+            target, args.docs_root, ids, apply=not args.check
+        )
+        total_added += added
+        total_existing += existing
+        if added:
+            verb = "missing" if args.check else "anchored"
+            print(f"{target}: {verb} {added}, already anchored {existing}")
+            for line in sample:
+                print(f"    {line}")
+
+    if args.check:
+        print(f"\n{total_added} headings without an anchor, {total_existing} with one")
+        return 1 if total_added else 0
+    print(f"\nanchored {total_added} headings, left {total_existing} unchanged")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

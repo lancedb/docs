@@ -44,7 +44,7 @@ reads exactly as before. Branches are a natural fit when you want to:
   `main`.
 - Hand a collaborator a frozen point-in-time fork while you keep writing to `main`.
 
-## How branches relate to versions and tags
+## How branches relate to versions and tags {#how-branches-relate-to-versions-and-tags}
 
 Every LanceDB table already tracks a linear history of [versions](/tables/versioning),
 and you can [tag](/tables/versioning#tag-based-versioning) a version or `checkout`
@@ -60,14 +60,14 @@ Branches are supported on local and namespace-backed tables in LanceDB OSS, as
 well as on LanceDB Enterprise (remote) tables.
 </Note>
 
-## Connect to a table
+## Connect to a table {#connect-to-a-table}
 
 The branch API is identical no matter how you connect — only the connection
 itself differs between OSS and Enterprise. Establish a connection (`db`) and open
 a `table` (see [Create a table](/tables/create)), then use the same branch calls
 in every example that follows.
 
-### LanceDB OSS
+### LanceDB OSS {#lancedb-oss}
 
 Point LanceDB at a local directory (or an object-storage URI) to use it as an
 embedded library.
@@ -87,7 +87,7 @@ embedded library.
     </CodeBlock>
 </CodeGroup>
 
-### LanceDB Enterprise
+### LanceDB Enterprise {#lancedb-enterprise}
 
 <Badge color="red">Enterprise</Badge>
 
@@ -110,13 +110,13 @@ every example that follows.
     </CodeBlock>
 </CodeGroup>
 
-## Work with branches
+## Work with branches {#work-with-branches}
 
 The lifecycle of a branch is short and predictable: fork it, write to it, reopen
 it whenever you need it, and delete it once you're done. The examples below use a
 small `quotes` table with three rows on `main`.
 
-### Create a branch
+### Create a branch {#create-a-branch}
 
 Forking from `main` returns a table handle scoped to the new branch. `main` is
 the reserved default source, so `create` needs only a name; to fork from
@@ -136,7 +136,7 @@ somewhere else, pass a branch name, a specific version, or both.
     </CodeBlock>
 </CodeGroup>
 
-### Write to a branch
+### Write to a branch {#write-to-a-branch}
 
 Writes go through the branch handle and stay there — the `main` handle keeps
 reporting its original row count. Listing branches returns a mapping of each
@@ -156,7 +156,7 @@ branch name to its metadata, including the version it was forked from.
     </CodeBlock>
 </CodeGroup>
 
-### Reopen a branch
+### Reopen a branch {#reopen-a-branch}
 
 A branch outlives the handle that created it. Reopen it later by name — either
 from an existing table handle or straight from the connection when you open the
@@ -176,7 +176,7 @@ table. Both routes give you a writable handle tracking the branch's latest state
     </CodeBlock>
 </CodeGroup>
 
-### Delete a branch
+### Delete a branch {#delete-a-branch}
 
 Deleting a branch removes it and its branch-local history; `main` is untouched.
 Before deleting a branch, make sure you've retained any results you need — see
@@ -197,7 +197,7 @@ below.
     </CodeBlock>
 </CodeGroup>
 
-## Apply branch-tested changes to `main`
+## Apply branch-tested changes to `main` {#apply-branch-tested-changes-to-main}
 
 <Warning>
 A branch has its own writable history. Outside of the [diff and merge
@@ -220,7 +220,7 @@ How you apply a validated change depends on the type of work:
 - **Selected row results:** upsert those rows into `main` using a stable unique
   key.
 
-### Upsert selected branch rows into `main`
+### Upsert selected branch rows into `main` {#upsert-selected-branch-rows-into-main}
 
 If the result you want to retain is a set of inserted or updated rows, use
 [`merge_insert`](/tables/update#merge-incoming-rows-by-key) to write them to
@@ -254,7 +254,7 @@ newer values with the same key. Read and upsert the whole branch only when that
 overwrite is intentional; otherwise, filter the branch read to the rows you
 intend to apply.
 
-## Compare and merge a branch into `main`
+## Compare and merge a branch into `main` {#compare-and-merge-a-branch-into-main}
 
 <Badge color="red">Enterprise</Badge>
 
@@ -269,7 +269,7 @@ columns; use the [upsert](#upsert-selected-branch-rows-into-main) or rerun
 patterns above for row and index changes.
 </Info>
 
-### Diff a branch
+### Diff a branch {#diff-a-branch}
 
 `diff` reads the branch and `main`, and returns a summary of what has changed:
 which columns were added, removed, or altered; which indexes were added or
@@ -300,7 +300,7 @@ matches `main`'s latest), `RowsChanged`, `ColumnRemoved`, `ColumnChanged`,
 `ParentNotMain`. Newer server codes surface as `Unknown` so older clients
 keep working.
 
-### Merge a branch
+### Merge a branch {#merge-a-branch}
 
 `merge` promotes a branch's added columns onto `main`. It is a review-and-land
 operation: the server re-evaluates the diff at request time, and either lands
@@ -352,7 +352,7 @@ see `diff.mergeBlockers`), `notImplemented`, and `unknown` for forward
 compatibility. Merge requests are not retried on rejection — the response
 carries everything you need to decide next steps.
 
-## Build indexes on a branch
+## Build indexes on a branch {#build-indexes-on-a-branch}
 
 One of the most useful things a branch buys you is a safe place to build and
 validate an index without affecting what's in production on the `main` branch.
@@ -385,7 +385,7 @@ Schema changes such as adding, altering, or dropping columns are branch-scoped i
 the same way, so you can stage and review a larger reshaping of a table before
 applying the same schema operations to `main`.
 
-## Branches vs. tags vs. versions
+## Branches vs. tags vs. versions {#branches-vs-tags-vs-versions}
 
 Now that you're familiar with branches, you can see how they complement the other ways LanceDB
 give you to work with table history. Choose these approaches based on whether you need to

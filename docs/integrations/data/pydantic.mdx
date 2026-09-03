@@ -43,7 +43,7 @@ Now you can create a table, add data, and perform vector search operations:
 </CodeBlock>
 
 
-## Vector Field
+## Vector Field {#vector-field}
 
 LanceDB provides a `lancedb.pydantic.Vector` method to define a
 vector Field in a Pydantic Model.
@@ -58,7 +58,7 @@ This example demonstrates how LanceDB automatically converts Pydantic field type
 - `Vector(768)` becomes `pa.list_(pa.float32(), 768)` (fixed-size list of 768 float32 values)
 - The `False` parameter indicates that the fields are not nullable
 
-## Type Conversion
+## Type Conversion {#type-conversion}
 
 LanceDB automatically convert Pydantic fields to
 [Apache Arrow DataType](https://arrow.apache.org/docs/python/generated/pyarrow.DataType.html#pyarrow.DataType).

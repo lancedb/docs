@@ -10,7 +10,7 @@ icon: "clipboard-question"
 [LanceDB Enterprise](/enterprise) comes with an SQL endpoint that can be used for analytical queries and data exploration. The SQL endpoint is designed to be compatible with the
 [Arrow FlightSQL protocol](https://arrow.apache.org/docs/format/FlightSql.html), which allows you to use any Arrow FlightSQL-compatible client to query your data.
 
-## Installing the client
+## Installing the client {#installing-the-client}
 
 There are Flight SQL clients available for most languages and tools.  If you find that your
 preferred language or tool is not listed here, please [reach out](mailto:contact@lancedb.com) to us and we can help you find a solution.  The following examples demonstrate how to install the Python and TypeScript
@@ -34,7 +34,7 @@ npm install --save @lancedb/flightsql-client
 ```
 </CodeGroup>
 
-## Usage
+## Usage {#usage}
 
 LanceDB uses the powerful DataFusion query engine to execute SQL queries.  This means that
 you can use a wide variety of SQL syntax and functions to query your data.  For more detailed
@@ -43,7 +43,7 @@ information on the SQL syntax and functions supported by DataFusion, please refe
 
 The FlightSQL endpoint executes one SQL statement per request and is intended for queries. Use the LanceDB SDKs for DDL and table-management operations such as creating tables, adding columns, or building indexes.
 
-### Setting Up the Client
+### Setting Up the Client {#setting-up-the-client}
 
 Establish a connection to your LanceDB Enterprise SQL endpoint using your preferred FlightSQL client:
 
@@ -72,7 +72,7 @@ const client = await Client.connect({
 ```
 </CodeGroup>
 
-### Executing a Query
+### Executing a Query {#executing-a-query}
 
 Run SQL queries against your LanceDB tables. Different clients may handle the FlightSQL protocol differently:
 
@@ -95,7 +95,7 @@ const result = await client.query("SELECT * FROM flights WHERE origin = 'SFO'");
 ```
 </CodeGroup>
 
-### Processing Results
+### Processing Results {#processing-results}
 
 Handle the query results returned by your FlightSQL client:
 
@@ -118,7 +118,7 @@ console.log(flights);
 ```
 </CodeGroup>
 
-### Inspecting query plans
+### Inspecting query plans {#inspecting-query-plans}
 
 The SQL endpoint runs queries through DataFusion, which means DataFusion's `EXPLAIN` family of statements is available unchanged. They're the SQL counterpart of the Python/TypeScript [`explain_plan` and `analyze_plan` methods](/search/optimize-queries) and are useful for the same things: confirming index usage, checking filter pushdown, and finding the slow operator in a query that's underperforming.
 

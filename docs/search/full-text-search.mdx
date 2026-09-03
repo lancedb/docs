@@ -13,11 +13,11 @@ import {
 
 LanceDB provides support for Full-Text Search via Lance, allowing you to incorporate keyword-based search (based on BM25) in your retrieval solutions.
 
-## Basic Usage
+## Basic Usage {#basic-usage}
 
 Consider that we have a LanceDB table named `my_table`, whose string column `text` we want to index and query via keyword search, the FTS index must be created before you can search via keywords.
 
-### Table Setup
+### Table Setup {#table-setup}
 
 First, open or create the table you want to search:
 
@@ -61,7 +61,7 @@ let tbl = db
 ```
 </CodeGroup>
 
-### Construct FTS Index
+### Construct FTS Index {#construct-fts-index}
 
 Create a full-text search index on your text column:
 
@@ -90,7 +90,7 @@ tbl
 ```
 </CodeGroup>
 
-### Full-text Search
+### Full-text Search {#full-text-search}
 
 Perform full-text search and retrieve results:
 
@@ -132,7 +132,7 @@ LanceDB automatically searches on the existing FTS index if the input to the sea
 
 If a table has more than one FTS index, specify the indexed text column in the query. In Python you can use `fts_columns` or the query builder's `nearest_to_text(..., columns=...)`; in TypeScript, use `query().nearestToText(..., columns)`. The newer Lance-native FTS does not accept legacy Tantivy-only index parameters.
 
-### Keeping the index up to date
+### Keeping the index up to date {#keeping-the-index-up-to-date}
 
 Rows you add after building an FTS index aren't part of the index until you optimize the table. Until then, queries fall back to a flat scan over the unindexed fragments to keep results complete, which slows them down as the unindexed tail grows. Call `table.optimize()` to fold new rows into the existing index — it's the same operation used for vector indexes:
 
@@ -154,9 +154,9 @@ tbl.optimize(OptimizeAction::All).await?;
 
 A useful rule of thumb is to call `optimize()` after roughly 100,000 row changes or 20 data-modification operations, whichever comes first. For tables with continuous ingest, schedule it on a cadence that keeps `num_unindexed_rows` (from `table.index_stats(...)`) close to zero. If you want to skip the flat scan over unindexed rows entirely — for example, on a hot read path where stale results are acceptable — call `.fast_search()` on the query so the search returns only indexed results.
 
-## Advanced Usage
+## Advanced Usage {#advanced-usage}
 
-### Tokenize Table Data
+### Tokenize Table Data {#tokenize-table-data}
 
 By default, the text is tokenized by splitting on punctuation and whitespaces, and would filter out words that are longer than 40 characters. All words are converted to lowercase.
 
@@ -228,7 +228,7 @@ table.create_fts_index(
 ```
 </CodeGroup>
 
-### Filtering Options
+### Filtering Options {#filtering-options}
 
 LanceDB full text search supports to filter the search results by a condition, both pre-filtering and post-filtering are supported.
 
@@ -294,7 +294,7 @@ table
 ```
 </CodeGroup>
 
-### Phrase vs. Terms Queries
+### Phrase vs. Terms Queries {#phrase-vs-terms-queries}
 
 <Warning>
 Lance-based FTS doesn't support queries using boolean operators `OR`, `AND` in the search string.
@@ -313,7 +313,7 @@ table.create_fts_index("text", with_position=True, replace=True)
 
 This will allow you to search for phrases, but it will also significantly increase the index size and indexing time.
 
-### Fuzzy Search
+### Fuzzy Search {#fuzzy-search}
 
 Fuzzy search allows you to find matches even when the search terms contain typos or slight variations. 
 LanceDB uses the classic [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance) 
@@ -326,7 +326,7 @@ to find similar terms within a specified edit distance.
 
 For a complete walkthrough that creates a sample table and demonstrates fuzzy search and relevance boosting, see the [fuzzy search example](/search/fts-examples#fuzzy-search-and-boosting-example).
 
-### Search for Substring
+### Search for Substring {#search-for-substring}
 
 LanceDB supports searching for substrings in the text column, you can set the `base_tokenizer` parameter to `"ngram"` to enable this feature, and use the parameters `ngram_min_length` and `ngram_max_length` to control the length of the substrings:
 
@@ -337,15 +337,15 @@ LanceDB supports searching for substrings in the text column, you can set the `b
 | prefix_only      | bool | false   | Whether to only search for prefixes of the n-grams |
 
 
-## More Examples
+## More Examples {#more-examples}
 
 For complete worked examples of fuzzy search, prefix matching, phrase matching, boosting, boolean queries, and substring search — including sample data generation and index setup — see [Full-Text Search Examples](/search/fts-examples).
 
-## Full-Text Search on Array Fields
+## Full-Text Search on Array Fields {#full-text-search-on-array-fields}
 
 LanceDB supports full-text search on string array columns, enabling efficient keyword-based search across multiple values within a single field (e.g., tags, keywords).
 
-### Setting Up the Connection
+### Setting Up the Connection {#setting-up-the-connection}
 
 Connect to your LanceDB instance:
 
@@ -372,7 +372,7 @@ const db = await lancedb.connect({
 ```
 </CodeGroup>
 
-### Defining the Schema
+### Defining the Schema {#defining-the-schema}
 
 Create a schema that includes an array field for tags:
 
@@ -398,7 +398,7 @@ const schema = new Schema([
 ```
 </CodeGroup>
 
-### Creating Sample Data
+### Creating Sample Data {#creating-sample-data}
 
 Generate sample data with array fields containing tags:
 
@@ -469,7 +469,7 @@ const data = makeArrowTable(
 ```
 </CodeGroup>
 
-### Creating the Table and Adding Data
+### Creating the Table and Adding Data {#creating-the-table-and-adding-data}
 
 Create the table and populate it with the sample data:
 
@@ -488,7 +488,7 @@ console.log(`Created table: ${tableName}`);
 ```
 </CodeGroup>
 
-### Building the Full-Text Search Index
+### Building the Full-Text Search Index {#building-the-full-text-search-index}
 
 Create an FTS index on the tags column to enable efficient text search:
 
@@ -512,7 +512,7 @@ await waitForIndex(table, ftsIndexName);
 ```
 </CodeGroup>
 
-### Performing Fuzzy Search
+### Performing Fuzzy Search {#performing-fuzzy-search}
 
 Search for terms with typos using fuzzy matching:
 
@@ -540,7 +540,7 @@ console.log(fuzzyResults);
 ```
 </CodeGroup>
 
-### Performing Phrase Search
+### Performing Phrase Search {#performing-phrase-search}
 
 Search for exact phrases within the array fields:
 

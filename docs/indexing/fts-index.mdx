@@ -13,9 +13,9 @@ examples on how to create and configure FTS indexes in LanceDB OSS and Enterpris
 In LanceDB Enterprise, `create_fts_index` API returns immediately, but index building happens asynchronously.
 </Note>
 
-## Creating FTS Indexes
+## Creating FTS Indexes {#creating-fts-indexes}
 
-### Synchronous API
+### Synchronous API {#synchronous-api}
 
 Use `create_fts_index` with synchronous LanceDB connections:
 
@@ -35,7 +35,7 @@ Check FTS index status using the API:
 
 `wait_for_index(...)` waits until the named FTS index exists and `index_stats(...)` reports `num_unindexed_rows == 0`. It can time out if writes keep adding rows faster than the index catches up. If a table has multiple FTS indexes, specify the target text column when querying instead of relying on implicit selection.
 
-### Asynchronous API
+### Asynchronous API {#asynchronous-api}
 
 When using async connections (`connect_async`), use `create_index` with the `FTS` configuration:
 
@@ -52,7 +52,7 @@ The `create_fts_index` method is not available on `AsyncTable`. Use `create_inde
 The current FTS implementation is Lance-native. Legacy Tantivy-only options, including
 `use_tantivy`, are no longer accepted by the index creation APIs.
 
-## Nested field paths
+## Nested field paths {#nested-field-paths}
 
 FTS indexes can target text leaves inside struct columns by passing a dotted path (for example, `payload.text`). The same path works for [`MatchQuery`](/search/full-text-search) and [`PhraseQuery`](/search/full-text-search), and for the `columns` argument on async `nearest_to_text` queries.
 
@@ -78,9 +78,9 @@ from lancedb.index import FTS
 await async_table.create_index("payload.text", config=FTS(with_position=True))
 ```
 
-## Configuration Options
+## Configuration Options {#configuration-options}
 
-### FTS Parameters
+### FTS Parameters {#fts-parameters}
 
 | Parameter | Type | Default | Description |
 |:----------|:-----|:--------|:------------|
@@ -104,7 +104,7 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 - `ascii_folding` helps with international text (e.g., “café” → “cafe”).
 </Note>
 
-### Tokenizer choices
+### Tokenizer choices {#tokenizer-choices}
 
 `base_tokenizer` controls segmentation before token filters run:
 
@@ -118,7 +118,7 @@ Model-backed tokenizers such as `jieba/default`, `lindera/ipadic`, and `lindera/
 
 `language` is used by token filters, not by the base tokenizer. Stemming supports Arabic, Danish, Dutch, English, Finnish, French, German, Greek, Hungarian, Italian, Norwegian, Portuguese, Romanian, Russian, Spanish, Swedish, Tamil, and Turkish. Built-in stop-word removal supports Danish, Dutch, English, Finnish, French, German, Hungarian, Italian, Norwegian, Portuguese, Russian, Spanish, and Swedish. For other stemming languages, set `remove_stop_words=False` or pass `custom_stop_words`.
 
-### Posting block size
+### Posting block size {#posting-block-size}
 
 `block_size` controls the number of documents packed into each compressed posting block on disk. The default of `128` matches the current FTS layout and is the right choice for most workloads. Setting it to `256` opts in to the experimental FTS V3 format, which changes how postings are encoded and may introduce breaking changes in future releases. Any other value is rejected at index creation time.
 
@@ -136,7 +136,7 @@ await table.createIndex("text", {
 });
 ```
 
-### Phrase Query Configuration
+### Phrase Query Configuration {#phrase-query-configuration}
 
 Enable phrase queries by setting:
 
@@ -145,7 +145,7 @@ Enable phrase queries by setting:
 | `with_position` | `True` | Track token positions for phrase matching |
 | `remove_stop_words` | `False` | Preserve stop words for exact phrase matching |
 
-## Indexing nested string fields
+## Indexing nested string fields {#indexing-nested-string-fields}
 
 You can build an FTS index on a string field inside a struct by passing its full dotted path, like `nested.text`. The same path is used when you query the index through `fts_columns`, and the indexed column is reported back as the full path from `list_indices()`.
 

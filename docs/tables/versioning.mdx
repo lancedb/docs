@@ -41,11 +41,11 @@ import {
 This page shows the core table-versioning APIs used in the code snippets for Python, TypeScript, and Rust.
 Each operation below maps directly to methods shown in the examples.
 
-## Basic Versioning Example
+## Basic Versioning Example {#basic-versioning-example}
 
 Let's create a table with sample data to demonstrate LanceDB's versioning capabilities:
 
-### Set Up the Table
+### Set Up the Table {#set-up-the-table}
 
 First, let's create a table with some sample data:
 
@@ -71,7 +71,7 @@ First, let's create a table with some sample data:
 </CodeGroup>
 </Expandable>
 
-### Check Initial Version
+### Check Initial Version {#check-initial-version}
 
 After creating the table, let's check the initial version information:
 
@@ -89,11 +89,11 @@ After creating the table, let's check the initial version information:
     </CodeBlock>
 </CodeGroup>
 
-## Modify Data
+## Modify Data {#modify-data}
 
 When you modify data through operations like update or delete, LanceDB automatically creates new versions.
 
-### Update Existing Data
+### Update Existing Data {#update-existing-data}
 
 Let's update some existing records to see versioning in action:
 
@@ -111,7 +111,7 @@ Let's update some existing records to see versioning in action:
     </CodeBlock>
 </CodeGroup>
 
-### Add New Data
+### Add New Data {#add-new-data}
 
 Now let's add more records to the table:
 
@@ -129,7 +129,7 @@ Now let's add more records to the table:
     </CodeBlock>
 </CodeGroup>
 
-### Check Version Changes
+### Check Version Changes {#check-version-changes}
 
 Let's see how the versions have changed after our modifications:
 
@@ -147,11 +147,11 @@ Let's see how the versions have changed after our modifications:
     </CodeBlock>
 </CodeGroup>
 
-## Rollback to Previous Versions
+## Rollback to Previous Versions {#rollback-to-previous-versions}
 
 LanceDB supports fast rollbacks to any previous version without data duplication.
 
-### View All Versions
+### View All Versions {#view-all-versions}
 
 First, let's see all the versions we've created:
 
@@ -169,7 +169,7 @@ First, let's see all the versions we've created:
     </CodeBlock>
 </CodeGroup>
 
-### Restore a Version Snapshot
+### Restore a Version Snapshot {#restore-a-version-snapshot}
 
 Now let's restore a captured version snapshot:
 
@@ -187,7 +187,7 @@ Now let's restore a captured version snapshot:
     </CodeBlock>
 </CodeGroup>
 
-## Tag-Based Versioning
+## Tag-Based Versioning {#tag-based-versioning}
 
 Numeric table versions like `v3` or `v17` are precise but hard to remember. Tags
 let you attach human-readable labels (e.g., `"prod"`, `"baseline"`,
@@ -218,7 +218,7 @@ Deleting a tag only removes the label, not the version it points to. After
 deletion, the underlying table version becomes eligible for cleanup again.
 </Note>
 
-## Branches
+## Branches {#branches}
 
 Beyond linear history, LanceDB also supports **branches** — isolated, writable
 lines of history forked from `main` (or a specific version). Whereas tags and
@@ -228,11 +228,11 @@ that you want to keep separate from production reads on `main`.
 
 Branches are covered in their own guide: see [Branches](/tables/branching).
 
-## Delete Data From the Table
+## Delete Data From the Table {#delete-data-from-the-table}
 
 Let's demonstrate how deletions also create new versions:
 
-### Go Back to Latest Version
+### Go Back to Latest Version {#go-back-to-latest-version}
 
 First, let's return to the latest version:
 
@@ -250,7 +250,7 @@ First, let's return to the latest version:
     </CodeBlock>
 </CodeGroup>
 
-### Delete Data
+### Delete Data {#delete-data}
 
 Now let's delete some data to see how it affects versioning:
 
@@ -268,7 +268,7 @@ Now let's delete some data to see how it affects versioning:
     </CodeBlock>
 </CodeGroup>
 
-### Version History and Operations
+### Version History and Operations {#version-history-and-operations}
 
 On a fresh table, the snippets in this guide produce this version sequence:
 

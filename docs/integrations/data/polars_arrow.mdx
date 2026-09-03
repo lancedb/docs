@@ -14,7 +14,7 @@ import {
 
 LanceDB supports [Polars](https://github.com/pola-rs/polars), a blazingly fast DataFrame library for Python written in Rust. Under the hood, both Lance and Polars speak Arrow, so passing data back and forth stays zero-copy and ergonomic.
 
-## Create & Query a Table
+## Create and Query a Table {#create-and-query-a-table}
 
 Import the required libraries, including the optional Pydantic helpers if you plan to define schemas.
 
@@ -34,7 +34,7 @@ Run vector search and keep the results as a Polars `DataFrame` for further proce
   {PyPlatformsPolarsVectorSearch}
 </CodeBlock>
 
-## Work with LazyFrames
+## Work with LazyFrames {#work-with-lazyframes}
 
 When you want to operate on the entire table (potentially larger than RAM), convert to a Polars `LazyFrame` so you can chain transformations without loading everything at once.
 
@@ -42,7 +42,7 @@ When you want to operate on the entire table (potentially larger than RAM), conv
   {PyPlatformsPolarsLazyframe}
 </CodeBlock>
 
-## Define Schemas with Pydantic
+## Define Schemas with Pydantic {#define-schemas-with-pydantic}
 
 You can also describe your table via `LanceModel` and continue ingesting data from Polars. This is useful when multiple teams share a schema or when you want validation.
 

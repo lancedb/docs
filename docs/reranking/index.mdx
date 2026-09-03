@@ -12,7 +12,7 @@ Reranking is the process of re-ordering search results to improve relevance, oft
 different model than the one used for the initial search. LanceDB has built-in support for reranking
 with models from Cohere, Sentence-Transformers, and more.
 
-### Quickstart
+### Quickstart {#quickstart}
 
 To use a reranker, you run a search and pass the results to the `rerank()` method. The examples below
 move from the simplest, model-free rerankers to a model-based one. Each is a complete, runnable script.
@@ -51,7 +51,7 @@ Reach for the model-free rerankers (`LinearCombinationReranker`, `RRFReranker`) 
 matter most; reach for a model-based one like `CohereReranker` or `CrossEncoderReranker` when you need
 higher relevance and can afford to score every query and document pair with a model.
 
-### Supported Rerankers
+### Supported Rerankers {#supported-rerankers}
 
 LanceDB supports the following rerankers out of the box. The first three are score-based and run no
 model; the rest are model-based. The built-in rerankers are documented in this section; the hosted
@@ -99,7 +99,7 @@ yourself.
 </Note>
 
 
-### Multi-vector reranking
+### Multi-vector reranking {#multi-vector-reranking}
 Most rerankers support reranking based on multiple vectors. To rerank based on multiple vectors, you can pass a list of vectors to the `rerank` method. Here's an example of how to rerank based on multiple vector columns using the `CrossEncoderReranker`:
 
 <CodeGroup>
@@ -126,7 +126,7 @@ input result sets is missing the `_rowid` column. Therefore, it's recommended to
 - `RRFReranker.rerank_multivector(...)` always requires `_rowid` on its inputs, regardless of
 the `deduplicate` flag.
 
-## Creating Custom Rerankers
+## Creating Custom Rerankers {#creating-custom-rerankers}
 
 LanceDB also allows you to create custom rerankers by extending the base `Reranker` class. The custom reranker
 should implement the `rerank` method that takes a list of search results and returns a reranked list of

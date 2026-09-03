@@ -23,8 +23,7 @@ This reranker uses the [VoyageAI](https://docs.voyageai.com/docs/) API to rerank
   </CodeBlock>
 </CodeGroup>
 
-Accepted Arguments
-----------------
+## Accepted Arguments {#accepted-arguments}
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `model_name` | `str` | `None` | The name of the reranker model to use. Available models are: rerank-2, rerank-2-lite |
@@ -35,22 +34,22 @@ Accepted Arguments
 | `truncation` | `bool` | `None` | Whether to truncate the input to satisfy the "context length limit" on the query and the documents. |
 
 
-## Supported Scores for each query type
+## Supported Scores for each query type {#supported-scores-for-each-query-type}
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:
 
-### Hybrid Search
+### Hybrid Search {#hybrid-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Returns only have the `_relevance_score` column |
 | `all` | ❌ Not Supported | Returns have vector(`_distance`) and FTS(`score`) along with Hybrid Search score(`_relevance_score`) |
 
-### Vector Search
+### Vector Search {#vector-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Returns only have the `_relevance_score` column |
 | `all` | ✅ Supported | Returns have vector(`_distance`) along with Hybrid Search score(`_relevance_score`) |
 
-### FTS Search
+### FTS Search {#fts-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Returns only have the `_relevance_score` column |
