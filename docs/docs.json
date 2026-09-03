@@ -70,7 +70,8 @@
               "training/index",
               "training/torch",
               "training/object-detection",
-              "training/vlm-finetuning"
+              "training/vlm-finetuning",
+              "integrations/lerobotdataset"
             ]
           },
           {

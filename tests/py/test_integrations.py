@@ -167,46 +167,41 @@ def test_embedding_huggingface_usage() -> None:
 def test_frameworks_lerobot_lancedb_usage() -> None:
     require_flag("RUN_LEROBOT_LANCEDB_SNIPPETS")
 
-    # --8<-- [start:frameworks_lerobot_lancedb_image_dataset]
-    from lerobot_lancedb import LeRobotLanceDataset
+    # --8<-- [start:frameworks_lerobot_load]
+    from lerobot.datasets import LeRobotDataset
 
-    dataset = LeRobotLanceDataset(
-        repo_id="your-org/your-lerobot-lance-images",
-        delta_timestamps={
-            "observation.images.front": [-0.2, -0.1, 0.0],
-        },
-        return_uint8=True,
-    )
+    # Hub dataset repo: storage_format in meta/info.json routes to the Lance reader
+    dataset = LeRobotDataset("lance-format/pusht-lance")
 
-    sample = dataset[0]
+    # HF Storage Bucket, read in place, nothing downloaded
+    dataset = LeRobotDataset("lance-format/lerobot-tests/pusht-lance", repo_type="bucket")
+
+    sample = dataset[100]
     print(sample["observation.state"].shape)
-    print(sample["action"].shape)
-    # --8<-- [end:frameworks_lerobot_lancedb_image_dataset]
+    print(sample["observation.image"].shape)
+    # --8<-- [end:frameworks_lerobot_load]
 
-    # --8<-- [start:frameworks_lerobot_lancedb_video_dataset]
-    from lerobot_lancedb import LeRobotLanceVideoDataset
+    # --8<-- [start:frameworks_lerobot_train_ready]
+    import torch
 
-    video_dataset = LeRobotLanceVideoDataset(
-        repo_id="lance-format/lerobot-pusht-lance",
-        delta_timestamps={
-            "observation.images.image": [-0.2, -0.1, 0.0],
-        },
+    dataset = LeRobotDataset(
+        "lance-format/pusht-lance",
+        delta_timestamps={"observation.image": [-0.2, -0.1, 0.0]},
         return_uint8=True,
     )
-
-    video_sample = video_dataset[0]
-    print(video_sample["observation.images.image"].shape)
-    # --8<-- [end:frameworks_lerobot_lancedb_video_dataset]
+    loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
+    batch = next(iter(loader))
+    print(batch["observation.image"].shape)  # [32, 3, C, H, W]
+    # --8<-- [end:frameworks_lerobot_train_ready]
 
     # --8<-- [start:frameworks_lerobot_open_lance_tables]
     import lancedb
 
-    db = lancedb.connect("hf://datasets/lance-format/lerobot-pusht-lance/data")
+    db = lancedb.connect("hf://datasets/lance-format/pusht-lance")
     frames = db.open_table("frames")
-    episodes = db.open_table("episodes")
     videos = db.open_table("videos")
 
-    print(len(frames), len(episodes), len(videos))
+    print(frames.count_rows(), videos.count_rows())
     print(frames.schema)
     # --8<-- [end:frameworks_lerobot_open_lance_tables]
 
