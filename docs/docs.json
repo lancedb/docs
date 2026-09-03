@@ -69,9 +69,9 @@
               "training/why-lancedb",
               "training/index",
               "training/torch",
+              "training/lerobot",
               "training/object-detection",
-              "training/vlm-finetuning",
-              "integrations/lerobotdataset"
+              "training/vlm-finetuning"
             ]
           },
           {
