@@ -11,6 +11,8 @@ what order. For a more complete solution, LanceDB also provides a streaming data
 This PyTorch `IterableDataset` adapts the lower-level `Permutation` API and adds prefetching, elastic determinism,
 resumability, and multithreaded transformations.
 
+Training robot policies with [LeRobot](https://huggingface.co/docs/lerobot/index)? It reads Lance datasets natively, so the same tables feed `LeRobotDataset` directly. See the [LeRobot guide](/training/lerobot).
+
 ## Basic data loading
 
 Most model training frameworks iterate through data in batches and feed this data into the model. This process is
