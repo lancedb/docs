@@ -35,6 +35,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The open-source pages live in lancedb/lancedb and are assembled from
+      # there. Pinned to main: this repository publishes what that repository
+      # has merged, not what is in flight.
+      - name: Check out the open-source documentation
+        uses: actions/checkout@v4
+        with:
+          repository: lancedb/lancedb
+          ref: main
+          path: lancedb
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,9 +59,13 @@ jobs:
       # have drifted the site would document something that was never released.
       - name: Check the OpenAPI spec matches its release
         run: make check-spec
+        env:
+          LANCEDB_DOCS_ROOT: lancedb/docs/web
 
       - name: Assemble
         run: make assemble
+        env:
+          LANCEDB_DOCS_ROOT: lancedb/docs/web
 
       - name: Check links in the assembled tree
         working-directory: build/site
@@ -65,8 +79,17 @@ jobs:
         working-directory: build/site
         run: mint export --output "$RUNNER_TEMP/assembled.zip"
 
-      - name: Export the source tree
-        working-directory: docs
+      # Nothing to compare against directly any more: the site no longer exists
+      # as one tree anywhere. Assembling twice proves the pipeline is
+      # deterministic, which is what the comparison can still establish.
+      - name: Assemble again
+        run: make assemble
+        env:
+          LANCEDB_DOCS_ROOT: lancedb/docs/web
+          ASSEMBLE_OUTPUT: build/site-again
+
+      - name: Export the second assembly
+        working-directory: build/site-again
         run: mint export --output "$RUNNER_TEMP/direct.zip"
 
       - name: Compare
