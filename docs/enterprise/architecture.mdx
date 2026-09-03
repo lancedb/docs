@@ -30,13 +30,13 @@ flowchart TB
     CP -.->|Govern and configure| IX
 ```
 
-## Compute-storage separation
+## Compute-storage separation {#compute-storage-separation}
 
 In LanceDB Enterprise, storage and compute are deliberately decoupled. Table data and index artifacts live in object storage, while query-serving and background workers read from and write to that shared durable layer. This means compute can be replaced, scaled, or specialized without making any individual node the owner of the dataset.
 
 This design has practical consequences. Query fleets can scale for interactive traffic without also scaling background indexing capacity. Heavy indexing and compaction work can run on dedicated workers instead of stealing resources from user-facing queries. Caches can accelerate hot reads without becoming the source of truth. And because the data remains in object storage, durability does not depend on the lifecycle of a particular server or local disk.
 
-## Architecture
+## Architecture {#architecture}
 
 At a high level, the control plane governs the system and the data plane executes the work. The control plane is responsible for configuration, service discovery, identity integration, policy, and cluster lifecycle. It determines how the system should behave, but it is not the layer serving table data or executing user queries -- that's the role of the data plane.
 
@@ -80,7 +80,7 @@ flowchart TB
     WAL -->|Persist| OS
 ```
 
-## Remote tables
+## Remote tables {#remote-tables}
 
 A [remote table](/tables-and-namespaces#understanding-tables) is the user-facing abstraction over this architecture. From the client side, you connect to a logical storage layer and table over the network by providing a `db://...` connection identifier. The system then resolves that logical name to the underlying storage-backed table and executes the operation inside the cluster.
 
@@ -88,7 +88,7 @@ This is why Enterprise feels familiar at the API level while operationally behav
 
 This design makes LanceDB Enterprise suitable for catalog-backed layouts, see [Namespaces and the Catalog Model](/namespaces) for more details. For the basic application flow, see the shared [quickstart](/quickstart).
 
-## Read path
+## Read path {#read-path}
 
 When a client issues a query against a remote table, the path is straightforward:
 
@@ -100,7 +100,7 @@ When a client issues a query against a remote table, the path is straightforward
 
 This separation is what lets Enterprise combine a clean remote API with a serving layer that can scale horizontally and keep hot data close to execution.
 
-## Write path
+## Write path {#write-path}
 
 Writes follow a different path because durability comes first:
 
@@ -110,7 +110,7 @@ Writes follow a different path because durability comes first:
 
 Keeping the commit path centered on object storage ensures that the durable record of the table lives outside any single query node. Regardless of whether you're using Lance namespaces or an external catalog, the catalog's role is mainly to resolve table names and provide access details -- the table’s actual data and index artifacts remain in object storage.
 
-## Background work
+## Background work {#background-work}
 
 Indexing, compaction, and cleanup are intentionally moved off the user request path. After table changes are committed, the system can determine that additional work is needed and assign it to background workers built for heavyweight processing.
 
@@ -122,7 +122,7 @@ In practice, that usually looks like this:
 
 This separation is one of the clearest architectural reasons to use LanceDB Enterprise: the same query-serving infrastructure does not have to handle every expensive indexing or compaction task itself.
 
-## What this means for users
+## What this means for users {#what-this-means-for-users}
 
 For teams using LanceDB Enterprise, the architecture changes the _operational model_ more than the programming model. You still work with tables and queries, but the cluster now takes responsibility for distributed execution, cache-aware reads, and long-running background jobs.
 

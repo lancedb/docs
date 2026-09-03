@@ -32,7 +32,7 @@ GPU acceleration changes how the vector index is built, not the lifecycle after 
 appended later still need `optimize()` before they are part of the index, and `fast_search()` only
 searches indexed rows.
 
-## Manual GPU indexing in LanceDB OSS
+## Manual GPU indexing in LanceDB OSS {#manual-gpu-indexing-in-lancedb-oss}
 
 You can use the Python SDK to manually create the `IVF_PQ` index on a GPU. You'll need
 [PyTorch>2.0](https://pytorch.org/). Note that GPU-based indexing is currently only
@@ -41,7 +41,7 @@ supported by the synchronous SDK in LanceDB OSS.
 Specify the values `cuda` or `mps` (on Apple Silicon) for the `accelerator` parameter
 to enable GPU training on your device.
 
-### GPU indexing on Linux
+### GPU indexing on Linux {#gpu-indexing-on-linux}
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -49,7 +49,7 @@ to enable GPU training on your device.
     </CodeBlock>
 </CodeGroup>
 
-### GPU indexing on macOS (Apple Silicon)
+### GPU indexing on macOS (Apple Silicon) {#gpu-indexing-on-macos-apple-silicon}
 
 <CodeGroup>
     <CodeBlock filename="Python" language="Python" icon="python">
@@ -57,14 +57,14 @@ to enable GPU training on your device.
     </CodeBlock>
 </CodeGroup>
 
-## Performance considerations
+## Performance considerations {#performance-considerations}
 
 - GPU memory usage scales with `num_partitions` and vector dimensions
 - For optimal performance, ensure GPU memory exceeds dataset size
 - Batch size is automatically tuned based on available GPU memory
 - Indexing speed improves with larger batch sizes
 
-## Troubleshooting
+## Troubleshooting {#troubleshooting}
 
 If you encounter the error `AssertionError: Torch not compiled with CUDA enabled`,
 you need to [install PyTorch with CUDA support](https://pytorch.org/get-started/locally/).

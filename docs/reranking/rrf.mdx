@@ -29,8 +29,7 @@ why it's the default reranker for LanceDB hybrid search. The implementation foll
   </CodeBlock>
 </CodeGroup>
 
-Accepted Arguments
-----------------
+## Accepted Arguments {#accepted-arguments}
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `K` | `int` | `60` | A constant used in the RRF formula (default is 60). Experiments indicate that k = 60 was near-optimal, but that the choice is not critical. |
@@ -39,7 +38,7 @@ Accepted Arguments
 `K` must be greater than `0`. In TypeScript, construct the built-in reranker with
 `await RRFReranker.create(k)` before passing it to `.rerank(...)`.
 
-## Multi-vector reranking
+## Multi-vector reranking {#multi-vector-reranking}
 
 `RRFReranker` can also fuse the results of several vector searches with `rerank_multivector`, applying
 the same rank-fusion algorithm across more than two lists. Every input result set must include the
@@ -47,10 +46,10 @@ the same rank-fusion algorithm across more than two lists. Every input result se
 otherwise the call raises a `ValueError`. See [multi-vector reranking](/reranking#multi-vector-reranking)
 for a full example.
 
-## Supported Scores for each query type
+## Supported Scores for each query type {#supported-scores-for-each-query-type}
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:
 
-### Hybrid Search
+### Hybrid Search {#hybrid-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Returned rows only have the `_relevance_score` column. |

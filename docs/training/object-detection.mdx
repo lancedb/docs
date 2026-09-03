@@ -9,7 +9,7 @@ This example walks through fine-tuning an autonomous vehicle (AV) perception mod
 
 The full pipeline lives in the [lancedb/training](https://github.com/lancedb/training/tree/main/object-detection) repository. This page focuses on the parts most relevant to training: defining curated splits as materialized views, loading them through the [`Permutation`](/training/) API, and pinning checkpoints to an exact data version.
 
-## What you get
+## What you get {#what-you-get}
 
 Fine-tuning Faster R-CNN ResNet50 FPN v2 for 10 epochs on each curated slice (batch size 64, AMP, A100), starting from the same COCO-pretrained checkpoint and evaluating on the matching validation view:
 
@@ -32,7 +32,7 @@ No external data added — only training-distribution correction via SQL filters
 
 The rest of the page walks through the pipeline that produced these checkpoints.
 
-## The failure modes
+## The failure modes {#the-failure-modes}
 
 A perception model fine-tuned on a generic dataset typically misses the long-tail scenarios that matter most in deployment. Three common failure modes drive this example:
 
@@ -44,7 +44,7 @@ A perception model fine-tuned on a generic dataset typically misses the long-tai
 
 Each curated slice becomes a [materialized view](/geneva/jobs/materialized-views) — a named, refreshable SQL filter over the source table — and the training script loads it by name. New footage flows in through `add()` → `backfill()` → `refresh()`; no manifests, no exports, no reshuffling on disk.
 
-## 1. Schema
+## 1\. Schema {#1-schema}
 
 The source table holds raw image bytes alongside structured annotations. Bounding boxes are stored as a parallel list (one element per box) rather than a nested struct so they remain directly queryable with SQL.
 
@@ -72,7 +72,7 @@ BDD_SCHEMA = pa.schema([
 
 Ingestion streams `pa.RecordBatch`es of raw frames + annotations directly into a Lance table — no intermediate preprocessing job. The table can live on local disk, S3, GCS, or Azure; everything downstream (backfills, views, the training loader) opens it in place via `lancedb.connect("s3://...")` with no local copy step.
 
-## 2. Backfill curation features with Geneva
+## 2\. Backfill curation features with Geneva {#2-backfill-curation-features-with-geneva}
 
 Curation signals are added as columns on the same table using [Geneva UDFs](/geneva/). Backfills are incremental and checkpointed: re-running the command after new footage arrives only computes the new rows.
 
@@ -120,7 +120,7 @@ with gconn.local_ray_context():
 Because the curation features are flat scalar columns on the same table, all four retrieval modes — SQL, full-text search, vector search, and SQL-filtered vector search — work directly without joins or exports. See the [Geneva end-to-end example](/geneva/end-to-end) for more on the backfill pattern.
 </Note>
 
-## 3. Define training splits as materialized views
+## 3\. Define training splits as materialized views {#3-define-training-splits-as-materialized-views}
 
 A training split is a named SQL filter, not a CSV manifest. Each view stays in sync with the source table and bumps its `version` on every refresh — the link between a checkpoint and the exact data that produced it.
 
@@ -153,7 +153,7 @@ with gconn.local_ray_context():
         print(f"[{name}]  {mv.count_rows()} rows  (version {mv.version})")
 ```
 
-## 4. PyTorch DataLoader via the Permutation API
+## 4\. PyTorch DataLoader via the Permutation API {#4-pytorch-dataloader-via-the-permutation-api}
 
 The training script doesn't know about the filter — it opens a view by name and reads through the [`Permutation`](/training/) API. Each DataLoader worker reopens its own connection lazily, reads Arrow batches directly from Lance (zero-copy, no intermediate file format), and the collate function decodes the whole batch in one pass. `Permutation` provides random-access indexing over the table, so shuffling is a cheap pointer rewrite rather than a full-dataset shuffle on disk.
 
@@ -249,7 +249,7 @@ def make_loader(uri, table_name, batch_size=64, num_workers=8, shuffle=False):
 `with_format("arrow")` keeps batches as zero-copy `pa.RecordBatch`es — no per-row Python boxing, no pickling between worker and main. Each DataLoader worker reopens its own `Permutation` after fork (the Rust async handle is cleared in `__getstate__`), so reads scale with `num_workers` and stream straight from the underlying object store. JPEG decode overlaps with GPU compute via `pin_memory` + `prefetch_factor`, which is what keeps the loader from becoming the bottleneck on a fast GPU.
 </Note>
 
-## 5. Fine-tune Faster R-CNN
+## 5\. Fine-tune Faster R-CNN {#5-fine-tune-faster-r-cnn}
 
 The training loop is plain PyTorch — the Lance integration ends at the loader. Mixed precision is enabled on CUDA for ~2× speedup on Ampere GPUs.
 
@@ -310,7 +310,7 @@ for epoch in range(1, 11):
     print(f"epoch {epoch}  ({time.time() - t0:.1f}s)")
 ```
 
-## 6. Pin the checkpoint to a data version
+## 6\. Pin the checkpoint to a data version {#6-pin-the-checkpoint-to-a-data-version}
 
 Every Lance table — including a materialized view — exposes a monotonically increasing `version`. Logging it next to the weights gives a permanent, deterministic link between a checkpoint and the exact data snapshot that produced it.
 
@@ -338,7 +338,7 @@ tbl = lancedb.connect("data/bdd100k/lancedb").open_table("bdd100k_rider_train")
 tbl.checkout(version=7)   # exact snapshot the checkpoint was trained on
 ```
 
-## 7. Continuous updates
+## 7\. Continuous updates {#7-continuous-updates}
 
 When new footage arrives, the same three calls update every downstream view — no view definitions change, no training-script edits required:
 
@@ -363,6 +363,6 @@ for view_name in gconn.table_names():
 
 The next training run picks up the new data automatically — and pins itself to the new `version`.
 
-## Full source
+## Full source {#full-source}
 
 The complete code, including a synthetic-data mode for pipeline verification (`--synthetic 500`), GPU UDFs for CLIP embeddings and dHash deduplication, and the EDA notebook, is in this [GitHub repository](https://github.com/lancedb/training/tree/main/object-detection).

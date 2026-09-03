@@ -19,7 +19,7 @@ As your table organization needs grow over time and your projects become more co
 
 As described in the [Namespaces and Catalog Model](/namespaces) section, namespaces are LanceDB's way of generalizing catalog specs, providing developers a clean way to manage hierarchical organization of tables in the catalog. The SDKs treat a namespace as a path and can use it for table resolution when you use LanceDB outside the root namespace.
 
-## Table operations with namespace paths
+## Table operations with namespace paths {#table-operations-with-namespace-paths}
 
 Let's imagine a scenario where your table management needs have evolved, and you now have the following multi-level structure to organize your tables outside the root namespace.
 ```
@@ -63,7 +63,7 @@ An empty namespace (`[]`), which is the default, means "root namespace", and the
 the `data/` directory under the specified root path.
 </Note>
 
-## Namespace management APIs
+## Namespace management APIs {#namespace-management-apis}
 
 You can open/create/drop tables inside a namespace path (like `["prod", "search"]`).
 All three SDKs expose namespace lifecycle operations directly.
@@ -102,7 +102,7 @@ Listing APIs return the immediate children of the requested namespace path. Use 
 returned `page_token` to page through large catalogs; pass an empty namespace path (`[]`) when you
 want to list from the root namespace.
 
-## Namespaces in LanceDB Enterprise
+## Namespaces in LanceDB Enterprise {#namespaces-in-lancedb-enterprise}
 
 In LanceDB Enterprise deployments, configure namespace-backed federated databases in a TOML file under your deployment's `config` directory.
 LanceDB Enterprise supports both directory-based (`ns_impl = "dir"`) and REST-based (`ns_impl = "rest"`) namespace implementations.
@@ -142,7 +142,7 @@ For the LanceDB REST API itself, requests use `x-api-key` for API-key authentica
 serves more than one database, LanceDB can also use headers such as `x-lancedb-database` or
 `x-lancedb-database-prefix` to route the request to the right database context.
 
-## Related references
+## Related references {#related-references}
 
 - [Client SDK API references](/api-reference)
 - [REST API Reference](/api-reference/rest)

@@ -21,7 +21,7 @@ If you want performance guidance for your own workload, reach out to [contact@la
 
 Depending on workload and tuning, Enterprise clusters can also be configured for high concurrency, including thousands of QPS in some deployments, but the right configuration varies by use case. Training, search, and analytics workloads often benefit from different cluster shapes and resource allocation strategies. To understand which parts of the system influence these results, see the [Enterprise architecture](/enterprise/architecture) guide.
 
-## Dataset
+## Dataset {#dataset}
 
 We used two datasets for this benchmark: the [dbpedia-entities-openai-1M](https://huggingface.co/datasets/KShivendu/dbpedia-entities-openai-1M)
 for vector search, and a synthetic dataset for vector search with metadata filtering.
@@ -33,7 +33,7 @@ for vector search, and a synthetic dataset for vector search with metadata filte
 
 These benchmark results are most useful as a directional baseline. Different data distributions, index choices, cache behavior, and cluster settings can materially change the latency profile.
 
-## Vector Search
+## Vector Search {#vector-search}
 
 We ran vector queries against `dbpedia-entities-openai-1M` with a warmed-up cache. In that benchmark setup, we observed the following latency profile:
 
@@ -44,7 +44,7 @@ We ran vector queries against `dbpedia-entities-openai-1M` with a warmed-up cach
 | P99 | 35ms |
 | Max | 49ms |
 
-## Full-Text Search
+## Full-Text Search {#full-text-search}
 
 With the same dataset and a warmed-up cache, full-text search fell into the following range:
 
@@ -55,7 +55,7 @@ With the same dataset and a warmed-up cache, full-text search fell into the foll
 | P99 | 42ms |
 | Max | 98ms |
 
-## Vector Search with Metadata Filtering
+## Vector Search with Metadata Filtering {#vector-search-with-metadata-filtering}
 
 We created a 15M-vector dataset to evaluate metadata-aware search under more complex filtering conditions.
 These filters can span a wide range of scalar columns, for example, "find Sci-fi movies since 1900".

@@ -7,7 +7,7 @@ import { PyEmbeddingIbmUsage } from '/snippets/integrations.mdx';
 
 Generate text embeddings using IBM's watsonx.ai platform.
 
-## Supported Models
+## Supported Models {#supported-models}
 
 You can find a list of supported models at [IBM watsonx.ai Documentation](https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models-embed.html?context=wx). The currently supported model names are:
 
@@ -23,7 +23,7 @@ You can find a list of supported models at [IBM watsonx.ai Documentation](https:
 For new tables, `ibm/granite-embedding-278m-multilingual` is the recommended default. Older model IDs (such as `ibm/slate-125m-english-rtrvr` and `sentence-transformers/all-minilm-l12-v2`) remain resolvable for tables whose stored metadata references them, but they are no longer advertised for new use.
 </Info>
 
-## Parameters
+## Parameters {#parameters}
 
 The following parameters can be passed to the `create` method:
 
@@ -40,7 +40,7 @@ The following parameters can be passed to the `create` method:
 You must supply exactly one of `project_id` or `space_id` (either as an argument or via its environment variable). Setting both, or neither, raises a `ValueError`.
 </Info>
 
-## Usage Example
+## Usage Example {#usage-example}
 
 First, the watsonx.ai library is an optional dependency, so must be installed separately:
 

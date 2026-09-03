@@ -9,7 +9,7 @@ All the scripts and code for this tutorial are available in the
 [vectorDB recipes](https://github.com/lancedb/vectordb-recipes/tree/main/examples/time-travel-rag) repository. 
 </Tip>
 
-## Use case: Financial services regulatory knowledge base
+## Use case: Financial services regulatory knowledge base {#use-case-financial-services-regulatory-knowledge-base}
 
 Imagine you're a major investment bank. Your team is tasked with building a critical Retrieval-Augmented Generation (RAG) system. This system must provide instant, accurate answers to compliance officers about ever-changing financial regulations. A wrong or out-of-date answer isn't just an inconvenience—it could lead to multi-million dollar fines, reputational damage, and regulatory audits.
 
@@ -22,7 +22,7 @@ Your knowledge base is a living entity, constantly evolving with:
 This dynamic environment creates a series of high-stakes challenges that traditional
 vector databases are ill-equipped to handle.
 
-## Pain points solved by LanceDB
+## Pain points solved by LanceDB {#pain-points-solved-by-lancedb}
 
 1. "Our RAG gave different answers yesterday versus today. Which version was used in the official compliance report?" Without versioning, you can't prove what the AI knew at a specific point in time, making audits impossible.
 
@@ -34,7 +34,7 @@ vector databases are ill-equipped to handle.
 
 LanceDB's [zero-cost data evolution](/tables/schema) and [time-travel capabilities](https://docs.lancedb.com/tables/versioning) directly address these critical enterprise pain points, providing the foundation for a reliable, auditable, and production-ready RAG system.
 
-## Dataset: The U.S. Federal Register
+## Dataset: The U.S. Federal Register {#dataset-the-us-federal-register}
 
 To make this use case realistic, we'll use a perfect real-world dataset: The U.S. Federal Register, the official daily journal of the United States Government.
 

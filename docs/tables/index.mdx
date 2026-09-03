@@ -73,7 +73,7 @@ Use the example below as a template, and see [Quickstart](/quickstart#python-syn
 for example snippets on both sync and async Python usage.
 </Note>
 
-## Dataset
+## Dataset {#dataset}
 
 We'll work with this small dataset based on characters from the legends of Camelot. Note that
 the `vector` column holds 4-dimensional embeddings, and the `stats` column is a nested struct
@@ -153,9 +153,9 @@ The `vector` arrays here are synthetic and for demonstration purposes only. In y
 applications, you'd generate these vectors from the raw text fields using a suitable embedding model.
 </Note>
 
-## Connect to a database
+## Connect to a database {#connect-to-a-database}
 
-### Option 1: Direct table access
+### Option 1: Direct table access {#option-1-direct-table-access}
 
 We start by connecting to a LanceDB database path. The example below uses a local path in LanceDB OSS.
 
@@ -176,7 +176,7 @@ We start by connecting to a LanceDB database path. The example below uses a loca
 You can also connect LanceDB OSS directly to object storage. For credentials, endpoints, and provider-specific options, see
 [Configuring storage](/storage/configuration).
 
-### Option 2: Remote tables
+### Option 2: Remote tables {#option-2-remote-tables}
 
 If you're using LanceDB [Enterprise](/enterprise), you can connect using a `db://` URI,
 along with any necessary credentials. Simply replace the local path with a remote `uri`
@@ -207,9 +207,9 @@ methods for bulk data export are not available.
 To retrieve data, use search queries instead: `table.search(query).limit(n).to_arrow()`.
 </Note>
 
-## Create a table and ingest data
+## Create a table and ingest data {#create-a-table-and-ingest-data}
 
-### From JSON
+### From JSON {#from-json}
 LanceDB stores records in Lance tables. Each row is a record and each column
 holds a field or related metadata. The simplest way to start is to obtain the source
 data as a list of JSON records that includes a vector column and any metadata
@@ -274,7 +274,7 @@ For more ingestion patterns, including PyArrow tables, Python `pyarrow.dataset.D
 empty tables, and Python `LanceModel` schemas with nested fields, see
 [Ingesting data](/tables/create/).
 
-### From Pandas DataFrames
+### From Pandas DataFrames {#from-pandas-dataframes}
 <Badge color="green">Python Only</Badge>
 
 You can create LanceDB tables directly from [Pandas](https://pandas.pydata.org/) DataFrames. Simply
@@ -287,7 +287,7 @@ and directly ingest to it.
     </CodeBlock>
 </CodeGroup>
 
-### From Polars DataFrames
+### From Polars DataFrames {#from-polars-dataframes}
 <Badge color="green">Python Only</Badge>
 
 You can also create LanceDB tables directly from [Polars](https://www.pola.rs/) DataFrames. Simply
@@ -300,7 +300,7 @@ and directly ingest to it.
     </CodeBlock>
 </CodeGroup>
 
-### From an Arrow schema
+### From an Arrow schema {#from-an-arrow-schema}
 
 If you want to create an _empty_ table without any data -- say you want to
 define the schema first and then incrementally add data later -- you can
@@ -344,7 +344,7 @@ stats: struct<courage: int64, magic: int64, strength: int64, wisdom: int64>
 ```
 </Card>
 
-## Append data to a table
+## Append data to a table {#append-data-to-a-table}
 
 LanceDB tables are mutable, and you can append new records to existing tables.
 If you're starting with a fresh session, connect to the database and open the
@@ -384,7 +384,7 @@ via the `add` method. For the Rust snippet, you can find the helper functions in
 
 We now have two new records in the table. Let's begin to query our data!
 
-## Vector search
+## Vector search {#vector-search}
 
 It's straightforward to run vector similarity search in LanceDB. Let's answer
 some questions about the data using vector search with projections (returning only
@@ -446,7 +446,7 @@ into which you can pass SQL-like expressions.
 Only three characters have magical abilities greater than 3. Merlin is
 clearly the most magical of them all!
 
-## Filtered search
+## Filtered search {#filtered-search}
 
 You can also run traditional analytics-style search queries that do not
 involve vectors. For example, let's find the strongest characters in
@@ -486,7 +486,7 @@ Lance extension to query Lance tables directly with SQL. See the
 [DuckDB integration guide](/integrations/data/duckdb).
 </Note>
 
-## Add column
+## Add column {#add-column}
 
 We can also add new columns to an existing LanceDB table using the `add_columns` method.
 For this example, let's add a new float column named `power` that shows the average
@@ -553,7 +553,7 @@ all their abilities! Sir Lancelot and the Lady of the Lake follow closely behind
 For column renames, type changes, nullability changes, and grouping multiple schema changes into
 one operation, see [Schema and data evolution](/tables/schema/).
 
-## Delete data
+## Delete data {#delete-data}
 
 You can delete rows from a LanceDB table using the `delete` method with
 a filtering expression.
@@ -578,7 +578,7 @@ This will delete the row(s) where the `role` value matches "Traitor Knight".
 You can verify that the row has been deleted by running a search query again,
 and confirming that Mordred no longer appears in the results.
 
-## Drop column
+## Drop column {#drop-column}
 
 If you want to remove or delete a column from an existing LanceDB table, you can use
 the `drop_columns` method.
@@ -599,7 +599,7 @@ the `drop_columns` method.
 
 This will remove the `power` column we added earlier from the table schema.
 
-## Drop table
+## Drop table {#drop-table}
 
 If you want to delete an entire table from the database, you can use the
 `drop_table` method.
@@ -626,7 +626,7 @@ See the full code for these examples (including helper functions) in the
 [docs repo](https://github.com/lancedb/docs/tree/main/tests).
 </Info>
 
-## What about vector indexes?
+## What about vector indexes? {#what-about-vector-indexes}
 
 LanceDB supports vector indexes to speed up similarity search on large datasets.
 For datasets up to a few hundred thousand vectors, LanceDB's highly efficient kNN
@@ -635,8 +635,7 @@ grows larger, you can create vector indexes on your vector columns to accelerate
 search. See the [indexing](/indexing/) documentation for details on how to create and use
 vector indexes in LanceDB.
 
-## What's next?
-
+## Next steps {#next-steps}
 Now that you've learned the basics of creating tables, adding data, running
 vector search, and modifying table schemas, you're ready to explore more
 advanced features of LanceDB. Below are some suggested next pages.

@@ -17,7 +17,7 @@ import {
 LanceDB will automatically vectorize the data both at ingestion and query time. All you need to do is specify which model to use.
 Popular embedding models like OpenAI, Hugging Face, Sentence Transformers, CLIP, and more, are supported.
 
-## Step 1: Import Required Libraries
+## Step 1: Import Required Libraries {#step-1-import-required-libraries}
 
 First, import the necessary LanceDB components:
 
@@ -40,7 +40,7 @@ from lancedb.embeddings import get_registry
 - TypeScript uses `lancedb.embedding.getRegistry()` and `lancedb.embedding.LanceSchema()` for the same registry/schema workflow
 - In TypeScript, import the provider module before calling `getRegistry().get(...)`; the provider import is what registers names such as `"huggingface"` or `"openai"`
 
-## Step 2: Connect to LanceDB
+## Step 2: Connect to LanceDB {#step-2-connect-to-lancedb}
 
 Establish a connection to your LanceDB OSS directory or Enterprise cluster:
 
@@ -55,7 +55,7 @@ db = lancedb.connect(...)
     </CodeBlock>
 </CodeGroup>
 
-## Step 3: Initialize the Embedding Function
+## Step 3: Initialize the Embedding Function {#step-3-initialize-the-embedding-function}
 
 Choose and configure your embedding model:
 
@@ -76,7 +76,7 @@ This creates an embedding function from the local embedding registry. The Python
 - Modify the model name for different embedding models
 - Set `device="cuda"` for GPU acceleration if available
 
-## Step 4: Define Your Schema
+## Step 4: Define Your Schema {#step-4-define-your-schema}
 
 Create a Pydantic model that defines your table structure:
 
@@ -97,7 +97,7 @@ class Words(LanceModel):
 - `model.ndims()`: Sets vector dimensions for your model
 - In TypeScript, use `model.sourceField(...)` and `model.vectorField()` inside `LanceSchema(...)`
 
-## Step 5: Create Table and Ingest Data
+## Step 5: Create Table and Ingest Data {#step-5-create-table-and-ingest-data}
 
 Create a table with your schema and add data:
 
@@ -124,7 +124,7 @@ If your input already includes the vector column, automatic embedding only runs 
 absent or entirely null for the batch. Partially supplied vectors are treated as manual data, so
 LanceDB preserves them instead of filling only the missing rows.
 
-## Step 6: Query with Automatic Embedding
+## Step 6: Query with Automatic Embedding {#step-6-query-with-automatic-embedding}
 
 Note: On LanceDB Enterprise, the server does not generate embeddings from query text. In the Python remote
 client, `table.search("greetings")` can still work when the table schema includes embedding metadata, because

@@ -14,7 +14,7 @@ The bridge is available in the Python and TypeScript SDKs. It is a thin wrapper 
 This page covers LanceDB OSS. LanceDB Enterprise clusters emit their own Prometheus/OpenTelemetry metrics from the server side — see the [Enterprise overview](/enterprise/) for that flow.
 </Note>
 
-## What you get
+## What you get {#what-you-get}
 
 Once instrumented, LanceDB registers one observable instrument per metric on your `MeterProvider`. The current catalog covers the object store layer:
 
@@ -32,7 +32,7 @@ The recorder is process-global and pull-based: your configured `MetricReader` co
 **Histograms are exported Prometheus-style.** OpenTelemetry has no asynchronous histogram instrument, so each histogram surfaces as three observable counters: `<name>_bucket` (with an `le` attribute per bucket boundary, including `+Inf`), `<name>_count`, and `<name>_sum`. Only `_sum` carries the histogram's unit; `_bucket` and `_count` are cumulative sample counts.
 </Note>
 
-## Python
+## Python {#python}
 
 Install LanceDB with the `otel` extra to pull in the OpenTelemetry API, plus an OpenTelemetry SDK of your choice. The SDK is intentionally not bundled, so you configure it and its readers and exporters however your platform expects.
 
@@ -68,7 +68,7 @@ If you omit `meter_provider`, LanceDB uses the global provider returned by `open
 `instrument_lancedb_metrics()` returns `False` and emits a warning if another `metrics`-crate recorder is already installed in the process. Only one global recorder is permitted, so instrument LanceDB before any other library that installs its own recorder.
 </Warning>
 
-## TypeScript
+## TypeScript {#typescript}
 
 The Node SDK depends on `@opentelemetry/api` directly, so no extra install step is needed to expose the entry point. You still need an OpenTelemetry SDK to actually export.
 
@@ -93,7 +93,7 @@ const db = await connect("s3://my-bucket/lancedb");
 
 `instrumentLanceDbMetrics()` also accepts no arguments, in which case it uses the global provider from `@opentelemetry/api`. Calling it more than once is safe: instruments are created only on the first successful call.
 
-## What to watch
+## What to watch {#what-to-watch}
 
 A few starting points for dashboards and alerts:
 
@@ -102,7 +102,7 @@ A few starting points for dashboards and alerts:
 - **Retryable responses:** a rising `lance_object_store_retryable_responses_total` typically means you are being throttled and should back off or shard writes.
 - **In-flight requests:** a growing `lance_object_store_in_flight_requests` gauge without a matching rise in throughput indicates queueing.
 
-## Where to go next
+## Where to go next {#where-to-go-next}
 
 <Columns cols={2}>
   <Card title="Performance tips" icon="gauge-high" href="/performance">

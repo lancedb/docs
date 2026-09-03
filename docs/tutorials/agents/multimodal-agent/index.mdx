@@ -10,7 +10,7 @@ description: "Build an AI agent that understands both text and images to help us
 Ever wanted to combine the power of text and images in a single AI agent? In this tutorial,
 you'll build an agent that can understand both text and images to help users discover recipes that are relevant to them. The approach shown combines LanceDB's multimodal capabilities with [Pydantic AI](https://ai.pydantic.dev/) for the agentic workflow.
 
-## Key Technologies
+## Key Technologies {#key-technologies}
 
 - **LanceDB**: Embedded retrieval library and multimodal lakehouse for efficient storage and retrieval
 - **PydanticAI**: Modern AI agent framework with type safety
@@ -18,9 +18,9 @@ you'll build an agent that can understand both text and images to help users dis
 - **CLIP**: Vision-language model for image understanding
 - **Streamlit**: Interactive web application framework
 
-## Tutorial Overview
+## Tutorial Overview {#tutorial-overview}
 
-### Option 1: Notebook
+### Option 1: Notebook {#option-1-notebook}
 The notebook shows how to work through the steps and prepare a small sample recipe dataset, generate both text and image
 embeddings, store everything efficiently in LanceDB, and then build a PydanticAI agent with custom tools to
 query it. You'll finish by testing the agent against a few example questions to see the full multimodal flow
@@ -32,7 +32,7 @@ No local setup required - just click and start learning about multimodal agents.
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1pxavAGoXa-KSh_4HxNpvP2AjHPcIRpbq?usp=sharing)
 </Card>
 
-### Option 2: Demo Application (Local Setup)
+### Option 2: Demo Application (Local Setup) {#option-2-demo-application-local-setup}
 The demo application is the full codebase: you'll download and process a real recipe dataset with thousands
 of items, run a Streamlit chat interface that supports image upload, and follow a structure that includes
 production-minded touches like error handling, logging, and monitoring. Everything you need to deploy is
@@ -42,12 +42,12 @@ included.
 Download the files for the full demo application here.
 </Card>
 
-### Dataset Information
+### Dataset Information {#dataset-information}
 - **Source**: [Kaggle Recipe Dataset](https://www.kaggle.com/datasets/pes12017000148/food-ingredients-and-recipe-dataset-with-images)
 - **Size**: Thousands of recipes with images
 - **Format**: CSV file with recipe data and image references
 
-### Setup
+### Setup {#setup}
 
 <CodeGroup>
 ```bash bash icon="code"

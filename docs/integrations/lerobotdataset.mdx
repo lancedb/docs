@@ -17,13 +17,13 @@ import {
 
 Lance pairs well with LeRobot when you need high-performance random access, lazy multimodal blob reads, and a single table interface for curation, search, and training data preparation. The `lerobot-lancedb` package ships Lance-backed `LeRobotDataset` subclasses, and LanceDB can open Lance-formatted LeRobot datasets on the Hub directly through `hf://` URIs.
 
-## Install
+## Install {#install}
 
 ```bash
 pip install lancedb lance lerobot-lancedb
 ```
 
-## Use Lance-backed LeRobotDataset loaders
+## Use Lance-backed LeRobotDataset loaders {#use-lance-backed-lerobotdataset-loaders}
 
 `LeRobotLanceDataset` is useful when your Lance-backed dataset stores decoded image observations. It's a drop-in replacement for `LeRobotDataset`, so existing policy training code keeps working with the usual PyTorch dataset and dataloader patterns.
 
@@ -41,7 +41,7 @@ For datasets that store camera observations as MP4 video segments, use `LeRobotL
 Use the image loader for Lance-backed repos that store image frames. Use the video loader for MP4-backed LeRobot datasets such as `lance-format/lerobot-pusht-lance`.
 </Info>
 
-## Open LeRobot Lance tables with LanceDB
+## Open LeRobot Lance tables with LanceDB {#open-lerobot-lance-tables-with-lancedb}
 
 Lance-formatted LeRobot datasets published by `lance-format` expose each `.lance` file under `data/` as a LanceDB table. The PushT dataset, for example, has `frames`, `episodes`, and `videos` tables.
 
@@ -51,7 +51,7 @@ Lance-formatted LeRobot datasets published by `lance-format` expose each `.lance
 
 Opening the tables directly is handy for inspecting schemas, counting rows, sampling metadata, or building curation workflows before any data reaches the training loop.
 
-## Filter a frame window
+## Filter a frame window {#filter-a-frame-window}
 
 Most robotics workflows want a deterministic slice by `episode_index`, `frame_index`, or task metadata long before training begins. LanceDB filters those rows without touching the video blobs.
 
@@ -61,7 +61,7 @@ Most robotics workflows want a deterministic slice by `episode_index`, `frame_in
 
 With the filtered set in hand, you can materialize a smaller local LanceDB database, add derived columns, attach embeddings, or build vector and scalar indexes for faster repeated access.
 
-## Example Lance-formatted LeRobot datasets
+## Example Lance-formatted LeRobot datasets {#example-lance-formatted-lerobot-datasets}
 
 <CardGroup cols={2}>
   <Card title="LeRobot PushT" href="/datasets/lerobot-pusht">
@@ -72,7 +72,7 @@ With the filtered set in hand, you can materialize a smaller local LanceDB datab
   </Card>
 </CardGroup>
 
-## More resources
+## More resources {#more-resources}
 
 <CardGroup cols={2}>
   <Card title="LeRobotDataset v3.0" href="https://huggingface.co/docs/lerobot/lerobot-dataset-v3">
@@ -83,7 +83,7 @@ With the filtered set in hand, you can materialize a smaller local LanceDB datab
   </Card>
 </CardGroup>
 
-## When to use each interface
+## When to use each interface {#when-to-use-each-interface}
 
 | Interface | Best for |
 |:---|:---|

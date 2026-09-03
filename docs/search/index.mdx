@@ -14,7 +14,7 @@ icon: "list"
 | [Filtering](/search/filtering/) | Filter results based on metadata fields |
 | [SQL Queries](/search/sql/index) | SQL query capabilities for data exploration and analytics |
 
-## Before you search
+## Before you search {#before-you-search}
 
 - Vector search can run without an ANN index as an exhaustive scan. That's useful while prototyping, but build a vector index before relying on low-latency searches over larger tables.
 - Full-text and hybrid text search require an FTS index on the text column you query. If a table has multiple FTS indexes, specify the target column. FTS also supports phrase, boolean, boosted, multi-match, and fuzzy query forms when you need more than plain terms.

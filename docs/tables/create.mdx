@@ -47,7 +47,7 @@ In LanceDB, tables store records with a defined schema that specifies column nam
 - PyArrow schemas for explicit schema control
 - `LanceModel` for Pydantic-based validation
 
-## Create a table with data
+## Create a table with data {#create-a-table-with-data}
 
 Initialize a LanceDB connection and create a table
 
@@ -67,7 +67,7 @@ Initialize a LanceDB connection and create a table
 
 Depending on the SDK, LanceDB can ingest arrays of records, Arrow tables or record batches, and Arrow batch iterators or readers. Let's take a look at some of the common patterns.
 
-### From list of objects
+### From list of objects {#from-list-of-objects}
 
 You can provide a list of objects to create a table. The Python and TypeScript SDKs
 support lists/arrays of dictionaries, while the Rust SDK supports lists of structs.
@@ -88,7 +88,7 @@ In Python, pass a list or other batch-like object; a single bare `dict` or singl
     </CodeBlock>
 </CodeGroup>
 
-### Handle existing tables
+### Handle existing tables {#handle-existing-tables}
 
 By default, `create_table` raises an error if a table with the same name already exists.
 You can change this behavior with two parameters that resolve the conflict in different ways:
@@ -121,7 +121,7 @@ You can change this behavior with two parameters that resolve the conflict in di
 contains specific rows, prefer the [empty-table-then-add pattern](#create-empty-table).
 </Note>
 
-### From a custom schema
+### From a custom schema {#from-a-custom-schema}
 
 You can define a custom Arrow schema for the table. This is useful when you want to have more control over the column types and metadata.
 
@@ -148,7 +148,7 @@ For Python ingest, malformed vector values fail by default. If you expect occasi
 null, or NaN vectors, choose an `on_bad_vectors` policy: `"drop"` removes those rows, `"fill"` writes
 `fill_value`, and `"null"` writes nulls.
 
-### From an Arrow Table
+### From an Arrow Table {#from-an-arrow-table}
 You can also create LanceDB tables directly from Arrow tables.
 Rust uses an Arrow `RecordBatchReader` for the same Arrow-native ingest flow.
 
@@ -167,7 +167,7 @@ Rust uses an Arrow `RecordBatchReader` for the same Arrow-native ingest flow.
 </CodeGroup>
 
 
-### From a Pandas DataFrame
+### From a Pandas DataFrame {#from-a-pandas-dataframe}
 <Badge color="green">Python Only</Badge>
 
 <CodeGroup>
@@ -184,7 +184,7 @@ Data is converted to Arrow before being written to disk. For maximum control ove
 The **`vector`** column needs to be a [Vector](/integrations/data/pydantic#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
 </Note>
 
-### From a Polars DataFrame
+### From a Polars DataFrame {#from-a-polars-dataframe}
 <Badge color="green">Python Only</Badge>
 
 LanceDB supports [Polars](https://pola.rs/), a modern, fast DataFrame library
@@ -198,7 +198,7 @@ is on the way.
     </CodeBlock>
 </CodeGroup>
 
-### From Pydantic Models
+### From Pydantic Models {#from-pydantic-models}
 <Badge color="green">Python Only</Badge>
 
 When you create an empty table without data, you must specify the table schema.
@@ -219,7 +219,7 @@ LanceDB only understands subclasses of `lancedb.pydantic.LanceModel`
     </CodeBlock>
 </CodeGroup>
 
-#### Nested schemas
+#### Nested schemas {#nested-schemas}
 
 Sometimes your data model may contain nested objects. For example, you may want to store the document string and the document source name as a nested Document object:
 
@@ -251,7 +251,7 @@ document: struct<content: string not null, source: string not null> not null
     child 1, source: string not null
 ```
 
-#### Validators
+#### Validators {#validators}
 
 Because `LanceModel` inherits from Pydantic's `BaseModel`, you can combine them with Pydantic's
 [field validators](https://docs.pydantic.dev/latest/concepts/validators). The example
@@ -266,7 +266,7 @@ for a `created_at` field.
 
 When you run this code it, should raise the `ValidationError`.
 
-### Loading Large Datasets
+### Loading Large Datasets {#loading-large-datasets}
 
 When ingesting large datasets, use `table.add()` on an existing table rather than
 passing all data to `create_table()`. The `add()` method auto-parallelizes large
@@ -277,7 +277,7 @@ For best performance with large datasets, create an empty table first and then c
 `table.add()`. This enables automatic write parallelism for materialized data sources.
 </Tip>
 
-#### From files (Parquet, CSV, etc.)
+#### From files (Parquet, CSV, etc.) {#from-files-parquet-csv-etc}
 <Badge color="green">Python Only</Badge>
 
 For file-based data, pass a `pyarrow.dataset.Dataset` to `table.add()`. This streams
@@ -295,7 +295,7 @@ file-based dataset ingestion is tracked in
 [lancedb#3173](https://github.com/lancedb/lancedb/issues/3173).
 </Note>
 
-#### From iterators (custom batch generation)
+#### From iterators (custom batch generation) {#from-iterators-custom-batch-generation}
 
 When you need custom batch logic — generating embeddings on the fly, transforming
 rows from an external source, etc. — use an iterator of `RecordBatch` objects.
@@ -322,7 +322,7 @@ Use this pattern when:
 
 Python can also consume iterators of other supported types like Pandas DataFrames or Python lists.
 
-#### Write parallelism
+#### Write parallelism {#write-parallelism}
 
 <Note title="Automatic parallelism">
 For materialized data (`pa.Table`, `pd.DataFrame`, `pa.dataset()`), LanceDB
@@ -335,7 +335,7 @@ but not yet exposed in Python or TypeScript
 ([tracking issue](https://github.com/lancedb/lancedb/issues/3173)).
 </Note>
 
-#### Tracking ingestion progress
+#### Tracking ingestion progress {#tracking-ingestion-progress}
 <Badge color="green">TypeScript Only</Badge>
 
 For long-running writes, pass a `progress` callback to `table.add()` to surface
@@ -366,7 +366,7 @@ A few things to know before you wire this up:
 - Errors swallowed: anything your callback throws is logged with `console.warn` and won't abort the write, so keep the callback side-effect-only and don't rely on it for control flow.
 - Row totals: `totalRows` is only populated when the input source can report it up front (for example, a materialized `arrow.Table`). For streaming sources it stays `undefined` until the final callback, where it falls back to the actual rows written.
 
-## Create empty table
+## Create empty table {#create-empty-table}
 You can create an empty table for scenarios where you want to add data to the table later.
 An example would be when you want to collect data from a stream/external file and then add it to a table in
 batches.
@@ -400,7 +400,7 @@ that has been extended to support LanceDB specific types like `Vector`.
 Once the empty table has been created, you can append to it or modify its contents,
 as explained in the [updating and modifying tables](/tables/update) section.
 
-## Open an existing table
+## Open an existing table {#open-an-existing-table}
 
 You can open an existing table by specifying the name of the table to the `open_table` / `openTable` method.
 If you forget the name of your table, you can always get a listing of all table names.
@@ -419,7 +419,7 @@ If you forget the name of your table, you can always get a listing of all table 
     </CodeBlock>
 </CodeGroup>
 
-## Drop a table
+## Drop a table {#drop-a-table}
 
 Use the `drop_table()` method on the database to remove a table.
 

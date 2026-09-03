@@ -10,18 +10,18 @@ import {
   TsFrameworksGenkitUsage,
 } from '/snippets/integrations.mdx';
 
-### genkitx-lancedb
+### genkitx-lancedb {#genkitx-lancedb}
 Genkit is an open-source framework for building end-to-end AI and RAG pipelines with a clean, TypeScript-first
 developer experience. The genkitx-lancedb plugin lets you use LanceDB as a high-performance vector store
 inside your Genkit flows, so you can index, search, and retrieve data efficiently as part of your AI
 applications.
 
-### Installation
+### Installation {#installation}
 ```bash
 pnpm install genkitx-lancedb
 ```
 
-### Usage
+### Usage {#usage}
 
 Adding LanceDB plugin to your genkit instance.
 
@@ -46,11 +46,11 @@ On running this query, you'll get 5 results fetched from the lancedb table, wher
 
 
 
-## Creating a custom RAG flow
+## Creating a custom RAG flow {#creating-a-custom-rag-flow}
 
 Now that we've seen how you can use LanceDB in a Genkit pipeline, let's refine the flow and create a RAG. A RAG flow will consist of an index and a retriever with its outputs postprocessed and fed into an LLM for final response
 
-### Creating custom indexer flows
+### Creating custom indexer flows {#creating-custom-indexer-flows}
 You can also create custom indexer flows, utilizing more options and features provided by LanceDB.
 
 <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
@@ -63,7 +63,7 @@ In your console, you can see the logs
 
 <img width="511" alt="Screenshot 2025-05-11 at 7 19 14 PM" src="https://github.com/user-attachments/assets/243f26c5-ed38-40b6-b661-002f40f0423a" />
 
-### Creating custom retriever flows
+### Creating custom retriever flows {#creating-custom-retriever-flows}
 You can also create custom retriever flows, utilizing more options and features provided by LanceDB.
 <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
   {TsFrameworksGenkitCustomRetriever}

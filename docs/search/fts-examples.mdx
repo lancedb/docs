@@ -7,9 +7,9 @@ icon: "book-open"
 
 These worked examples build on the concepts from the [Full-Text Search guide](/search/full-text-search). They walk through creating sample tables, building FTS indices, and running fuzzy, phrase, boosted, boolean, and substring queries.
 
-## Fuzzy Search and Boosting Example
+## Fuzzy Search and Boosting Example {#fuzzy-search-and-boosting-example}
 
-### Generate Data
+### Generate Data {#generate-data}
 
 First, let's create a table with sample text data for testing fuzzy search:
 
@@ -71,7 +71,7 @@ const count = Array.from({ length: n }, () => Math.floor(Math.random() * 10000) 
 ```
 </CodeGroup>
 
-### Create Table
+### Create Table {#create-table}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -105,7 +105,7 @@ const table = await db.createTable(tableName, data, { mode: "overwrite" });
 ```
 </CodeGroup>
 
-### Construct FTS Index
+### Construct FTS Index {#construct-fts-index}
 
 Create a full-text search index on the first text column:
 
@@ -139,11 +139,11 @@ await waitForIndex(table, "text2_idx");
 ```
 </CodeGroup>
 
-### Basic and Fuzzy Search
+### Basic and Fuzzy Search {#basic-and-fuzzy-search}
 
 Now we can perform basic, fuzzy, and prefix match searches:
 
-#### Basic Exact Search
+#### Basic Exact Search {#basic-exact-search}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -170,7 +170,7 @@ const basicMatchResults = await table.query()
 ```
 </CodeGroup>
 
-#### Fuzzy Search with Typos
+#### Fuzzy Search with Typos {#fuzzy-search-with-typos}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -195,7 +195,7 @@ const fuzzyResults = await table.query()
 ```
 </CodeGroup>
 
-#### Prefix based Match
+#### Prefix based Match {#prefix-based-match}
 
 Prefix-based match allows you to search for documents containing words that start with a specific prefix. 
 
@@ -222,7 +222,7 @@ const fuzzyResults = await table.query()
 ```
 </CodeGroup>
 
-### Phrase Match
+### Phrase Match {#phrase-match}
 
 Phrase matching enables you to search for exact sequences of words. Unlike regular text search 
 which matches individual terms independently, phrase matching requires words to appear in the 
@@ -263,7 +263,7 @@ const phraseResults = await table.query()
 ```
 </CodeGroup>
 
-#### Flexible Phrase Match
+#### Flexible Phrase Match {#flexible-phrase-match}
 To provide more flexible phrase matching, LanceDB supports the `slop` parameter. This allows you to match phrases where the terms appear close to each other, even if they are not directly adjacent or in the exact order, as long as they are within the specified `slop` value.
 
 For example, the phrase query "puppy merrily" would not return any results by default. However, if you set `slop=1`, it will match phrases like "puppy jumps merrily", "puppy runs merrily", and similar variations where one word appears between "puppy" and "merrily".
@@ -293,7 +293,7 @@ const phraseResults = await table.query()
 ```
 </CodeGroup>
 
-### Search with Boosting
+### Search with Boosting {#search-with-boosting}
 
 Boosting allows you to control the relative importance of different search terms or fields 
 in your queries. This feature is particularly useful when you need to:
@@ -388,10 +388,10 @@ const multiMatchBoostingResults = await table.query()
 - For complex queries, use SQL to combine FTS with other filter conditions
 </Card>
 
-### Boolean Queries
+### Boolean Queries {#boolean-queries}
 LanceDB supports boolean logic in full-text search, allowing you to combine multiple queries using `and` and `or` operators. This is useful when you want to match documents that satisfy multiple conditions (intersection) or at least one of several conditions (union).
 
-#### Combining Two Match Queries
+#### Combining Two Match Queries {#combining-two-match-queries}
 
 In Python, you can combine two MatchQuery objects using either the `and` function or the `&` operator (e.g., `MatchQuery("puppy", "text") and MatchQuery("merrily", "text")`); both methods are supported and yield the same result. Similarly, you can use either the `or` function or the `|` operator to perform an or query. 
 
@@ -473,11 +473,11 @@ const shouldResults = await table
 - Use `or`/`|`(Python), `Occur.Should`(Typescript) for union (documents must match at least one query).
 </Info>
 
-## Substring Search Example
+## Substring Search Example {#substring-search-example}
 
 LanceDB supports searching for substrings in text columns using n-gram tokenization. This is useful for finding partial matches within text content.
 
-### Setting Up the Table
+### Setting Up the Table {#setting-up-the-table}
 
 First, create a table with sample text data and configure n-gram tokenization:
 
@@ -494,7 +494,7 @@ table.create_fts_index("text", base_tokenizer="ngram")
 ```
 </CodeGroup>
 
-### Basic Substring Search
+### Basic Substring Search {#basic-substring-search}
 
 With the default n-gram settings (minimum length of 3), you can search for substrings of length 3 or more:
 
@@ -512,7 +512,7 @@ assert set(r["text"] for r in results) == {"lance database", "lance is cool"}
 ```
 </CodeGroup>
 
-### Handling Short Substrings
+### Handling Short Substrings {#handling-short-substrings}
 
 By default, the minimum n-gram length is 3, so shorter substrings like "la" won't match:
 
@@ -523,7 +523,7 @@ assert len(results) == 0
 ```
 </CodeGroup>
 
-### Customizing N-gram Parameters
+### Customizing N-gram Parameters {#customizing-n-gram-parameters}
 
 You can customize the n-gram behavior by adjusting the minimum length and using prefix-only matching:
 
@@ -539,7 +539,7 @@ table.create_fts_index(
 ```
 </CodeGroup>
 
-### Testing Custom N-gram Settings
+### Testing Custom N-gram Settings {#testing-custom-n-gram-settings}
 
 With the new settings, you can now search for shorter substrings and use prefix-only matching:
 

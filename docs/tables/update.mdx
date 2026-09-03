@@ -54,7 +54,7 @@ The `update` method is simpler to use when you already know which rows you want 
 
 Let's look at an example that demonstrates these operations in practice.
 
-## Connect to LanceDB
+## Connect to LanceDB {#connect-to-lancedb}
 
 Connect to your local LanceDB instance:
 
@@ -96,7 +96,7 @@ In the Rust snippets, a `make_users_reader` helper is used  to build Arrow input
     </CodeBlock>
 </CodeGroup>
 
-## Create the example table
+## Create the example table {#create-the-example-table}
 
 We'll start by creating a simple table with `id`, `name`, and `login_count` columns. All examples below use the same table.
 <CodeGroup>
@@ -123,7 +123,7 @@ Expected table contents:
 The example above shows a PyArrow schema. You can just as well create the table using other
 table creation patterns (Pandas, Polars, Pydantic, iterators, etc.) -- see the [ingestion](/tables/create/) guide for more details.
 
-## Choose a write method
+## Choose a write method {#choose-a-write-method}
 
 | Family |  Method | Use this when... |
 | --------------- | --------------- | ---------------- |
@@ -141,7 +141,7 @@ before modifying data.
 The committed `version` advances even for writes that affect zero rows, such as a delete predicate
 that matches nothing.
 
-## Update rows
+## Update rows {#update-rows}
 
 Use `update` when you already know which target rows to modify and you do not need to compare against an incoming dataset.
 
@@ -170,7 +170,7 @@ Expected table contents:
 Updating nested columns is not yet supported.
 </Warning>
 
-## Update rows with SQL expressions
+## Update rows with SQL expressions {#update-rows-with-sql-expressions}
 
 Use `values_sql` when you want to use SQL-like expressions to update rows. This is useful for operations like incrementing a counter, or setting a column value based on another column.
 
@@ -201,7 +201,7 @@ See the [SQL queries](/search/sql/) page for more information on the supported S
 
 When rows are updated, they are moved out of any existing index. The row will still show up in search queries, but the query will not be as fast as it would be if the row was in the index. If you update a large proportion of rows, consider triggering an index rebuild afterwards.
 
-## Merge incoming rows by key
+## Merge incoming rows by key {#merge-incoming-rows-by-key}
 
 Merging is different from updating because it involves comparing incoming rows to existing rows by key, and then choosing what to do based on whether the key exists in the target table or not.
 The `merge_insert(""..."")` method lets you do this.
@@ -248,7 +248,7 @@ Primary keys in LanceDB are metadata used by operations such as `merge_insert`; 
 enforced as uniqueness constraints on ordinary writes. Keep using `merge_insert` or your own
 deduplication logic when you need key-based upsert semantics.
 
-### Update matched rows only
+### Update matched rows only {#update-matched-rows-only}
 
 This updates keys that already exist in the target table. Source rows with new keys are ignored.
 
@@ -273,7 +273,7 @@ Expected table contents:
 | 1 | Alice | 10 |
 | 2 | Bobby | 21 |
 
-### Insert unmatched rows only
+### Insert unmatched rows only {#insert-unmatched-rows-only}
 
 This inserts only brand-new keys from the source. Existing keys are left unchanged.
 
@@ -299,7 +299,7 @@ Expected table contents:
 | 2 | Bob | 20 |
 | 3 | Charlie | 5 |
 
-### Update matched rows and insert unmatched rows
+### Update matched rows and insert unmatched rows {#update-matched-rows-and-insert-unmatched-rows}
 
 Use both `when_matched_update_all()` and `when_not_matched_insert_all()` when you want to update existing keys and insert missing keys in one operation.
 
@@ -329,7 +329,7 @@ Expected table contents:
 | 2 | Bobby | 21 |
 | 3 | Charlie | 5 |
 
-### Delete target rows that are missing from source
+### Delete target rows that are missing from source {#delete-target-rows-that-are-missing-from-source}
 
 Use `when_not_matched_by_source_delete()` when you want to remove any target row that does not appear in the incoming source data.
 
@@ -356,7 +356,7 @@ Expected table contents:
 
 In the example above, LanceDB matches rows by `id`. Rows with `id=2` and `id=3` exist in both the table and incoming data, so they are updated. Row `id=1` exists only in the target, so it is deleted.
 
-### Use partial columns in merge updates
+### Use partial columns in merge updates {#use-partial-columns-in-merge-updates}
 
 Merge updates do not require you to provide values for all columns. You can provide only a subset of columns in source rows. For matched rows, only the provided columns are updated.
 
@@ -384,7 +384,7 @@ Expected table contents:
 
 Note that in the example above, when `merge_insert` creates a new row, any missing columns are written as `null`. If a missing column is non-nullable in your schema, the insert will fail.
 
-## Delete rows
+## Delete rows {#delete-rows}
 
 Delete operations **soft delete** rows that match a given condition.
 The underlying data is not immediately removed, but is marked

@@ -23,8 +23,7 @@ pip install ibm-watsonx-ai
   </CodeBlock>
 </CodeGroup>
 
-Accepted Arguments
-----------------
+## Accepted Arguments {#accepted-arguments}
 | Argument | Type | Default | Description |
 | --- | --- | --- | --- |
 | `model_name` | `str` | `"cross-encoder/ms-marco-minilm-l-12-v2"` | The rerank model ID. See [supported rerank models](https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models-embed.html?context=wx#rerank). |
@@ -41,23 +40,23 @@ Accepted Arguments
 You must supply exactly one of `project_id` or `space_id` (either as an argument or via its environment variable). Setting both, or neither, raises a `ValueError`.
 </Info>
 
-## Supported scores for each query type
+## Supported scores for each query type {#supported-scores-for-each-query-type}
 
 You can specify the type of scores you want the reranker to return. The following are the supported scores for each query type:
 
-### Hybrid Search
+### Hybrid Search {#hybrid-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |
 | `all` | ❌ Not Supported | Results have vector(`_distance`) and FTS(`score`) along with Hybrid Search score(`_relevance_score`). |
 
-### Vector Search
+### Vector Search {#vector-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |
 | `all` | ✅ Supported | Results have vector(`_distance`) along with Hybrid Search score(`_relevance_score`). |
 
-### FTS Search
+### FTS Search {#fts-search}
 |`return_score`| Status | Description |
 | --- | --- | --- |
 | `relevance` | ✅ Supported | Results only have the `_relevance_score` column. |

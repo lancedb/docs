@@ -9,7 +9,7 @@ LanceDB's storage layer is built on modular, disk-first components. That design 
 
 Choosing a backend is a balance between latency, scalability, cost, and operational complexity. Use this guide to pick the right fit for your workload.
 
-## Storage backend selection guide
+## Storage backend selection guide {#storage-backend-selection-guide}
 
 ![](/static/assets/images/storage/lancedb_storage_tradeoffs.png)
 
@@ -20,12 +20,11 @@ When architecting your system, ask yourself:
 - **Cost**: What is the all-in cost of storage plus serving?
 - **Reliability/Availability**: How will replication and disaster recovery work?
 
-## Storage backend comparison
+## Storage backend comparison {#storage-backend-comparison}
 
 Below is a high-level comparison ordered from lowest cost to lowest latency.
 
-### 1. Object storage (S3 / GCS / Azure Blob)
-
+### 1\. Object storage (S3, GCS, Azure Blob) {#1-object-storage-s3-gcs-azure-blob}
 - **Latency**: Highest; expect hundreds of milliseconds and higher p95.
 - **Scalability**: Effectively unlimited storage; QPS bound by concurrency limits.
 - **Cost**: Lowest overall.
@@ -39,8 +38,7 @@ LanceDB separates storage and compute and writes immutable fragments, making it 
 S3 and S3 Express now support atomic writes natively, so LanceDB handles concurrent writers against the same table out-of-the-box — no external commit coordinator is required. Bucket-level [server-side encryption with KMS](/storage/configuration#server-side-encryption-with-kms) and [S3 Express One Zone](/storage/configuration#s3-express) are also supported on this tier.
 </Note>
 
-### 2. File storage (EFS / GCS Filestore / Azure File)
-
+### 2\. File storage (EFS, GCS Filestore, Azure File) {#2-file-storage-efs-gcs-filestore-azure-file}
 - **Latency**: Better than object storage; p95 under ~&lt;100ms is typical.
 - **Scalability**: High, but limited by provisioned IOPS per volume.
 - **Cost**: More than object storage but cheaper than in-memory options; cold data can tier down automatically.
@@ -48,22 +46,20 @@ S3 and S3 Express now support atomic writes natively, so LanceDB handles concurr
 
 Keep a copy of data in object storage for disaster recovery. If zero downtime is required, provision a second network file system with replicated data.
 
-### 3. Third-party storage (e.g., MinIO, WekaFS)
+### 3\. Third-party storage (e.g., MinIO, WekaFS) {#3-third-party-storage-e-g--minio-wekafs}
 
 - **Latency**: Similar to EFS; typically under &lt;100ms.
 - **Scalability**: Determined by the chosen vendor’s cluster sizing.
 - **Cost**: Higher than S3; may edge above EFS at larger scales.
 - **Reliability/Availability**: Shareable across many nodes; replication depends on vendor capabilities.
 
-### 4. Block storage (EBS / GCP Persistent Disk / Azure Managed Disk)
-
+### 4\. Block storage (EBS, GCP Persistent Disk, Azure Managed Disk) {#4-block-storage-ebs-gcp-persistent-disk-azure-managed-disk}
 - **Latency**: Near-local performance; often &lt;30ms.
 - **Scalability**: Not shareable across instances; shard or copy data when scaling.
 - **Cost**: Higher than networked file systems, plus potential I/O charges.
 - **Reliability/Availability**: Persists through instance restarts; backups and sharding must be managed.
 
-### 5. Local storage (SSD / NVMe)
-
+### 5\. Local storage (SSD, NVMe) {#5-local-storage-ssd-nvme}
 - **Latency**: Fastest; p95 often under &lt;10ms.
 - **Scalability**: Hard to scale in cloud environments; requires sharding or additional copies for higher QPS.
 - **Cost**: Highest; tightly coupling compute and storage makes horizontal scaling difficult.
@@ -71,7 +67,7 @@ Keep a copy of data in object storage for disaster recovery. If zero downtime is
 
 Use local disk only when you need extremely low latency and are comfortable owning the operational overhead.
 
-## File-format choices that interact with the backend
+## File-format choices that interact with the backend {#file-format-choices-that-interact-with-the-backend}
 
 A few `storage_options` keys shape new tables in ways that depend on the backend you picked above. They are documented in full on the [configuration page](/storage/configuration#new-table-configuration); the architecture-level summary is:
 
