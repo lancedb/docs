@@ -12,13 +12,13 @@ import {
   PyFrameworksLerobotTrainReady,
 } from '/snippets/integrations.mdx';
 
-[LeRobot](https://huggingface.co/docs/lerobot/index) is Hugging Face's open-source robotics stack. Since [lerobot#4363](https://github.com/huggingface/lerobot/pull/4363) it reads Lance datasets natively: same `LeRobotDataset` class, same items, same training pipeline. The dataset's `"storage_format": "lance"` picks the reader. No subclasses, no wrapper library.
+[LeRobot](https://huggingface.co/docs/lerobot/index) is Hugging Face's open-source robotics stack. Since [lerobot#4363](https://github.com/huggingface/lerobot/pull/4363), LeRobot can read Lance datasets natively through the standard `LeRobotDataset` class and training pipeline. Setting `"storage_format": "lance"` in the dataset selects the Lance reader without changing how the rest of the workflow works.
 
 What you get:
 
-- **Train from object storage while keeping your GPUs fed.** Lance reads random frames straight from S3, GCS, the HF Hub or HF Storage Buckets, fetching only the bytes each batch needs, so every batch is a global shuffle: any frame, from anywhere in the dataset. In the table below (samples/s, 8 workers, batch 64), Lance and upstream local both draw every batch from the whole dataset. Upstream streaming does a reservoir shuffle, reading the dataset in order and drawing each batch from a pool of recently seen frames, so those two columns are not the same job:
+- **Train from object storage while keeping your GPUs fed.** Lance reads random frames straight from S3, GCS, the HF Hub or HF Storage Buckets, fetching only the bytes each batch needs. Every batch can be a global shuffle across the full dataset. In the table below (samples/s, 8 workers, batch 64), Lance and upstream local both draw every batch from the whole dataset. Upstream streaming does a reservoir shuffle, reading the dataset in order and drawing each batch from a pool of recently seen frames, so those two columns are not the same job:
 
-| dataset | frames | cameras | Lance, S3 (global shuffle) | upstream, local (global shuffle) | same job | upstream, streaming (reservoir shuffle) | vs streaming |
+| dataset | frames | cameras | Lance, S3 (global shuffle, samples/s) | upstream, local (global shuffle, samples/s) | speedup vs local | upstream, streaming (reservoir shuffle, samples/s) | speedup vs streaming |
 |---|---|---|---|---|---|---|---|
 | DROID | 27,630,375 | 3 | 2,258.5 | 346.7 | 6.5x | 898.6 | 1.7x |
 | berkeley_rpt | 392,578 | 1 | 1,740.6 | 1,209.9 | 1.4x | 274.5 | 6.3x |
@@ -38,16 +38,28 @@ The gap grows with how much video each sample carries: about 1.2x with one camer
 | of each step spent waiting on data | 1.7% | 37.4% |
 | final loss | 0.2380 | 0.2380 |
 
-Same model, same loss, 33 minutes sooner, and no 384 GB download first. The difference is time the GPUs spend waiting on data, so it grows with the run: at 100k steps it is over five hours, and every re-run and sweep point pays it again.
+Training reached the same result, but finished 33 minutes faster and avoided a 384 GB download upfront. The savings come from reducing the time GPUs spend waiting on data, so they compound over longer runs. At 100k steps, that adds up to more than five hours saved, and every re-run and sweep benefits again.
 
-- **The training table is also the index.** Parquet has no secondary indexes, so finding frames instead of scanning them usually means another system per question: a vector database for embeddings, a search service for instructions, a feature store for scores. With Lance those are columns and indexes on the same table the DataLoader reads. One query spans all of them, at a version the trainer can reopen.
+- **The training table is also the index.** Parquet has no secondary indexes, so finding frames instead of scanning them usually means another system per question, such as a vector database for embeddings, a search service for instructions, a feature store for scores. With Lance, those are columns and indexes on the same table the DataLoader reads. One query spans all of them, at a version the trainer can reopen.
 
 ## Install
 
 ```bash
 pip install "lerobot[lancedb]"   # the reader, inside lerobot itself
-pip install lerobot-lancedb      # the converter
+pip install "lerobot[lancedb-convert]"   # to convert LeRobot datasets to Lance
 ```
+
+<Note>
+On macOS, use Python 3.12 or 3.13. Lance datasets with RGB video require TorchCodec, which does not fall back to PyAV in the Lance reader. If TorchCodec cannot load FFmpeg, install FFmpeg 8:
+
+```bash
+brew install ffmpeg@8
+export PATH="$(brew --prefix ffmpeg@8)/bin:$PATH"
+export DYLD_LIBRARY_PATH="$(brew --prefix ffmpeg@8)/lib:$DYLD_LIBRARY_PATH"
+```
+
+Verify with `python -c "import torchcodec"`.
+</Note>
 
 ## Convert a dataset
 
@@ -57,7 +69,7 @@ Any LeRobot v3.0 dataset, from the Hub or a local directory:
 lerobot-lance-convert --repo-id lerobot/pusht --out ./pusht-lance
 ```
 
-**Migration costs about as much as a file copy.** Videos are stored as blobs without re-encoding, so items are bit-identical to the source: 392,578 frames convert in 10 seconds, DROID's 27.6M in 34 minutes. Nothing about your recording or training code changes. The output keeps `meta/` as is and adds three Lance tables (`frames`, `videos`, `meta`). `lerobot-lance-doctor` audits the result and often finds problems in the source: DROID carries 44% orphaned rows, and three of eight public datasets we converted have frame-count defects that only random access exposes.
+**Migration takes about as long as copying the files.** Videos are stored as blobs without re-encoding, so items are bit-identical to the source. For example, 392,578 frames convert in 10 seconds, DROID's 27.6M in 34 minutes. Nothing about your recording or training code changes. The output keeps `meta/` as is and adds three Lance tables (`frames`, `videos`, `meta`). `lerobot-lance-doctor` audits the result and often finds problems in the source. For example, DROID carries 44% orphaned rows, and three of eight public datasets we converted have frame-count defects that random access exposes.
 
 Host the result anywhere: an HF dataset repo (`hf upload`, tag it `v3.0`), an HF Storage Bucket (`hf buckets sync`), or any object store (`aws s3 sync`).
 
@@ -83,7 +95,7 @@ lerobot-train \
   --policy.type=act
 ```
 
-## Visualize TB-scale datasets in Foxglove
+## Visualize your training data directly in Foxglove
 
 LeRobot's dataset viewer can serve an episode to [Foxglove](https://foxglove.dev) over its WebSocket protocol ([lerobot#4542](https://github.com/huggingface/lerobot/pull/4542)), and with a Lance dataset it works wherever the data lives:
 
@@ -95,7 +107,7 @@ Open the Foxglove app, connect to `ws://localhost:8765`, and scrub. Cameras, joi
 
 ![Foxglove showing episode 7 of DROID served from S3: three camera panels and the joint state, scrubbed to 19.4 s](/static/assets/images/integrations/lerobot-foxglove-droid.png)
 
-Frames are fetched as you scrub, so looking at one episode of the 373 GB DROID from S3 moves a few MB, not the dataset. No MCAP export, no download, and nothing new to install on the dataset side: this is the same reader the trainer uses.
+Foxglove loads only the frames you’re viewing, so opening one episode from the 373 GB DROID dataset transfers just a few MB from S3. You don’t need to export to MCAP or download the full dataset. Foxglove reads the same Lance data that training uses.
 
 ## Query, curate, enrich
 
@@ -113,7 +125,7 @@ Filter with SQL over any feature, using the indexes built at conversion:
 
 From here it is standard LanceDB. The examples below are from our DROID walkthrough, all on the table the trainer reads.
 
-**Feature engineering costs nothing until you use it.** With [Geneva](/geneva/udfs/udfs), a new column is a declaration: `add_columns` registers a Python function over existing columns and computes nothing, and `backfill` materializes it in parallel when you want it. No copy of the dataset, and the videos are never touched:
+**Derived columns are added without rewriting existing data.** With [Geneva](/geneva/udfs/udfs), `add_columns` registers a Python function and its input columns as a new derived column. No values are computed at that point. `backfill` computes and stores the derived values later, in parallel, without rewriting the existing columns or video blobs:
 
 ```python
 @udf(data_type=pa.float32(), input_columns=["action_joint_velocity"])
@@ -138,7 +150,7 @@ class EmbedFromBlob:                    # SigLIP2 loads once per worker
 
 **Search** is an index on those columns: a vector index over the embeddings built in 29.7 s across 27.6M rows, a full-text index over the instructions in 7.0 s, queries in 10 to 54 ms.
 
-**Curation** is one query across all of it. Semantic search with a predicate on the derived score, no join, no second system:
+**Curation** is one query across all of it. Semantic search with a predicate on the derived score without a join:
 
 ```python
 tbl.search(vec("a gripper closing on an object"), vector_column_name="emb_siglip2") \
@@ -156,4 +168,4 @@ Then drop what you found from training with `episodes=[...]` instead of rewritin
 Lance datasets are read-only in LeRobot: record and edit in the default format, then convert.
 </Info>
 
-Public examples to try everything above: [`lance-format/pusht-lance`](https://huggingface.co/datasets/lance-format/pusht-lance) and friends under the [`lance-format`](https://huggingface.co/lance-format) org.
+You can try the examples above with [`lance-format/pusht-lance`](https://huggingface.co/datasets/lance-format/pusht-lance) and other datasets in the [`lance-format`](https://huggingface.co/lance-format) organization.
