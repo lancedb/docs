@@ -2,54 +2,6 @@
   "insert": [
     {
       "into": [
-        "Documentation",
-        "Get started"
-      ],
-      "after": "What is LanceDB?",
-      "entry": {
-        "group": "LanceDB Enterprise",
-        "pages": [
-          "enterprise/index",
-          "enterprise/architecture",
-          "enterprise/security",
-          "enterprise/authentication",
-          "enterprise/benchmarks",
-          {
-            "group": "Deployment",
-            "pages": [
-              "enterprise/deployment/index",
-              "enterprise/deployment/azure"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "into": [
-        "Documentation",
-        "Guides",
-        "Indexing"
-      ],
-      "after": "indexing/scalar-index",
-      "entry": "indexing/gpu-indexing"
-    },
-    {
-      "into": [
-        "Documentation",
-        "Guides",
-        "Search"
-      ],
-      "after": "search/optimize-queries",
-      "entry": {
-        "group": "Enterprise SQL",
-        "pages": [
-          "search/sql/index",
-          "search/sql/fts-sql"
-        ]
-      }
-    },
-    {
-      "into": [
         "Documentation"
       ],
       "after": "Guides",
@@ -112,15 +64,6 @@
           "geneva/reference"
         ]
       }
-    },
-    {
-      "into": [
-        "Documentation",
-        "Support",
-        "FAQ"
-      ],
-      "after": "faq/faq-oss",
-      "entry": "faq/faq-enterprise"
     },
     {
       "into": [],

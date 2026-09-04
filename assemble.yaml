@@ -18,6 +18,12 @@ roots:
     path: ${LANCEDB_DOCS_ROOT:-../lancedb/docs/web}
     role: reference
 
+  # Enterprise pages, from the private repository. Override the path with
+  # SOPHON_DOCS_ROOT; CI sets it from its checkout.
+  - name: enterprise
+    path: ${SOPHON_DOCS_ROOT:-../sophon/docs}
+    role: reference
+
   # What this repository still owns: the Geneva pages until Stage G replaces
   # them, the generated dataset cards, and the OpenAPI spec.
   - name: build

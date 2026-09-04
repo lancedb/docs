@@ -131,6 +131,7 @@ def resolve(config: Config) -> Resolved:
     exactly the drift this project exists to remove.
     """
     resolved = Resolved()
+    base_root = next(r for r in config.roots if r.role == "reference")
     for root in config.roots:
         for src in sorted(root.path.rglob("*")):
             if not src.is_file():
@@ -139,12 +140,22 @@ def resolve(config: Config) -> Resolved:
             if rel == NAV_FRAGMENT:
                 resolved.fragments[root.name] = src
                 continue
+            if rel == NAV_BASE and root is not base_root:
+                # Every root ships a complete docs.json so it can be previewed
+                # on its own. Only the first reference root's is the published
+                # navigation; the rest are a local convenience.
+                continue
             target = resolved.overlays if root.role == "overlay" else resolved.files
             if rel in target:
-                other = target[rel][0]
+                other, other_src = target[rel]
+                # Shared assets legitimately appear in more than one root — each
+                # needs them to render alone. Identical bytes are not a conflict;
+                # differing ones are, because then the site depends on ordering.
+                if other_src.read_bytes() == src.read_bytes():
+                    continue
                 raise AssembleError(
-                    f"{rel} is provided by both {other.name} and {root.name}; "
-                    f"{root.role} roots must not overlap"
+                    f"{rel} differs between {other.name} and {root.name}; "
+                    f"{root.role} roots must not disagree on a file"
                 )
             target[rel] = (root, src)
     return resolved
