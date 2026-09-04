@@ -196,6 +196,204 @@ Add timestamp columns that can contain NULL values:
 When adding columns that should contain NULL values, be sure to cast the NULL to the appropriate type, e.g., `cast(NULL as timestamp)`.
 </Warning>
 
+### Declare computed columns
+
+You can also declare a column whose values are defined by a SQL expression but
+not evaluated at commit time. LanceDB stores the expression in the column's
+field metadata, commits the column with no values, and fills the rows on a
+later refresh. The column's type and its input columns are derived from the
+expression, so you do not pass a data type.
+
+Use this form when you want to add a derived column to a large table without
+paying the cost of computing every row up front. Declaring a computed column
+costs the same on an empty table as on a large one, because no values are
+written at declaration time. Regular `add_columns` transforms, in contrast,
+evaluate the SQL expression against every existing row and write the results
+in the same commit.
+
+<CodeGroup>
+```python Python icon="python"
+# Declare a computed column; values are filled by a later refresh.
+table.add_columns(computed={"doubled": "x * 2"})
+```
+
+```typescript TypeScript icon="square-js"
+// Declare a computed column; values are filled by a later refresh.
+await table.addColumns({
+  computed: [{ name: "doubled", valueSql: "x * 2" }],
+});
+```
+
+```rust Rust icon="rust"
+// Declare a computed column; values are filled by a later refresh.
+table
+    .add_columns()
+    .computed("doubled", "x * 2")
+    .execute()
+    .await?;
+```
+</CodeGroup>
+
+A declaration stays authoritative for the column's lifetime. While it is in
+place, LanceDB rejects writes and schema changes that would give the column a
+value or reshape its output:
+
+- `add`, `update`, `merge_insert`, and SQL `INSERT` are refused for the
+  declared column.
+- The declared column cannot be renamed, retyped, or dropped.
+- An input column named in the expression cannot be renamed, retyped, or
+  dropped while the declaration reads it.
+- Volatile expressions (for example, expressions whose value can change
+  between calls) are refused at declaration time.
+
+A refresh fills every fragment that has no value for the declared column,
+including fragments appended since the last refresh. A refresh does not
+revisit a fragment it has already filled, so mutating an input row leaves
+the previously computed value in place. To recompute values, drop the column
+and declare it again.
+
+<Info>
+Computed columns work on both local tables and LanceDB Enterprise. On
+Enterprise the declaration is sent to the server, which plans the
+expression against the published contract; refresh runs as a server-side
+backfill job (see the next section).
+</Info>
+
+<Info>
+`add_columns` cannot mix a regular transform with a computed column in the
+same call. Declare computed columns in a separate `add_columns` call from
+any evaluated transforms.
+</Info>
+
+#### Declare several computed columns at once
+
+You can declare more than one computed column in a single `add_columns` call.
+Each column joins the schema the next one resolves against, so later
+declarations in the same call can reference earlier ones in dependency order:
+
+<CodeGroup>
+```python Python icon="python"
+table.add_columns(
+    computed={
+        "doubled": "x * 2",
+        "doubled_plus_one": "doubled + 1",
+    }
+)
+```
+
+```typescript TypeScript icon="square-js"
+await table.addColumns({
+  computed: [
+    { name: "doubled", valueSql: "x * 2" },
+    { name: "doubled_plus_one", valueSql: "doubled + 1" },
+  ],
+});
+```
+
+```rust Rust icon="rust"
+table
+    .add_columns()
+    .computed("doubled", "x * 2")
+    .computed("doubled_plus_one", "doubled + 1")
+    .execute()
+    .await?;
+```
+</CodeGroup>
+
+The batch is planned and committed as one operation. Order is dependency
+order: a declaration can only reference columns that appear before it in the
+same call, and referencing a column declared later fails as an unknown
+column.
+
+#### Reference blob columns
+
+An expression can read a [Blob API](/tables/multimodal) column: refresh
+materializes the referenced blob input as `LargeBinary` payload bytes before
+evaluating the expression. Directly projecting a blob column preserves its
+blob semantics on the output — the new column inherits the source's blob
+metadata and is stored through the same encoding path. Any other expression
+produces an ordinary Arrow-typed column, even when it reads a blob input.
+
+Blob-aware computed columns are available on local tables. Support on LanceDB
+Enterprise ships once the server planner rollout completes.
+
+### Refresh a computed column
+
+A declared computed column starts empty. Call `refresh_column` (Python and
+Rust) or `refreshColumn` (TypeScript) to evaluate the expression and fill
+every row that still has no value:
+
+<CodeGroup>
+```python Python icon="python"
+result = table.refresh_column("doubled")
+print(result.rows_filled, result.version)
+```
+
+```typescript TypeScript icon="square-js"
+const { rowsFilled, version } = await table.refreshColumn("doubled");
+```
+
+```rust Rust icon="rust"
+let result = table.refresh_column("doubled").await?;
+println!("filled {} rows at version {}", result.rows_filled, result.version);
+```
+</CodeGroup>
+
+The call returns the number of rows it filled and the new table version. Each
+run picks up rows appended since the previous refresh; rows that already have
+a value are left alone, so calling `refresh_column` when nothing new needs
+filling is a no-op that costs one scan of the unfilled rows. Because refresh
+never revisits a filled row, mutating an input after the fact does not change
+the stored value — to recompute, drop the column and declare it again.
+
+Refresh dependencies in order. If a computed column reads another computed
+column, refresh the input first: refreshing a dependent while its input still
+has rows to fill is refused and names the input column. Otherwise the
+dependent would bake the input's placeholder null into rows the input's
+refresh has not reached yet, and the fill-once contract would keep those
+values in place.
+
+The blocking form is refused when the table uses an LSM write specification,
+and is refused on LanceDB Enterprise because a remote refresh runs as a
+server job that does not report a fill count. On Enterprise, submit the
+refresh with the async form below instead.
+
+#### Run the refresh in the background
+
+If you don't want to block on the refresh, call the async variant to get back
+a job handle. On local tables the job runs as an in-process task; on LanceDB
+Enterprise the call submits a server-side backfill job and returns a handle
+that tracks it. Wait for it or poll its status when convenient.
+
+<CodeGroup>
+```python Python icon="python"
+job = table.refresh_column_async("doubled")
+job.wait()
+print(job.status())  # "finished"
+```
+
+```typescript TypeScript icon="square-js"
+const job = await table.refreshColumnAsync("doubled");
+await job.wait();
+console.log(await job.status()); // "finished"
+```
+
+```rust Rust icon="rust"
+let job = table.refresh_column_async("doubled").await?;
+job.wait().await?;
+```
+</CodeGroup>
+
+Invalid input — an unknown column, or one that is not a declared computed
+column — is reported by the submitting call rather than by the job, so you
+learn about mistakes before you start waiting. The returned job may already
+be complete; treat the column as filled only after `wait` returns.
+
+On LanceDB Enterprise, a successful `wait` also advances the submitting
+table handle's read-freshness baseline so subsequent reads see the refreshed
+rows — unless a `checkout` has pinned the handle to a specific version by the
+time the job completes.
+
 ## Alter existing columns
 
 You can alter columns using the [`alter_columns`](https://lancedb.github.io/lancedb/python/python/#lancedb.table.Table.alter_columns)
