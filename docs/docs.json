@@ -51,6 +51,7 @@
                   "enterprise/security",
                   "enterprise/authentication",
                   "enterprise/benchmarks",
+                  "enterprise/jobs",
                   {
                     "group": "Deployment",
                     "pages": [
