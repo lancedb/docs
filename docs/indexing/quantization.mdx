@@ -33,7 +33,7 @@ At query time, we need only to compare each chunk of the queried vector with our
 </Frame>
 
 In the above example, the original vector is split into chunks (subvectors), each of which is associated to a centroid. The stored quantization code for this vector 
-is the concatenation $2 || 1 || 4 || 3$. The original vector required $128$ dimensions $\times 32$-bit integers $ =4096$ bits total,
+is the concatenation $2 || 1 || 4 || 3$. The original vector required $128$ dimensions $\times 32$-bit floats $ =4096$ bits total,
 which has been compressed to $4$ chunks $\times 8$-bit integers $= 32$ bits of quantized storage.
 
 ### RaBitQ Quantization (RQ)
