@@ -4,7 +4,7 @@
       "into": [
         "Documentation"
       ],
-      "after": "Guides",
+      "after": "Feature engineering",
       "entry": {
         "group": "Feature Engineering (Geneva)",
         "pages": [
