@@ -100,8 +100,8 @@
   "set": [
     {
       "into": [
-        "API Reference",
-        "API Reference",
+        "Documentation",
+        "Basics",
         "REST API"
       ],
       "key": "openapi",
