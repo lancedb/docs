@@ -5,13 +5,8 @@
       "after": "Demos",
       "entry": {
         "tab": "Datasets",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "datasets/index"
-            ]
-          },
+        "pages": [
+          "datasets/index",
           {
             "group": "Robotics",
             "pages": [
