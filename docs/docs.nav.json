@@ -13,6 +13,14 @@
             ]
           },
           {
+            "group": "Robotics",
+            "pages": [
+              "integrations/lerobotdataset",
+              "datasets/lerobot-pusht",
+              "datasets/lerobot-xvla-soft-fold"
+            ]
+          },
+          {
             "group": "Image Classification",
             "pages": [
               "datasets/mnist",
@@ -84,13 +92,6 @@
             "group": "Video",
             "pages": [
               "datasets/openvid"
-            ]
-          },
-          {
-            "group": "Robotics",
-            "pages": [
-              "datasets/lerobot-pusht",
-              "datasets/lerobot-xvla-soft-fold"
             ]
           }
         ]
