@@ -1,71 +1,6 @@
 {
   "insert": [
     {
-      "into": [
-        "Documentation"
-      ],
-      "after": "Feature engineering",
-      "entry": {
-        "group": "Feature Engineering (Geneva)",
-        "pages": [
-          "geneva/index",
-          "geneva/overview/index",
-          "geneva/getting-started",
-          {
-            "group": "Transforms",
-            "pages": [
-              "geneva/udfs/index",
-              "geneva/udfs/udfs",
-              "geneva/udfs/scalar-udtfs",
-              "geneva/udfs/batch-udtfs",
-              "geneva/udfs/error_handling",
-              "geneva/udfs/profiling-memory",
-              "geneva/udfs/blobs"
-            ]
-          },
-          {
-            "group": "Built-in Transforms",
-            "pages": [
-              "geneva/udfs/providers/index",
-              "geneva/udfs/providers/openai",
-              "geneva/udfs/providers/gemini",
-              "geneva/udfs/providers/sentence-transformers"
-            ]
-          },
-          {
-            "group": "Running Jobs",
-            "pages": [
-              "geneva/jobs/index",
-              "geneva/jobs/backfilling",
-              "geneva/jobs/bulk-load-columns",
-              "geneva/jobs/materialized-views",
-              "geneva/jobs/advanced-job-configuration",
-              "geneva/jobs/lifecycle",
-              "geneva/jobs/conflicts",
-              "geneva/jobs/performance",
-              "geneva/jobs/job_metrics",
-              "geneva/jobs/console",
-              "geneva/jobs/troubleshooting",
-              "geneva/jobs/contexts"
-            ]
-          },
-          {
-            "group": "Deployment",
-            "pages": [
-              "geneva/deployment/helm",
-              "geneva/jobs/startup",
-              "geneva/deployment/dependency-verification",
-              "geneva/udfs/advanced-configuration",
-              "geneva/deployment/index",
-              "geneva/deployment/troubleshooting"
-            ]
-          },
-          "geneva/end-to-end",
-          "geneva/reference"
-        ]
-      }
-    },
-    {
       "into": [],
       "after": "Demos",
       "entry": {
@@ -216,10 +151,6 @@
     {
       "source": "/tutorials/vector-search/:slug*",
       "destination": "tutorials/search/:slug*"
-    },
-    {
-      "source": "/geneva/udfs/built-in",
-      "destination": "/geneva/udfs/providers"
     },
     {
       "source": "/enterprise/performance",

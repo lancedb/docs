@@ -306,10 +306,10 @@ def merge_nav(base: dict, fragment: dict) -> dict:
     Tabs are matched by name: a fragment tab that already exists contributes its
     groups to it, and a new tab is inserted. Both carry an optional `after`
     naming the sibling they follow, because appending is not good enough --
-    sidebar order is what a reader navigates by, and dropping Geneva below
+    sidebar order is what a reader navigates by, and dropping Governance below
     Support or Datasets past Use Cases silently reorders the whole site.
 
-    This is the same shape sophon's Enterprise fragment will use in A5.
+    This is the same shape sophon's Enterprise fragment uses.
     """
 
     def descend(node: dict | list, path: list[str]) -> list:
