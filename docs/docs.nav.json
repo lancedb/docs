@@ -97,20 +97,6 @@
       }
     }
   ],
-  "set": [
-    {
-      "into": [
-        "Documentation",
-        "Basics",
-        "REST API"
-      ],
-      "key": "openapi",
-      "value": {
-        "source": "api-reference/rest/openapi.yml",
-        "directory": "api-reference/rest"
-      }
-    }
-  ],
   "redirects": [
     {
       "source": "/hybrid-search",
