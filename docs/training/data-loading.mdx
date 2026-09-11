@@ -141,13 +141,12 @@ todo
 
 ### Parallelism & Elasticity
 
-When loading data, `StreamingDataset` partitions the computation on the source dataset among a fixed number of disjoint parallel threads called **splits**. Each rank is allocated a contiguous group of splits, and each DataLoader worker associated to a rank gets a contiguous subgroup of its rank's splits.
+When loading data, `StreamingDataset` partitions the the source dataset among disjoint parallel threads called **splits**. Each rank is allocated a contiguous group of splits, and each DataLoader worker associated to a rank gets a contiguous subgroup of its rank's splits.
 
-If using `shuffle = false`, data is allocated to splits naively in ordered contiguous blocks of equal size. If `shuffle = true`, the mapping of data to splits behaves differently in one-phase and two-phase shuffling.
+If using `shuffle = false`, data is allocated to splits naively in ordered contiguous blocks of equal size. If `shuffle = true`, 
+in one-phase shuffling, the rows of the source dataset are distributed randomly among splits such that each split receives the same number of rows. In two-phase shuffling, the dataset is first partitioned into blocks, which are then distributed randomly among splits such that each split receives the same number of blocks.
 
-In one-phase shuffling, the rows of the source dataset are distributed randomly among splits such that each split receives the same number of rows. In two-phase shuffling, the dataset is first partitioned into blocks, which are then distributed randomly among splits such that each split receives the same number of blocks.
-
-The number of splits defaults to `world_size` during initialization if `num_splits` is omitted. This is not recommended, as the layout of splits becomes pinned to the current world size. A run that was later resumed with a different world size would then construct a different layout and structure of global batches.
+The number of splits defaults to `world_size` if `num_splits` is omitted during initialization. This is not recommended, as a later run using a different world size will then construct a different layout and structure of global batches.
 
 To get **elastic determinism**, choose a fixed `num_splits` that is compatible with every topology you plan to use.
 For example, a run with `num_splits=8` and $4$ GPUs assigns $2$ splits to each rank. The ranks pull from their splits in
@@ -163,9 +162,8 @@ The following constraints apply:
 - The filtered row count must be at least `num_splits`. If it is not evenly divisible by `num_splits`, up to
   `num_splits - 1` surplus rows are dropped so that every split has the same length.
 
-For example, to switch between $8$ and $6$ GPUs, use a `num_splits` value divisible by both, such as $24$. Highly composite
-values can support several layouts: $48$ supports $1$, $2$, $3$, $4$, $6$, $8$, $12$, $16$, $24$, and $48$ GPUs, while $60$ supports $1$, $2$, $3$,
-$4$, $5$, $6$, $10$, $12$, $15$, $20$, $30$, and $60$ GPUs. Remember to include `num_workers` when checking divisibility.
+For example, to switch between $8$ and $6$ GPUs, use a common multiple such as $24$ for `num_splits`. Highly composite
+values can support many layouts; for example, `num_splits = 48` is compatible with $10$ distinct possible GPU counts. Remember to include `num_workers` when checking divisibility.
 
 <CodeGroup>
 ```py Python icon=Python
