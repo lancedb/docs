@@ -1,7 +1,7 @@
 ---
 title: "Loading Data for Model Training"
-sidebarTitle: "Data loading and shuffles"
-description: "Stream, shuffle, transform, and resume model training data from LanceDB."
+sidebarTitle: "Data Loading"
+description: "Stream, shuffle, transform, and resume model training data with LanceDB."
 icon: boxes-stacked
 ---
 
@@ -74,16 +74,10 @@ Other concepts, such as read batch size and `num_workers`, are introduced in the
 
 ### Prefetching
 
-PyTorch datasets were originally built around in-memory structures like a Pandas DataFrame. When they are iterated,
-they yield a single sample at a time. This makes sense for a simple in-memory structure, but accessing data on object
-storage one row at a time introduces too much per-call overhead. To avoid this, `StreamingDataset` fetches and
-transforms data in batches. The `read_batch_size` parameter controls how many rows are fetched from each split per
-storage request and defaults to `64`.
+Traditional datasets have often been designed to yield a single sample at a time upon iteration. However, in modern use cases,  accessing data on object storage one row at a time introduces too much per-call overhead. Thus, `StreamingDataset` fetches data in read batches, whose size is controlled by the `read_batch_size` parameter (defaults = `64`).
 
 In addition to batching requests, the prefetching mechanism reads ahead in the background. While one batch is being
-transformed and processed by the GPU, `StreamingDataset` reads subsequent batches. The `prefetch_batches` parameter
-controls how many batches are kept in flight per split and defaults to `4`. A larger value can provide more buffering
-against jittery workloads, but it also increases memory use and I/O concurrency.
+processed, `StreamingDataset` reads subsequent batches. The `prefetch_batches` parameter specifies the number of batches simultaneously kept in flight split (default = `4`). A larger value provides more buffering against jittery workloads, but also increases memory use and I/O concurrency.
 
 <CodeGroup>
 ```py Python icon=Python
@@ -158,7 +152,7 @@ Optimizing data loader performance can be tricky, as runtime bottlenecks are oft
 and `prefetch_queue_depth` is the number of transformed rows ready to be consumed. `unscanned_rows` and
 `consumed_rows` show how far the current iterator has progressed.
 
-If the `prefetch_queue_depth` is consistently zero but the `raw_queue_depth` is not then you have a CPU
+If the `prefetch_queue_depth` is consistently zero but the `raw_queue_depth` is not, then you likely have a CPU
 transformation bottleneck. You should investigate GIL bottlenecks or look for ways to optimize your transformation.
 This can often be done by batching the compute work. If both `prefetch_queue_depth` and `raw_queue_depth` are
 consistently zero while the consumer is waiting, I/O is the likely bottleneck. A larger read batch size or clumped
