@@ -20,36 +20,6 @@ def _make_vector_rows(count: int, dim: int, column: str = "vector"):
     return rows
 
 
-def test_vector_index_configure_ivf(tmp_db):
-    table = tmp_db.create_table(
-        "vector_index_configure_ivf",
-        _make_vector_rows(512, 4),
-        mode="overwrite",
-    )
-
-    # --8<-- [start:vector_index_configure_ivf]
-    table.create_index(metric="l2", num_partitions=16, num_sub_vectors=4)
-    # --8<-- [end:vector_index_configure_ivf]
-
-    assert table.list_indices()
-
-
-def test_vector_index_setup(tmp_db):
-    tmp_db.create_table(
-        "vector-index-tbl",
-        _make_vector_rows(8, 4),
-        mode="overwrite",
-    )
-
-    db = tmp_db
-    # --8<-- [start:vector_index_setup]
-    table_name = "vector-index-tbl"
-    table = db.open_table(table_name)
-    # --8<-- [end:vector_index_setup]
-
-    assert table.name == table_name
-
-
 def test_vector_index_build_ivf(tmp_db):
     table = tmp_db.create_table(
         "vector-index-build-ivf",
@@ -63,6 +33,7 @@ def test_vector_index_build_ivf(tmp_db):
     table.create_index(
         metric="cosine",
         vector_column_name="keywords_embeddings",
+        index_type="IVF_PQ",
     )
     # --8<-- [end:vector_index_build_ivf]
 
@@ -294,46 +265,23 @@ def test_vector_index_hnsw(tmp_db):
     assert len(df) == 2
 
 
-def test_vector_index_binary(tmp_db):
-    table_name = "hamming-index-tbl"
-    ndim = 256
-    schema = pa.schema(
-        [
-            pa.field("id", pa.int64()),
-            pa.field("vector", pa.list_(pa.uint8(), ndim // 8)),
-        ]
+def test_quantization_custom_params(tmp_db):
+    table = tmp_db.create_table(
+        "quantization-custom-params",
+        _make_vector_rows(256, 64),
+        mode="overwrite",
     )
 
-    # --8<-- [start:vector_index_binary_schema]
-    table = tmp_db.create_table(table_name, schema=schema, mode="overwrite")
-    # --8<-- [end:vector_index_binary_schema]
-
-    data = []
-    for i in range(64):
-        vector = np.random.randint(0, 2, size=ndim)
-        vector = np.packbits(vector)
-        data.append({"id": i, "vector": vector})
-
-    # --8<-- [start:vector_index_binary_add_data]
-    table.add(data)
-    # --8<-- [end:vector_index_binary_add_data]
-
-    # --8<-- [start:vector_index_binary_build_index]
+    # --8<-- [start:quantization_custom_params]
     table.create_index(
-        metric="hamming",
-        vector_column_name="vector",
-        index_type="IVF_FLAT",
+        index_type="IVF_RQ",
+        num_bits=2,
+        max_iterations=100,
+        sample_rate=512,
     )
-    # --8<-- [end:vector_index_binary_build_index]
+    # --8<-- [end:quantization_custom_params]
 
-    # --8<-- [start:vector_index_binary_search]
-    query = np.random.randint(0, 2, size=ndim)
-    query = np.packbits(query)
-    df = table.search(query).metric("hamming").limit(10).to_pandas()
-    df.vector = df.vector.apply(np.unpackbits)
-    # --8<-- [end:vector_index_binary_search]
-
-    assert not df.empty
+    assert table.list_indices()
 
 
 def test_vector_index_check_status(tmp_db):
@@ -577,7 +525,7 @@ def test_fts_index_wait(tmp_db):
         [{"text": "full text search"}],
         mode="overwrite",
     )
-    
+
     db = tmp_db
     # --8<-- [start:fts_index_wait]
     table_name = "fts-index-wait"

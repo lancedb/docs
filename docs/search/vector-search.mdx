@@ -60,10 +60,10 @@ The right metric improves both search accuracy and query performance. Currently,
 
 | Distance metric | Mathematical form | Notes |
 |---|---|---|
-| `l2` | $\|x-y\|_2=\sqrt{\sum_i (x_i-y_i)^2}$ | Measures the straight-line distance between two points in vector space. Calculated as the square root of the sum of squared differences between corresponding vector components. |
-| `cosine` | $1-\frac{x\cdot y}{\|x\|_2\|y\|_2}$ | Measures directional difference between vectors. Computed as 1 minus cosine similarity (the dot product normalized by both vector magnitudes), so vector length does not affect the score. Use for unnormalized vectors. |
-| `dot` | $x\cdot y=\sum_i x_i y_i$ | Calculates the sum of products of corresponding vector components. Provides raw similarity scores without normalization, sensitive to vector magnitudes. Use for normalized vectors for best performance. |
-| `hamming` | $\sum_i \mathbf{1}[x_i\neq y_i]$ | Counts the number of positions where corresponding bits differ between binary vectors. Only applicable to binary vectors stored as packed uint8 arrays. |
+| `l2` | $$\|x-y\|_2= \sqrt{\sum_i (x_i-y_i)^2}$$ | The $\ell_2$ norm. Measures Euclidean distance between two points in geometric space. |
+| `cosine` | $1-\frac{x\cdot y}{\|x\|_2\|y\|_2}$ | Measures directional difference between vectors. Insensitive to nonzero scaling of vectors. |
+| `dot` | $x\cdot y= \underset{i}{\sum} x_i y_i$ | The standard dot product of real vectors. Sensitive to nonzero scaling of vectors; use on normalized vectors. |
+| `hamming` | $\underset{i}{\sum} \,\: \mathbf{1}_{\, [x_i\neq y_i]}$ | Counts the number of bitwise-differing bits between binary vectors. |
 
 For indexed search, supported distance metrics vary by index type:
 
