@@ -26,7 +26,7 @@ for batch in table:
 </CodeGroup>
 
 ## Advanced Data Loading
-In practice, advanced data loading scenarios can be handled by the `StreamingDataset`. This object allows you to load only a subset of your data, or apply preprocessing before training. Use this when the training data does not fit in memory, or when you need deterministic global batches across cluster sizes, or prefiltering/prefetching.
+In practice, advanced data loading scenarios can be handled by the `StreamingDataset`. This object allows you to load only a subset of your data, apply preprocessing before training, and more. Use this when the training data does not fit in memory, or when you need deterministic global batches across cluster sizes, or prefiltering/prefetching.
 
 <CodeGroup>
 ```py Python icon=Python
@@ -73,14 +73,8 @@ Other concepts, such as read batch size and `num_workers`, are introduced in the
 
 ### Filtering
 
-By default, the streaming data loader includes all rows and columns. LanceDB is a columnar database that also supports
-efficient random access. Reducing the number of columns you load has a direct impact on I/O performance. Reducing the
-number of rows can also help, especially with a selective filter, large values, local data, or the LanceDB Enterprise
-cache.
-
-Use the `columns` parameter to specify which columns to load and the `filter` parameter to specify which rows to load.
-The filter is evaluated once when the permutation is constructed, before the rows are divided into splits. Filtered-out
-rows are not loaded from storage during iteration, and split sizes reflect the filtered row count.
+The `StreamingDataset` object allows you to train models on only the subset of rows that satisfy a user-defined filter, specified using the `filter` parameter. This can be useful for removing large rows, badly-sourced data, and a wide range of other applications. 
+You can also use the `columns` parameter to load only a subset of columns.
 
 <CodeGroup>
 ```py Python icon=Python
@@ -92,7 +86,6 @@ ds = StreamingDataset(
 )
 ```
 </CodeGroup>
-
 
 ### Shuffling Rows
 
@@ -146,15 +139,15 @@ ds = StreamingDataset(
 #### Two-Phase shuffle
 todo
 
-### Data Splits and Elasticity
+### Parallelism & Elasticity
 
-`StreamingDataset` partitions the permutation into a fixed number of equal-sized groups called splits. Each rank gets
-a contiguous group of splits, and each DataLoader worker gets a contiguous subgroup of its rank's splits. Samples are
-then yielded by round-robining over the assigned splits.
+When loading data, `StreamingDataset` partitions the computation on the source dataset among a fixed number of disjoint parallel threads called **splits**. Each rank is allocated a contiguous group of splits, and each DataLoader worker associated to a rank gets a contiguous subgroup of its rank's splits.
 
-If `num_splits` is omitted, it defaults to `world_size`. This works when `num_workers=0`, but it ties the split layout
-to the current number of ranks. A run resumed with a different world size would then construct a different layout and
-would not see the same global batches.
+If using `shuffle = false`, data is allocated to splits naively in ordered contiguous blocks of equal size. If `shuffle = true`, the mapping of data to splits behaves differently in one-phase and two-phase shuffling.
+
+In one-phase shuffling, the rows of the source dataset are distributed randomly among splits such that each split receives the same number of rows. In two-phase shuffling, the dataset is first partitioned into blocks, which are then distributed randomly among splits such that each split receives the same number of blocks.
+
+The number of splits defaults to `world_size` during initialization if `num_splits` is omitted. This is not recommended, as the layout of splits becomes pinned to the current world size. A run that was later resumed with a different world size would then construct a different layout and structure of global batches.
 
 To get **elastic determinism**, choose a fixed `num_splits` that is compatible with every topology you plan to use.
 For example, a run with `num_splits=8` and $4$ GPUs assigns $2$ splits to each rank. The ranks pull from their splits in
@@ -473,21 +466,18 @@ dataset.load_state_dict(merged)
 
 ## Permutations
 
-In more complicated scenarios, you may want the flexibility to shuffle, split, and select data without using the full
-iterable streaming data loader. In these cases, use `Permutation`, the lower-level class on which `StreamingDataset`
-is built. A `Permutation` defines a custom ordering of the data and supports map-style access through `__getitem__()`
+In specific use cases, you may need the flexibility to shuffle, split, and select data without using the full `StreamingDataset` object. In these cases, use `Permutation`, the lower-level functionality on which `StreamingDataset`
+is built. A `Permutation` defines a customizable row ordering, and supports map-style access through `__getitem__()`
 and batched access through `__getitems__()`.
 
-### Base Table Version Pinning
+##### Version Pinning
 
-A `Permutation` is pinned to the version of the base table at the time it was built, and every read (including reads
+A `Permutation` is pinned to the version of its base table at the time it was constructed, and every read (including future reads
 from a `StreamingDataset` that wraps it, and every DataLoader worker after a `fork`) resolves against that pinned
 version. This makes iteration deterministic across compactions and worker forks: the permutation only addresses rows
 that existed when it was built, and rows appended to the base table afterwards are not visible through the existing
 permutation.
 
-<Note>
-To include newly appended rows, build a new `Permutation` (and rebuild any `StreamingDataset` that depends on it)
-against the updated table. Permutations written before this behavior shipped carry no pinned version and continue to
+To include newly appended rows, build a new `Permutation` (and any `StreamingDataset` that depends on it)
+against the updated table. Permutations written before this behavior shipped continue to
 read as they did before.
-</Note>
