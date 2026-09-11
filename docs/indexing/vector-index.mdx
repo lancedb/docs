@@ -116,7 +116,7 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | :--- | :--- |
 | `distance_type` | Default is `l2`, others available are `cosine` and `dot`. 
 | `num_partitions` | The number of IVF partitions constructed (corresponds to the $k$ in $k$-means clustering). This takes precedence over `target_partition_size` if both are set. |
-| `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition: `num_partitions = clamp(num_rows / target_partition_size, 1, 4096)`. `num_partitions` takes precedence over `target_partition_size` if both are set. If neither is set the number of partitions is automatically calculated based on the number of rows and the index type. |
+| `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition. `num_partitions` takes precedence over `target_partition_size` if both are set. If neither is set the number of partitions is automatically calculated based on the number of rows and the index type. |
 | `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if not a multiple of 16). Larger values produce better recall and slower search. |
 | `max_iterations` | Maximum number of k-means training iterations, for every IVF/HNSW index type. Default `50`. Increase for larger datasets or to improve training quality. |
 | `sample_rate` | Number of k-means training samples per partition, for every IVF/HNSW index type. Default `256`. Higher values increase both accuracy and training time. |
