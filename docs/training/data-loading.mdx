@@ -162,8 +162,7 @@ The following constraints apply:
 - The filtered row count must be at least `num_splits`. If it is not evenly divisible by `num_splits`, up to
   `num_splits - 1` surplus rows are dropped so that every split has the same length.
 
-For example, to switch between $8$ and $6$ GPUs, use a common multiple such as $24$ for `num_splits`. Highly composite
-values can support many layouts; for example, `num_splits = 48` is compatible with $10$ distinct possible GPU counts. Remember to include `num_workers` when checking divisibility.
+For example, to switch between $8$ and $6$ GPUs, use a common multiple such as $24$ for `num_splits`. Highly composite values can support many layouts; for example, `num_splits = 48` is compatible with $10$ distinct possible GPU counts. Remember to include `num_workers` when checking divisibility.
 
 <CodeGroup>
 ```py Python icon=Python
@@ -193,8 +192,7 @@ for sample in ds:
 
 Traditional datasets have often been designed to yield a single sample at a time upon iteration. However, in modern use cases,  accessing data on object storage one row at a time introduces too much per-call overhead. Thus, `StreamingDataset` fetches data in read batches, whose size is controlled by the `read_batch_size` parameter (defaults = `64`).
 
-In addition to batching requests, the prefetching mechanism reads ahead in the background. While one batch is being
-processed, `StreamingDataset` reads several subsequent batches. The `prefetch_batches` parameter specifies the number of batches simultaneously kept in flight split (default = `4`). A larger value provides more buffering against jittery workloads, but also increases memory use and I/O concurrency.
+In addition to batching requests, the prefetching mechanism reads ahead in the background. While one batch is being processed, `StreamingDataset` reads several subsequent batches. The `prefetch_batches` parameter specifies the number of batches simultaneously kept in flight split (default = `4`). A larger value provides more buffering against jittery workloads, but also increases memory use and I/O concurrency.
 
 <CodeGroup>
 ```py Python icon=Python
@@ -209,16 +207,10 @@ ds = StreamingDataset(
 
 ### Transforming
 
-Many model training workloads require a transformation step between loading the data and training the model. For
-example, we may need to decode images, tokenize text, or normalize data. A transformation function can be provided
-using the `transform` parameter. Transformations can be expensive, so `StreamingDataset` applies them with a
-`ThreadPoolExecutor` whose worker count equals the number of available CPUs.
+Many model training workloads require performing a transformation to the data after it is loaded from object storage and before it is passed to the GPU. For example, we may need to decode images, tokenize text, or normalize vectors. A transformation function can be provided
+using the `transform` parameter. 
 
-Transformations are applied to batches, not individual samples, to amortize per-batch overhead. A transformation
-function receives a PyArrow `RecordBatch` and must return an iterable with exactly one output sample for every input
-row. The sample format should match what your data loader expects. For example, PyTorch's default collation function
-accepts several sample types, with a Python dictionary being one of the most common. When no transform is provided,
-the default transform converts the Arrow record batch into Python dictionaries without further processing.
+A transformation function must receive a PyArrow `RecordBatch` and return an iterable with exactly one sample for each input row. The sample format should match the specified input of your data loader; for example, PyTorch's default collation function accepts a Python dictionary and several other types. If no transform function is provided, LanceDB collates the Arrow record batch into a Python dictionary without further processing.
 
 <CodeGroup>
 ```py Python icon=Python
@@ -236,6 +228,9 @@ def normalize(batch: pa.RecordBatch) -> list[dict]:
 ds = StreamingDataset(table, shuffle_seed=42, transform=normalize)
 ```
 </CodeGroup>
+
+`StreamingDataset` manages expensive transforms through a
+`ThreadPoolExecutor` whose worker count equals the number of available CPUs. Furthermore, transformations are applied to batches (instead of individual samples) to amortize per-batch overhead. 
 
 ##### DataLoader Workers
 
