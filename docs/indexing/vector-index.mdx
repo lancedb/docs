@@ -144,8 +144,8 @@ distance type set at build time then a costly flat search will be performed.
 
 | Index type | Guidance |
 | :--- | :--- |
-| `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the auto-tuned `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
-| `IVF_RQ`, `IVF_PQ` | Keep auto-tuned `nprobes`; raise only when recall is insufficient. |
+| `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the default `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
+| `IVF_RQ`, `IVF_PQ` | Keep the default `nprobes` and raise when recall is insufficient.  If using a selective filter you may need to increase `maximum_nprobes` if you do not received enough results. |
 
 
 <Note>
