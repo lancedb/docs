@@ -154,10 +154,8 @@ serializing connection credentials into worker state.
 
 ### Observability & Performance
 
-Optimizing data loader performance is tricky because it can be difficult to locate the bottleneck. What is often
-blamed on I/O can be a CPU bottleneck in the transform stage, or vice versa. To help distinguish them,
-`StreamingDataset` exposes pipeline counters. `raw_queue_depth` is the number of loaded rows waiting to be transformed,
-while `prefetch_queue_depth` is the number of transformed rows ready to be consumed. `unscanned_rows` and
+Optimizing data loader performance can be tricky, as runtime bottlenecks are often difficult to locate across various stages of the I/O and CPU pipelines. To help distinguish bottlenecks, `StreamingDataset` exposes several pipeline counters: `raw_queue_depth` shows the number of loaded rows waiting to be transformed,
+and `prefetch_queue_depth` is the number of transformed rows ready to be consumed. `unscanned_rows` and
 `consumed_rows` show how far the current iterator has progressed.
 
 If the `prefetch_queue_depth` is consistently zero but the `raw_queue_depth` is not then you have a CPU
