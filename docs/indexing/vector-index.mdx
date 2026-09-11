@@ -37,14 +37,10 @@ Lance with `index_type`.
 
 | If your priority is... | Use this index | Why | Approx. compression ratio | Python config class |
 | :--- | :--- | :--- | :--- | :--- |
-| Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | IVF indexing with product quantization | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) | `IvfPq` |
 | Maximum compression | `IVF_RQ` | IVF indexing with RaBitQ quantization | Around `1/32` of raw size | `IvfRq` |
-|   | `IVF_SQ` | IVF indexing with scalar quantization | Varies | `IvfSq` |
-|  | `IVF_HNSW_PQ` | IVF-HNSW indexing with product quantization | Varies | `IvfHnswPq` |
+| Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | IVF indexing with product quantization | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) | `IvfPq` |
 | Best recall/latency trade-off | `IVF_HNSW_SQ` | IVF-HNSW indexing with scalar | Typically a little larger than `1/4` of raw size | `IvfHnswSq` |
 | Highest recall / no quantization | `IVF_HNSW_FLAT` | IVF-HNSW indexing with no quantization | Around raw vector size plus HNSW graph overhead | `IvfHnswFlat` |
-|  | `IVF_FLAT` | IVF indexing with no quantization | `1` | `IvfFlat` |
-
 
 <Warning>
 If your vector search frequently includes metadata filters (`where(...)`), use `IVF_RQ` or `IVF_PQ`. In filtered workloads, HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ` can show higher latency variance.
@@ -118,7 +114,7 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 
 | Parameter | Description |
 | :--- | :--- |
-| `metric` | Default is `l2`, others available are `cosine` and `dot`. 
+| `distance_type` | Default is `l2`, others available are `cosine` and `dot`. 
 | `num_partitions` | The number of IVF partitions constructed (corresponds to the $k$ in $k$-means clustering). If unset, it is derived from `target_partition_size` (see below) rather than from `sqrt(num_rows)`. |
 | `target_partition_size` | An alternative IVF sizing knob that derives the partition count by setting the number of rows per partition: `num_partitions = clamp(num_rows / target_partition_size, 1, 4096)`. `num_partitions` takes precedence over `target_partition_size` if both are set. If neither is set, `target_partition_size` itself defaults per index type: `4096` for `IVF_FLAT` and `IVF_RQ`, `8192 = 2^13` for `IVF_PQ` and `IVF_SQ`, and `1,048,576 = 2^20` for the IVF-HNSW-family indexes. |
 | `num_sub_vectors` | Applies to `IVF_PQ`; defaults to `dimension // 16` (or `dimension // 8` if not a multiple of 16). Larger values produce better recall and slower search. |
@@ -130,13 +126,19 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | Parameter | Description |
 | :--- | :--- |
 | `limit` | Number of results to return (the `k` in `k-ANN`). |
-| `nprobes` | Shorthand that sets both `minimum_nprobes` and `maximum_nprobes` to the same value. LanceDB auto-tunes this by default. |
+| `nprobes` | Shorthand that sets both `minimum_nprobes` and `maximum_nprobes` to the same value. LanceDB defaults this to 20 which is a good default for many cases.  At very high scales you will likely need to experiment to find your preferred recall / latency balance. |
 | `minimum_nprobes` | Minimum number of partitions scanned. |
 | `maximum_nprobes` | Maximum number of partitions scanned. Only scans more than `minimum_nprobes` if an initial pass does not return enough results — useful for narrow filters. Set to `0` to remove the cap. |
 | `ef` | HNSW search-time exploration factor. Start around `1.5 * k` and increase up to `10 * k` for higher recall. |
 | `refine_factor` | Reads and reranks additional candidates in memory to recover recall lost to quantization. |
 | `distance_range(lower_bound, upper_bound)` | Return only rows whose distance falls within `[lower_bound, upper_bound)`. Either bound is optional. Useful for near-duplicate detection or "close-enough" matching. |
 | `bypass_vector_index()` | Ignore the ANN index entirely and perform an exact (flat) scan. Can be used to measure ANN `recall@k`, or to query with a metric the index was not built for (e.g., a non-cosine query on a multivector column). |
+
+<Note>
+The `distance_type` can be specified at search time in addition to build time.  If you do this you must ensure that
+you set it to the same value you used when building the vector index.  If the search time distance does not match the
+distance type set at build time then a costly flat search will be performed.
+</Note>
 
 **Recommended `nprobes` behavior by index type:**
 
@@ -306,5 +308,3 @@ Pass `name=...` to `create_index()` to override it. Once set, the custom name wi
     {VectorIndexCustomName}
     </CodeBlock>
 </CodeGroup>
-
-
