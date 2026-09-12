@@ -198,6 +198,23 @@ path must be wrapped in backticks.
 AND `nested with space`.`inner with space` < 2
 ```
 
+You can also escape identifiers with SQL-standard double quotes (`"`). LanceDB rewrites
+double-quoted identifiers to backticks before running the filter, so the two forms are
+equivalent. Single quotes (`'`) always denote string literals, never identifiers.
+
+```sql
+"UpperCaseName" = '3' AND "column name with space" IS NOT NULL
+```
+
+Double-quoted identifiers work in every operation that accepts a filter: search
+filters, row counts, updates, deletes, and merge insert conditions.
+
+<Warning>
+In older SDK versions, double-quoted tokens were parsed as string literals. A filter
+like `"UpperCaseName" = '3'` compared two strings and silently matched no rows. If you
+target older versions, use backticks to escape identifiers.
+</Warning>
+
 <Warning>
 Field names containing periods (.) are NOT supported.
 </Warning>
