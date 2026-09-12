@@ -33,6 +33,7 @@ import {
     RsBlobApiIngest as RsBlobApiIngest,
     PyBlobApiToPandas as BlobApiToPandas,
     PyQueryToPandasKwargs as QueryToPandasKwargs,
+    PyBlobUriWrite as BlobUriWrite,
 } from '/snippets/multimodal.mdx';
 
 LanceDB handles multimodal data—images, audio, video, and PDF files—natively by storing the raw bytes in a binary column alongside your vectors and metadata. This approach simplifies your data infrastructure by keeping the raw assets and their embeddings in the same database, eliminating the need for separate object storage for many use cases.
@@ -227,6 +228,34 @@ Query builders also accept `blob_mode` on their `to_pandas()` method:
     {QueryToPandasKwargs}
     </CodeBlock>
 </CodeGroup>
+
+## Write blob URIs
+
+Copying bytes into the table is not always practical when your media already lives in object storage. A blob column can instead store a reference to the original object.
+
+Declare the column with `lancedb.blob()` and pass a string URI as the value in `add()`. LanceDB coerces the string to the blob's `uri` field, so the row stores a reference instead of a copy. `fetch_blobs()` reads the payload from the referenced location.
+
+How `add()` handles a URI depends on where it points:
+
+- A URI under a registered blob base writes with no extra options.
+- A URI outside every registered base makes `add()` fail.
+- `allow_external_blob_outside_bases=True` is an escape hatch that stores the absolute URI anyway. It does not register a base.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {BlobUriWrite}
+    </CodeBlock>
+</CodeGroup>
+
+<Warning>
+A row written with `allow_external_blob_outside_bases=True` keeps only a reference. The object has to stay readable at that URI for `fetch_blobs()` to work.
+</Warning>
+
+The flag applies to local (OSS) tables only. Enterprise tables reject `allow_external_blob_outside_bases` before making a request, although string URIs still coerce and are sent as a `uri` struct. In Rust, set the flag with the `allow_external_blob_outside_bases` method on the `add` builder.
+
+<Note>
+URI coercion applies to `add()` only. `merge_insert` does not coerce string blob input.
+</Note>
 
 ## Other modalities
 
