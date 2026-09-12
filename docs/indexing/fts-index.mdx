@@ -97,6 +97,7 @@ await async_table.create_index("payload.text", config=FTS(with_position=True))
 | `ngram_max_length` | int | `3` | Maximum n-gram length. Applies only when `base_tokenizer="ngram"`. |
 | `prefix_only` | bool | `False` | Index only prefix n-grams rather than all substrings. Applies only when `base_tokenizer="ngram"`. |
 | `block_size` | int | `128` | Number of documents per compressed posting block. Supported values are `128` and `256`. Setting this to `256` opts in to the experimental FTS V3 layout. |
+| `document_granularity` | DocumentGranularity | `ROW` | Unit treated as one FTS document. `ROW` indexes each table row as one document. `LIST_ELEMENT` indexes each element of the deepest list on the field path as its own document. |
 
 <Note title="Key parameters">
 - `max_token_length` can filter out base64 blobs or long URLs.
@@ -135,6 +136,34 @@ await table.createIndex("text", {
   config: lancedb.Index.fts({ blockSize: 256 }),
 });
 ```
+
+### Document granularity
+
+By default, an FTS index treats all of the text in one table row as a single document (`ROW` granularity). When the indexed field lives inside a list column, for example a `docs` column of type `list<struct<content: string>>`, you can instead index each element of the deepest list as its own document by setting `document_granularity` on the `FTS` config.
+
+Use list-element granularity when each list entry is a meaningful unit on its own, such as a list of passages, chunks, or reviews stored in one row. BM25 statistics are computed per element, so short matching elements are not diluted by unrelated text elsewhere in the row.
+
+```python Python icon="python"
+from lancedb.index import FTS
+from lancedb.query import DocumentGranularity
+
+# `docs` is a list<struct<content: string>> column.
+table.create_index(
+    "docs.content",
+    config=FTS(
+        with_position=True,
+        document_granularity=DocumentGranularity.LIST_ELEMENT,
+    ),
+)
+```
+
+Match and phrase queries against a list-element index return a `_doc_index` column. It contains a list of unsigned integers per row that identifies which list elements matched. See [querying with document granularity](/search/full-text-search#list-element-document-granularity) for query examples.
+
+Omitting `document_granularity` keeps the default row behavior, so existing index creation code is unaffected.
+
+<Note>
+In LanceDB Enterprise, creating a list-element FTS index requires server API version 0.6.0 or later. Older servers reject the request instead of silently indexing with row semantics. Row-granularity requests work with all server versions.
+</Note>
 
 ### Phrase Query Configuration
 
