@@ -102,6 +102,45 @@ Listing APIs return the immediate children of the requested namespace path. Use 
 returned `page_token` to page through large catalogs; pass an empty namespace path (`[]`) when you
 want to list from the root namespace.
 
+## Check whether a namespace or table exists
+
+When you write branching logic like "create the namespace only if it isn't there yet" or "open the
+table only if it already exists", use the existence-check APIs instead of catching a
+`NamespaceNotFoundError` or `TableNotFoundError` from `describe_namespace` or `open_table`.
+
+In Python, a namespace-connected database exposes two methods that return a boolean:
+
+- `namespace_exists(namespace_id=[...])` returns `True` when the given namespace path resolves to
+  an existing namespace, and `False` otherwise.
+- `table_exists(table_id=[...])` returns `True` when the given fully qualified table identifier
+  (namespace segments followed by the table name) resolves to an existing table, and `False`
+  otherwise.
+
+Both methods take a list of path components, matching the same identifier shape used by
+`create_namespace`, `describe_namespace`, `create_table`, and `open_table`.
+
+```python Python icon="python"
+import lancedb
+
+db = lancedb.connect_namespace("dir", {"root": "./local_lancedb"})
+
+# Check whether a namespace exists before creating it.
+if not db.namespace_exists(namespace_id=["prod", "search"]):
+    db.create_namespace(["prod"], mode="exist_ok")
+    db.create_namespace(["prod", "search"])
+
+# Check whether a table exists before opening it. The table identifier is the
+# full path: namespace segments followed by the table name.
+if db.table_exists(table_id=["prod", "search", "user"]):
+    table = db.open_table("user", namespace_path=["prod", "search"])
+```
+
+<Note>
+These existence checks are available on connections created with `lancedb.connect_namespace(...)`.
+Calling them on a plain `lancedb.connect(...)` connection raises `NotImplementedError`, since that
+connection type doesn't expose namespace lifecycle operations.
+</Note>
+
 ## Namespaces in LanceDB Enterprise
 
 In LanceDB Enterprise deployments, configure namespace-backed federated databases in a TOML file under your deployment's `config` directory.
