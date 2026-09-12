@@ -440,3 +440,39 @@ Use the `drop_table()` method on the database to remove a table.
 This permanently removes the table and is not recoverable, unlike deleting rows.
 By default, if the table does not exist an exception is raised. To suppress this,
 you can pass in `ignore_missing=True`.
+
+### Drop a table asynchronously
+
+Use `drop_table_async()` when you don't want to block on cleanup of the underlying
+data files. LanceDB marks the table as dropped so it is no longer accessible, then
+returns a job handle you can wait on for the physical delete to finish. This is
+useful when dropping large tables against LanceDB Enterprise, where cleanup runs
+server-side and can take longer than the request timeout.
+
+<CodeGroup>
+```python Python icon="python"
+# Sync connection: returns a Job you can wait on later.
+job = db.drop_table_async("camelot")
+job.wait()
+
+# Async connection: returns an AsyncJob.
+async_job = await async_db.drop_table_async("camelot")
+await async_job.wait()
+```
+
+```typescript TypeScript icon="square-js"
+const job = await db.dropTableAsync("camelot");
+await job.wait();
+```
+
+```rust Rust icon="rust"
+let job = db.drop_table_async("camelot", &[]).await?;
+job.wait().await?;
+```
+</CodeGroup>
+
+<Note>
+On local backends the drop may already be complete when the handle is returned;
+`wait()` returns immediately in that case. On LanceDB Enterprise the handle
+tracks the server-side cleanup job.
+</Note>
