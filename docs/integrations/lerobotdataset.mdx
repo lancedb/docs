@@ -27,7 +27,7 @@ What you get:
 | pusht | 5,340 | 648 | 8.2x | 3 GB | 7 GB | 5,508 | 4,224 | 1.3x |
 | aloha_static_cups_open | 597 | 45 | 13.2x | 10 GB | 38 GB | 575 | 483 | 1.2x |
 
-The shuffle window is 0.05% of the dataset, at least 5,000 frames: 5,000 on the small sets, 13,815 on DROID. Streaming DROID at that window needs 122 GB, so those two runs used a 256 GB machine with the same decode speed. The DROID pair is noisy: Lance 684 and 1,124, streaming 303 and 653.
+The shuffle window is 0.05% of the dataset, at least 5,000 frames: 5,000 on the small sets, 13,815 on DROID. Streaming DROID at that window in upstream default needs 122 GB, so those two runs used a 256 GB machine with the same decode speed. The DROID pair is noisy: Lance 684 and 1,124, streaming 303 and 653.
 
 Same batches: Lance from an object store is 1.9x faster than upstream streaming on DROID and 5x to 15x on the other datasets, with 8 GB of RAM against 122 GB on DROID. Global shuffle: Lance with nothing downloaded is 1.1x to 1.7x faster than upstream reading local NVMe after the download. berkeley_rpt, toto and soarm101 are left out because their metadata lists frames the videos do not have; `lerobot-lance-doctor` reports that before you train.
 
