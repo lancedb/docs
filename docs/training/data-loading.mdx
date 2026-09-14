@@ -192,7 +192,7 @@ for sample in ds:
 
 Traditional datasets have often been designed to yield a single sample at a time upon iteration. However, in modern use cases,  accessing data on object storage one row at a time introduces too much per-call overhead. Thus, `StreamingDataset` fetches data in read batches, whose size is controlled by the `read_batch_size` parameter (defaults = `64`).
 
-In addition to batching requests, the prefetching mechanism reads ahead in the background. While one batch is being processed, `StreamingDataset` reads several subsequent batches. The `prefetch_batches` parameter specifies the number of batches simultaneously kept in flight split (default = `4`). A larger value provides more buffering against jittery workloads, but also increases memory use and I/O concurrency.
+In addition to batching requests, the prefetching mechanism reads ahead in the background. While one batch is being processed, `StreamingDataset` reads several subsequent batches. The `prefetch_batches` parameter specifies the number of batches simultaneously kept in flight per split (default = `4`). A larger value provides more buffering against jittery workloads, but also increases memory use and I/O concurrency.
 
 <CodeGroup>
 ```py Python icon=Python
