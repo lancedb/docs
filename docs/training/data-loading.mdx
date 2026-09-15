@@ -172,8 +172,8 @@ dist.init_process_group("nccl")
 rank = dist.get_rank()
 world_size = dist.get_world_size()
 
-# num_splits=48 is divisible by 1, 2, 3, 4, 6, 8, 12, 16, 24, 48
-# so this dataset works unchanged as you scale up or down GPUs.
+# num_splits=48 is divisible by many integers,
+# so this dataset works unchanged as you add or remove GPUs.
 ds = StreamingDataset(
     table,
     num_splits=48,
@@ -258,7 +258,7 @@ By default, `StreamingDataset` serializes enough table state to reopen the table
 setup, pass a picklable `connection_factory` callable that accepts a table name and returns an open table. This avoids
 serializing connection credentials into worker state.
 
-### Observability & Performance
+### Observability
 
 Optimizing data loader performance can be tricky, as runtime bottlenecks are often difficult to locate across various stages of the I/O and CPU pipelines. To help distinguish bottlenecks, `StreamingDataset` exposes several pipeline counters: `raw_queue_depth` shows the number of loaded rows waiting to be transformed,
 and `prefetch_queue_depth` is the number of transformed rows ready to be consumed. `unscanned_rows` and
@@ -305,16 +305,10 @@ are cumulative across iterations of the same dataset instance; because work runs
 can exceed wall-clock time. The queue depths report rows currently waiting in the pipeline, and the progress counters
 reflect the latest iterator snapshot.
 
-### Checkpointing & Resumability
+### Checkpointing 
+`StreamingDataset` provides checkpointing in case your model training fails partway through a run. Use `StreamingDataset.state_dict()` to capture the current number of samples consumed from each split in a Python dictionary, and `load_state_dict()` to restore the last saved position. 
 
-Model training is expensive, and failures can occur partway through a run. A model checkpoint is not enough for an
-exact resume: the streaming data loader must also continue from the same position. `StreamingDataset.state_dict()`
-captures the number of samples consumed from every split in a plain Python dictionary, and `load_state_dict()` restores
-that position.
-
-Save this state at a global-step boundary where every split has contributed equally. The easiest way to guarantee this
-is to make `global_batch_size` a multiple of `num_splits`, as in the example below. If you checkpoint partway through a
-round-robin cycle, the state reflects the preceding complete cycle and those partial-cycle samples can be replayed.
+A stored `StreamingDataset` state reflects only round-robin cycles that have been completed across all splits; samples completed partway through a cycle at the time of saving can be replayed. To ensure efficient saving, make sure `global_batch_size` is a multiple of `num_splits`, as in the example below. 
 
 <CodeGroup>
 ```py Python icon=Python
@@ -378,12 +372,7 @@ still hold.
 
 ##### Checkpointing with Multiple DataLoader Workers
 
-The plain `torch.utils.data.DataLoader` only produces a safe checkpoint when `num_workers=0`. With `num_workers > 0`,
-PyTorch runs `StreamingDataset.__iter__` in separate worker processes and prefetches batches ahead of the trainer, so
-the counters on the parent dataset do not reflect what the trainer has actually consumed. Calling `state_dict()` on the
-parent in that setup raises `RuntimeError` and points you at `StreamingDataLoader`.
-
-Use `StreamingDataLoader` when you want multi-worker prefetch and exact resumability. It carries a state snapshot
+Python's built-in `torch.utils.data.DataLoader` produces a safe checkpoint when `num_workers = 0`. With `num_workers > 0`, calling `state_dict()` on the often raises `RuntimeError`. In this case, use `StreamingDataLoader` for multi-worker prefetch and exact resumability. It carries a state snapshot
 alongside every internal batch and commits it to the parent `StreamingDataset` only when that batch is returned to the
 trainer. The trainer receives the same collated batch it would receive from a standard `DataLoader`.
 
@@ -416,12 +405,12 @@ for step, batch in enumerate(dataloader):
 ```
 </CodeGroup>
 
-`StreamingDataLoader` accepts the same arguments as `torch.utils.data.DataLoader` with a few restrictions:
+`StreamingDataLoader` accepts the same arguments as `torch.utils.data.DataLoader`, with a few restrictions:
 
 - `dataset` must be a `StreamingDataset` (subclasses that override `__iter__` are not supported).
-- `in_order=True` is required so that consumer-committed checkpoints stay deterministic.
-- `persistent_workers=True` is not supported, because prefetched worker copies cannot be restored from parent-committed state.
-- `drop_last=True` is not supported, because incomplete tails discarded by worker replicas cannot be checkpointed topology-independently.
+- `in_order = True` is required so that consumer-committed checkpoints stay deterministic.
+- `persistent_workers = True` is not supported, because prefetched worker copies cannot be restored from parent-committed state.
+- `drop_last = True` is not supported, because incomplete tails discarded by worker replicas cannot be checkpointed topology-independently.
 
 With more than one worker, call `state_dict()` at a complete logical step boundary where every split assigned to the
 rank has the same consumed-sample count. Calling it mid-step raises `RuntimeError` asking you to consume more batches
