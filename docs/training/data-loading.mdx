@@ -89,6 +89,17 @@ ds = StreamingDataset(
 
 ### Shuffling Rows
 
+row shuffling behaves very differently in 1-phase and 2-phase shuffling (mention presence of `block_size` parameter)
+
+1-phase shuffling:
+...
+
+
+2-phase shuffling: 
+...
+
+
+vv
 By default, `StreamingDataset` sets `shuffle=True` and randomly assigns rows to splits. This helps prevent the model
 from learning artifacts from storage order. Set `shuffle=False` to divide rows into splits sequentially, which is
 useful for deterministic evaluation and debugging.
