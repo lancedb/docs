@@ -95,9 +95,6 @@ In model training, model quality can be hurt by unintentional patterns in the or
 `StreamingDataset` shuffle seeds combine `shuffle_seed` with `epoch`; each epoch produces a different permutation while runs
 with the same inputs remain reproducible. Set `shuffle_seed = None` to generate a random seed upon pipeline initialization.
 </Note>
-<Note>
-Use the `shuffle_clump_size` parameter to shuffle source data in atomic units of contiguous `clumps` instead of individual rows. 
-</Note>
 
 #### One-Phase Shuffle
 
