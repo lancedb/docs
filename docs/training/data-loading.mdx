@@ -89,66 +89,71 @@ ds = StreamingDataset(
 
 ### Shuffling Rows
 
-row shuffling behaves very differently in 1-phase and 2-phase shuffling (mention presence of `block_size` parameter)
+In model training, model quality can be hurt by unintentional patterns in the original training dataset (for example, rows sorted by metadata). Shuffling the dataset before training alleviates this problem. However, fetching rows with scattered sparse reads across object storage can be dramatically slower than fetching contiguous batches. StreamingDataset offers two different implementations to read data in shuffled order, toggled by the presence of the `block_size` parameter. 
 
-1-phase shuffling:
-...
+<Note>
+`StreamingDataset` shuffle seeds combine `shuffle_seed` with `epoch`; each epoch produces a different permutation while runs
+with the same inputs remain reproducible. Set `shuffle_seed = None` to generate a random seed upon pipeline initialization.
+</Note>
+<Note>
+Use the `shuffle_clump_size` parameter to shuffle source data in atomic units of contiguous `clumps` instead of individual rows. 
+</Note>
+
+#### One-Phase Shuffle
+
+Setting `block_size = None` corresponds to the naive $1$-phase shuffled read: the rows of the source dataset are shuffled according to a pseudorandom permutation, then fed in batches to the accelerator. This gives the best possible randomness, but can exhibit very high latency. 
 
 
-2-phase shuffling: 
-...
 
 
-vv
-By default, `StreamingDataset` sets `shuffle=True` and randomly assigns rows to splits. This helps prevent the model
-from learning artifacts from storage order. Set `shuffle=False` to divide rows into splits sequentially, which is
-useful for deterministic evaluation and debugging.
-
-The effective shuffle seed combines `shuffle_seed` with `epoch`, so each epoch has a different ordering while runs
-with the same inputs remain reproducible. Keep `epoch=0` if you want the same ordering across iterations. The default
-`shuffle_seed` is `0`; set it to `None` to generate a random seed when the dataset is constructed.
-
-<CodeGroup>
-```py Python icon=Python
-# Training loop: each epoch gets a different shuffled ordering
-for epoch in range(num_epochs):
-    ds = StreamingDataset(
-        table,
-        shuffle_seed=42,
-        epoch=epoch,       # changes the permutation each epoch
-    )
-    for sample in ds:
+<CodeGroup> 
+```py Python icon=Python 
+# 1-phase shuffled read: rows shuffled individually.
+for epoch in range(num_epochs): 
+    ds = StreamingDataset( 
+        table, 
+        shuffle_seed=42, 
+        epoch=epoch, # changes the permutation each epoch 
+    ) 
+    for sample in ds: 
         train_step(sample)
 
-# Evaluation: deterministic sequential order, no shuffle
+#Evaluation: deterministic sequential order, no shuffle.
 eval_ds = StreamingDataset(table, shuffle=False)
 for sample in eval_ds:
     eval_step(sample)
 ```
+
 </CodeGroup>
 
-<Note>
-Shuffling can have significant impacts on I/O performance, especially if you are loading data from cloud storage.
-In many cases the GPU pipeline is slow enough that this penalty will not be noticeable.  However,
-you can use the `shuffle_clump_size` parameter to shuffle the data in clumps (small contiguous batches that get
-shuffled together).  This will give some penalty to the randomness of the shuffle, but will significantly improve
-I/O performance.
-</Note>
 
+#### Two-Phase Shuffle
+
+Setting `block_size` to an integer corresponds to selecting $2$-phase shuffled read. In this implementation, the source dataset is first partitioned into fixed-size `blocks`, which are then assigned randomly to splits. Within each split, rows are then further shuffled, with each row moving at most `max_shuffle_distance` distance away from its original position. Reading blocks allows storage I/O to constitute mostly large, contiguous reads rather than single row fetches. This yields much higher throughput at a randomness tradeoff.
+ 
 <CodeGroup>
 ```py Python icon=Python
-# Clumped shuffle: groups of 16 contiguous rows are shuffled together,
-# preserving read locality while still randomising the global ordering.
-ds = StreamingDataset(
-    table,
-    shuffle_seed=42,
-    shuffle_clump_size=16,
-)
+# 2-phase shuffled read: rows are shuffled block-by-block instead of
+# individually, trading a bit of randomness for much cheaper I/O.
+for epoch in range(num_epochs):
+    ds = StreamingDataset(
+        table,
+        shuffle_seed=42,
+        epoch=epoch,               
+        block_size=1024,           # enables 2-phase
+        window_blocks=4,           # blocks resident per split at once
+        max_shuffle_distance=256,  # how far a row may move from its
+                                    # original position
+    )
+    for sample in ds:
+        train_step(sample)
+
+# Evaluation: deterministic sequential order, no shuffle.
+eval_ds = StreamingDataset(table, shuffle=False, block_size=1024)
+for sample in eval_ds:
+    eval_step(sample)
 ```
 </CodeGroup>
-
-#### Two-Phase shuffle
-todo
 
 ### Parallelism & Elasticity
 
