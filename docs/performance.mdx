@@ -124,7 +124,7 @@ If vector search latency climbs with table size (i.e., queries that ran in milli
 | `IVF_HNSW_SQ` | Best recall/latency for unfiltered search; higher latency variance under selective filters. |
 | `IVF_FLAT` | Required for binary vectors with `hamming`. |
 
-The distance metric is fixed once the index is built. Pick the distance metric based on how the embedding model was trained: `cosine` (unnormalized), `dot` (already-normalized, best performance), `l2` (general-purpose, default), `hamming` (binary). For parameter tuning, see [Vector Indexing](/indexing/vector-index).
+The distance metric is fixed once the index is built. Pick the distance metric based on how the embedding model was trained: `cosine` (unnormalized), `dot` (already-normalized, best performance), `l2` (general-purpose, default), `hamming` (binary). If a query explicitly requests a different metric, the index cannot be used and the query falls back to a brute-force scan; LanceDB Enterprise may reject that scan on a large table. For parameter tuning, see [Vector Indexing](/indexing/vector-index).
 
 ### Scalar indexes
 
