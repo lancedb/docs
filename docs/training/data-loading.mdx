@@ -52,8 +52,7 @@ for batch in dataloader:
 The `StreamingDataset` wraps a LanceDB `Table` and yields plain Python dictionaries by default, handling collation from Arrow to Python automatically. You can also iterate the dataset directly; however, only one iterator can be simultaneously active on a `StreamingDataset` instance. 
 
 <Note>
-`StreamingDataset` is built on the `permutation` API and works with both local LanceDB tables when using OSS, and
-remote tables accessed through LanceDB Enterprise. The underlying table data can live on local disk or object storage.
+`StreamingDataset` is built on the `permutation` API and works with both LanceDB OSS and LanceDB Enterprise. The underlying table data can live on local disk or object storage.
 </Note>
 
 To understand the wide range of scenarios handled by `StreamingDataset`, consider a model trained with stochastic gradient descent (SGD) and distributed data parallelism (DDP). In this example, we need to load batches onto multiple GPUs
@@ -64,7 +63,7 @@ fix the following terminology:
   GPUs each, the world size is $8$.
 - **Rank** - The identifier of an individual GPU-loading process. It is an integer in the range `[0, world_size)`.
   Each rank is allocated a disjoint portion of the source data.
-- **Batch size** - The number of rows processed by one GPU in a single training step. For example, $128$.
+- **Batch size** - The number of rows processed by one GPU in a single training step (sometimes called a "minibatch" in machine learning literature). For example, $128$.
 - **Global batch size** - The total number of rows processed across all GPUs in a training step. For
   example, if we have $8$ GPUs with batch size $128$, the global batch size is $1024$.
 
