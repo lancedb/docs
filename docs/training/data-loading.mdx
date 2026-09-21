@@ -49,7 +49,7 @@ for batch in dataloader:
 ```
 </CodeGroup>
 
-The `StreamingDataset` wraps a LanceDB `Table` and yields plain Python dictionaries by default, handling collation from Arrow to Python automatically. You can also iterate the dataset directly; however, only one iterator can be simultaneously active on a `StreamingDataset` instance. 
+The `StreamingDataset` wraps a LanceDB `Table` and yields plain Python dictionaries by default. Whether iterating directly or through a PyTorch `DataLoader`, only one iterator can be simultaneously active on a `StreamingDataset` instance. 
 
 <Note>
 `StreamingDataset` is built on the `permutation` API and works with both LanceDB OSS and LanceDB Enterprise. The underlying table data can live on local disk or object storage.
@@ -61,10 +61,10 @@ fix the following terminology:
 
 - **World size** - The number of GPUs being loaded simultaneously. For example, if we have $2$ servers with $4$
   GPUs each, the world size is $8$.
-- **Rank** - The identifier of an individual GPU-loading process. It is an integer in the range `[0, world_size)`.
+- **Rank** - The identifier of an individual GPU. It is an integer in the range `[0, world_size)`.
   Each rank is allocated a disjoint portion of the source data.
-- **Batch size** - The number of rows processed by one GPU in a single training step (sometimes called a "minibatch" in machine learning literature). For example, $128$.
-- **Global batch size** - The total number of rows processed across all GPUs in a training step. For
+- **Batch size** - The number of rows processed by one GPU in a single training step. For example, $128$.
+- **Global batch size** - The total number of rows processed across all GPUs in a training step (sometimes called a "minibatch" in machine learning literature). For
   example, if we have $8$ GPUs with batch size $128$, the global batch size is $1024$.
 
 
@@ -97,7 +97,7 @@ with the same inputs remain reproducible. Set `shuffle_seed = None` to generate 
 
 #### One-Phase Shuffle
 
-Setting `block_size = None` corresponds to the naive $1$-phase shuffled read: the rows of the source dataset are shuffled according to a pseudorandom permutation, then fed in batches to the accelerator. This gives the best possible randomness, but can exhibit high latency. 
+Setting `block_size = None` corresponds to the naive $1$-phase shuffled read: the rows of the source dataset are shuffled according to a pseudorandom permutation, then fed in batches to the accelerator. This gives the best possible randomness, but can exhibit low throughput. 
 
 
 <CodeGroup> 
@@ -217,10 +217,10 @@ ds = StreamingDataset(
 
 ### Transforming
 
-Many model training workloads require performing a transformation to the data after it is loaded from object storage and before it is passed to the GPU. For example, we may need to decode images, tokenize text, or normalize vectors. A transformation function can be provided
-using the `transform` parameter. 
+Many model training workloads require performing a transformation to the data after it is loaded from object storage and before it is passed to the GPU. For example, we may need to decode images, tokenize text, or normalize vectors. A transformation function can be provided using the `transform` parameter. 
 
-A transformation function must receive a PyArrow `RecordBatch` and return an iterable with exactly one sample for each input row. The sample format should match the specified input of your data loader; for example, PyTorch's default collation function accepts a Python dictionary and several other types. If no transform function is provided, LanceDB collates the Arrow record batch into a Python dictionary without further processing.
+A transformation function must receive a PyArrow `RecordBatch` and return an iterable. For example, the default transform function returns a list of Python dictionaries. Furthermore, the input expected by PyTorch must match the collation function used in the PyTorch data loader. PyTorch's default collation function accepts a Python dictionary and several other types, and is thus compatible with the default `StreamingDataset` transform function. If your custom transform function returns something different (for example, Arrow record batches), you may need to provide a compatible PyTorch collation function.
+
 
 <CodeGroup>
 ```py Python icon=Python
@@ -382,7 +382,7 @@ still hold.
 
 ##### Checkpointing with Multiple DataLoader Workers
 
-Python's built-in `torch.utils.data.DataLoader` produces a safe checkpoint when `num_workers = 0`. With `num_workers > 0`, calling `state_dict()` on the often raises `RuntimeError`. In this case, use `StreamingDataLoader` for multi-worker prefetch and exact resumability. It carries a state snapshot
+Python's built-in `torch.utils.data.DataLoader` produces a safe checkpoint when `num_workers = 0`. With `num_workers > 0`, calling `state_dict()` often raises `RuntimeError`. In this case, use `StreamingDataLoader` for multi-worker prefetch and exact resumability. It carries a state snapshot
 alongside every internal batch and commits it to the parent `StreamingDataset` only when that batch is returned to the
 trainer. The trainer receives the same collated batch it would receive from a standard `DataLoader`.
 
