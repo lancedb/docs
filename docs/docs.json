@@ -520,6 +520,10 @@
   },
   "redirects": [
     {
+      "source": "/core/update",
+      "destination": "/tables/update"
+    },
+    {
       "source": "/hybrid-search",
       "destination": "/search/hybrid-search"
     },
