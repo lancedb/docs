@@ -68,7 +68,7 @@
             "group": "Model training",
             "pages": [
               "training/why-lancedb",
-              "training/index",
+              "training/data-loading",
               "training/torch",
               "training/object-detection",
               "training/vlm-finetuning",
@@ -574,6 +574,10 @@
     {
       "source": "/huggingface/datasets",
       "destination": "/datasets"
+    },
+    {
+      "source": "/training",
+      "destination": "/training/data-loading"
     }
   ]
 }
