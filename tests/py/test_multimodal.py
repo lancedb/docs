@@ -230,3 +230,33 @@ async def test_query_to_pandas_kwargs(db_path_factory):
     assert df_bytes["video"].iloc[0] == b"fake_video_bytes_1"
     assert len(df_vec) == 10
     assert "video" not in df_vec.columns
+
+
+def test_blob_uri_write(db_path_factory, tmp_path):
+    payload = b"fake_image_bytes"
+    blob_path = tmp_path / "cat.jpg"
+    blob_path.write_bytes(payload)
+
+    db = lancedb.connect(db_path_factory("blob_uri_db"))
+
+    # --8<-- [start:blob_uri_write]
+    # Declare a blob column with the Lance blob extension type
+    schema = pa.schema([pa.field("id", pa.int64()), lancedb.blob("image")])
+    tbl = db.create_table("images_by_uri", schema=schema)
+
+    # Point at an existing object; file://, s3://, and other URIs work
+    image_uri = blob_path.as_uri()
+
+    # A string value coerces to the blob's `uri` field, so the row stores
+    # a reference instead of copying the bytes into the table
+    tbl.add(
+        [{"id": 1, "image": image_uri}],
+        allow_external_blob_outside_bases=True,
+    )
+
+    # Fetch the referenced bytes back through the blob column
+    hits = tbl.search().to_arrow()
+    blobs = tbl.fetch_blobs("image", hits)
+    # --8<-- [end:blob_uri_write]
+
+    assert blobs[0].as_py() == payload
