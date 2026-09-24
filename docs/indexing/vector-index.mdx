@@ -135,9 +135,17 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | `bypass_vector_index()` | Ignore the ANN index entirely and perform an exact (flat) scan. Can be used to measure ANN `recall@k`, or to query with a metric the index was not built for (e.g., a non-cosine query on a multivector column). |
 
 <Note>
-The `distance_type` can be specified at search time in addition to build time.  If you do this you must ensure that
-you set it to the same value you used when building the vector index.  If the search time distance does not match the
-distance type set at build time then a costly flat search will be performed.
+The `distance_type` can be specified at search time in addition to build time. If
+you do this, set it to the same value used to build the vector index. If the search
+metric does not match the index metric, LanceDB cannot use the index and falls
+back to a costly flat search. On LanceDB Cloud, the brute-force KNN safety limit
+can reject that search on a large table instead of executing it. LanceDB
+Enterprise doesn't have the limit.
+
+When the search metric is omitted, current SDKs use the index metric if an index
+is available. Some older SDK versions sent `l2` when it was omitted, so explicitly
+set the matching metric or upgrade the SDK when querying a non-`l2` index with an
+older client.
 </Note>
 
 **Recommended `nprobes` behavior by index type:**

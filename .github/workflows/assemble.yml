@@ -43,7 +43,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install Mintlify CLI
-        run: npm install -g mint
+        # Keep the two exports byte-comparable. Newer releases can render
+        # nondeterministic OpenAPI examples from identical input.
+        run: npm install -g mint@4.2.888
 
       # The OpenAPI spec is tracked at a release tag, not a commit. If the two
       # have drifted the site would document something that was never released.
