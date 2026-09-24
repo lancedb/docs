@@ -1,0 +1,172 @@
+---
+title: Getting Started
+sidebarTitle: Getting Started
+description: Connect to LanceDB Enterprise, define a UDF, and run a distributed backfill — from a notebook or a script.
+icon: rocket
+---
+
+Connect to your LanceDB Enterprise deployment, define a UDF, and run a distributed
+backfill — all from a notebook or a script. No cluster setup required.
+
+## Installation
+
+Geneva is published on [PyPI](https://pypi.org/project/geneva/). Install the latest stable
+release with [`uv`](https://docs.astral.sh/uv/) (recommended) or `pip`. Newer pre-release
+builds with the latest features are also available on LanceDB's Fury indexes — see
+[Pre-release builds](#pre-release-builds) below.
+
+### Prerequisites
+
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/) (recommended) or `pip`
+
+### Install the latest stable release
+
+<CodeGroup>
+```bash uv icon="terminal"
+uv pip install --upgrade geneva
+```
+
+```bash pip icon="terminal"
+pip install --upgrade geneva
+```
+</CodeGroup>
+
+### Verify
+
+```bash
+python -c "import geneva; print(geneva.__version__)"
+```
+
+### Pre-release builds
+
+To pick up the newest features ahead of a stable release, install a pre-release from LanceDB's
+Fury indexes. Geneva and its dependencies are published across two indexes:
+
+| Package | Index |
+|---------|-------|
+| `geneva`, `lancedb` | `https://pypi.fury.io/lancedb/` |
+| `pylance` | `https://pypi.fury.io/lance-format/` |
+
+<CodeGroup>
+```bash uv icon="terminal"
+uv pip install --pre --upgrade \
+  --extra-index-url https://pypi.fury.io/lancedb/ \
+  --extra-index-url https://pypi.fury.io/lance-format \
+  --index-strategy unsafe-best-match \
+  geneva
+```
+
+```bash pip icon="terminal"
+pip install --pre --upgrade \
+  --extra-index-url https://pypi.fury.io/lancedb/ \
+  --extra-index-url https://pypi.fury.io/lance-format \
+  geneva
+```
+</CodeGroup>
+
+<Note>
+The `--index-strategy unsafe-best-match` flag is required with `uv`. By default, `uv` only
+considers package versions from the first index that lists a given package (PyPI). Since
+`geneva` and `pylance` also appear on PyPI, this flag tells `uv` to pick the best match across
+all indexes.
+</Note>
+
+## Quickstart
+
+<CodeGroup>
+```python Python icon="python"
+import os
+import geneva
+import pyarrow as pa
+
+# Connect to LanceDB Enterprise
+db = geneva.connect(
+    uri="db://my-db",
+    host_override=os.getenv("LANCEDB_URI", "http://localhost:10024"),
+    api_key=os.getenv("LANCEDB_API_KEY"),
+)
+
+tbl = db.open_table("my_table")
+
+# Define a User Defined Function (UDF) that counts the words in the text column
+@geneva.udf(data_type=pa.int32())
+def word_count(text: str) -> int:
+    return len(text.split())
+
+# Register the UDF as a new virtual column
+tbl.add_columns({"word_count": word_count})
+
+# Backfill the new column using distributed execution with incremental checkpointing
+tbl.backfill("word_count")
+```
+</CodeGroup>
+
+## Auto-backfill
+
+With `auto_backfill=True`, LanceDB Enterprise recomputes the column for you whenever the
+data or the UDF version changes — no explicit `backfill()` call needed (see
+[Backfilling](/geneva/jobs/backfilling/)).
+
+<CodeGroup>
+```python Python icon="python"
+# Change the column to use a new UDF version with auto-backfill enabled
+@geneva.udf(data_type=pa.int32(), auto_backfill=True)
+def word_count(text: str) -> int:
+    return len(text.split())
+
+tbl.alter_columns({"path": "word_count", "udf": word_count})
+
+# Add new rows. word_count is computed automatically in the background.
+tbl.add([{"text": "hello world"}])
+```
+</CodeGroup>
+
+## Materialized views and chunkers
+
+A [materialized view](/geneva/jobs/materialized-views/) applies UDFs over a query and
+refreshes incrementally. A [chunker](/geneva/udfs/scalar-udtfs) view expands each source
+row into many rows (1:N) — useful for splitting documents, videos, or images.
+
+<CodeGroup>
+```python Python icon="python"
+# Materialized view: a query with UDF-computed columns, refreshed incrementally
+query = tbl.search(None).select({"text": "text", "word_count": word_count})
+view = db.create_materialized_view("my_view", query)
+view.refresh()
+
+# Chunker view: 1:N row expansion — split each row's text into one row per word
+from typing import Iterator, NamedTuple
+
+class Chunk(NamedTuple):
+    chunk_index: int
+    chunk_text: str
+
+@geneva.chunker
+def split_text(text: str) -> Iterator[Chunk]:
+    for i, word in enumerate(text.split()):
+        yield Chunk(chunk_index=i, chunk_text=word)
+
+chunks = db.create_udtf_view(
+    "my_chunks",
+    source=tbl.search(None).select(["text"]),
+    udtf=split_text,
+)
+chunks.refresh()
+```
+</CodeGroup>
+
+## Connecting to object storage or a local filesystem
+
+Geneva can also run directly against cloud object storage or a local path. In this mode, jobs run on a
+[distributed execution context](/geneva/jobs/contexts) you provide.
+
+<CodeGroup>
+```python Python icon="python"
+# Cloud object storage (S3, GCS, Azure, or any S3-compatible object store)
+db = geneva.connect("s3://my-bucket/my-database")
+
+# Local filesystem
+db = geneva.connect("/path/to/my-database")
+```
+</CodeGroup>
