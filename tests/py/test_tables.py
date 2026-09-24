@@ -615,6 +615,36 @@ def test_update_using_sql(tmp_db):
     ]
 
 
+def test_update_expr_filter(tmp_db):
+    db = tmp_db
+
+    # --8<-- [start:update_expr_filter]
+    import pyarrow as pa
+
+    from lancedb.expr import col
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "O'Brien"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+    # Plain Python values are encoded as SQL literals automatically,
+    # so names with apostrophes or numeric-looking text are safe.
+    table.update(where=col("name") == "O'Brien", values={"login_count": 30})
+    # --8<-- [end:update_expr_filter]
+    rows = table.to_arrow().sort_by("id").to_pylist()
+    assert rows == [
+        {"id": 1, "name": "Alice", "login_count": 10},
+        {"id": 2, "name": "O'Brien", "login_count": 30},
+    ]
+
+
 def test_merge_matched_update_only(tmp_db):
     db = tmp_db
 

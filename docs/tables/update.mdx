@@ -10,6 +10,7 @@ import {
     PyUpdateExampleTableSetup as UpdateExampleTableSetup,
     PyUpdateOperation as UpdateOperation,
     PyUpdateUsingSql as UpdateUsingSql,
+    PyUpdateExprFilter as UpdateExprFilter,
     PyMergeMatchedUpdateOnly as MergeMatchedUpdateOnly,
     PyInsertIfNotExists as InsertIfNotExists,
     PyMergeUpdateInsert as MergeUpdateInsert,
@@ -47,7 +48,7 @@ import {
 Updating or modifying data involves changing rows in an existing table.
 LanceDB provides two families of write operations that can modify data in a table:
 
-- `update(...)`: mutate existing rows that match a SQL filter.
+- `update(...)`: mutate existing rows that match a filter. The filter is a SQL string, or a type-safe expression in Python.
 - `merge_insert(...)`: compare incoming rows to existing rows by key, then choose what to do for each case.
 
 The `update` method is simpler to use when you already know which rows you want to modify and you do not need to compare against an incoming dataset. The `merge_insert` method is more powerful when you have a new dataset that you want to merge into an existing table, and you want LanceDB to handle the logic of comparing against existing rows by key.
@@ -127,7 +128,7 @@ table creation patterns (Pandas, Polars, Pydantic, iterators, etc.) -- see the [
 
 | Family |  Method | Use this when... |
 | --------------- | --------------- | ---------------- |
-| `update` | `update(where=..., values=...)` | You want to edit rows that already exist, using a SQL filter. |
+| `update` | `update(where=..., values=...)` | You want to edit rows that already exist, using a filter. |
 | `merge_insert` | `.when_matched_update_all()` | You have incoming rows and want to update keys that already exist in the table. |
 | `merge_insert` | `.when_not_matched_insert_all()` | You have incoming rows and want to insert keys that do not exist yet. |
 | `merge_insert` | `.when_matched_update_all()` + `.when_not_matched_insert_all()` | You want both behaviors together (often called **upsert**: update existing keys **and** insert missing keys in the same operation). |
@@ -198,6 +199,25 @@ Expected table contents:
 <Note title="SQL syntax">
 See the [SQL queries](/search/sql/) page for more information on the supported SQL syntax.
 </Note>
+
+## Update rows with a type-safe filter
+
+In Python, the `where` argument of `update` also accepts a type-safe expression instead of a raw SQL string. Build the filter with `col` and `lit` from `lancedb.expr`, then combine expressions with Python operators. LanceDB encodes plain Python values as SQL literals for you. Text containing apostrophes or numeric-looking strings is always treated as text, so you do not need to escape interpolated values yourself.
+
+<CodeGroup>
+    <CodeBlock filename="Python" language="Python" icon="python">
+    {UpdateExprFilter}
+    </CodeBlock>
+</CodeGroup>
+
+Expected table contents:
+
+| id | name | login_count |
+| --- | --- | --- |
+| 1 | Alice | 10 |
+| 2 | O'Brien | 30 |
+
+Expression filters work on local, async, and remote tables. The `delete` method and query `where` clauses accept the same expressions.
 
 When rows are updated, they are moved out of any existing index. The row will still show up in search queries, but the query will not be as fast as it would be if the row was in the index. If you update a large proportion of rows, consider triggering an index rebuild afterwards.
 

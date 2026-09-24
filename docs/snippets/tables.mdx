@@ -114,6 +114,8 @@ export const PyUpdateConnectLocal = "import lancedb\n\ndb = lancedb.connect(\"./
 
 export const PyUpdateExampleTableSetup = "import pyarrow as pa\n\ntable = db.create_table(\n    \"users_example\",\n    data=pa.table(\n        {\n            \"id\": [1, 2],\n            \"name\": [\"Alice\", \"Bob\"],\n            \"login_count\": [10, 20],\n        }\n    ),\n    mode=\"overwrite\",\n)\n";
 
+export const PyUpdateExprFilter = "import pyarrow as pa\n\nfrom lancedb.expr import col\n\ntable = db.create_table(\n    \"users_example\",\n    data=pa.table(\n        {\n            \"id\": [1, 2],\n            \"name\": [\"Alice\", \"O'Brien\"],\n            \"login_count\": [10, 20],\n        }\n    ),\n    mode=\"overwrite\",\n)\n# Plain Python values are encoded as SQL literals automatically,\n# so names with apostrophes or numeric-looking text are safe.\ntable.update(where=col(\"name\") == \"O'Brien\", values={\"login_count\": 30})\n";
+
 export const PyUpdateOperation = "import pyarrow as pa\n\ntable = db.create_table(\n    \"users_example\",\n    data=pa.table(\n        {\n            \"id\": [1, 2],\n            \"name\": [\"Alice\", \"Bob\"],\n            \"login_count\": [10, 20],\n        }\n    ),\n    mode=\"overwrite\",\n)\ntable.update(where=\"id = 2\", values={\"name\": \"Bobby\"})\n";
 
 export const PyUpdateOptimizeCleanup = "from datetime import timedelta\n\ntable.optimize(cleanup_older_than=timedelta(days=1))\n";
