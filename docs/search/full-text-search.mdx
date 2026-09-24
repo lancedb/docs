@@ -563,3 +563,42 @@ const phraseResults = await table.query()
 console.log(phraseResults);
 ```
 </CodeGroup>
+
+### List-Element Document Granularity
+
+By default, all of the text in one row counts as a single document for BM25 scoring, even when the field is a list. You can instead treat each element of the deepest list as its own document by creating the index with `document_granularity=DocumentGranularity.LIST_ELEMENT`. See [document granularity](/indexing/fts-index#document-granularity) for index creation details.
+
+`MatchQuery` and `PhraseQuery` accept an optional `document_granularity` parameter in Python that selects which granularity to search:
+
+```python Python icon="python"
+from lancedb.query import DocumentGranularity, MatchQuery, PhraseQuery
+
+# `docs` is a list<struct<content: string>> column indexed with
+# document_granularity=DocumentGranularity.LIST_ELEMENT.
+results = (
+    table.search(
+        MatchQuery(
+            "alpha",
+            "docs.content",
+            document_granularity=DocumentGranularity.LIST_ELEMENT,
+        )
+    )
+    .limit(10)
+    .to_arrow()
+)
+
+# _doc_index lists the indices of the matching list elements in each row.
+print(results["_doc_index"])
+```
+
+Results from a list-element search include a `_doc_index` column. Each value is a list of unsigned integers giving the positions of the matching elements within the row's list. Row-granularity searches do not return this column.
+
+The parameter resolves as follows:
+
+- If omitted, LanceDB infers the granularity from the index on the field.
+- If the field has both a row and a list-element index, you must set `document_granularity` to pick one.
+- If the field has no FTS index, LanceDB searches with row granularity.
+
+<Note>
+In LanceDB Enterprise, list-element queries require server API version 0.6.0 or later. Explicit row-granularity queries work with all server versions.
+</Note>
