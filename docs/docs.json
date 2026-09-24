@@ -511,7 +511,17 @@
       "linkedin": "https://www.linkedin.com/company/lancedb",
       "x": "https://x.com/lancedb",
       "discord": "https://discord.gg/AUEWnJ7Txb"
-    }
+    },
+    "links": [
+      {
+        "items": [
+          {
+            "label": "Cookie settings",
+            "href": "#cookie-settings"
+          }
+        ]
+      }
+    ]
   },
   "integrations": {
     "ga4": {
