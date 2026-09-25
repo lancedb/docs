@@ -273,17 +273,19 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
 
 
 def merge(resolved: Resolved) -> None:
-    """Apply overlay fragments onto reference anchors.
+    """Let each overlay page replace the reference page at the same path.
 
-    A5 fills this in: each overlay contributes content keyed on an anchor in the
-    reference page, rendered after that section inside an Enterprise banner. With
-    no overlay roots configured there is nothing to merge, and `resolve` has
-    already proven the set is empty.
+    Whole-page replacement rather than anchor-keyed splicing. The reference root
+    owns every path and the whole navigation, so an overlay never adds a page or
+    moves one -- it only says more about a page that already exists. That is
+    what keeps the two repositories from having to agree on anything beyond the
+    path itself.
+
+    `validate` has already refused any overlay with no reference page, so every
+    replacement here lands on something.
     """
-    if resolved.overlays:
-        raise AssembleError(
-            "overlay roots are configured but the merge stage is not implemented yet"
-        )
+    for rel, (root, src) in resolved.overlays.items():
+        resolved.files[rel] = (root, src)
 
 
 # --------------------------------------------------------------------------- #
