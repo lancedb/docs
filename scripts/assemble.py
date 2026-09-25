@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import os
 import shutil
 import sys
 import urllib.error
@@ -49,6 +50,14 @@ CONFIG_PATH = REPO_ROOT / "assemble.yaml"
 # and reordering, and the key Enterprise overlays will join on from A5.
 ANCHOR_RE = re.compile(r"^#{1,6}\s+.*\{#([A-Za-z0-9][A-Za-z0-9._-]*)\}\s*$", re.M)
 PAGE_SUFFIXES = (".mdx", ".md")
+# The reference root ships a complete `docs.json` so it can be served on its own.
+# Every other root contributes a `docs.nav.json` fragment instead: tabs merged by
+# name into the base. Neither file is content, so neither is copied to the output.
+NAV_BASE = "docs.json"
+NAV_FRAGMENT = "docs.nav.json"
+# A root's contributor docs sit beside its pages without being pages. Copying one
+# publishes it at a URL that nothing links to and no navigation reaches.
+NOT_CONTENT = frozenset({"README.md", "CONTRIBUTING.md"})
 
 
 class AssembleError(Exception):
@@ -75,6 +84,19 @@ class Resolved:
 
     files: dict[str, tuple[Root, Path]] = field(default_factory=dict)
     overlays: dict[str, tuple[Root, Path]] = field(default_factory=dict)
+    fragments: dict[str, Path] = field(default_factory=dict)
+
+
+ENV_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]*))?\}")
+
+
+def expand(value: str) -> str:
+    """Resolve ${VAR} and ${VAR:-default} in a configured path.
+
+    Root paths point at sibling checkouts, which sit somewhere different in CI
+    than on a laptop. Everything else in the config stays literal.
+    """
+    return ENV_RE.sub(lambda m: os.environ.get(m.group(1), m.group(2) or ""), value)
 
 
 def load_config(path: Path = CONFIG_PATH) -> Config:
@@ -86,14 +108,14 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         role = entry.get("role", "reference")
         if role not in ("reference", "overlay"):
             raise AssembleError(f"root {entry['name']}: unknown role {role!r}")
-        root_path = (REPO_ROOT / entry["path"]).resolve()
+        root_path = (REPO_ROOT / expand(entry["path"])).resolve()
         if not root_path.is_dir():
             raise AssembleError(f"root {entry['name']}: {root_path} is not a directory")
         roots.append(Root(name=entry["name"], path=root_path, role=role))
     if not any(r.role == "reference" for r in roots):
         raise AssembleError("at least one reference root is required")
     return Config(
-        output=(REPO_ROOT / raw["output"]).resolve(),
+        output=(REPO_ROOT / expand(raw["output"])).resolve(),
         roots=roots,
         openapi=raw.get("openapi"),
     )
@@ -112,17 +134,33 @@ def resolve(config: Config) -> Resolved:
     exactly the drift this project exists to remove.
     """
     resolved = Resolved()
+    base_root = next(r for r in config.roots if r.role == "reference")
     for root in config.roots:
         for src in sorted(root.path.rglob("*")):
             if not src.is_file():
                 continue
             rel = src.relative_to(root.path).as_posix()
+            if rel == NAV_FRAGMENT:
+                resolved.fragments[root.name] = src
+                continue
+            if rel in NOT_CONTENT:
+                continue
+            if rel == NAV_BASE and root is not base_root:
+                # Every root ships a complete docs.json so it can be previewed
+                # on its own. Only the first reference root's is the published
+                # navigation; the rest are a local convenience.
+                continue
             target = resolved.overlays if root.role == "overlay" else resolved.files
             if rel in target:
-                other = target[rel][0]
+                other, other_src = target[rel]
+                # Shared assets legitimately appear in more than one root — each
+                # needs them to render alone. Identical bytes are not a conflict;
+                # differing ones are, because then the site depends on ordering.
+                if other_src.read_bytes() == src.read_bytes():
+                    continue
                 raise AssembleError(
-                    f"{rel} is provided by both {other.name} and {root.name}; "
-                    f"{root.role} roots must not overlap"
+                    f"{rel} differs between {other.name} and {root.name}; "
+                    f"{root.role} roots must not disagree on a file"
                 )
             target[rel] = (root, src)
     return resolved
@@ -214,6 +252,18 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
                 f"overlay {rel} has no reference page to attach to"
             )
 
+    # The spec is synced from upstream and shipped so the REST overview can link
+    # to it. Mintlify only generates per-endpoint pages from a navigation group,
+    # and the site deliberately has none, so the invariant worth holding is that
+    # the file itself is present rather than that navigation names it.
+    if config.openapi:
+        dest = Path(config.openapi["dest"])
+        if not dest.is_file():
+            raise AssembleError(
+                f"the OpenAPI spec is missing from {dest}; "
+                "run the sync workflow before assembling"
+            )
+
     return warnings
 
 
@@ -223,22 +273,151 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
 
 
 def merge(resolved: Resolved) -> None:
-    """Apply overlay fragments onto reference anchors.
+    """Let each overlay page replace the reference page at the same path.
 
-    A5 fills this in: each overlay contributes content keyed on an anchor in the
-    reference page, rendered after that section inside an Enterprise banner. With
-    no overlay roots configured there is nothing to merge, and `resolve` has
-    already proven the set is empty.
+    Whole-page replacement rather than anchor-keyed splicing. The reference root
+    owns every path and the whole navigation, so an overlay never adds a page or
+    moves one -- it only says more about a page that already exists. That is
+    what keeps the two repositories from having to agree on anything beyond the
+    path itself.
+
+    `validate` has already refused any overlay with no reference page, so every
+    replacement here lands on something.
     """
-    if resolved.overlays:
-        raise AssembleError(
-            "overlay roots are configured but the merge stage is not implemented yet"
-        )
+    for rel, (root, src) in resolved.overlays.items():
+        resolved.files[rel] = (root, src)
 
 
 # --------------------------------------------------------------------------- #
 # stage 4: nav
 # --------------------------------------------------------------------------- #
+
+
+def merge_nav(base: dict, fragment: dict) -> dict:
+    """Fold a root's navigation fragment into the base navigation.
+
+    Tabs are matched by name: a fragment tab that already exists contributes its
+    groups to it, and a new tab is inserted. Both carry an optional `after`
+    naming the sibling they follow, because appending is not good enough --
+    sidebar order is what a reader navigates by, and dropping Governance below
+    Support or Datasets past Use Cases silently reorders the whole site.
+
+    This is the same shape sophon's Enterprise fragment uses.
+    """
+
+    def descend(node: dict | list, path: list[str]) -> list:
+        """Follow a list of group names to the container that should hold an entry."""
+        items = node["navigation"]["tabs"] if isinstance(node, dict) else node
+        for name in path:
+            match = next(
+                (
+                    i
+                    for i in items
+                    # Page paths sit alongside groups in the same list.
+                    if isinstance(i, dict)
+                    and (i.get("tab") == name or i.get("group") == name)
+                ),
+                None,
+            )
+            if match is None:
+                raise AssembleError(
+                    f"navigation fragment targets {name!r}, which does not exist"
+                )
+            items = match.setdefault("groups" if "groups" in match else "pages", [])
+        return items
+
+    def insert_value(items: list, value: str, after: str | None) -> None:
+        """Insert a bare page path after a named sibling."""
+        if after is None:
+            items.insert(0, value)
+            return
+        for index, item in enumerate(items):
+            name = item.get("tab") or item.get("group") if isinstance(item, dict) else item
+            if name == after:
+                items.insert(index + 1, value)
+                return
+        items.append(value)
+
+    def insert(items: list, entry: dict, key: str) -> None:
+        after = entry.pop("after", None)
+        if after is None:
+            items.append(entry)
+            return
+        for index, item in enumerate(items):
+            # A container list holds tabs, groups and bare page paths, so match
+            # on whichever names the entry rather than on one fixed key.
+            name = (
+                (item.get("tab") or item.get("group"))
+                if isinstance(item, dict)
+                else item
+            )
+            if name == after:
+                items.insert(index + 1, entry)
+                return
+        raise AssembleError(
+            f"navigation fragment wants to follow {after!r}, which does not exist"
+        )
+
+    # Entries that name a nested container, e.g. the Enterprise group inside
+    # "Get started". A5's Enterprise fragment uses the same mechanism.
+    for spec in fragment.get("insert", []):
+        target = descend(base, spec["into"])
+        entry = spec["entry"]
+        if isinstance(entry, str):
+            insert_value(target, entry, spec.get("after"))
+        else:
+            insert(target, dict(entry, after=spec.get("after")), "group")
+
+    # Keys lifted out of the base because the file they name lives here.
+    for spec in fragment.get("set", []):
+        container = descend(base, spec["into"][:-1] or [])
+        name = spec["into"][-1]
+        target = next(
+            (
+                i
+                for i in container
+                if isinstance(i, dict)
+                and (i.get("tab") == name or i.get("group") == name)
+            ),
+            None,
+        )
+        if target is None:
+            raise AssembleError(f"navigation fragment targets {name!r}, which does not exist")
+        target[spec["key"]] = spec["value"]
+
+    tabs = base.setdefault("navigation", {}).setdefault("tabs", [])
+    by_name = {t.get("tab"): t for t in tabs}
+    for incoming in fragment.get("tabs", []):
+        existing = by_name.get(incoming.get("tab"))
+        if existing is None:
+            insert(tabs, incoming, "tab")
+            by_name[incoming.get("tab")] = incoming
+            continue
+        for key, value in incoming.items():
+            if key in ("tab", "after"):
+                continue
+            if key == "groups":
+                for group in value:
+                    insert(existing.setdefault("groups", []), group, "group")
+            else:
+                # `openapi` and friends: the root that owns the generated pages
+                # owns how they are generated.
+                existing[key] = value
+    # Every root redirects its own moved pages, so these accumulate rather than
+    # replace. A source claimed twice is a conflict, not a last-writer-wins.
+    for redirect in fragment.get("redirects", []):
+        existing = next(
+            (r for r in base.setdefault("redirects", []) if r["source"] == redirect["source"]),
+            None,
+        )
+        if existing and existing != redirect:
+            raise AssembleError(
+                f"two roots redirect {redirect['source']!r} to different destinations: "
+                f"{existing['destination']!r} and {redirect['destination']!r}"
+            )
+        if not existing:
+            base["redirects"].append(redirect)
+    return base
 
 
 def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
@@ -256,11 +435,20 @@ def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
     existing URLs survive, and under its version path so it stays addressable.
     Both genuinely change the navigation, and both will serialize.
     """
-    entry = resolved.files.get("docs.json")
+    entry = resolved.files.get(NAV_BASE)
     if entry is None:
-        raise AssembleError("no docs.json found in any reference root")
+        raise AssembleError(f"no {NAV_BASE} found in any reference root")
     raw = entry[1].read_bytes()
-    return json.loads(raw.decode("utf-8")), raw
+    base = json.loads(raw.decode("utf-8"))
+
+    fragments = sorted(resolved.fragments.items())
+    if not fragments:
+        # Nothing to merge: emit the source bytes so the tree stays literally
+        # byte-identical rather than merely equivalent.
+        return base, raw
+    for _name, path in fragments:
+        base = merge_nav(base, json.loads(path.read_text(encoding="utf-8")))
+    return base, None
 
 
 # --------------------------------------------------------------------------- #
@@ -306,7 +494,7 @@ def emit(
 
     written = 0
     for rel, (_root, src) in sorted(resolved.files.items()):
-        if rel == "docs.json":
+        if rel == NAV_BASE:
             continue
         dest = (output / rel).resolve()
         # A root containing `../` in a name would otherwise write outside the
@@ -318,11 +506,14 @@ def emit(
         written += 1
 
     if nav_raw is not None:
-        (output / "docs.json").write_bytes(nav_raw)
+        (output / NAV_BASE).write_bytes(nav_raw)
     else:
-        (output / "docs.json").write_text(
-            json.dumps(docs_json, indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
+        # `ensure_ascii=True` matches how the navigation was written before the
+        # assembler existed. It is not cosmetic: the banner text carries an
+        # em-dash, and escaping it differently changes the bytes Mintlify hashes
+        # its CSS and JS bundles from, which renames those assets on every page.
+        (output / NAV_BASE).write_text(
+            json.dumps(docs_json, indent=2) + "\n", encoding="utf-8"
         )
     return written + 1
 
