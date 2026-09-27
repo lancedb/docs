@@ -219,7 +219,7 @@ existing table row and `source.` for the incoming row, for example
 <Tip>
 **Use scalar indexes to speed up merge insert**
 
-The merge insert command performs a join between the input data and the target table `on` the key you provide. This requires scanning that entire column, which can be expensive for large tables. To speed up this operation, create a scalar index on the join column, which will allow LanceDB to find matches without scanning the whole table.
+The merge insert command matches the input data against the target table `on` the key you provide. Without a usable scalar index on every join key, this requires a target scan, which can be expensive for large tables. Scalar indexes can avoid scanning covered fragments; fragments not covered by every join-key index must still be scanned. The total cost also depends on how matched rows are written; see [How `merge_insert` executes](#how-merge-insert-executes).
 
 Read more about scalar indices in the [Scalar Index](/indexing/scalar-index/) guide.
 </Tip>
@@ -383,6 +383,27 @@ Expected table contents:
 | 3 | Charlie | null |
 
 Note that in the example above, when `merge_insert` creates a new row, any missing columns are written as `null`. If a missing column is non-nullable in your schema, the insert will fail.
+
+### How merge insert executes
+
+On the standard merge path, `merge_insert` first matches source rows to target rows by the `on` key. With `use_index=True` (the default), it can probe a scalar index when every join key has a usable index. Otherwise, it joins against a scan of the target table. The TypeScript option is named `useIndex`. A merge that deletes target rows not present in the source also requires a target scan. Tables using a MemWAL LSM write spec follow a separate write path.
+
+The indexed path also scans fragments not covered by every join-key index and combines those rows with the index matches. Appended data and fragments whose join-key index coverage was removed by an earlier column patch both contribute to this scan. Include this scan cost when planning repeated merges, even when index use is enabled.
+
+For a partial-column update, the way matched rows are found can also change how they are written:
+
+| Match path | Matched-row write | Approximate cost |
+| --- | --- | --- |
+| Indexed probe | Patch the source columns in each touched fragment. A replacement column file covers **every row** in that fragment, even if only one row matched. | Rows in touched fragments × bytes in the source columns, **plus** the cost of probing indexes and scanning uncovered fragments. |
+| Full-table join | Delete matched rows and append complete updated rows, including the target columns omitted by the source. | Matched rows × bytes per complete row, **plus** the cost of scanning and joining the target. |
+
+These are cost shapes, not runtime estimates. For example, if one row matches in each of 100 fragments of 100,000 rows, column patching writes the supplied columns for roughly 10 million row positions, not 100. Patching tends to write fewer bytes when the fraction of rows matched within a fragment exceeds the fraction of each row's bytes occupied by the supplied columns. Column widths matter more than the number of columns.
+
+Patching also removes scalar-index coverage for patched columns in the touched fragments; indexes on untouched columns retain their coverage. Row rewriting leaves existing index coverage on old fragments but appends updated rows in new, initially unindexed fragments. For a scattered update, consider how many fragments each call touches. Grouping keys by destination fragment, when possible, can avoid patching the same fragment in multiple calls; simply reducing the input row count per call may not reduce the work.
+
+<Warning>
+Do not use `use_index(False)` as a general way to force cheaper row writes on a large table. The current full-table join can materialize the target on the hash-join build side and exhaust server memory. This limitation is tracked in [Lance #9505](https://github.com/lance-format/lance/issues/9505). Explicit write-mode control in the LanceDB SDKs is tracked in [LanceDB #4255](https://github.com/lancedb/lancedb/issues/4255).
+</Warning>
 
 ## Delete rows
 
