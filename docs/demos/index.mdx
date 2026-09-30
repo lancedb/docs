@@ -11,6 +11,8 @@ App | Description
 [Semantic.Art](#semantic-art) | A multimodal art discovery platform using feelings, phrases, and images.
 [Wikipedia 41M Hybrid Search](#wikipedia-41m-hybrid-search) | An interactive hybrid search demo combining full-text search and vector search.
 [Video Search](#video-search) | A video search application that allows searching through a library of videos using natural language queries.
+[Large Scale Vector Search (1.5B)](#large-scale-vector-search-1-5b) | A semantic search demo over 1.5B+ FineWeb EDU embeddings.
+[Robot Data Curation (DROID)](#robot-data-curation-droid) | A robotics data curation workflow for searching, scoring, and selecting training examples.
 
 
 ## Semantic.art
@@ -74,5 +76,38 @@ Read in detail about how the Wikipedia 41M hybrid search demo is built in this b
 >
 Search through a library of videos using natural language queries. This demo showcases how to use LanceDB
 to perform semantic search on video content.
+
+</Card>
+
+## Large Scale Vector Search (1.5B)
+
+<Badge color="purple">vector-search</Badge>
+<Badge color="blue">education</Badge>
+<Badge color="gray">bge-embeddings</Badge>
+
+<Card
+  title="Large Scale Vector Search (1.5B)"
+  img="/static/assets/images/demos/fineweb_edu_hero.svg"
+  href="https://lancedb-demos.vercel.app/demo/fineweb-edu-search"
+>
+Semantic search over curated FineWeb EDU pages, represented as 1.5B+ BGE embeddings. Inspect the
+query plan to see how LanceDB serves vector search at billion scale.
+
+</Card>
+
+## Robot Data Curation (DROID)
+
+<Badge color="green">multimodal</Badge>
+<Badge color="yellow">robotics</Badge>
+<Badge color="purple">vector-search</Badge>
+<Badge color="gray">fts</Badge>
+
+<Card
+  title="Robot Data Curation (DROID)"
+  img="/static/assets/images/demos/droid_hero.jpg"
+  href="https://lancedb-demos.vercel.app/demo/robot-data-curation"
+>
+Search robot video frames from the DROID dataset, compute features, and select training examples in LanceDB.
+Add captions and quality scores as columns, then write model errors back to guide the next training run.
 
 </Card>
