@@ -165,7 +165,9 @@ jobs:
 
   publish:
     name: Publish to the assembled branch
-    needs: assemble
+    # Waits for the assembler's own tests as well: an assembled site is only
+    # published if the guards that built it still hold.
+    needs: [test, assemble]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
