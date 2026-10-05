@@ -117,7 +117,10 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
             raise AssembleError(
                 f"root {entry['name']}: `private` must be true or false"
             )
-        root_path = (REPO_ROOT / expand(entry["path"])).resolve()
+        configured = REPO_ROOT / expand(entry["path"])
+        if private:
+            check_private_path(entry["name"], configured)
+        root_path = configured.resolve()
         if not root_path.is_dir():
             raise AssembleError(f"root {entry['name']}: {root_path} is not a directory")
         roots.append(
@@ -179,6 +182,28 @@ def resolve(config: Config) -> Resolved:
                 )
             target[rel] = (root, src)
     return resolved
+
+
+def check_private_path(name: str, configured: Path) -> None:
+    """Refuse a private root that is reached through a symlink.
+
+    `check_private` refuses symlinks inside the root, but the root's own path is
+    resolved before that walk, so a symlink at `docs/web`, or at `docs` above
+    it, would publish whatever it points at. This checks the configured path
+    before anything resolves it: every directory from the root up to the
+    checkout that holds it -- the nearest real directory containing `.git` --
+    must be real. Above the checkout a symlink only moves the checkout, and is
+    allowed. Without a checkout, every directory on the path is checked.
+    """
+    path = Path(os.path.abspath(configured))
+    for directory in (path, *path.parents):
+        if directory.is_symlink():
+            raise AssembleError(
+                f"root {name}: {directory} is a symlink; a private root must be "
+                "reached through real directories"
+            )
+        if (directory / ".git").exists():
+            return
 
 
 def check_private(root: Root, src: Path, rel: str) -> None:

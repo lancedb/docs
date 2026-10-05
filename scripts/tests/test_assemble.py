@@ -1,0 +1,231 @@
+"""Tests for the assembler's overlay, navigation and private-root guards.
+
+Each test builds a small site in a temporary directory: a reference root that
+owns `enterprise/security` and the navigation, and a private overlay root at
+`sophon/docs/web` beside an internal folder that must never be published.
+
+Run with `make test-assemble`.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+import assemble  # noqa: E402
+
+PUBLIC = "Enterprise security page\n"
+INTERNAL = "Internal engineering notes\n"
+NAVIGATION = {
+    "navigation": {
+        "tabs": [
+            {
+                "tab": "Documentation",
+                "groups": [{"group": "Security", "pages": ["enterprise/security"]}],
+            }
+        ]
+    }
+}
+
+
+@pytest.fixture
+def base(tmp_path: Path) -> Path:
+    """The test's directory with symlinks resolved.
+
+    With no checkout to anchor on, the private-root guard checks every directory
+    on the path, so a symlinked temporary directory (as on macOS) would trip it.
+    """
+    return tmp_path.resolve()
+
+
+def write(path: Path, text: str) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    return path
+
+
+def site(base: Path, *, checkout: bool = True) -> dict[str, Path]:
+    """A reference root, a Sophon-like checkout, and an internal folder."""
+    reference = base / "lancedb/docs/web"
+    write(reference / "docs.json", json.dumps(NAVIGATION))
+    write(reference / "enterprise/security.mdx", "Open-source security page\n")
+    write(reference / "static/styles/style.css", "body {}\n")
+
+    sophon = base / "sophon"
+    if checkout:
+        (sophon / ".git").mkdir(parents=True)
+    write(sophon / "docs/ci.md", INTERNAL)
+    internal = base / "internal"
+    write(internal / "enterprise/security.mdx", INTERNAL)
+    write(internal / "web/enterprise/security.mdx", INTERNAL)
+    return {
+        "reference": reference,
+        "sophon": sophon,
+        "public": sophon / "docs/web",
+        "internal": internal,
+    }
+
+
+def public_root(paths: dict[str, Path]) -> Path:
+    """Fill the overlay root with one valid Enterprise page."""
+    write(paths["public"] / "enterprise/security.mdx", PUBLIC)
+    return paths["public"]
+
+
+def config(base: Path, reference: Path, overlay: Path) -> Path:
+    path = base / "assemble.yaml"
+    path.write_text(
+        f"""output: {base / "output"}
+roots:
+  - name: lancedb
+    path: {reference}
+    role: reference
+  - name: enterprise
+    path: {overlay}
+    role: overlay
+    private: true
+"""
+    )
+    return path
+
+
+def build(config_path: Path) -> Path:
+    """Run every stage `main` runs and return the output directory."""
+    loaded = assemble.load_config(config_path)
+    resolved = assemble.resolve(loaded)
+    docs_json, nav_raw = assemble.assemble_nav(resolved)
+    assemble.validate(loaded, resolved, docs_json)
+    assemble.merge(resolved)
+    assemble.emit(loaded, resolved, docs_json, nav_raw)
+    return loaded.output
+
+
+@pytest.mark.parametrize("checkout", [True, False])
+def test_valid_private_overlay_replaces_the_page(base, checkout):
+    paths = site(base, checkout=checkout)
+    output = build(config(base, paths["reference"], public_root(paths)))
+
+    assert (output / "enterprise/security.mdx").read_text() == PUBLIC
+    assert json.loads((output / "docs.json").read_text()) == NAVIGATION
+    assert not (output / "ci.md").exists()
+    assert sorted(p.relative_to(output).as_posix() for p in output.rglob("*.*")) == [
+        "docs.json",
+        "enterprise/security.mdx",
+        "static/styles/style.css",
+    ]
+
+
+@pytest.mark.parametrize("checkout", [True, False])
+def test_symlinked_private_root_is_refused(base, checkout):
+    paths = site(base, checkout=checkout)
+    paths["public"].parent.mkdir(parents=True, exist_ok=True)
+    paths["public"].symlink_to(paths["internal"], target_is_directory=True)
+
+    with pytest.raises(assemble.AssembleError, match=r"docs/web is a symlink"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+@pytest.mark.parametrize("checkout", [True, False])
+def test_symlinked_parent_of_private_root_is_refused(base, checkout):
+    paths = site(base, checkout=checkout)
+    (paths["sophon"] / "docs/ci.md").unlink()
+    (paths["sophon"] / "docs").rmdir()
+    (paths["sophon"] / "docs").symlink_to(paths["internal"], target_is_directory=True)
+
+    with pytest.raises(assemble.AssembleError, match=r"sophon/docs is a symlink"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+def test_symlinked_checkout_is_refused(base):
+    paths = site(base)
+    public_root(paths)
+    elsewhere = base / "elsewhere"
+    paths["sophon"].rename(elsewhere)
+    paths["sophon"].symlink_to(elsewhere, target_is_directory=True)
+
+    with pytest.raises(assemble.AssembleError, match=r"sophon is a symlink"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+def test_symlink_above_the_checkout_is_allowed(base):
+    real = base / "real"
+    paths = site(real)
+    public_root(paths)
+    (base / "linked").symlink_to(real, target_is_directory=True)
+    overlay = base / "linked/sophon/docs/web"
+
+    output = build(config(base, paths["reference"], overlay))
+
+    assert (output / "enterprise/security.mdx").read_text() == PUBLIC
+
+
+def test_symlink_inside_private_root_is_refused(base):
+    paths = site(base)
+    page = paths["public"] / "enterprise/security.mdx"
+    page.parent.mkdir(parents=True)
+    page.symlink_to(paths["internal"] / "enterprise/security.mdx")
+
+    with pytest.raises(assemble.AssembleError, match=r"security.mdx is a symlink"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+def test_hidden_path_in_private_root_is_refused(base):
+    paths = site(base)
+    write(public_root(paths) / ".vscode/settings.json", "{}\n")
+
+    with pytest.raises(assemble.AssembleError, match=r"\.vscode is hidden"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+def test_overlay_navigation_may_only_carry_redirects(base):
+    paths = site(base)
+    fragment = {
+        "insert": [
+            {
+                "into": ["Documentation"],
+                "entry": {"group": "Enterprise", "pages": ["enterprise/security"]},
+            }
+        ]
+    }
+    write(public_root(paths) / "docs.nav.json", json.dumps(fragment))
+
+    with pytest.raises(assemble.AssembleError, match=r"may only carry redirects"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+def test_overlay_redirects_are_merged(base):
+    paths = site(base)
+    redirect = {"source": "/old", "destination": "/enterprise/security"}
+    write(public_root(paths) / "docs.nav.json", json.dumps({"redirects": [redirect]}))
+
+    output = build(config(base, paths["reference"], paths["public"]))
+
+    assert json.loads((output / "docs.json").read_text())["redirects"] == [redirect]
+
+
+def test_overlay_asset_must_match_the_reference(base):
+    paths = site(base)
+    write(public_root(paths) / "static/styles/style.css", "body { color: red }\n")
+
+    with pytest.raises(assemble.AssembleError, match=r"style.css differs"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+def test_identical_overlay_asset_is_accepted(base):
+    paths = site(base)
+    write(public_root(paths) / "static/styles/style.css", "body {}\n")
+
+    output = build(config(base, paths["reference"], paths["public"]))
+
+    assert (output / "static/styles/style.css").read_text() == "body {}\n"
+
+
+def test_overlay_without_a_reference_page_is_refused(base):
+    paths = site(base)
+    write(public_root(paths) / "enterprise/new.mdx", PUBLIC)
+
+    with pytest.raises(assemble.AssembleError, match=r"no reference page"):
+        build(config(base, paths["reference"], paths["public"]))

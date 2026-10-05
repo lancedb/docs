@@ -41,6 +41,20 @@ env:
   SOPHON_DOCS_ROOT: sophon/docs/web
 
 jobs:
+  # Needs no other repository and no secret, so it runs on every pull request,
+  # forks included.
+  test:
+    name: Test the assembler
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Test the overlay, navigation and private-root guards
+        run: make test-assemble
+
   assemble:
     runs-on: ubuntu-latest
     outputs:

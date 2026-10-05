@@ -7,7 +7,7 @@ ASSEMBLE_SCRIPT := scripts/assemble.py
 ASSEMBLE_RUN := uv run --no-project --with pyyaml
 
 # uv run automatically handles virtualenv, so no activation needed
-.PHONY: py ts rs snippets hf-sync assemble check-spec sync-spec
+.PHONY: py ts rs snippets hf-sync assemble test-assemble check-spec sync-spec
 
 # Generate Python MDX snippets
 py:
@@ -35,6 +35,10 @@ hf-sync:
 # later phases add the lancedb and sophon roots without changing the script.
 assemble:
 	@$(ASSEMBLE_RUN) $(ASSEMBLE_SCRIPT)
+
+# Test the assembler's overlay, navigation and private-root guards.
+test-assemble:
+	@$(ASSEMBLE_RUN) --with pytest pytest scripts/tests -q
 
 # Fail if the tracked OpenAPI spec has drifted from the release pinned in
 # assemble.yaml. Run in CI so the pin cannot rot unnoticed.
