@@ -20,6 +20,13 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      lancedb_ref:
+        description: lancedb/lancedb ref to read docs/web from
+        default: main
+      sophon_ref:
+        description: lancedb/sophon ref to read docs/web from
+        default: main
 
 permissions:
   contents: read
@@ -29,21 +36,47 @@ concurrency:
   group: assemble-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  LANCEDB_DOCS_ROOT: lancedb/docs/web
+  SOPHON_DOCS_ROOT: sophon/docs/web
+
 jobs:
   assemble:
     runs-on: ubuntu-latest
+    outputs:
+      sources: ${{ steps.assemble.outputs.sources }}
     steps:
       - uses: actions/checkout@v4
 
       # The open-source pages live in lancedb/lancedb and are assembled from
       # there. Pinned to main: this repository publishes what that repository
-      # has merged, not what is in flight.
+      # has merged, not what is in flight. A manual run can name another ref to
+      # build a candidate.
       - name: Check out the open-source documentation
         uses: actions/checkout@v4
         with:
           repository: lancedb/lancedb
-          ref: main
+          ref: ${{ inputs.lancedb_ref || 'main' }}
           path: lancedb
+          sparse-checkout: docs/web
+          persist-credentials: false
+
+      # The Enterprise pages live in the private lancedb/sophon repository.
+      # Only its public docs/web folder is checked out: the rest of
+      # sophon/docs is internal. SOPHON_DOCS_TOKEN must be able to read
+      # lancedb/sophon contents and nothing else -- a fine-grained token or a
+      # GitHub App installation token with Contents: read on that repository.
+      # Pull requests from forks do not receive it, so this step fails there.
+      - name: Check out the Enterprise documentation
+        uses: actions/checkout@v4
+        with:
+          repository: lancedb/sophon
+          ref: ${{ inputs.sophon_ref || 'main' }}
+          path: sophon
+          token: ${{ secrets.SOPHON_DOCS_TOKEN }}
+          sparse-checkout: docs/web
+          submodules: false
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -61,17 +94,25 @@ jobs:
       # have drifted the site would document something that was never released.
       - name: Check the OpenAPI spec matches its release
         run: make check-spec
-        env:
-          LANCEDB_DOCS_ROOT: lancedb/docs/web
 
+      # The assembler prints the commit it read each root from. Recording the
+      # three together is what makes a published build reproducible.
       - name: Assemble
-        run: make assemble
-        env:
-          LANCEDB_DOCS_ROOT: lancedb/docs/web
+        id: assemble
+        run: |
+          set -euo pipefail
+          make assemble | tee "$RUNNER_TEMP/assemble.log"
+          sources=$(sed -n 's/^sources: //p' "$RUNNER_TEMP/assemble.log")
+          echo "sources=$sources" >> "$GITHUB_OUTPUT"
+          echo "Assembled from: \`$sources\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Check links in the assembled tree
+      - name: Validate the assembled tree
         working-directory: build/site
-        run: mint broken-links
+        run: mint validate
+
+      - name: Check links, anchors and redirects in the assembled tree
+        working-directory: build/site
+        run: mint broken-links --check-anchors --check-redirects
 
       # The assembler must not change what readers see. Export the assembled
       # tree and the source tree, then compare. `compare_exports.py` normalizes
@@ -87,7 +128,6 @@ jobs:
       - name: Assemble again
         run: make assemble
         env:
-          LANCEDB_DOCS_ROOT: lancedb/docs/web
           ASSEMBLE_OUTPUT: build/site-again
 
       - name: Export the second assembly
@@ -135,6 +175,7 @@ jobs:
       - name: Push
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCES: ${{ needs.assemble.outputs.sources }}
         run: |
           set -euo pipefail
           cd site
@@ -142,7 +183,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -q -m "assemble ${GITHUB_SHA:0:7}"
+          git commit -q -m "assemble ${GITHUB_SHA:0:7}" -m "sources: ${SOURCES}"
           git push -q --force \
             "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
             HEAD:refs/heads/assembled

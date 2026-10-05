@@ -23,6 +23,22 @@ Check broken links (applies to internal links within this docs site only):
 mint broken-links
 ```
 
+## Build the combined site
+
+`docs/` is only part of the published site. The rest comes from the open-source
+pages in `lancedb/lancedb` and the Enterprise pages in `lancedb/sophon`, both
+under `docs/web`. `assemble.yaml` lists the three roots. With the three
+repositories checked out side by side, build and preview the site with:
+
+```bash
+make assemble
+cd build/site && mint dev
+```
+
+To build from other checkouts or worktrees, point `LANCEDB_DOCS_ROOT` and
+`SOPHON_DOCS_ROOT` at their `docs/web` directories. The assembler prints the
+commit it read each root from, so every build names its inputs.
+
 ## Generate snippets
 
 To generate snippets, use `uv` to sync your local Python environment so that you can run the Python script described below.

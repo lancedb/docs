@@ -1,9 +1,13 @@
 name: Docs Check
 
+# The site is assembled from lancedb/lancedb, lancedb/sophon and this
+# repository, so links are checked on the assembled tree. `docs/` alone is no
+# longer a site: checking it reported pages that live in the other roots as
+# missing. The Assemble workflow runs the same checks before it publishes; this
+# job keeps the required status check about the site that would be published.
+#
 # The REST API spec is tracked in-repo at the release pinned in `assemble.yaml`
-# and enforced by `make check-spec` in the Assemble workflow. This job used to
-# overwrite it from lance-namespace@main before checking links, which meant it
-# validated a spec the site would never publish.
+# and checked with `make check-spec`.
 
 on:
   pull_request:
@@ -14,6 +18,10 @@ on:
 permissions:
   contents: read
 
+env:
+  LANCEDB_DOCS_ROOT: lancedb/docs/web
+  SOPHON_DOCS_ROOT: sophon/docs/web
+
 jobs:
   broken-links-and-openapi:
     runs-on: ubuntu-latest
@@ -21,20 +29,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check out the open-source documentation
+        uses: actions/checkout@v4
+        with:
+          repository: lancedb/lancedb
+          ref: main
+          path: lancedb
+          sparse-checkout: docs/web
+          persist-credentials: false
+
+      # See the Assemble workflow for what SOPHON_DOCS_TOKEN must be allowed
+      # to read.
+      - name: Check out the Enterprise documentation
+        uses: actions/checkout@v4
+        with:
+          repository: lancedb/sophon
+          ref: main
+          path: sophon
+          token: ${{ secrets.SOPHON_DOCS_TOKEN }}
+          sparse-checkout: docs/web
+          submodules: false
+          persist-credentials: false
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
 
       - name: Install Mintlify CLI
-        run: npm install -g mintlify@latest
+        run: npm install -g mint@4.2.888
 
-      - name: Check broken links
-        run: |
-          set -euo pipefail
-          if command -v mint >/dev/null 2>&1; then
-            (cd docs && mint broken-links)
-          elif command -v mintlify >/dev/null 2>&1; then
-            (cd docs && mintlify broken-links)
-          else
-            (cd docs && npx -y mintlify@latest broken-links)
-          fi
+      - name: Check the OpenAPI spec matches its release
+        run: make check-spec
+
+      - name: Assemble
+        run: make assemble
+
+      - name: Validate the assembled tree
+        working-directory: build/site
+        run: mint validate
+
+      - name: Check links, anchors and redirects in the assembled tree
+        working-directory: build/site
+        run: mint broken-links --check-anchors --check-redirects
