@@ -12,7 +12,7 @@ Six stages:
 
     resolve   walk each root in order and map output path -> source file
     validate  anchors unique per page, nav references resolve, no path escapes
-    merge     apply overlay fragments onto reference anchors      (no overlays yet)
+    merge     let each overlay page replace the reference page at its path
     nav       assemble docs.json                                  (passthrough)
     emit      write the output tree
     check     `mint broken-links`, run separately in CI
@@ -34,11 +34,12 @@ import json
 import re
 import os
 import shutil
+import subprocess
 import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Iterable
 
 import yaml
@@ -69,6 +70,9 @@ class Root:
     name: str
     path: Path
     role: str  # "reference" owns structure; "overlay" contributes to it
+    # Read from a private repository: only regular, visible files may be
+    # published from it.
+    private: bool = False
 
 
 @dataclass
@@ -108,10 +112,17 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         role = entry.get("role", "reference")
         if role not in ("reference", "overlay"):
             raise AssembleError(f"root {entry['name']}: unknown role {role!r}")
+        private = entry.get("private", False)
+        if not isinstance(private, bool):
+            raise AssembleError(
+                f"root {entry['name']}: `private` must be true or false"
+            )
         root_path = (REPO_ROOT / expand(entry["path"])).resolve()
         if not root_path.is_dir():
             raise AssembleError(f"root {entry['name']}: {root_path} is not a directory")
-        roots.append(Root(name=entry["name"], path=root_path, role=role))
+        roots.append(
+            Root(name=entry["name"], path=root_path, role=role, private=private)
+        )
     if not any(r.role == "reference" for r in roots):
         raise AssembleError("at least one reference root is required")
     return Config(
@@ -137,10 +148,14 @@ def resolve(config: Config) -> Resolved:
     base_root = next(r for r in config.roots if r.role == "reference")
     for root in config.roots:
         for src in sorted(root.path.rglob("*")):
+            rel = src.relative_to(root.path).as_posix()
+            if root.private:
+                check_private(root, src, rel)
             if not src.is_file():
                 continue
-            rel = src.relative_to(root.path).as_posix()
             if rel == NAV_FRAGMENT:
+                if root.role == "overlay":
+                    check_overlay_fragment(root, src)
                 resolved.fragments[root.name] = src
                 continue
             if rel in NOT_CONTENT:
@@ -164,6 +179,37 @@ def resolve(config: Config) -> Resolved:
                 )
             target[rel] = (root, src)
     return resolved
+
+
+def check_private(root: Root, src: Path, rel: str) -> None:
+    """Refuse anything in a private root that could publish more than it shows.
+
+    The root is one public folder inside a private repository. A symlink can
+    point at anything beside it, and a hidden path is editor or tool state
+    rather than a page, so neither may reach the published site.
+    """
+    if src.is_symlink():
+        raise AssembleError(
+            f"{root.name}: {rel} is a symlink; a private root may only hold regular files"
+        )
+    if any(part.startswith(".") for part in PurePosixPath(rel).parts):
+        raise AssembleError(
+            f"{root.name}: {rel} is hidden; a private root may not publish hidden files"
+        )
+
+
+def check_overlay_fragment(root: Root, src: Path) -> None:
+    """An overlay's navigation fragment may only carry redirects.
+
+    The reference root owns every path and the whole navigation, so an overlay
+    that inserted its pages would list each of them a second time.
+    """
+    extra = sorted(set(json.loads(src.read_text(encoding="utf-8"))) - {"redirects"})
+    if extra:
+        raise AssembleError(
+            f"{root.name}: an overlay's {NAV_FRAGMENT} may only carry redirects, "
+            f"not {', '.join(extra)}; the reference root owns the navigation"
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -250,6 +296,19 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
         if rel not in resolved.files:
             raise AssembleError(
                 f"overlay {rel} has no reference page to attach to"
+            )
+
+    # Overlays replace pages. Anything else an overlay root ships, such as the
+    # logo or stylesheet it needs to be previewed alone, must match the
+    # reference copy, or a stale preview asset would replace the site's.
+    for rel, (root, src) in resolved.overlays.items():
+        if rel.endswith(PAGE_SUFFIXES):
+            continue
+        reference, reference_src = resolved.files[rel]
+        if reference_src.read_bytes() != src.read_bytes():
+            raise AssembleError(
+                f"{rel} differs between {reference.name} and {root.name}; an "
+                "overlay replaces pages, and its other files must match the reference"
             )
 
     # The spec is synced from upstream and shipped so the REST overview can link
@@ -518,6 +577,30 @@ def emit(
     return written + 1
 
 
+def revision(path: Path) -> str:
+    """The commit a root was read from, so every build names its inputs.
+
+    Roots are read from whatever is checked out beside this repository, so the
+    output alone cannot say which commits it came from.
+    """
+    try:
+        head = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        changed = subprocess.run(
+            ["git", "-C", str(path), "status", "--porcelain", "--", "."],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return "unversioned"
+    return f"{head}+uncommitted" if changed else head
+
+
 # --------------------------------------------------------------------------- #
 # OpenAPI spec, tracked at a release
 # --------------------------------------------------------------------------- #
@@ -628,6 +711,7 @@ def main() -> int:
     except ValueError:
         where = config.output
     print(f"assembled {count} files from {roots} into {where}")
+    print("sources: " + " ".join(f"{r.name}={revision(r.path)}" for r in config.roots))
     return 0
 
 
