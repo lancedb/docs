@@ -31,8 +31,8 @@ hf-sync:
 	@uv run $(HF_SYNC_SCRIPT)
 
 # Assemble the published tree from the roots declared in assemble.yaml into
-# build/site. Today that is one root and the output matches docs/ byte for byte;
-# later phases add the lancedb and sophon roots without changing the script.
+# build/site. Set LANCEDB_DOCS_ROOT and SOPHON_DOCS_ROOT when the lancedb and
+# sophon checkouts are not beside this one.
 assemble:
 	@$(ASSEMBLE_RUN) $(ASSEMBLE_SCRIPT)
 

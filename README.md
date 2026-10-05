@@ -4,31 +4,19 @@ Home of the [LanceDB](https://lancedb.com/) documentation. Built using [Mintlify
 
 ## Development
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify) to preview the documentation changes locally. To install, use the following command
+The published site is assembled from three roots, listed in `assemble.yaml`:
+the open-source pages in `lancedb/lancedb` and the Enterprise pages in
+`lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
+
+Install the [Mintlify CLI](https://www.npmjs.com/package/mint) at the version CI
+uses:
 
 ```bash
-npm i -g mintlify
+npm i -g mint@4.2.888
 ```
 
-Run the following commands at the root of the documentation (`/docs/` in this repo, where `docs.json` is located).
-
-```bash
-cd docs
-mint dev
-```
-
-Check broken links (applies to internal links within this docs site only):
-
-```bash
-mint broken-links
-```
-
-## Build the combined site
-
-`docs/` is only part of the published site. The rest comes from the open-source
-pages in `lancedb/lancedb` and the Enterprise pages in `lancedb/sophon`, both
-under `docs/web`. `assemble.yaml` lists the three roots. With the three
-repositories checked out side by side, build and preview the site with:
+With the three repositories checked out side by side, build and preview the
+site:
 
 ```bash
 make assemble
@@ -38,6 +26,17 @@ cd build/site && mint dev
 To build from other checkouts or worktrees, point `LANCEDB_DOCS_ROOT` and
 `SOPHON_DOCS_ROOT` at their `docs/web` directories. The assembler prints the
 commit it read each root from, so every build names its inputs.
+
+Check the assembled site the way CI does, and run the assembler's own tests:
+
+```bash
+(cd build/site && mint validate && mint broken-links --check-anchors --check-redirects)
+make test-assemble
+```
+
+`cd docs && mint dev` previews only this repository's pages. Links into the
+open-source and Enterprise pages do not resolve there, so check links on the
+assembled site.
 
 ## Generate snippets
 

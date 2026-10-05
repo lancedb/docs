@@ -2,20 +2,19 @@
 Assemble the published documentation tree from one or more content roots.
 
 The site is not published straight from this repository. It is assembled here
-and pushed to the `assembled` branch, which Mintlify serves. Today there is one
-root and the output is byte-identical to `docs/`; the value is the seam. Later
-phases add roots — the open-source pages from `lancedb/lancedb`, then the
-Enterprise overlays from `sophon` — by editing `assemble.yaml` rather than this
-file.
+from the roots in `assemble.yaml` -- the open-source pages from
+`lancedb/lancedb`, the Enterprise pages from `sophon` as whole-page overlays, and
+this repository's `docs/` -- and pushed to the `assembled` branch, which
+Mintlify serves.
 
 Six stages:
 
     resolve   walk each root in order and map output path -> source file
     validate  anchors unique per page, nav references resolve, no path escapes
     merge     let each overlay page replace the reference page at its path
-    nav       assemble docs.json                                  (passthrough)
+    nav       fold each root's navigation fragment into the base docs.json
     emit      write the output tree
-    check     `mint broken-links`, run separately in CI
+    check     `mint validate` and `mint broken-links`, run separately in CI
 
 Hard-fails on any inconsistency. A partially assembled site that renders is far
 worse than a build that stops and says why.

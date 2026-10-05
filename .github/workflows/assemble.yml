@@ -1,16 +1,14 @@
 name: Assemble
 
-# The published site is assembled from the roots declared in `assemble.yaml`
-# rather than served straight from this repository. This workflow proves the
-# assembler changes nothing observable, and on `main` publishes the result to the
-# `assembled` branch that Mintlify serves.
+# The published site is assembled from the roots declared in `assemble.yaml`:
+# the docs/web folders of lancedb/lancedb and lancedb/sophon, and this
+# repository's docs/. This workflow checks the assembled site and, on `main`,
+# publishes it to the `assembled` branch that Mintlify serves.
 #
-# The invariant checked on every pull request is:
-#
-#     mint export (assembled tree)  ==  mint export (docs/ directly)
-#
-# Both sides are exported from the same commit in the same run, so the check
-# cannot go stale the way a stored baseline can.
+# Every pull request validates the assembled tree, checks its links, anchors and
+# redirects, and assembles it a second time to compare the two exports, which
+# proves the pipeline is deterministic. No single source tree exists to compare
+# against any more.
 
 on:
   pull_request:
@@ -128,17 +126,15 @@ jobs:
         working-directory: build/site
         run: mint broken-links --check-anchors --check-redirects
 
-      # The assembler must not change what readers see. Export the assembled
-      # tree and the source tree, then compare. `compare_exports.py` normalizes
-      # the per-build UUIDs Mintlify regenerates each run, and quarantines only
-      # reference pages that failed to generate request examples at all.
+      # Assemble twice and compare the exports: the site exists as one tree
+      # nowhere else, so determinism is what a comparison can establish.
+      # `compare_exports.py` normalizes the per-build UUIDs Mintlify regenerates
+      # each run, and quarantines only reference pages that failed to generate
+      # request examples at all.
       - name: Export the assembled tree
         working-directory: build/site
         run: mint export --output "$RUNNER_TEMP/assembled.zip"
 
-      # Nothing to compare against directly any more: the site no longer exists
-      # as one tree anywhere. Assembling twice proves the pipeline is
-      # deterministic, which is what the comparison can still establish.
       - name: Assemble again
         run: make assemble
         env:
@@ -146,12 +142,12 @@ jobs:
 
       - name: Export the second assembly
         working-directory: build/site-again
-        run: mint export --output "$RUNNER_TEMP/direct.zip"
+        run: mint export --output "$RUNNER_TEMP/assembled-again.zip"
 
       - name: Compare
         run: |
           python3 scripts/compare_exports.py \
-            "$RUNNER_TEMP/direct.zip" "$RUNNER_TEMP/assembled.zip"
+            "$RUNNER_TEMP/assembled-again.zip" "$RUNNER_TEMP/assembled.zip"
 
       - name: Upload the assembled tree
         uses: actions/upload-artifact@v4
