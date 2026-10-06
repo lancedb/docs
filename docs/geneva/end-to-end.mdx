@@ -1,0 +1,203 @@
+---
+title: End-to-End Example
+sidebarTitle: End-to-end example
+description: A complete Geneva example on LanceDB Enterprise — create a table, backfill computed columns, and build a materialized view with embeddings.
+icon: play
+---
+
+This example walks through a complete Geneva workflow on LanceDB Enterprise: creating a raw
+table, adding computed columns with a distributed backfill, and materializing a view with
+embeddings for downstream search.
+
+The dataset is a product catalog with titles and descriptions. We'll compute a `word_count`
+feature column, then create a materialized view that adds text embeddings.
+
+## 0. What you need to run this
+
+All you need is an existing **LanceDB Enterprise deployment**. Distributed job execution,
+clusters, and dependency manifests are managed for you — there is no Kubernetes or cluster
+setup in this example.
+
+## 1. Connect and create a table
+
+```python
+import os
+import pyarrow as pa
+import geneva
+
+# Connect to LanceDB Enterprise
+db = geneva.connect(
+    uri="db://my-db",
+    host_override=os.getenv("LANCEDB_URI"),
+    api_key=os.getenv("LANCEDB_API_KEY"),
+)
+
+# Create a raw product table
+schema = pa.schema([
+    pa.field("product_id", pa.int64()),
+    pa.field("title", pa.string()),
+    pa.field("description", pa.string()),
+    pa.field("category", pa.string()),
+    pa.field("price", pa.float64()),
+])
+
+data = pa.table({
+    "product_id": [1, 2, 3, 4, 5],
+    "title": ["Chainmail Coif", "Jousting Lance Grip Tape", "Dragon-Repellent Spray", "Sword Squeegee", "Visor Windshield Wipers"],
+    "description": [
+        "Premium riveted chainmail head covering. Breathable enough for dragon fire, probably.",
+        "Non-slip grip tape for jousting lances. 3000 PSI tensile strength. Void where tilting is prohibited.",
+        "All-natural herbal spray. Dragons hate it. Effectiveness not guaranteed against actual dragons.",
+        "Ergonomic squeegee fits all standard broadswords. Removes blood, mud, and existential dread.",
+        "Hand-cranked windshield wipers for full-face visors. Never ride blind into battle again.",
+    ],
+    "category": ["armor", "tournament", "defense", "maintenance", "armor"],
+    "price": [129.99, 45.00, 59.99, 34.99, 24.99],
+})
+
+try:
+    db.drop_table("products_raw")
+except Exception:
+    pass
+table = db.create_table("products_raw", data=data, schema=schema)
+```
+
+## 2. Define UDFs
+
+```python
+import pyarrow as pa
+from geneva import udf
+
+@udf(data_type=pa.int32())
+def word_count(description: str) -> int:
+    """Count words in the description."""
+    return len(description.split())
+
+@udf(data_type=pa.string())
+def price_tier(price: float) -> str:
+    """Bucket price into tiers."""
+    if price < 30:
+        return "budget"
+    elif price < 75:
+        return "mid-range"
+    else:
+        return "premium"
+```
+
+## 3. Register columns and run a backfill
+
+Register the UDFs as virtual columns and trigger a backfill. The job runs on your
+deployment's default distributed execution environment — no cluster or context to configure.
+
+```python
+# Add computed columns
+table.add_columns({
+    "word_count": word_count,
+    "price_tier": price_tier,
+})
+
+# Run the backfills
+table.backfill("word_count")
+table.backfill("price_tier")
+```
+
+## 4. Create a materialized view with embeddings
+
+The embedding model needs extra Python dependencies (`sentence-transformers`, `torch`). Rather
+than configuring a deployment-wide environment, we bundle those dependencies **with the UDF**
+using `@udf(manifest=...)`. The manifest is snapshotted onto the view, so refreshes use it
+automatically.
+
+The materialized view selects a subset of columns from the source table — here we drop `price`
+and `price_tier`, keeping only what's needed for search — plus a derived `embedding` column.
+
+```python
+from geneva import udf
+from geneva.manifest import GenevaManifest
+
+# Bundle the embedding model's dependencies and attach them to the UDF
+embed_manifest = (
+    GenevaManifest.create_pip("embedding-deps")
+    .pip(["sentence-transformers==3.3.1", "torch==2.5.1"])
+    .build()
+)
+
+@udf(data_type=pa.list_(pa.float32(), 384), manifest=embed_manifest)
+class EmbedDescription:
+    def __init__(self):
+        self.model = None
+
+    def __call__(self, description: str) -> list[float]:
+        if self.model is None:
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+        return self.model.encode(description, normalize_embeddings=True).tolist()
+
+# Build a query that selects search columns plus the derived embedding
+query = table.search(None).select({
+    "product_id": "product_id",
+    "title": "title",
+    "description": "description",
+    "category": "category",
+    "word_count": "word_count",
+    "embedding": EmbedDescription(),
+})
+
+# Create the materialized view and populate it — the embedding UDF runs on refresh
+db.create_materialized_view("products_enriched", query)
+enriched = db.open_table("products_enriched")
+enriched.refresh()
+```
+
+## 5. Query the enriched table
+
+```python
+enriched = db.open_table("products_enriched")
+
+# Vector search
+results = (
+    enriched.search([0.1] * 384, vector_column_name="embedding")
+    .limit(3)
+    .to_arrow()
+)
+
+# Filtered search — armor category only
+armor_results = (
+    enriched.search([0.1] * 384, vector_column_name="embedding")
+    .where("category = 'armor'")
+    .limit(3)
+    .to_arrow()
+)
+```
+
+## 6. Incremental refresh
+
+As new products are added to the source table, backfill the new rows and refresh the view to
+compute embeddings for them — only the new rows are processed:
+
+```python
+# Append new products
+new_data = pa.table({
+    "product_id": [6, 7],
+    "title": ["Moat Floaties", "Knight-Night Sleep Mask"],
+    "description": [
+        "Inflatable arm floaties in battleship grey. Because even knights can't always swim in full plate.",
+        "Padded silk sleep mask embroidered with your coat of arms. Blocks out 100% of torchlight.",
+    ],
+    "category": ["defense", "armor"],
+    "price": [29.99, 19.99],
+})
+table.add(new_data)
+
+# Only null/new values are computed
+table.backfill("word_count")
+table.backfill("price_tier")
+
+# Incrementally materialize the new rows (including their embeddings) into the view
+enriched.refresh()
+```
+
+<Tip>
+To keep source columns in sync automatically, mark their UDFs with `@udf(auto_backfill=True)`. See
+[Backfilling](/geneva/jobs/backfilling/).
+</Tip>
