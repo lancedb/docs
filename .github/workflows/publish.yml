@@ -9,7 +9,7 @@ name: Publish
 #
 #   staging      the `staging` branch, for a hosted preview of the combined site
 #   production   the `assembled` branch, from a run on `main` that read both
-#                producers' `main`, approved in the `production` environment
+#                producers' `main`, with the `production` environment's key
 #
 # Each publication is a new commit on top of its branch, naming the run, the
 # checksum and the source commits; nothing is force-pushed. Publishing an
@@ -18,9 +18,11 @@ name: Publish
 # files are checked against the checksum.
 #
 # This relies on settings outside the repository; see "Publishing" in
-# README.md. Without them production is refused: the `production` environment
-# holds the only key `assembled` accepts, and MINTLIFY_CONTENT_DIR says where
-# Mintlify reads docs.json.
+# README.md. Of those, the workflow checks only that production runs from
+# `main`, that the `production` environment supplies ASSEMBLED_DEPLOY_KEY and
+# that MINTLIFY_CONTENT_DIR is set. It cannot see whether that environment
+# requires reviewers, or whether rules on `assembled` refuse every other writer:
+# those protections are installed and verified separately.
 
 on:
   workflow_dispatch:
@@ -57,7 +59,7 @@ jobs:
     if: inputs.target == 'staging'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # the `staging` branch; rules on `assembled` refuse this token
+      contents: write # the `staging` branch; the `assembled` ruleset must refuse this token
       actions: read # the candidate artifact and its run
     steps:
       - uses: actions/checkout@v4
@@ -90,8 +92,9 @@ jobs:
     name: Publish to production
     if: inputs.target == 'production'
     runs-on: ubuntu-latest
-    # Required reviewers approve here, and only `main` may deploy to it. Its
-    # deploy key is the only credential the rules on `assembled` accept.
+    # Set up as README.md describes, this environment requires reviewers'
+    # approval, admits only `main`, and holds the only key the rules on
+    # `assembled` accept. This job cannot check any of that itself.
     environment: production
     permissions:
       contents: read

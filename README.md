@@ -61,11 +61,13 @@ successful Assemble run and its candidate's checksum.
   of the combined site. A preview of any other branch of this repository is not
   one: it holds only `docs/`.
 - `production` puts it on `assembled`. It takes only a candidate built on `main`
-  from both producers' `main`, runs only from `main`, and waits for approval in
-  the `production` environment.
+  from both producers' `main`, runs only from `main`, and pushes with the
+  `production` environment's deploy key. It waits for approval only if that
+  environment requires reviewers.
 
 Either way the published files are the candidate's, checked against its record
-and the checksum. Nothing is rebuilt, so newer source commits cannot slip in.
+and the checksum, and the record must name exactly the three source commits and
+both producers' refs. Nothing is rebuilt, so newer source commits cannot slip in.
 Each publication is a new commit on its branch that names the run, the checksum
 and the source commits, and nothing is force-pushed. To roll back, publish an
 earlier candidate again: its run ID and checksum are in its commit on
@@ -91,6 +93,12 @@ Publishing relies on settings outside this repository:
   publishing to `assembled` reaches production only once that is the branch.
 - A `SOPHON_DOCS_TOKEN` secret that can read `lancedb/sophon` contents and
   nothing else.
+
+Of these, the Publish workflow checks only that production runs from `main`,
+that the environment supplies the deploy key and that `MINTLIFY_CONTENT_DIR` is
+set. It cannot see whether the environment requires reviewers and admits only
+`main`, or whether the ruleset refuses every other writer: verify those
+separately before the first production publication.
 
 ## Code snippets
 
