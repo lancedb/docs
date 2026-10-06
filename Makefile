@@ -1,5 +1,4 @@
 # Paths
-SCRIPT := scripts/mdx_snippets_gen.py
 HF_SYNC_SCRIPT := scripts/sync_hf_datasets.py
 ASSEMBLE_SCRIPT := scripts/assemble.py
 # The assembler needs only pyyaml; skipping the project env keeps CI from
@@ -9,20 +8,13 @@ ASSEMBLE_RUN := uv run --no-project --with pyyaml
 # uv run automatically handles virtualenv, so no activation needed
 .PHONY: py ts rs snippets hf-sync assemble test-assemble check-spec sync-spec
 
-# Generate Python MDX snippets
-py:
-	@uv run $(SCRIPT) -s tests/py
-
-# Generate TypeScript MDX snippets
-ts:
-	@uv run $(SCRIPT) -s tests/ts
-
-# Generate Rust MDX snippets
-rs:
-	@uv run $(SCRIPT) -s tests/rs
-
-# Convenience: generate all snippets
-snippets: py ts rs
+# Snippets are generated in lancedb/lancedb, beside the tests they come from;
+# these targets only say so. See "Code snippets" in README.md.
+py ts rs snippets:
+	@echo "Snippets are not generated in this repository. In a lancedb/lancedb checkout, run:" >&2
+	@echo "  uv run docs/web-tests/mdx_snippets_gen.py -s docs/web-tests/py -s docs/web-tests/ts -s docs/web-tests/rs -o docs/web/snippets" >&2
+	@echo "The Geneva snippets in docs/snippets/ are frozen copies and are not regenerated." >&2
+	@exit 1
 
 # Sync Lance dataset cards from lance-format/lance-huggingface into docs/datasets/.
 # Regenerates per-dataset MDX pages, the landing-page card grid, and the

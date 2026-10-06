@@ -119,9 +119,10 @@ can click on their language of choice via tabs.
 
 ### Option 2: `CodeBlock` components within `CodeGroup`
 
-As engineers, we may want to write a testable snippet in code in the `tests/py`, `tests/ts`, or `tests/rs` directory.
-These directories contain test files in each language that contain valid, tested code, which are fenced within comment markers
-so that they can be parsed by a [snippet generation script](./scripts/mdx_snippets_gen.py).
+As engineers, we may want to write a testable snippet in code. Testable examples live in `lancedb/lancedb`, in the
+`docs/web-tests/py`, `docs/web-tests/ts` and `docs/web-tests/rs` directories. These contain test files in each language with
+valid, tested code, fenced within comment markers so that they can be parsed by the snippet generation script there,
+`docs/web-tests/mdx_snippets_gen.py` (see "Code snippets" in [README.md](./README.md)).
 
 The snippet generation script is run to extract the relevant snippets from the file (based on the fenced comment markers
 indicating `start` and `end` in each test file).
