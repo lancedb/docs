@@ -583,9 +583,91 @@ def test_rollback_from_history_requires_complete_provenance(
         assert refs(remote["bare"]) == before
 
 
+# --------------------------------------------------------------------------- #
+# the run's workflow: the bare path, or qualified with the run's own ref
+# --------------------------------------------------------------------------- #
+
+WORKFLOW_PATHS = {
+    "bare path": (WORKFLOW, {}, None),
+    "with its branch, as GitHub documents": (WORKFLOW + "@main", {}, None),
+    "with its full branch ref": (WORKFLOW + "@refs/heads/main", {}, None),
+    "with its commit": (WORKFLOW + "@{docs}", {}, None),
+    "another workflow with a ref": (
+        ".github/workflows/docs-ci.yml@main", {}, "ran .github/workflows/docs-ci.yml@main, not"
+    ),
+    "another repository's copy": (
+        "octo-org/docs/.github/workflows/assemble.yml@main",
+        {},
+        "ran octo-org/docs/.github/workflows/assemble.yml@main",
+    ),
+    "a lookalike file": (
+        WORKFLOW + ".bak@main", {}, "ran .github/workflows/assemble.yml.bak@main, not"
+    ),
+    "a lookalike directory": (
+        ".github/workflows/x/assemble.yml", {}, "ran .github/workflows/x/assemble.yml, not"
+    ),
+    "another branch's copy": (
+        WORKFLOW + "@jack/a3-move", {}, "from jack/a3-move, not from its own branch main"
+    ),
+    "another commit's copy": (
+        WORKFLOW + "@" + "f" * 40, {}, "from " + "f" * 40 + ", not from its own"
+    ),
+    "an empty ref": (WORKFLOW + "@", {}, "ran .github/workflows/assemble.yml@, not"),
+    "a ref holding another @": (
+        WORKFLOW + "@main@other", {}, "ran .github/workflows/assemble.yml@main@other"
+    ),
+    "no path": (None, {}, "ran None, not"),
+    "a path that is not text": ([WORKFLOW], {}, "not .github/workflows/assemble.yml"),
+    "its branch, but a failed run": (
+        WORKFLOW + "@main", {"conclusion": "failure"}, "has not succeeded"
+    ),
+    "its branch, but a pull request": (
+        WORKFLOW + "@main", {"event": "pull_request"}, "was a pull_request run"
+    ),
+}
+
+
+@pytest.mark.parametrize("case", WORKFLOW_PATHS)
+def test_workflow_identity(tmp_path, remote, case):
+    path, fields, message = WORKFLOW_PATHS[case]
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    if isinstance(path, str):
+        path = path.format(docs=remote["docs_commit"])
+    candidate.edit_run(path=path, **fields)
+    before = refs(remote["bare"])
+
+    result = publish(remote, candidate)
+
+    after = refs(remote["bare"])
+    if message is None:
+        assert result.returncode == 0, result.stderr
+        assert {r for r in after if after[r] != before.get(r)} == {"refs/heads/assembled"}
+    else:
+        assert result.returncode == 1, result.stdout
+        assert message in result.stderr
+        assert after == before
+
+
+def test_staging_takes_a_manual_run_named_with_its_own_branch(tmp_path, remote):
+    candidate = Candidate(
+        tmp_path,
+        remote["docs_commit"],
+        event="workflow_dispatch",
+        head_branch="jack/a3-move",
+        path=WORKFLOW + "@jack/a3-move",
+    )
+    candidate.record(refs=("lancedb=refs/pull/4122/head", "enterprise=refs/pull/7681/head"))
+    candidate.checksum = candidate.manifest["site_sha256"]
+
+    result = publish(remote, candidate, target="staging")
+
+    assert result.returncode == 0, result.stderr
+    assert published(remote["bare"], "staging") == SITE
+
+
 # The independent review's probes (documentation/reviews/candidate/pass8/
-# probe_publication.py): before this fix the three malformed records were
-# published.
+# probe_publication.py), case for case: before this fix the three malformed
+# records were published and the documented path was refused.
 REVIEW_PROBES = {
     "control": (lambda c: None, 0),
     "no_producer_sources": (
@@ -603,6 +685,7 @@ REVIEW_PROBES = {
         ),
         1,
     ),
+    "github_documented_path_with_ref": (lambda c: c.edit_run(path=WORKFLOW + "@main"), 0),
 }
 
 

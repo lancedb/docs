@@ -310,14 +310,33 @@ def content_prefix(value: str) -> str:
     return path + "/"
 
 
+def check_workflow(run: dict, run_id: str) -> None:
+    """The run's workflow must be this repository's Assemble workflow file.
+
+    The API gives its path bare or, as GitHub's REST reference shows, with the
+    ref the file was read from: `.github/workflows/assemble.yml@main`. That ref
+    must then be the run's own branch or commit.
+    """
+    path = run.get("path")
+    file, at, ref = path.partition("@") if isinstance(path, str) else ("", "", "")
+    if file != WORKFLOW or (at and not REF_RE.fullmatch(ref)):
+        raise CandidateError(f"run {run_id} ran {path}, not {WORKFLOW}")
+    branch = run.get("head_branch")
+    own = {branch, f"refs/heads/{branch}", run.get("head_sha")} if branch else {run.get("head_sha")}
+    if at and ref not in own - {None}:
+        raise CandidateError(
+            f"run {run_id} ran {WORKFLOW} from {ref}, not from its own branch "
+            f"{branch} or commit {run.get('head_sha')}"
+        )
+
+
 def check_run(run: dict, run_id: str, repository: str, target: str) -> None:
     """The run must be a finished, successful Assemble run of this repository."""
     if str(run.get("id")) != run_id:
         raise CandidateError(f"the run evidence describes run {run.get('id')}, not {run_id}")
     if run["repository"].get("full_name") != repository:
         raise CandidateError(f"run {run_id} is not a run of {repository}")
-    if run.get("path") != WORKFLOW:
-        raise CandidateError(f"run {run_id} ran {run.get('path')}, not {WORKFLOW}")
+    check_workflow(run, run_id)
     if run.get("status") != "completed" or run.get("conclusion") != "success":
         raise CandidateError(
             f"run {run_id} has not succeeded: {run.get('status')}, {run.get('conclusion')}"
