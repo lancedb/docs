@@ -459,6 +459,9 @@ PROVENANCE = {
         {"lancedb": "main"},
         "missing ['enterprise'], unexpected []",
     ),
+    "Enterprise source missing, both refs present": (
+        {"build": None, "lancedb": "1" * 40}, PAIR, "sources must name exactly"
+    ),
     "another producer instead of the pair": (
         {"build": None, "other": "3" * 40},
         {"other": "main"},
@@ -542,13 +545,21 @@ def forge(tmp_path: Path, remote: dict, files: dict[str, bytes], message: str) -
     [
         ("{all}", "lancedb=main enterprise=main", None),
         ("build={docs}", "lancedb=main enterprise=main", "missing ['lancedb', 'enterprise']"),
-        (f"lancedb={'1' * 40} build={{docs}}", "lancedb=main", "missing ['enterprise']"),
+        (
+            f"lancedb={'1' * 40} build={{docs}}",
+            "lancedb=main enterprise=main",
+            "missing ['enterprise']",
+        ),
         (
             "{all}",
             "lancedb=main",
             "refs must name exactly lancedb, enterprise: missing ['enterprise']",
         ),
-        (f"build={{docs}} other={'3' * 40}", "other=main", "unexpected ['other']"),
+        (
+            f"build={{docs}} other={'3' * 40}",
+            "lancedb=main enterprise=main",
+            "unexpected ['other']",
+        ),
     ],
     ids=[
         "complete", "build only", "Enterprise missing", "Enterprise ref missing", "another producer"
