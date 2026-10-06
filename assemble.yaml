@@ -30,8 +30,9 @@ roots:
     role: overlay
     private: true
 
-  # What this repository still owns: the Geneva pages until Stage G replaces
-  # them, the generated dataset cards, and the OpenAPI spec.
+  # What this repository still owns: the Geneva pages, which stay published
+  # until the official Function launch, the generated dataset cards, and the
+  # OpenAPI spec.
   - name: build
     path: docs
     role: reference

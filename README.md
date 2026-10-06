@@ -8,6 +8,13 @@ The published site is assembled from three roots, listed in `assemble.yaml`:
 the open-source pages in `lancedb/lancedb` and the Enterprise pages in
 `lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
 
+This repository's `docs/` holds the pages it still owns: the Geneva pages, the
+dataset cards and the REST API reference. The Geneva pages stay published until the official Function
+launch, because the Function pages do not replace their APIs. They and their
+snippets (`docs/snippets/geneva_*.mdx`) are kept as published at
+`deploy-freeze`; the tests that generated those snippets need the `geneva`
+package and are not in this repository, so the snippets are not regenerated.
+
 Install the [Mintlify CLI](https://www.npmjs.com/package/mint) at the version CI
 uses:
 
