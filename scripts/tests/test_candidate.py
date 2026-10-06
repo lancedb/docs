@@ -402,6 +402,20 @@ REFUSALS = {
     ),
     "malformed run ID": (lambda c: None, {"run_id": "1001; true"}, "is not a number"),
     "malformed checksum": (lambda c: None, {"site_sha256": "ABC"}, "is not a lowercase SHA-256"),
+    "run evidence that is not an object": (
+        lambda c: c.run_json.write_text("[]"), {}, "the evidence of run 1001 is not a workflow run"
+    ),
+    "run evidence without a repository object": (
+        lambda c: c.edit_run(repository="lancedb/docs"),
+        {},
+        "the evidence of run 1001 is not a workflow run",
+    ),
+    "a record that is not an object": (
+        lambda c: (c.dir / "candidate.json").write_text("[]"), {}, "candidate.json is not a record"
+    ),
+    "a record without file hashes": (
+        lambda c: c.edit_manifest(file_sha256=None), {}, "the record has no file hashes"
+    ),
 }
 
 
@@ -429,6 +443,182 @@ def test_pull_request_candidates_are_refused_for_both_targets(tmp_path, remote, 
     assert result.returncode == 1
     assert "was a pull_request run" in result.stderr
     assert refs(remote["bare"]) == before
+
+
+# --------------------------------------------------------------------------- #
+# provenance: exactly lancedb, enterprise and build, with both producers' refs
+# --------------------------------------------------------------------------- #
+
+PAIR = {"lancedb": "main", "enterprise": "main"}
+# Sources and refs written into an otherwise valid record. `None` stands for
+# the run's own docs commit.
+PROVENANCE = {
+    "build only": ({"build": None}, {}, "missing ['lancedb', 'enterprise'], unexpected []"),
+    "Enterprise missing": (
+        {"build": None, "lancedb": "1" * 40},
+        {"lancedb": "main"},
+        "missing ['enterprise'], unexpected []",
+    ),
+    "another producer instead of the pair": (
+        {"build": None, "other": "3" * 40},
+        {"other": "main"},
+        "missing ['lancedb', 'enterprise'], unexpected ['other']",
+    ),
+    "another producer beside the pair": (
+        {**SOURCES, "build": None, "other": "3" * 40}, PAIR, "missing [], unexpected ['other']"
+    ),
+    "Enterprise ref missing": (
+        {**SOURCES, "build": None},
+        {"lancedb": "main"},
+        "refs must name exactly lancedb, enterprise: missing ['enterprise']",
+    ),
+    "a ref for the docs root": (
+        {**SOURCES, "build": None}, {**PAIR, "build": "main"}, "missing [], unexpected ['build']"
+    ),
+    "a producer that is not a commit": (
+        {**SOURCES, "build": None, "enterprise": "main"},
+        PAIR,
+        "source enterprise=main is not a clean commit",
+    ),
+    "a ref that is not a ref name": (
+        {**SOURCES, "build": None}, {**PAIR, "enterprise": "main; true"}, "is not a plain ref name"
+    ),
+    "sources that are not a map": (["build"], PAIR, "are not a map of names to strings"),
+}
+
+
+@pytest.mark.parametrize("target", ["staging", "production"])
+@pytest.mark.parametrize("case", PROVENANCE)
+def test_incomplete_provenance_publishes_nothing(tmp_path, remote, case, target):
+    sources, recorded_refs, message = PROVENANCE[case]
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    if isinstance(sources, dict):
+        sources = {name: commit or candidate.docs_commit for name, commit in sources.items()}
+    candidate.edit_manifest(sources=sources, refs=recorded_refs)
+    before = refs(remote["bare"])
+
+    result = publish(remote, candidate, target=target)
+
+    assert result.returncode == 1, result.stdout
+    assert message in result.stderr
+    assert refs(remote["bare"]) == before
+
+
+@pytest.mark.parametrize(
+    "sources, recorded_refs, message",
+    [
+        (lambda docs: f"lancedb={'1' * 40} build={docs}", ("lancedb=main", "enterprise=main"),
+         "missing ['enterprise']"),
+        (lambda docs: sources_line(docs, other="3" * 40), ("lancedb=main", "enterprise=main"),
+         "unexpected ['other']"),
+        (lambda docs: sources_line(docs), ("lancedb=main",), "missing ['enterprise']"),
+        (lambda docs: sources_line(docs), ("lancedb=main", "enterprise=main", "other=main"),
+         "unexpected ['other']"),
+    ],
+)
+def test_record_requires_every_source_and_producer_ref(
+    tmp_path, remote, sources, recorded_refs, message
+):
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    with pytest.raises(subprocess.CalledProcessError) as failure:
+        candidate.record(refs=recorded_refs, sources=sources(remote["docs_commit"]))
+    assert message in failure.value.stderr
+
+
+def forge(tmp_path: Path, remote: dict, files: dict[str, bytes], message: str) -> str:
+    """Push a commit with these files and this message onto `assembled`."""
+    forger = tmp_path / "forger"
+    git(tmp_path, "clone", "-q", "-b", "assembled", str(remote["bare"]), str(forger))
+    git(forger, "rm", "-q", "-rf", ".")
+    write_files(forger, files)
+    git(forger, "add", "-A", "-f")
+    git(forger, "commit", "-q", "-m", message)
+    git(forger, "push", "-q", "origin", "assembled")
+    return git(forger, "rev-parse", "HEAD")
+
+
+@pytest.mark.parametrize(
+    "sources_trailer, refs_trailer, message",
+    [
+        ("{all}", "lancedb=main enterprise=main", None),
+        ("build={docs}", "lancedb=main enterprise=main", "missing ['lancedb', 'enterprise']"),
+        (f"lancedb={'1' * 40} build={{docs}}", "lancedb=main", "missing ['enterprise']"),
+        (
+            "{all}",
+            "lancedb=main",
+            "refs must name exactly lancedb, enterprise: missing ['enterprise']",
+        ),
+        (f"build={{docs}} other={'3' * 40}", "other=main", "unexpected ['other']"),
+    ],
+    ids=[
+        "complete", "build only", "Enterprise missing", "Enterprise ref missing", "another producer"
+    ],
+)
+def test_rollback_from_history_requires_complete_provenance(
+    tmp_path, remote, sources_trailer, refs_trailer, message
+):
+    candidate = Candidate(tmp_path, remote["docs_commit"], run_id="1004")
+    # An earlier commit with exactly the candidate's files, run and checksum.
+    trailers = sources_trailer.format(
+        all=sources_line(remote["docs_commit"]), docs=remote["docs_commit"]
+    )
+    forge(
+        tmp_path,
+        remote,
+        {f"docs/{path}": data for path, data in SITE.items()},
+        f"Publish candidate\n\nCandidate-Site-SHA256: {candidate.checksum}\n"
+        f"Candidate-Run: 1004\nSources: {trailers}\nRefs: {refs_trailer}\n",
+    )
+    shutil.rmtree(candidate.dir)
+    before = refs(remote["bare"])
+
+    result = publish(remote, candidate)
+
+    if message is None:
+        assert result.returncode == 0, result.stderr
+        assert published(remote["bare"], "assembled") == SITE
+    else:
+        assert result.returncode == 1, result.stdout
+        assert message in result.stderr
+        assert refs(remote["bare"]) == before
+
+
+# The independent review's probes (documentation/reviews/candidate/pass8/
+# probe_publication.py): before this fix the three malformed records were
+# published.
+REVIEW_PROBES = {
+    "control": (lambda c: None, 0),
+    "no_producer_sources": (
+        lambda c: c.edit_manifest(sources={"build": c.docs_commit}, refs={}), 1
+    ),
+    "enterprise_source_missing": (
+        lambda c: c.edit_manifest(
+            sources={"build": c.docs_commit, "lancedb": "1" * 40}, refs={"lancedb": "main"}
+        ),
+        1,
+    ),
+    "unexpected_producer_instead_of_expected_pair": (
+        lambda c: c.edit_manifest(
+            sources={"build": c.docs_commit, "other": "3" * 40}, refs={"other": "main"}
+        ),
+        1,
+    ),
+}
+
+
+@pytest.mark.parametrize("case", REVIEW_PROBES)
+def test_independent_review_probes(tmp_path, remote, case):
+    mutate, expected = REVIEW_PROBES[case]
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    mutate(candidate)
+    before = refs(remote["bare"])
+
+    result = publish(remote, candidate)
+
+    after = refs(remote["bare"])
+    assert result.returncode == expected, result.stderr
+    changed = {r for r in set(before) | set(after) if before.get(r) != after.get(r)}
+    assert changed == ({"refs/heads/assembled"} if expected == 0 else set())
 
 
 def assemble_sources(base: Path, index: bytes) -> dict:

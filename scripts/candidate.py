@@ -51,6 +51,10 @@ WORKFLOW = ".github/workflows/assemble.yml"
 EVENTS = ("push", "workflow_dispatch")
 # The root read from this repository: its commit is the one the run checked out.
 DOCS_ROOT = "build"
+# The roots in assemble.yaml, in its order. A record names each exactly once.
+ROOTS = ("lancedb", "enterprise", DOCS_ROOT)
+# The roots read from the other repositories, each from a ref the run asked for.
+PRODUCERS = ("lancedb", "enterprise")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 CHECKSUM_RE = re.compile(r"[0-9a-f]{64}")
 REF_RE = re.compile(r"[A-Za-z0-9._/-]+")
@@ -113,25 +117,48 @@ def parse_pairs(text: str, what: str) -> dict[str, str]:
     return pairs
 
 
-def parse_sources(text: str) -> dict[str, str]:
-    """`lancedb=<sha> ...` as the assembler prints it, every root a clean commit."""
-    sources = parse_pairs(text, "sources")
-    for name, commit in sources.items():
+def exactly(found: dict, names: tuple[str, ...], what: str) -> None:
+    """`found` must name each of `names` and nothing else."""
+    if not isinstance(found, dict) or not all(
+        isinstance(k, str) and isinstance(v, str) for k, v in found.items()
+    ):
+        raise CandidateError(f"{what} {found!r} are not a map of names to strings")
+    missing = [name for name in names if name not in found]
+    unexpected = sorted(set(found) - set(names))
+    if missing or unexpected:
+        raise CandidateError(
+            f"{what} must name exactly {', '.join(names)}: "
+            f"missing {missing}, unexpected {unexpected}"
+        )
+
+
+def check_sources(sources: dict) -> dict[str, str]:
+    """Every root of assemble.yaml, each a clean commit, in that order."""
+    exactly(sources, ROOTS, "sources")
+    for name in ROOTS:
         # The assembler marks a dirty root `<sha>+uncommitted` and a root
         # outside git `unversioned`: neither names what was built.
-        if not COMMIT_RE.fullmatch(commit):
-            raise CandidateError(f"source {name}={commit} is not a clean commit")
-    if DOCS_ROOT not in sources:
-        raise CandidateError(f"sources name no {DOCS_ROOT} root: {text!r}")
-    return sources
+        if not COMMIT_RE.fullmatch(sources[name]):
+            raise CandidateError(f"source {name}={sources[name]} is not a clean commit")
+    return {name: sources[name] for name in ROOTS}
+
+
+def check_refs(refs: dict) -> dict[str, str]:
+    """The ref each producer was read from."""
+    exactly(refs, PRODUCERS, "refs")
+    for name in PRODUCERS:
+        if not REF_RE.fullmatch(refs[name]):
+            raise CandidateError(f"ref {name}={refs[name]!r} is not a plain ref name")
+    return {name: refs[name] for name in PRODUCERS}
+
+
+def parse_sources(text: str) -> dict[str, str]:
+    """`lancedb=<sha> enterprise=<sha> build=<sha>`, as the assembler prints it."""
+    return check_sources(parse_pairs(text, "sources"))
 
 
 def parse_refs(text: str) -> dict[str, str]:
-    refs = parse_pairs(text, "refs")
-    for name, ref in refs.items():
-        if not REF_RE.fullmatch(ref):
-            raise CandidateError(f"ref {name}={ref!r} is not a plain ref name")
-    return refs
+    return check_refs(parse_pairs(text, "refs"))
 
 
 def run_context() -> dict[str, str] | None:
@@ -152,13 +179,14 @@ def run_context() -> dict[str, str] | None:
 
 def record(site: Path, sources_line: str, refs: list[str], output: Path) -> dict:
     sources = parse_sources(sources_line)
+    refs = parse_refs(" ".join(refs))
     hashes = file_hashes(site)
     manifest = {
         "format": 1,
         "site_sha256": site_checksum(hashes),
         "files": len(hashes),
         "sources": sources,
-        "refs": parse_refs(" ".join(refs)),
+        "refs": refs,
         "run": run_context(),
         "file_sha256": hashes,
     }
@@ -286,7 +314,7 @@ def check_run(run: dict, run_id: str, repository: str, target: str) -> None:
     """The run must be a finished, successful Assemble run of this repository."""
     if str(run.get("id")) != run_id:
         raise CandidateError(f"the run evidence describes run {run.get('id')}, not {run_id}")
-    if (run.get("repository") or {}).get("full_name") != repository:
+    if run["repository"].get("full_name") != repository:
         raise CandidateError(f"run {run_id} is not a run of {repository}")
     if run.get("path") != WORKFLOW:
         raise CandidateError(f"run {run_id} ran {run.get('path')}, not {WORKFLOW}")
@@ -314,7 +342,9 @@ def check_artifact(candidate: Path, run: dict, expected: str) -> tuple[dict, dic
         raise CandidateError(f"{candidate} holds no candidate.json") from None
     except json.JSONDecodeError as exc:
         raise CandidateError(f"candidate.json is not JSON: {exc}") from None
-    recorded_by = manifest.get("run") or {}
+    if not isinstance(manifest, dict):
+        raise CandidateError("candidate.json is not a record")
+    recorded_by = manifest.get("run") if isinstance(manifest.get("run"), dict) else {}
     if str(recorded_by.get("run_id")) != str(run["id"]) or recorded_by.get(
         "repository"
     ) != run["repository"]["full_name"]:
@@ -322,7 +352,9 @@ def check_artifact(candidate: Path, run: dict, expected: str) -> tuple[dict, dic
             f"the candidate was recorded by {recorded_by.get('repository')} run "
             f"{recorded_by.get('run_id')}, not run {run['id']}"
         )
-    recorded = manifest.get("file_sha256") or {}
+    recorded = manifest.get("file_sha256")
+    if not isinstance(recorded, dict) or not all(isinstance(h, str) for h in recorded.values()):
+        raise CandidateError("the record has no file hashes")
     actual = file_hashes(candidate / "site")
     if actual != recorded:
         missing = sorted(set(recorded) - set(actual))
@@ -338,11 +370,7 @@ def check_artifact(candidate: Path, run: dict, expected: str) -> tuple[dict, dic
         raise CandidateError(
             f"run {run['id']} recorded candidate {manifest['site_sha256']}, not {expected}"
         )
-    sources = parse_sources(
-        " ".join(f"{k}={v}" for k, v in (manifest.get("sources") or {}).items())
-    )
-    refs = parse_refs(" ".join(f"{k}={v}" for k, v in (manifest.get("refs") or {}).items()))
-    return sources, refs
+    return check_sources(manifest.get("sources")), check_refs(manifest.get("refs"))
 
 
 TRAILER = "^{}: (.+)$"
@@ -380,6 +408,8 @@ def publish(args: argparse.Namespace) -> dict:
         run = json.loads(args.run.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         raise CandidateError(f"no evidence of run {args.run_id}: {exc}") from None
+    if not isinstance(run, dict) or not isinstance(run.get("repository"), dict):
+        raise CandidateError(f"the evidence of run {args.run_id} is not a workflow run")
     check_run(run, args.run_id, args.repository, args.target)
 
     head = remote_head(args.remote, branch)
@@ -405,9 +435,9 @@ def publish(args: argparse.Namespace) -> dict:
             f"the candidate was built from {DOCS_ROOT} {sources[DOCS_ROOT]}, "
             f"but run {args.run_id} checked out {run.get('head_sha')}"
         )
+    # Both producers are always named: a record missing one was refused above.
     if args.target == "production":
-        producers = [name for name in sources if name != DOCS_ROOT]
-        off_main = {name: refs.get(name) for name in producers if refs.get(name) != "main"}
+        off_main = {name: refs[name] for name in PRODUCERS if refs[name] != "main"}
         if off_main:
             raise CandidateError(f"production takes producers' main; this read {off_main}")
 
