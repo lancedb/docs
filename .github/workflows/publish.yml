@@ -1,0 +1,137 @@
+name: Publish
+
+# Puts one candidate from the Assemble workflow on a branch Mintlify builds
+# from, exactly as that run checked it. Nothing is assembled here and no other
+# repository is read: the run's own output is published, named by the run's ID
+# and the candidate's checksum, both shown in that run's summary. A candidate
+# is publishable only if its whole run succeeded, the assembler's own tests
+# included.
+#
+#   staging      the `staging` branch, for a hosted preview of the combined site
+#   production   the `assembled` branch, from a run on `main` that read both
+#                producers' `main`, approved in the `production` environment
+#
+# Each publication is a new commit on top of its branch, naming the run, the
+# checksum and the source commits; nothing is force-pushed. Publishing an
+# earlier candidate again is how a rollback happens. If that run's artifact has
+# expired, its earlier publication on the branch is used instead, after its
+# files are checked against the checksum.
+#
+# This relies on settings outside the repository; see "Publishing" in
+# README.md. Without them production is refused: the `production` environment
+# holds the only key `assembled` accepts, and MINTLIFY_CONTENT_DIR says where
+# Mintlify reads docs.json.
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: staging (hosted preview) or production
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      run_id:
+        description: ID of the successful Assemble run whose candidate to publish
+        required: true
+      site_sha256:
+        description: The candidate's site checksum, from that run's summary
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ inputs.target }}
+  cancel-in-progress: false
+
+env:
+  RUN_ID: ${{ inputs.run_id }}
+  SITE_SHA256: ${{ inputs.site_sha256 }}
+  MINTLIFY_CONTENT_DIR: ${{ vars.MINTLIFY_CONTENT_DIR }}
+
+jobs:
+  staging:
+    name: Publish to staging
+    if: inputs.target == 'staging'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the `staging` branch; rules on `assembled` refuse this token
+      actions: read # the candidate artifact and its run
+    steps:
+      - uses: actions/checkout@v4
+
+      # An expired artifact is not an error yet: the earlier publication of the
+      # same candidate, if there is one, is used instead.
+      - name: Download the candidate
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: candidate
+          path: ${{ runner.temp }}/candidate
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Read the run that recorded it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
+
+      - name: Publish
+        run: |
+          python3 scripts/candidate.py publish --target staging \
+            --run-id "$RUN_ID" --site-sha256 "$SITE_SHA256" \
+            --run "$RUNNER_TEMP/run.json" --repository "$GITHUB_REPOSITORY" \
+            --content-dir "$MINTLIFY_CONTENT_DIR" --candidate "$RUNNER_TEMP/candidate" \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+  production:
+    name: Publish to production
+    if: inputs.target == 'production'
+    runs-on: ubuntu-latest
+    # Required reviewers approve here, and only `main` may deploy to it. Its
+    # deploy key is the only credential the rules on `assembled` accept.
+    environment: production
+    permissions:
+      contents: read
+      actions: read # the candidate artifact and its run
+    steps:
+      - name: Require main and the production key
+        env:
+          DEPLOY_KEY: ${{ secrets.ASSEMBLED_DEPLOY_KEY }}
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::production is published only by the workflow on main"
+            exit 1
+          fi
+          if [ -z "$DEPLOY_KEY" ]; then
+            echo "::error::the production environment has no ASSEMBLED_DEPLOY_KEY"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.ASSEMBLED_DEPLOY_KEY }}
+
+      - name: Download the candidate
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: candidate
+          path: ${{ runner.temp }}/candidate
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Read the run that recorded it
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
+
+      - name: Publish
+        run: |
+          python3 scripts/candidate.py publish --target production \
+            --run-id "$RUN_ID" --site-sha256 "$SITE_SHA256" \
+            --run "$RUNNER_TEMP/run.json" --repository "$GITHUB_REPOSITORY" \
+            --content-dir "$MINTLIFY_CONTENT_DIR" --candidate "$RUNNER_TEMP/candidate" \
+            --summary "$GITHUB_STEP_SUMMARY"

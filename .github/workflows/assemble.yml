@@ -2,13 +2,17 @@ name: Assemble
 
 # The published site is assembled from the roots declared in `assemble.yaml`:
 # the docs/web folders of lancedb/lancedb and lancedb/sophon, and this
-# repository's docs/. This workflow checks the assembled site and, on `main`,
-# publishes it to the `assembled` branch that Mintlify serves.
+# repository's docs/. This workflow builds and checks the assembled site and
+# keeps it as a candidate. It never publishes: its token can only read, so
+# neither a pull request nor a merge to `main` changes what is served.
+# Publishing a candidate is the Publish workflow, run by hand.
 #
-# Every pull request validates the assembled tree, checks its links, anchors and
+# Every run validates the assembled tree, checks its links, anchors and
 # redirects, and assembles it a second time to compare the two exports, which
 # proves the pipeline is deterministic. No single source tree exists to compare
-# against any more.
+# against any more. The checked tree is then recorded -- the commit each root
+# was read from and a checksum over its files -- and uploaded with that record
+# as the run's `candidate` artifact.
 
 on:
   pull_request:
@@ -30,7 +34,8 @@ permissions:
   contents: read
 
 concurrency:
-  # Serialize pushes to main: two runs force-pushing `assembled` would race.
+  # A newer push to a pull request replaces its running check. Runs on `main`
+  # are never cancelled, so every merge leaves a candidate.
   group: assemble-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -55,8 +60,6 @@ jobs:
 
   assemble:
     runs-on: ubuntu-latest
-    outputs:
-      sources: ${{ steps.assemble.outputs.sources }}
     steps:
       - uses: actions/checkout@v4
 
@@ -108,7 +111,7 @@ jobs:
         run: make check-spec
 
       # The assembler prints the commit it read each root from. Recording the
-      # three together is what makes a published build reproducible.
+      # three together is what makes a candidate reproducible.
       - name: Assemble
         id: assemble
         run: |
@@ -149,11 +152,28 @@ jobs:
           python3 scripts/compare_exports.py \
             "$RUNNER_TEMP/assembled-again.zip" "$RUNNER_TEMP/assembled.zip"
 
-      - name: Upload the assembled tree
+      # The candidate is the tree checked above, exactly. Its record names the
+      # commit each root was read from, the refs this run asked for, and a
+      # SHA-256 for every file; the checksum over those names the candidate.
+      # The Publish workflow takes a candidate only by this run's ID and that
+      # checksum, both shown in the run's summary.
+      - name: Record the candidate
+        env:
+          SOURCES: ${{ steps.assemble.outputs.sources }}
+          LANCEDB_REF: ${{ inputs.lancedb_ref || 'main' }}
+          SOPHON_REF: ${{ inputs.sophon_ref || 'main' }}
+        run: |
+          python3 scripts/candidate.py record build/site --sources "$SOURCES" \
+            --ref "lancedb=$LANCEDB_REF" --ref "enterprise=$SOPHON_REF" \
+            --output build/candidate.json --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the candidate
         uses: actions/upload-artifact@v4
         with:
-          name: assembled-site
-          path: build/site
+          name: candidate
+          path: |
+            build/site
+            build/candidate.json
           # Without this the upload silently drops dot-prefixed paths, so the
           # published branch would be missing files the assembler produced —
           # docs/.cursor/ went missing from the first published build that way.
@@ -161,42 +181,7 @@ jobs:
           # deciding a file is "not really content" is how a byte-comparability
           # guarantee turns into a list of exceptions.
           include-hidden-files: true
-          retention-days: 7
-
-  publish:
-    name: Publish to the assembled branch
-    # Waits for the assembler's own tests as well: an assembled site is only
-    # published if the guards that built it still hold.
-    needs: [test, assemble]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download the assembled tree
-        uses: actions/download-artifact@v4
-        with:
-          name: assembled-site
-          path: site
-
-      # `assembled` holds generated output only and is never hand-edited, so it
-      # carries a single commit rather than a history worth preserving. Mintlify
-      # serves this branch; repointing it is how cutover and rollback happen.
-      - name: Push
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SOURCES: ${{ needs.assemble.outputs.sources }}
-        run: |
-          set -euo pipefail
-          cd site
-          git init -q
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "assemble ${GITHUB_SHA:0:7}" -m "sources: ${SOURCES}"
-          git push -q --force \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            HEAD:refs/heads/assembled
-          echo "published $(git rev-parse --short HEAD) to assembled from ${GITHUB_SHA:0:7}"
+          # Kept as long as GitHub allows for anything that can be published.
+          # After that, publishing an earlier candidate again takes it from the
+          # branch it was published to.
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}

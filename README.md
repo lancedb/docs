@@ -45,6 +45,53 @@ make test-assemble
 open-source and Enterprise pages do not resolve there, so check links on the
 assembled site.
 
+## Publishing
+
+Merging publishes nothing. Every pull request and every push to `main` runs the
+Assemble workflow, which builds the site from the three roots, checks it as
+above, and keeps the checked tree as the run's `candidate` artifact, with a
+record of the commit each root was read from and a SHA-256 for every file. A
+checksum over those hashes names the candidate, and the run's summary shows it.
+That workflow's token can only read.
+
+Publishing is a separate, manual step: run the Publish workflow with the ID of a
+successful Assemble run and its candidate's checksum.
+
+- `staging` puts the candidate on the `staging` branch, for a Mintlify preview
+  of the combined site. A preview of any other branch of this repository is not
+  one: it holds only `docs/`.
+- `production` puts it on `assembled`. It takes only a candidate built on `main`
+  from both producers' `main`, runs only from `main`, and waits for approval in
+  the `production` environment.
+
+Either way the published files are the candidate's, checked against its record
+and the checksum. Nothing is rebuilt, so newer source commits cannot slip in.
+Each publication is a new commit on its branch that names the run, the checksum
+and the source commits, and nothing is force-pushed. To roll back, publish an
+earlier candidate again: its run ID and checksum are in its commit on
+`assembled`. Once its artifact has expired, after 90 days, that earlier commit's
+files are published again, after they are checked against the checksum.
+
+`scripts/candidate.py` records and publishes; `make test-assemble` runs its
+tests against disposable local repositories.
+
+Publishing relies on settings outside this repository:
+
+- A `production` environment with required reviewers, deployments limited to
+  `main`, and an `ASSEMBLED_DEPLOY_KEY` secret: the private half of the only
+  deploy key with write access.
+- A ruleset on `assembled` that restricts updates and deletions and blocks force
+  pushes, with deploy keys as its only bypass. Without it, any workflow token
+  that can write could change `assembled`.
+- A repository variable `MINTLIFY_CONTENT_DIR`: the path Mintlify's Git settings
+  read `docs.json` from, such as `/docs`, or `/` for the root. Publishing
+  refuses to guess.
+- Mintlify's Git settings: repository `lancedb/docs`, branch `assembled`, and
+  the content directory above. Mintlify serves the branch its settings name, so
+  publishing to `assembled` reaches production only once that is the branch.
+- A `SOPHON_DOCS_TOKEN` secret that can read `lancedb/sophon` contents and
+  nothing else.
+
 ## Code snippets
 
 The code examples on the open-source pages are tested programs in

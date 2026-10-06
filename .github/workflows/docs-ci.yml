@@ -3,8 +3,9 @@ name: Docs Check
 # The site is assembled from lancedb/lancedb, lancedb/sophon and this
 # repository, so links are checked on the assembled tree. `docs/` alone is no
 # longer a site: checking it reported pages that live in the other roots as
-# missing. The Assemble workflow runs the same checks before it publishes; this
-# job keeps the required status check about the site that would be published.
+# missing. The Assemble workflow runs the same checks before it records a
+# candidate; this job keeps the required status check about the site a merge
+# would build.
 #
 # The REST API spec is tracked in-repo at the release pinned in `assemble.yaml`
 # and checked with `make check-spec`.
