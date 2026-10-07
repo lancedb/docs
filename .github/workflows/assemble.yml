@@ -21,7 +21,6 @@ permissions:
   contents: read
 
 concurrency:
-  # Keep every main build; newer PR pushes replace obsolete checks.
   group: assemble-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
