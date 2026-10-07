@@ -2,7 +2,7 @@
 HF_SYNC_SCRIPT := scripts/sync_hf_datasets.py
 ASSEMBLE_SCRIPT := scripts/assemble.py
 # The assembler needs only pyyaml; skipping the project env keeps CI from
-# resolving lancedb, pyarrow, polars and geneva to run a file-copying script.
+# resolving the SDK dependencies used by the audit workflow.
 ASSEMBLE_RUN := uv run --no-project --with pyyaml
 
 # uv run automatically handles virtualenv, so no activation needed
@@ -18,7 +18,7 @@ py ts rs snippets:
 
 # Sync Lance dataset cards from lance-format/lance-huggingface into docs/datasets/.
 # Regenerates per-dataset MDX pages, the landing-page card grid, and the
-# Datasets tab in docs.json based on scripts/hf_datasets.yaml.
+# Datasets tab in docs/docs.nav.json based on scripts/hf_datasets.yaml.
 hf-sync:
 	@uv run $(HF_SYNC_SCRIPT)
 

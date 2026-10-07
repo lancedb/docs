@@ -48,7 +48,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "assemble.yaml"
 
 # `## Heading {#anchor}` — the stable identity a section keeps across rewording
-# and reordering, and the key Enterprise overlays will join on from A5.
+# and reordering.
 ANCHOR_RE = re.compile(r"^#{1,6}\s+.*\{#([A-Za-z0-9][A-Za-z0-9._-]*)\}\s*$", re.M)
 PAGE_SUFFIXES = (".mdx", ".md")
 # The reference root ships a complete `docs.json` so it can be served on its own.
@@ -164,9 +164,7 @@ def resolve(config: Config) -> Resolved:
             if rel in NOT_CONTENT:
                 continue
             if rel == NAV_BASE and root is not base_root:
-                # Every root ships a complete docs.json so it can be previewed
-                # on its own. Only the first reference root's is the published
-                # navigation; the rest are a local convenience.
+                # Only the first reference root owns the published navigation.
                 continue
             target = resolved.overlays if root.role == "overlay" else resolved.files
             if rel in target:
@@ -352,7 +350,7 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
-# stage 3: merge  (overlays land in A5)
+# stage 3: merge
 # --------------------------------------------------------------------------- #
 
 
@@ -443,7 +441,7 @@ def merge_nav(base: dict, fragment: dict) -> dict:
         )
 
     # Entries that name a nested container, e.g. the Enterprise group inside
-    # "Get started". A5's Enterprise fragment uses the same mechanism.
+    # "Get started".
     for spec in fragment.get("insert", []):
         target = descend(base, spec["into"])
         entry = spec["entry"]
@@ -507,17 +505,9 @@ def merge_nav(base: dict, fragment: dict) -> dict:
 def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
     """Produce the published docs.json.
 
-    Returns the parsed navigation for validation, and the original bytes when
-    nothing transformed it. Emitting those bytes verbatim keeps the assembled
-    tree *literally* byte-identical to its source rather than merely equivalent,
-    which is worth more than tidy formatting while the assembler is meant to be
-    a no-op. Re-serializing loses that for no gain: it rewrote a literal em-dash
-    as `\u2014` and nothing else.
-
-    A5 merges overlay nav fragments by page path; A6 wraps the result in a
-    `navigation.versions` array, mounting the newest bundle twice — unprefixed so
-    existing URLs survive, and under its version path so it stays addressable.
-    Both genuinely change the navigation, and both will serialize.
+    Returns the parsed navigation for validation and the original bytes when
+    no fragments transform it. Otherwise the merged navigation is serialized.
+    Versioned navigation is not implemented.
     """
     entry = resolved.files.get(NAV_BASE)
     if entry is None:

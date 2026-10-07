@@ -1,11 +1,9 @@
 """
 Give every section heading a stable anchor.
 
-An anchor is the identity a section keeps when it is reworded or moved, and the
-key Enterprise overlays attach to from A5: an overlay says "put this after
-`{#branch-create}`" and must still land correctly after someone rewrites the
-heading above it. Heading-derived slugs cannot do that — they change with the
-text — so the anchor is written down once and then never regenerated.
+An anchor is the identity a section keeps when it is reworded or moved.
+Heading-derived slugs change with the text, so the anchor is written down once
+and then never regenerated to preserve existing deep links.
 
 That "never regenerated" is the whole point, and it shapes this script:
 
@@ -74,26 +72,9 @@ MAX_ANCHORED_LEVEL = 4
 # `{#anchor}`, so `observability-&-performance` cannot be written down: any
 # anchor we set changes the id and breaks links to it. Five headings across the
 # corpus join two words with an ampersand. They keep their generated id and go
-# without an explicit anchor; if A5 ever needs to attach to one, reword the
-# heading then rather than silently move it now.
+# without an explicit anchor to preserve their existing deep links.
 UNWRITABLE_IN_ANCHOR = "&"
 FRONTMATTER_DELIM = "---"
-
-# Inline markup to strip before deriving a name, so `## Use \`add_columns()\``
-# becomes `use-add-columns` rather than carrying backticks into the anchor.
-INLINE_CODE_RE = re.compile(r"`([^`]*)`")
-LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
-JSX_RE = re.compile(r"<[^>]+>")
-NON_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
-def slugify(text: str) -> str:
-    text = LINK_RE.sub(r"\1", text)
-    text = INLINE_CODE_RE.sub(r"\1", text)
-    text = JSX_RE.sub(" ", text)
-    text = NON_SLUG_RE.sub("-", text.lower()).strip("-")
-    return text or "section"
-
 
 HEADING_ID_RE = re.compile(r'<h([2-6])[^>]*\bid="([^"]+)"')
 

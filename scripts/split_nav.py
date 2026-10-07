@@ -14,7 +14,8 @@ navigation is identical to the one it replaced.
 
 Run once when a set of pages moves between roots:
 
-    python scripts/split_nav.py --nav <original docs.json> --moved <dir of moved pages>
+    python scripts/split_nav.py --nav <original docs.json> --owned <base pages directory> \
+        --base-out <base docs.json> --fragment-out <docs.nav.json>
 """
 
 from __future__ import annotations

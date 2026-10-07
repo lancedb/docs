@@ -8,7 +8,7 @@ For each entry in `scripts/hf_datasets.yaml`, this script:
      "View on Hugging Face" card).
   3. Writes `docs/datasets/<slug>.mdx`.
 
-It also keeps `docs/docs.json` and the auto-generated card grid in
+It also keeps `docs/docs.nav.json` and the auto-generated card grid in
 `docs/datasets/index.mdx` in sync with the same config file, so adding a new
 dataset is a single-line edit to `hf_datasets.yaml` plus `make hf-sync`.
 
@@ -34,7 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "scripts" / "hf_datasets.yaml"
 DATASETS_DIR = REPO_ROOT / "docs" / "datasets"
 INDEX_PATH = DATASETS_DIR / "index.mdx"
-DOCS_JSON_PATH = REPO_ROOT / "docs" / "docs.json"
+NAV_FRAGMENT_PATH = REPO_ROOT / "docs" / "docs.nav.json"
 
 RAW_URL = "https://raw.githubusercontent.com/lance-format/lance-huggingface/main/{dir}/HF_DATASET_CARD.md"
 HF_URL = "https://huggingface.co/datasets/lance-format/{hf}"
@@ -262,9 +262,9 @@ def render_card_grid(
     return "\n".join(parts)
 
 
-def update_index_page(
+def render_index_page(
     categories: list[Category], descriptions: dict[str, str]
-) -> None:
+) -> str:
     text = INDEX_PATH.read_text()
     start = text.find(SYNC_START)
     end = text.find(SYNC_END)
@@ -280,36 +280,68 @@ def update_index_page(
         + "\n"
         + text[end:]
     )
-    INDEX_PATH.write_text(new_body)
+    return new_body
 
 
-# ----- docs.json --------------------------------------------------------------
+# ----- navigation fragment ----------------------------------------------------
 
 
-def update_docs_json(categories: list[Category]) -> None:
-    with DOCS_JSON_PATH.open() as f:
-        docs = json.load(f)
+def is_dataset_page(item: object) -> bool:
+    return isinstance(item, str) and item.lstrip("/").startswith("datasets/")
 
-    groups = [{"group": "Overview", "pages": ["datasets/index"]}]
-    for cat in categories:
-        groups.append(
-            {
-                "group": cat.name,
-                "pages": [f"datasets/{ds.slug}" for ds in cat.datasets],
-            }
-        )
 
-    tabs = docs["navigation"]["tabs"]
-    for tab in tabs:
-        if tab.get("tab") == "Datasets":
-            tab["groups"] = groups
-            break
-    else:
+def replace_dataset_pages(pages: list, replacements: list[str]) -> list:
+    """Replace generated links at their first slot, retaining editorial entries."""
+    result = []
+    inserted = False
+    for page in pages:
+        if is_dataset_page(page):
+            if not inserted:
+                result.extend(replacements)
+                inserted = True
+        else:
+            result.append(page)
+    if not inserted:
+        result.extend(replacements)
+    return result
+
+
+def render_nav_fragment(categories: list[Category]) -> str:
+    with NAV_FRAGMENT_PATH.open() as f:
+        fragment = json.load(f)
+    tabs = [
+        spec["entry"] for spec in fragment.get("insert", [])
+        if isinstance(spec.get("entry"), dict)
+        and spec["entry"].get("tab") == "Datasets"
+    ]
+    if len(tabs) != 1 or not isinstance(tabs[0].get("pages"), list):
         raise RuntimeError(
-            "No 'Datasets' tab found in docs.json — add the tab scaffold before running sync."
+            "Expected one 'Datasets' tab with pages in docs.nav.json."
         )
-
-    DOCS_JSON_PATH.write_text(json.dumps(docs, indent=2) + "\n")
+    tab = tabs[0]
+    remaining = {cat.name: cat for cat in categories}
+    pages = []
+    for page in tab["pages"]:
+        if isinstance(page, dict) and "group" in page:
+            cat = remaining.pop(page["group"], None)
+            if cat is None and not any(
+                is_dataset_page(child) for child in page.get("pages", [])
+            ):
+                pages.append(page)
+                continue
+            generated = [f"datasets/{ds.slug}" for ds in cat.datasets] if cat else []
+            children = replace_dataset_pages(page.get("pages", []), generated)
+            if children or cat is not None:
+                pages.append({**page, "pages": children})
+        elif not is_dataset_page(page) or page == "datasets/index":
+            pages.append(page)
+    for cat in remaining.values():
+        pages.append({
+            "group": cat.name,
+            "pages": [f"datasets/{ds.slug}" for ds in cat.datasets],
+        })
+    tab["pages"] = pages
+    return json.dumps(fragment, indent=2, ensure_ascii=False) + "\n"
 
 
 # ----- driver -----------------------------------------------------------------
@@ -323,8 +355,6 @@ def sync(dry_run: bool = False) -> None:
         f"{len(categories)} categories…"
     )
 
-    DATASETS_DIR.mkdir(parents=True, exist_ok=True)
-
     config_slugs = {ds.slug for ds in all_datasets}
     existing_pages = {
         p.stem for p in DATASETS_DIR.glob("*.mdx") if p.stem != "index"
@@ -334,6 +364,7 @@ def sync(dry_run: bool = False) -> None:
         print(f"  Will remove stale pages: {sorted(stale)}")
 
     descriptions: dict[str, str] = {}
+    rendered_pages: dict[Path, str] = {}
     for ds in all_datasets:
         print(f"  • {ds.category} / {ds.slug} ← {ds.dir}")
         card = fetch_card(ds)
@@ -343,17 +374,22 @@ def sync(dry_run: bool = False) -> None:
         if dry_run:
             print(f"    (dry run, would write {out_path.relative_to(REPO_ROOT)})")
         else:
-            out_path.write_text(mdx)
+            rendered_pages[out_path] = mdx
 
+    index = render_index_page(categories, descriptions)
+    navigation = render_nav_fragment(categories)
     if not dry_run:
+        DATASETS_DIR.mkdir(parents=True, exist_ok=True)
+        for path, content in rendered_pages.items():
+            path.write_text(content)
         for slug in stale:
             (DATASETS_DIR / f"{slug}.mdx").unlink()
-        update_index_page(categories, descriptions)
-        update_docs_json(categories)
+        INDEX_PATH.write_text(index)
+        NAV_FRAGMENT_PATH.write_text(navigation)
         print(
             f"Wrote {len(all_datasets)} dataset pages, updated "
             f"{INDEX_PATH.relative_to(REPO_ROOT)} and "
-            f"{DOCS_JSON_PATH.relative_to(REPO_ROOT)}."
+            f"{NAV_FRAGMENT_PATH.relative_to(REPO_ROOT)}."
         )
 
 

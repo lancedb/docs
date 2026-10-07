@@ -138,7 +138,7 @@ generated from those upstream cards via `scripts/sync_hf_datasets.py`. The scrip
    injects a "View on Hugging Face" card at the top, and sanitizes known MDX hazards (bibtex citations outside
    code fences, literal `<>` in prose).
 4. Writes `docs/datasets/<slug>.mdx`, regenerates the card grid in `docs/datasets/index.mdx` between the
-   `HF_SYNC:START` / `HF_SYNC:END` markers, and updates the `Datasets` tab in `docs/docs.json` to keep the
+   `HF_SYNC:START` / `HF_SYNC:END` markers, and updates the `Datasets` tab in `docs/docs.nav.json` to keep the
    sidebar in sync.
 
 Run it from the repo root:
@@ -155,9 +155,10 @@ make hf-sync
    fields (`dir`, `slug`, `hf`, `title`) are explicit because the GitHub directory name, the HF Hub repo slug,
    and the desired URL slug don't follow a derivable convention.
 3. Run `make hf-sync`. The script will fetch the new card, generate `docs/datasets/<slug>.mdx`, refresh the
-   landing-page card grid, and add the new page to the `Datasets` tab in `docs/docs.json`.
-4. Preview locally with `mint dev` and commit the changes (the MDX page, the regenerated `index.mdx`, the
-   updated `docs.json`, and the new yaml entry).
+   landing-page card grid, and add the new page to the `Datasets` tab in `docs/docs.nav.json`.
+4. Run `make assemble`, then preview with `cd build/site && mint dev` (see [Development](#development)
+   for the required source checkouts). Commit the MDX page, regenerated `index.mdx`, updated
+   `docs.nav.json`, and new yaml entry.
 
 If you remove a dataset from the yaml, the next `make hf-sync` will delete its MDX file and drop the sidebar
 entry. The script hard-fails on any fetch error — partial regeneration would be worse than a clear error.
