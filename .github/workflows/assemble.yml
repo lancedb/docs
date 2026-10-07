@@ -1,18 +1,5 @@
 name: Assemble
 
-# The published site is assembled from the roots declared in `assemble.yaml`:
-# the docs/web folders of lancedb/lancedb and lancedb/sophon, and this
-# repository's docs/. This workflow builds and checks the assembled site and
-# keeps it as a candidate. It never publishes: its token can only read, so
-# neither a pull request nor a merge to `main` changes what is served.
-# Publishing a candidate is the Publish workflow, run by hand.
-#
-# Every run validates the assembled tree, checks its links, anchors and
-# redirects, and assembles it a second time to compare the two exports, which
-# proves the pipeline is deterministic. No single source tree exists to compare
-# against any more. The checked tree is then recorded -- the commit each root
-# was read from and a checksum over its files -- and uploaded with that record
-# as the run's `candidate` artifact.
 
 on:
   pull_request:
@@ -34,8 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  # A newer push to a pull request replaces its running check. Runs on `main`
-  # are never cancelled, so every merge leaves a candidate.
+  # Keep every main build; newer PR pushes replace obsolete checks.
   group: assemble-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -44,8 +30,7 @@ env:
   SOPHON_DOCS_ROOT: sophon/docs/web
 
 jobs:
-  # Needs no other repository and no secret, so it runs on every pull request,
-  # forks included.
+  # Forks run the guard tests without private-source credentials.
   test:
     name: Test the assembler
     runs-on: ubuntu-latest
@@ -63,10 +48,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The open-source pages live in lancedb/lancedb and are assembled from
-      # there. Pinned to main: this repository publishes what that repository
-      # has merged, not what is in flight. A manual run can name another ref to
-      # build a candidate.
       - name: Check out the open-source documentation
         uses: actions/checkout@v4
         with:
@@ -76,12 +57,7 @@ jobs:
           sparse-checkout: docs/web
           persist-credentials: false
 
-      # The Enterprise pages live in the private lancedb/sophon repository.
-      # Only its public docs/web folder is checked out: the rest of
-      # sophon/docs is internal. SOPHON_DOCS_TOKEN must be able to read
-      # lancedb/sophon contents and nothing else -- a fine-grained token or a
-      # GitHub App installation token with Contents: read on that repository.
-      # Pull requests from forks do not receive it, so this step fails there.
+      # SOPHON_DOCS_TOKEN needs only Sophon Contents: read; fork PRs receive no secret.
       - name: Check out the Enterprise documentation
         uses: actions/checkout@v4
         with:
@@ -101,17 +77,12 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install Mintlify CLI
-        # Keep the two exports byte-comparable. Newer releases can render
-        # nondeterministic OpenAPI examples from identical input.
+        # Newer Mint releases can render nondeterministic OpenAPI examples.
         run: npm install -g mint@4.2.888
 
-      # The OpenAPI spec is tracked at a release tag, not a commit. If the two
-      # have drifted the site would document something that was never released.
       - name: Check the OpenAPI spec matches its release
         run: make check-spec
 
-      # The assembler prints the commit it read each root from. Recording the
-      # three together is what makes a candidate reproducible.
       - name: Assemble
         id: assemble
         run: |
@@ -129,11 +100,7 @@ jobs:
         working-directory: build/site
         run: mint broken-links --check-anchors --check-redirects
 
-      # Assemble twice and compare the exports: the site exists as one tree
-      # nowhere else, so determinism is what a comparison can establish.
-      # `compare_exports.py` normalizes the per-build UUIDs Mintlify regenerates
-      # each run, and quarantines only reference pages that failed to generate
-      # request examples at all.
+      # Export comparison normalizes Mint build UUIDs and missing request examples.
       - name: Export the assembled tree
         working-directory: build/site
         run: mint export --output "$RUNNER_TEMP/assembled.zip"
@@ -152,11 +119,6 @@ jobs:
           python3 scripts/compare_exports.py \
             "$RUNNER_TEMP/assembled-again.zip" "$RUNNER_TEMP/assembled.zip"
 
-      # The candidate is the tree checked above, exactly. Its record names the
-      # commit each root was read from, the refs this run asked for, and a
-      # SHA-256 for every file; the checksum over those names the candidate.
-      # The Publish workflow takes a candidate only by this run's ID and that
-      # checksum, both shown in the run's summary.
       - name: Record the candidate
         env:
           SOURCES: ${{ steps.assemble.outputs.sources }}
@@ -174,14 +136,6 @@ jobs:
           path: |
             build/site
             build/candidate.json
-          # Without this the upload silently drops dot-prefixed paths, so the
-          # published branch would be missing files the assembler produced —
-          # docs/.cursor/ went missing from the first published build that way.
-          # The assembler must publish what it assembled, editor config included:
-          # deciding a file is "not really content" is how a byte-comparability
-          # guarantee turns into a list of exceptions.
           include-hidden-files: true
-          # Kept as long as GitHub allows for anything that can be published.
-          # After that, publishing an earlier candidate again takes it from the
-          # branch it was published to.
+          # Expired candidates can be recovered from verified publication history.
           retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}
