@@ -56,14 +56,23 @@ jobs:
           sparse-checkout: docs/web
           persist-credentials: false
 
-      # SOPHON_DOCS_TOKEN needs only Sophon Contents: read; fork PRs receive no secret.
+      - name: Create a read-only Sophon token
+        id: sophon-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SOPHON_DOCS_APP_PRIVATE_KEY }}
+          owner: lancedb
+          repositories: sophon
+          permission-contents: read
+
       - name: Check out the Enterprise documentation
         uses: actions/checkout@v4
         with:
           repository: lancedb/sophon
           ref: ${{ inputs.sophon_ref || 'main' }}
           path: sophon
-          token: ${{ secrets.SOPHON_DOCS_TOKEN }}
+          token: ${{ steps.sophon-token.outputs.token }}
           sparse-checkout: docs/web
           submodules: false
           persist-credentials: false

@@ -91,8 +91,14 @@ Publishing relies on settings outside this repository:
 - Mintlify's Git settings: repository `lancedb/docs`, branch `assembled`, and
   the content directory above. Mintlify serves the branch its settings name, so
   publishing to `assembled` reaches production only once that is the branch.
-- A `SOPHON_DOCS_TOKEN` secret that can read `lancedb/sophon` contents and
-  nothing else.
+- The LanceDB Docs Reader GitHub App installed on `lancedb/sophon` only, with
+  Contents: read and the required Metadata: read permission. Set its Client ID
+  in the `SOPHON_DOCS_APP_CLIENT_ID` repository variable and its PEM private key
+  in the `SOPHON_DOCS_APP_PRIVATE_KEY` repository secret. The Assemble and Docs
+  Check workflows generate a short-lived token scoped to Sophon with
+  Contents: read. Checkout does not persist it, and the token is revoked when
+  the job ends. Fork pull requests receive no App secret and cannot run the
+  combined build; the assembler guard tests still run without credentials.
 
 Of these, the Publish workflow checks only that production runs from `main`,
 that the environment supplies the deploy key and that `MINTLIFY_CONTENT_DIR` is
