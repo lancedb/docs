@@ -53,16 +53,21 @@ lancedb's `CONTRIBUTING.md` describes the `availability` key. For each page
 that declares it, the assembler:
 
 - puts a label, the offerings' badges and the page's one-sentence summary,
-  above the page's content, after its imports;
+  directly after the frontmatter, ahead of any imports;
 - adds a sidebar `tag` when only one offering has it;
 - leaves `availability` out of the published frontmatter.
 
 A line `{/* availability-comparison */}` in a page becomes a table of every
 page that declares availability, in navigation order. Declarations are read from
 the page the site publishes, so an overlay's frontmatter replaces its reference
-page's. A malformed declaration, a badge of the page's own above a label, or a
-misplaced comparison line stops the build. Pages that declare nothing are copied
-unchanged.
+page's. A malformed declaration, a `tag` set by hand, a page that opens with a
+badge of its own, or a misplaced comparison line stops the build. Pages that
+declare nothing are copied unchanged.
+
+`make test-assemble` also compiles its labelled test pages with the MDX
+compiler Mint uses when `MDX_COMPILER` names the `index.js` of the
+`@mdx-js/mdx` package installed with Mint and `node` is on the path; otherwise
+those tests are skipped.
 
 ## Publishing
 

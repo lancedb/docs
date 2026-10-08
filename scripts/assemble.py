@@ -565,8 +565,6 @@ AVAILABILITY_KEYS = {"oss", "enterprise", "summary"}
 AVAILABILITY_LINE_RE = re.compile(r"^availability:")
 COMPARISON_MARKER = "{/* availability-comparison */}"
 BLANK_LINES_RE = re.compile(r"(?:[ \t]*\n)*")
-BLOCK_END_RE = re.compile(r"\n[ \t]*\n")
-ESM_RE = re.compile(r"(?:import|export)\b")
 
 
 def split_frontmatter(text: str) -> tuple[str, str] | None:
@@ -624,15 +622,6 @@ def availability_label(declared: dict) -> str:
     return " ".join([*badges, declared["summary"].strip()])
 
 
-def content_start(body: str) -> int:
-    """Where a page's content begins, after its MDX import and export blocks."""
-    position = BLANK_LINES_RE.match(body).end()
-    while ESM_RE.match(body, position):
-        end = BLOCK_END_RE.search(body, position)
-        position = BLANK_LINES_RE.match(body, end.end() if end else len(body)).end()
-    return position
-
-
 def render_availability(rel: str, text: str, meta: dict, declared: dict) -> str:
     """The page with its label added and `availability` replaced by its tag."""
     frontmatter, body = split_frontmatter(text)
@@ -653,14 +642,16 @@ def render_availability(rel: str, text: str, meta: dict, declared: dict) -> str:
         raise AssembleError(
             f"{rel}: write `availability:` as a block of its own in the frontmatter"
         )
+    if "tag" in meta:
+        raise AssembleError(
+            f"{rel}: its sidebar tag comes from `availability`; remove `tag`"
+        )
     tag = availability_tag(declared)
     if tag:
-        if "tag" in meta:
-            raise AssembleError(
-                f"{rel}: its sidebar tag comes from `availability`; remove `tag`"
-            )
         kept += f"tag: {json.dumps(tag)}\n"
-    position = content_start(body)
+    # The label goes directly after the frontmatter: further down it could land
+    # inside an import or export, whose JavaScript may contain blank lines.
+    position = BLANK_LINES_RE.match(body).end()
     if body.startswith("<Badge", position):
         raise AssembleError(
             f"{rel}: opens with a badge of its own; its availability label replaces it"

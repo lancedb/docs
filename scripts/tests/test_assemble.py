@@ -8,6 +8,9 @@ Run with `make test-assemble`.
 """
 
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -242,7 +245,17 @@ BOTH = """availability:
   enterprise: varies
   summary: Local views refresh in full; see [Against a deployment](#deployment).
 """
+BOTH_AVAILABLE = """availability:
+  oss: available
+  enterprise: available
+  summary: Works in both offerings.
+"""
 IMPORTS = "import { Example } from '/snippets/example.mdx';\n"
+# Valid MDX whose JavaScript contains blank lines.
+MULTILINE_IMPORT = "import {\n  A,\n\n  B\n} from '/snippets/probe.mdx';\n\nContent.\n"
+MULTILINE_EXPORT = "export const helper = () => {\n\n  return 1;\n};\n\nContent.\n"
+# The MDX compiler Mint uses: `<mint>/node_modules/@mdx-js/mdx/index.js`.
+MDX_COMPILER = os.environ.get("MDX_COMPILER")
 
 
 def page(frontmatter: str = "", body: str = "First paragraph.\n") -> str:
@@ -268,10 +281,61 @@ def test_availability_renders_a_label_and_a_tag(base):
 
     assert (output / "auth.mdx").read_text() == (
         '---\ntitle: "A page"\nicon: key\ntag: "Enterprise"\n---\n\n'
-        f"{IMPORTS}\n"
         '<Badge color="red">Enterprise</Badge> A deployment checks every request.\n\n'
+        f"{IMPORTS}\n"
         "## Section {#section}\n\n<Example />\n"
     )
+
+
+def render(base: Path, body: str) -> str:
+    output = build(
+        availability_site(base, {"p.mdx": page(BOTH_AVAILABLE, body)}, ["p"])
+    )
+    return (output / "p.mdx").read_text()
+
+
+@pytest.mark.parametrize("body", [MULTILINE_IMPORT, MULTILINE_EXPORT])
+def test_label_is_placed_before_any_javascript(base, body):
+    assert render(base, body) == (
+        '---\ntitle: "A page"\n---\n\n'
+        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> '
+        f"Works in both offerings.\n\n{body}"
+    )
+
+
+def compile_mdx(text: str) -> subprocess.CompletedProcess:
+    script = (
+        f"import {{compile}} from {json.dumps(MDX_COMPILER)};\n"
+        "let source = '';\n"
+        "for await (const chunk of process.stdin) source += chunk;\n"
+        "await compile(source);\n"
+    )
+    body = assemble.split_frontmatter(text)[1]
+    return subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        input=body,
+        capture_output=True,
+        text=True,
+    )
+
+
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
+)
+@pytest.mark.parametrize("body", [MULTILINE_IMPORT, MULTILINE_EXPORT])
+def test_labelled_page_still_compiles_as_mdx(base, body):
+    source = compile_mdx(page(BOTH_AVAILABLE, body))
+    assert source.returncode == 0, source.stderr
+    rendered = compile_mdx(render(base, body))
+    assert rendered.returncode == 0, rendered.stderr
+
+
+@pytest.mark.parametrize("declaration", [ENTERPRISE_ONLY, BOTH, BOTH_AVAILABLE])
+def test_hand_set_tag_is_refused_whatever_the_declaration(base, declaration):
+    source = page(declaration + "tag: Enterprise\n")
+    with pytest.raises(assemble.AssembleError, match=r"remove `tag`"):
+        build(availability_site(base, {"p.mdx": source}, ["p"]))
 
 
 def test_varies_is_labelled_and_untagged(base):
@@ -402,7 +466,6 @@ def test_overlay_that_drops_a_declaration_is_reported(base):
             "Text.\n",
             r"block of its own",
         ),
-        (ENTERPRISE_ONLY + "tag: Enterprise\n", "Text.\n", r"remove `tag`"),
         (
             ENTERPRISE_ONLY,
             '<Badge color="red">Enterprise</Badge> Text.\n',
