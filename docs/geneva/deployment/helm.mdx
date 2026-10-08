@@ -1,0 +1,184 @@
+---
+title: Deploy Geneva using Helm
+sidebarTitle: Helm Deployment
+description: Learn how to deploy Geneva on Kubernetes using the Geneva Helm Chart
+icon: cogs
+---
+
+<Tip>
+**Feature Engineering is deployed automatically in LanceDB Enterprise**
+
+In self-managed environments, Geneva can be installed into existing Kubernetes clusters using Helm. Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
+</Tip>
+
+## Pre-requisites
+
+- An existing Kubernetes cluster
+- An existing node pool(s) for Geneva workloads. By default, Geneva uses node selector
+`{"geneva.lancedb.com/ray-head": "true"}` for Ray head nodes, and
+`{"geneva.lancedb.com/ray-worker-cpu": "true"}` and `{"geneva.lancedb.com/ray-worker-gpu": "true"}`
+for Ray CPU worker and Ray GPU worker nodes respectively. This can be overridden in the Geneva client.
+- Geneva Helm chart. Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
+
+For more information on deploying the required cloud resources, see the [manual deployment instructions](/geneva/deployment/).
+
+## Geneva Helm Chart
+
+The Helm chart includes resources required for running [Geneva](https://lancedb.com/docs/geneva/) in Kubernetes.
+
+It includes services, service accounts, RBAC roles, etc. that are used by the Geneva client to manage resources.
+
+## Install
+
+1. Authenticate with Kubernetes cluster, i.e. update kubeconfig
+2. Configure Helm chart values
+
+In values.yaml, configure the service account, node selectors, and cloud resources, if applicable.
+
+```
+geneva:
+  # Object storage root URI
+  rootUri:
+    value: "s3://my-data-bucket"
+
+  serviceAccount:
+    # Service account for Geneva worker pods and services
+    annotations:
+      # Set per-CSP annotations to provide access to CSP resources, i.e.
+      # eks.amazonaws.com/role-arn: arn:aws:iam::0123456789:role/geneva_service_role
+      # iam.gke.io/gcp-service-account: geneva-service-account@my-project.iam.gserviceaccount.com
+
+  gcp:
+    # GCP service account email for the Geneva client.
+    # It should have access to the GKS cluster and "roles/storage.objectUser"
+    # permissions on the object storage bucket.
+    # e.g., geneva-client-sa@project-id.iam.gserviceaccount.com
+    clientServiceAccount: ""
+
+  aws:
+    # AWS IAM role ARN to be assumed by the Geneva client.
+    # This role should have an access entry to the cluster with username matching the role ARN.
+    # It should also have r/w access to the object storage bucket.
+    # e.g., arn:aws:iam::123456789012:role/geneva-client-role
+    clientRoleArn: ""
+
+  azure:
+    # Azure managed identity client ID for the Geneva client.
+    # This identity should have a federated credential for the LanceDB namespace
+    # and Storage Blob Data Contributor role on the storage account.
+    clientPrincipalId: ""
+```
+
+3. Install kuberay operator
+```bash
+export NAMESPACE=lancedb
+
+helm repo add kuberay https://ray-project.github.io/kuberay-helm/
+helm repo update
+helm install kuberay-operator kuberay/kuberay-operator -n $NAMESPACE --create-namespace
+```
+4. Install NVIDIA device plugin (if using GPU nodes)
+
+For GPU support, the NVIDIA device plugin must be installed in your EKS cluster:
+
+```bash
+curl https://raw.githubusercontent.com/NVIDIA/k8s-device-plugin/v0.17.0/deployments/static/nvidia-device-plugin.yml > nvidia-device-plugin.yml
+kubectl apply -f nvidia-device-plugin.yml
+```
+
+5. Install Geneva Helm chart
+```bash
+helm install geneva ./geneva -n $NAMESPACE --create-namespace
+```
+
+## Default cluster and manifest
+
+In LanceDB Enterprise, backfill and refresh jobs run on a **default cluster** (the compute
+pool jobs run on) and a **default manifest** (the Python dependency environment — image and
+packages). Configuring these in the LanceDB Enterprise chart lets jobs run out of the box
+without per-job configuration. They are set under `geneva.defaults` in the chart's
+`values.yaml`:
+
+```yaml
+geneva:
+  defaults:
+    cluster:
+      cluster_type: external_ray
+      name: deployment-default
+      ray_address: "ray://raycluster-kuberay-head-svc.lancedb.svc.cluster.local:10001"
+    manifest:
+      name: deployment-default
+      pip: [geneva, pyarrow, lancedb, pylance]
+      head_image: rayproject/ray:2.54.0-py312
+      worker_image: rayproject/ray:2.54.0-py312
+      skip_site_packages: true
+```
+
+If no default is configured, jobs must specify a manifest explicitly. Individual transforms can override the default manifest by pinning one
+with `@udf` / `@chunker` / `@udtf` (see
+[Advanced Job Configuration](/geneva/jobs/advanced-job-configuration)); to override the cluster
+at runtime, use an [Advanced Execution Context](/geneva/jobs/contexts).
+
+## Providing a Ray cluster
+
+The LanceDB Helm chart can be configured to deploy a static KubeRay cluster, provision KubeRay clusters on demand per job, or
+use an existing Ray cluster.
+
+### Use default LanceDB Enterprise Ray cluster (default)
+
+By default, LanceDB Enterprise will use a shared, statically provisioned Ray cluster for job execution.
+
+This can be enabled in the Helm chart by setting the following values.
+
+```yaml
+raycluster:
+    enabled: true
+
+global:
+    rayclusterUri: "ray://raycluster-kuberay-head-svc.lancedb.svc.cluster.local:10001"
+```
+
+Configuration for the Ray cluster can be specified by modifying raycluster.yaml Helm values.
+
+### Provision KubeRay clusters on demand
+
+Set `global.rayclusterUri` to an empty value to provision ephemeral KubeRay clusters on-demand for each execution job. The default KubeRay cluster configuration
+is specified in `geneva.defaults.cluster`, i.e.
+
+```yaml
+geneva:
+  defaults:
+    cluster:
+      cluster_type: kuberay
+      name: deployment-default
+      kuberay:
+        namespace: lancedb
+        config_method: IN_CLUSTER
+        head_group:
+          service_account: geneva-service-account
+          num_cpus: 2
+          memory: 8Gi
+          image: rayproject/ray:2.54.0-py312
+        worker_groups:
+          - name: cpu
+            service_account: geneva-service-account
+            num_cpus: 4
+            memory: 8Gi
+            replicas: 2
+            min_replicas: 0
+            max_replicas: 4
+            idle_timeout_seconds: 60
+            node_selector:
+              geneva.lancedb.com/ray-worker-cpu: "true"
+            image: rayproject/ray:2.54.0-py312
+```
+
+### Use an external Ray cluster
+
+Self-managed enterprise customers can bring an existing Ray cluster to run Geneva jobs. Simply set the rayclusterUri property in the Helm chart
+to a Ray address that can be accessed from the LanceDB Enterprise deployment.
+
+```yaml
+global:
+  rayclusterUri: "ray://my-ray-cluster.my-ns.svc.cluster.local:10001"
+```

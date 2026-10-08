@@ -1,0 +1,354 @@
+---
+title: "OpenVid-1M"
+sidebarTitle: "OpenVid-1M"
+description: "A Lance-formatted version of the OpenVid-1M corpus — 937,957 high-quality clips with inline MP4 bytes, 1024-dim video embeddings, captions, and rich per-clip quality signals — available directly from the Hub at…"
+---
+
+<Card
+  title="View on Hugging Face"
+  icon="/static/assets/logo/huggingface-logo.svg"
+  href="https://huggingface.co/datasets/lance-format/openvid-lance"
+>
+Source dataset card and downloadable files for `lance-format/openvid-lance`.
+</Card>
+
+A Lance-formatted version of the [OpenVid-1M](https://huggingface.co/datasets/nkp37/OpenVid-1M) corpus — **937,957 high-quality clips** with inline MP4 bytes, 1024-dim video embeddings, captions, and rich per-clip quality signals — available directly from the Hub at `hf://datasets/lance-format/openvid-lance/data/train.lance`.
+
+![](https://huggingface.co/datasets/nkp37/OpenVid-1M/resolve/main/OpenVid-1M.png)
+
+## Key features
+
+- **Inline MP4 bytes** in the `video_blob` column, stored in a side blob file and surfaced as lazy `BlobFile` handles via `take_blobs` — metadata scans, search, and filtering never read a single byte of video data.
+- **Pre-computed 1024-dim video embeddings** in `embedding` with a bundled `IVF_PQ` ANN index.
+- **Pre-built `INVERTED` (FTS) index on `caption`** for keyword and hybrid search.
+- **Rich quality signals** — `aesthetic_score`, `motion_score`, `temporal_consistency_score`, `camera_motion`, `fps`, `seconds` — that downstream filters can stack on.
+
+## Splits
+
+`train.lance`
+
+## Schema
+
+| Column | Type | Notes |
+|---|---|---|
+| `video_blob` | `large_binary` (blob-encoded) | Inline MP4 bytes; stored in a separate blob file and read lazily through `take_blobs` |
+| `video_path` | `string` | Original file path / object key |
+| `caption` | `string` | Text description of the clip |
+| `embedding` | `fixed_size_list<float32, 1024>` | Video embedding |
+| `aesthetic_score` | `float64` | Visual quality, roughly 0–6 |
+| `motion_score` | `float64` | Amount of motion, 0–1 |
+| `temporal_consistency_score` | `float64` | Frame-to-frame stability, 0–1 |
+| `camera_motion` | `string` | `pan`, `zoom`, `static`, etc. |
+| `fps` | `float64` | Frames per second |
+| `seconds` | `float64` | Clip duration |
+| `frame` | `int64` | Total frame count |
+
+## Pre-built indices
+
+- `IVF_PQ` on `embedding` — video similarity (L2)
+- `INVERTED` (FTS) on `caption` — keyword and hybrid search
+
+## Why Lance?
+
+1. **Blazing Fast Random Access**: Optimized for fetching scattered rows, making it ideal for random sampling, real-time ML serving, and interactive applications without performance degradation.
+2. **Native Multimodal Support**: Store text, embeddings, and other data types together in a single file. Large binary objects are loaded lazily, and vectors are optimized for fast similarity search.
+3. **Native Index Support**: Lance comes with fast, on-disk, scalable vector and FTS indexes that sit right alongside the dataset on the Hub, so you can share not only your data but also your embeddings and indexes without your users needing to recompute them.
+4. **Efficient Data Evolution**: Add new columns and backfill data without rewriting the entire dataset. This is perfect for evolving ML features, adding new embeddings, or introducing moderation tags over time.
+5. **Versatile Querying**: Supports combining vector similarity search, full-text search, and SQL-style filtering in a single query, accelerated by on-disk indexes.
+6. **Data Versioning**: Every mutation commits a new version; previous versions remain intact on disk. Tags pin a snapshot by name, so retrieval systems and training runs can reproduce against an exact slice of history.
+
+## Load with `datasets.load_dataset`
+
+You can load Lance datasets via the standard HuggingFace `datasets` interface, suitable when your pipeline already speaks `Dataset` / `IterableDataset` or you just want a quick streaming sample.
+
+```python
+import datasets
+
+hf_ds = datasets.load_dataset("lance-format/openvid-lance", split="train", streaming=True)
+for row in hf_ds.take(3):
+    print(row["caption"])
+```
+
+## Load with LanceDB
+
+LanceDB is the embedded retrieval library built on top of the Lance format ([docs](https://lancedb.com/docs)), and is the interface most users interact with. It wraps the dataset as a queryable table with search and filter builders, and is the entry point used by the Search, Curate, Evolve, Versioning, and Materialize-a-subset sections below.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/openvid-lance/data")
+tbl = db.open_table("train")
+print(len(tbl))
+```
+
+## Load with Lance
+
+`pylance` is the Python binding for the Lance format and works directly with the format's lower-level APIs. Reach for it when you want to inspect dataset internals — schema, scanner, fragments, the list of pre-built indices — or when you need the blob-level `take_blobs` entry point that streams video bytes lazily from inline storage.
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/openvid-lance/data/train.lance")
+print(ds.count_rows(), ds.schema.names)
+print(ds.list_indices())
+```
+
+> **Tip — for production use, download locally first.** Streaming from the Hub works for exploration, but heavy random access, ANN search, and video decoding are far faster against a local copy:
+> ```bash
+> hf download lance-format/openvid-lance --repo-type dataset --local-dir ./openvid
+> ```
+> Then point Lance or LanceDB at `./openvid/data`.
+
+## Search
+
+The bundled `IVF_PQ` index on `embedding` makes approximate-nearest-neighbor search a single call. In production you would encode a text prompt through a text-to-video model or a reference clip through the same video encoder used at ingest, and pass the resulting 1024-d vector to `tbl.search(...)`. The example below uses the embedding from row 42 as a runnable stand-in.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/openvid-lance/data")
+tbl = db.open_table("train")
+
+seed = (
+    tbl.search()
+    .select(["embedding", "caption"])
+    .limit(1)
+    .offset(42)
+    .to_list()[0]
+)
+
+hits = (
+    tbl.search(seed["embedding"])
+    .metric("L2")
+    .select(["caption", "aesthetic_score", "camera_motion", "seconds"])
+    .limit(10)
+    .to_list()
+)
+for r in hits:
+    print(f"{r['aesthetic_score']:.2f} | {r['camera_motion']:>8} | {r['caption'][:60]}")
+```
+
+The result set carries only the projected columns. The `video_blob` column is never read, so the network traffic for a top-10 search is dominated by a few kilobytes of caption text, not by megabytes of MP4. The lazy blob fetch comes later — see Curate below.
+
+Because OpenVid also ships an `INVERTED` index on `caption`, the same query can be issued as a hybrid search that combines the dense vector with a keyword query. LanceDB merges the two result lists and reranks them in a single call.
+
+```python
+hybrid_hits = (
+    tbl.search(query_type="hybrid")
+    .vector(seed["embedding"])
+    .text("sunset over the ocean")
+    .select(["caption", "aesthetic_score", "seconds"])
+    .limit(10)
+    .to_list()
+)
+for r in hybrid_hits:
+    print(f"{r['aesthetic_score']:.2f} | {r['seconds']:.1f}s | {r['caption'][:60]}")
+```
+
+Tune `metric`, `nprobes`, and `refine_factor` on the vector side to trade recall against latency.
+
+## Curate
+
+Curation for a video workflow almost always starts as a metadata filter — pick the dynamic, high-aesthetic, well-stabilized clips first, then decide what to do with the video bytes. Stacking predicates inside a single filtered scan keeps the result small and explicit, and the bounded `.limit(200)` makes it cheap to inspect or hand off.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/openvid-lance/data")
+tbl = db.open_table("train")
+
+candidates = (
+    tbl.search()
+    .where(
+        "aesthetic_score >= 4.5 "
+        "AND motion_score >= 0.3 "
+        "AND temporal_consistency_score >= 0.9",
+        prefilter=True,
+    )
+    .select(["caption", "camera_motion", "aesthetic_score", "fps", "seconds"])
+    .limit(200)
+    .with_row_id(True)
+    .to_list()
+)
+print(f"{len(candidates)} clips selected")
+```
+
+The scan above never reads the `video_blob` column. Lance stores blobs in a separate side file referenced by the dataset, so column-projected reads skip them entirely until they are explicitly requested. That is what makes "find me the right clips" a metadata-only operation against a million-row video corpus.
+
+Once the candidate set is fixed, pull the actual video bytes through pylance's `take_blobs`. It returns one `BlobFile` per row — a file-like handle that streams from inline blob storage on demand rather than reading the full clip into Python memory up front. For video specifically, this is the operation that matters: a video model trainer or a dataloader inspecting a few seconds of each clip should never have to materialize entire MP4s in memory just to inspect or decode part of them.
+
+```python
+import lance
+
+ds = lance.dataset("hf://datasets/lance-format/openvid-lance/data/train.lance")
+
+row_ids = [r["_rowid"] for r in candidates[:10]]
+blob_files = ds.take_blobs("video_blob", ids=row_ids)
+```
+
+Each `BlobFile` implements the file protocol, so it can be passed straight to a decoder like PyAV without first being copied through a `bytes` object. The decoder seeks and reads against the underlying handle, which means a 2-second sample from a 30-second clip moves only the bytes the decoder actually touches — not the whole MP4.
+
+```python
+import av
+
+with av.open(blob_files[0]) as container:
+    stream = container.streams.video[0]
+    for seconds in (0.0, 1.0, 2.5):
+        target = int(seconds / stream.time_base)
+        container.seek(target, stream=stream)
+        frame = next(
+            (f for f in container.decode(stream) if f.time is not None and f.time >= seconds),
+            None,
+        )
+        if frame is not None:
+            print(f"  seek {seconds:.1f}s -> {frame.width}x{frame.height} @ {frame.time:.2f}s")
+```
+
+If you only need the raw bytes (e.g., to persist a hand-picked subset to disk), call `.read()` on each handle. The lazy semantics are the same; `read()` simply materializes the full blob for that one row.
+
+```python
+for r_id, blob in zip(row_ids, blob_files):
+    with open(f"clip_{r_id}.mp4", "wb") as f:
+        f.write(blob.read())
+```
+
+## Evolve
+
+Lance stores each column independently, so a new column can be appended without rewriting the existing data — including the video blobs, which stay exactly where they are. The lightest form is a SQL expression: derive the new column from columns that already exist, and Lance computes it once and persists it. The example below adds a `duration_bucket` and a `is_high_quality` flag, either of which can then be used directly in `where` clauses without re-evaluating the predicate on every query.
+
+> **Note:** Mutations require a local copy of the dataset, since the Hub mount is read-only. See the Materialize-a-subset section at the end of this card for a streaming pattern that downloads only the rows and columns you need, or use `hf download` to pull the full corpus first.
+
+```python
+import lancedb
+
+db = lancedb.connect("./openvid/data")  # local copy required for writes
+tbl = db.open_table("train")
+
+tbl.add_columns({
+    "duration_bucket": (
+        "CASE WHEN seconds < 5 THEN 'short' "
+        "WHEN seconds < 15 THEN 'medium' ELSE 'long' END"
+    ),
+    "is_high_quality": (
+        "aesthetic_score >= 4.5 AND temporal_consistency_score >= 0.9"
+    ),
+})
+```
+
+If the values you want to attach already live in another table (offline labels, safety classifications, a second embedding from a different encoder), merge them in by joining on `video_path`:
+
+```python
+import pyarrow as pa
+
+labels = pa.table({
+    "video_path": pa.array(["s3://openvid/clips/00001.mp4", "s3://openvid/clips/00002.mp4"]),
+    "scene_label": pa.array(["beach", "city"]),
+})
+tbl.merge(labels, on="video_path")
+```
+
+The original columns and the `video_blob` side file are untouched, so existing code that does not reference the new columns continues to work unchanged. New columns become visible to every reader as soon as the operation commits. For column values that require a Python computation (e.g., running an alternative video encoder over the inline bytes), Lance provides a batch-UDF API — see the [Lance data evolution docs](https://lance.org/guide/data_evolution/).
+
+## Train
+
+A common pattern for video training is to pre-extract decoded frames once into a derived LanceDB table, and train against that table with the regular projection-based dataloader. `take_blobs` is the mechanism that makes the extraction step tractable: each clip's MP4 is randomly addressable, so the pass can subset bytes on demand and write decoded windows into a fresh table without an external file store. Other workflows project `video_blob` directly through `select_columns(...)` and decode at the batch boundary, or skip pixels entirely and train on the cached embeddings — the right shape is workload-specific. The actual training loop is the same `Permutation.identity(tbl).select_columns(...)` snippet in every case; only the source table and the column list change.
+
+Against a pre-extracted frames table:
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+db = lancedb.connect("./openvid-frames")   # local table produced by the one-time extraction
+tbl = db.open_table("train")
+
+train_ds = Permutation.identity(tbl).select_columns(["frames", "caption", "aesthetic_score"])
+loader = DataLoader(train_ds, batch_size=8, shuffle=True, num_workers=4)
+```
+
+Against the cached embeddings on the source table (no pre-extraction):
+
+```python
+import lancedb
+from lancedb.permutation import Permutation
+from torch.utils.data import DataLoader
+
+src_db = lancedb.connect("hf://datasets/lance-format/openvid-lance/data")
+src_tbl = src_db.open_table("train")
+
+train_ds = Permutation.identity(src_tbl).select_columns(["embedding", "caption"])
+loader = DataLoader(train_ds, batch_size=256, shuffle=True, num_workers=4)
+```
+
+The inline `video_blob` storage and `take_blobs` still earn their place outside of the training loop — random-access inspection of a clip in a notebook, sampling for human review, one-off evaluation against a held-out set, and the pre-extraction step itself — but they are not the dataloader.
+
+## Versioning
+
+Every mutation to a Lance dataset, whether it adds a column, merges labels, or builds an index, commits a new version. Previous versions remain intact on disk, with the same blob handles still valid. You can list versions and inspect the history directly from the Hub copy; creating new tags requires a local copy since tags are writes.
+
+```python
+import lancedb
+
+db = lancedb.connect("hf://datasets/lance-format/openvid-lance/data")
+tbl = db.open_table("train")
+
+print("Current version:", tbl.version)
+print("History:", tbl.list_versions())
+print("Tags:", tbl.tags.list())
+```
+
+Once you have a local copy, tag a version for reproducibility:
+
+```python
+local_db = lancedb.connect("./openvid/data")
+local_tbl = local_db.open_table("train")
+local_tbl.tags.create("quality-v1", local_tbl.version)
+```
+
+A tagged version can be opened by name, or any version reopened by its number, against either the Hub copy or a local one:
+
+```python
+tbl_v1 = db.open_table("train", version="quality-v1")
+tbl_v5 = db.open_table("train", version=5)
+```
+
+Pinning supports two workflows. A retrieval system locked to `quality-v1` keeps returning stable results while the dataset evolves in parallel — newly added columns or labels do not change what the tag resolves to. A training experiment pinned to the same tag can be rerun later against the exact same clips, so changes in metrics reflect model changes rather than data drift. Neither workflow needs shadow copies or external manifest tracking.
+
+## Materialize a subset
+
+Reads from the Hub are lazy, so exploratory queries only transfer the columns and row groups they touch. Mutating operations (Evolve, tag creation) need a writable backing store, and a training loop benefits from a local copy with fast random access into the blob file. Both can be served by a subset of the dataset rather than the full corpus. The pattern is to stream a filtered query through `.to_batches()` into a new local table; only the projected columns and matching row groups cross the wire, and the bytes never fully materialize in Python memory — including the `video_blob` column, which streams through Arrow record batches rather than being assembled in a single buffer.
+
+```python
+import lancedb
+
+remote_db = lancedb.connect("hf://datasets/lance-format/openvid-lance/data")
+remote_tbl = remote_db.open_table("train")
+
+batches = (
+    remote_tbl.search()
+    .where("aesthetic_score >= 4.5 AND motion_score >= 0.3")
+    .select(["caption", "embedding", "video_blob", "aesthetic_score", "camera_motion"])
+    .to_batches()
+)
+
+local_db = lancedb.connect("./openvid-subset")
+local_db.create_table("train", batches)
+```
+
+The resulting `./openvid-subset` is a first-class LanceDB database. Every snippet in the Evolve, Train, and Versioning sections above works against it by swapping `hf://datasets/lance-format/openvid-lance/data` for `./openvid-subset`. The same `take_blobs` pattern from Curate also works against the local copy — and runs faster, because the blob side file is now on local disk.
+
+## Citation
+
+```
+@article{nan2024openvid,
+  title={OpenVid-1M: A Large-Scale High-Quality Dataset for Text-to-video Generation},
+  author={Nan, Kepan and Xie, Rui and Zhou, Penghao and Fan, Tiehan and Yang, Zhenheng and Chen, Zhijie and Li, Xiang and Yang, Jian and Tai, Ying},
+  journal={arXiv preprint arXiv:2407.02371},
+  year={2024}
+}
+```
+
+## License
+
+Content inherits the original OpenVid-1M dataset license. Review the [upstream dataset card](https://huggingface.co/datasets/nkp37/OpenVid-1M) before downstream use.
