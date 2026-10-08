@@ -1,16 +1,5 @@
 name: Assemble
 
-# The published site is assembled from the roots declared in `assemble.yaml`
-# rather than served straight from this repository. This workflow proves the
-# assembler changes nothing observable, and on `main` publishes the result to the
-# `assembled` branch that Mintlify serves.
-#
-# The invariant checked on every pull request is:
-#
-#     mint export (assembled tree)  ==  mint export (docs/ directly)
-#
-# Both sides are exported from the same commit in the same run, so the check
-# cannot go stale the way a stored baseline can.
 
 on:
   pull_request:
@@ -20,20 +9,73 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      lancedb_ref:
+        description: lancedb/lancedb ref to read docs/web from
+        default: main
+      sophon_ref:
+        description: lancedb/sophon ref to read docs/web from
+        default: main
 
 permissions:
   contents: read
 
 concurrency:
-  # Serialize pushes to main: two runs force-pushing `assembled` would race.
   group: assemble-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  LANCEDB_DOCS_ROOT: lancedb/docs/web
+  SOPHON_DOCS_ROOT: sophon/docs/web
+
 jobs:
+  # Forks run the guard tests without private-source credentials.
+  test:
+    name: Test the assembler
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Test the overlay, navigation and private-root guards
+        run: make test-assemble
+
   assemble:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check out the open-source documentation
+        uses: actions/checkout@v4
+        with:
+          repository: lancedb/lancedb
+          ref: ${{ inputs.lancedb_ref || 'main' }}
+          path: lancedb
+          sparse-checkout: docs/web
+          persist-credentials: false
+
+      - name: Create a read-only Sophon token
+        id: sophon-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SOPHON_DOCS_APP_PRIVATE_KEY }}
+          owner: lancedb
+          repositories: sophon
+          permission-contents: read
+
+      - name: Check out the Enterprise documentation
+        uses: actions/checkout@v4
+        with:
+          repository: lancedb/sophon
+          ref: ${{ inputs.sophon_ref || 'main' }}
+          path: sophon
+          token: ${{ steps.sophon-token.outputs.token }}
+          sparse-checkout: docs/web
+          submodules: false
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
@@ -43,77 +85,65 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install Mintlify CLI
-        # Keep the two exports byte-comparable. Newer releases can render
-        # nondeterministic OpenAPI examples from identical input.
+        # Newer Mint releases can render nondeterministic OpenAPI examples.
         run: npm install -g mint@4.2.888
 
-      # The OpenAPI spec is tracked at a release tag, not a commit. If the two
-      # have drifted the site would document something that was never released.
       - name: Check the OpenAPI spec matches its release
         run: make check-spec
 
       - name: Assemble
-        run: make assemble
+        id: assemble
+        run: |
+          set -euo pipefail
+          make assemble | tee "$RUNNER_TEMP/assemble.log"
+          sources=$(sed -n 's/^sources: //p' "$RUNNER_TEMP/assemble.log")
+          echo "sources=$sources" >> "$GITHUB_OUTPUT"
+          echo "Assembled from: \`$sources\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Check links in the assembled tree
+      - name: Validate the assembled tree
         working-directory: build/site
-        run: mint broken-links
+        run: mint validate
 
-      # The assembler must not change what readers see. Export the assembled
-      # tree and the source tree, then compare. `compare_exports.py` normalizes
-      # the per-build UUIDs Mintlify regenerates each run, and quarantines only
-      # reference pages that failed to generate request examples at all.
+      - name: Check links, anchors and redirects in the assembled tree
+        working-directory: build/site
+        run: mint broken-links --check-anchors --check-redirects
+
+      # Export comparison normalizes Mint build UUIDs and missing request examples.
       - name: Export the assembled tree
         working-directory: build/site
         run: mint export --output "$RUNNER_TEMP/assembled.zip"
 
-      - name: Export the source tree
-        working-directory: docs
-        run: mint export --output "$RUNNER_TEMP/direct.zip"
+      - name: Assemble again
+        run: make assemble
+        env:
+          ASSEMBLE_OUTPUT: build/site-again
+
+      - name: Export the second assembly
+        working-directory: build/site-again
+        run: mint export --output "$RUNNER_TEMP/assembled-again.zip"
 
       - name: Compare
         run: |
           python3 scripts/compare_exports.py \
-            "$RUNNER_TEMP/direct.zip" "$RUNNER_TEMP/assembled.zip"
+            "$RUNNER_TEMP/assembled-again.zip" "$RUNNER_TEMP/assembled.zip"
 
-      - name: Upload the assembled tree
+      - name: Record the candidate
+        env:
+          SOURCES: ${{ steps.assemble.outputs.sources }}
+          LANCEDB_REF: ${{ inputs.lancedb_ref || 'main' }}
+          SOPHON_REF: ${{ inputs.sophon_ref || 'main' }}
+        run: |
+          python3 scripts/candidate.py record build/site --sources "$SOURCES" \
+            --ref "lancedb=$LANCEDB_REF" --ref "enterprise=$SOPHON_REF" \
+            --output build/candidate.json --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the candidate
         uses: actions/upload-artifact@v4
         with:
-          name: assembled-site
-          path: build/site
-          retention-days: 7
-
-  publish:
-    name: Publish to the assembled branch
-    needs: assemble
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download the assembled tree
-        uses: actions/download-artifact@v4
-        with:
-          name: assembled-site
-          path: site
-
-      # `assembled` holds generated output only and is never hand-edited, so it
-      # carries a single commit rather than a history worth preserving. Mintlify
-      # serves this branch; repointing it is how cutover and rollback happen.
-      - name: Push
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          cd site
-          git init -q
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -q -m "assemble ${GITHUB_SHA:0:7}"
-          git push -q --force \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-            HEAD:refs/heads/assembled
-          echo "published $(git rev-parse --short HEAD) to assembled from ${GITHUB_SHA:0:7}"
+          name: candidate
+          path: |
+            build/site
+            build/candidate.json
+          include-hidden-files: true
+          # Expired candidates can be recovered from verified publication history.
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}
