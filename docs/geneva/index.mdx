@@ -8,6 +8,14 @@ keywords: ["geneva", "feature engineering", "add features"]
 
 <Badge color="red">Enterprise-only</Badge>
 
+{/* if functions launched */}
+<Note>
+For new feature engineering in Python on a deployment, use
+[Functions](/management/function). Geneva remains available for existing
+pipelines; see [Geneva and Functions](#functions).
+</Note>
+
+{/* end if */}
 When working with multimodal data at scale, [LanceDB Enterprise](/enterprise) makes it easy
 to define, extract, and transform raw data into useful information and features for your
 AI applications. LanceDB Enterprise's _Multimodal Feature Engineering_ package is designed to improve
@@ -22,10 +30,16 @@ experiments in local notebooks to fully-managed distributed job execution on dat
 billions of rows.
 
 <Card>
-Feature Engineering and the `geneva` Python package are currently only available as part of
+The `geneva` Python package is currently only available as part of
 [LanceDB Enterprise](/enterprise). Please [contact us](https://www.lancedb.com/contact) if you're interested
 in scaling up your feature engineering workloads for your AI and multimodal use cases.
 </Card>
+
+Feature engineering itself is not Enterprise-only: LanceDB OSS has
+[computed columns](/feature-engineering/add-computed-column) and
+[materialized views](/feature-engineering/materialized-views), which need no
+extra package. See [Feature engineering](/feature-engineering) to choose between
+them and Geneva.
 
 The `geneva` package uses Python [User Defined Functions (UDFs)](/geneva/udfs/udfs) to define features
 as columns in a Lance dataset. Adding a feature is straightforward:
@@ -54,6 +68,27 @@ You can build your Python feature generator function in an IDE or a notebook usi
 
 Ready to write your first feature? Head to [Getting Started](/geneva/getting-started).
 
+{/* if functions launched */}
+## Geneva and Functions {#functions}
+
+[Functions](/management/function) are the recommended way to fill columns with
+Python on a deployment. They are part of the `lancedb` package and run on the
+deployment that enables them. Geneva remains available for existing pipelines.
+The concepts correspond:
+
+| Geneva | Functions |
+| --- | --- |
+| `geneva.connect(...)` | `lancedb.connect(...)`, with the same URI, endpoint and key |
+| `@geneva.udf(data_type=...)` | `@udf` from `lancedb`, typed by its annotations |
+| `tbl.add_columns({"col": udf})` | register with `db.create_function_async(fn)`, then `table.add_columns({"col": version(x=col("x"))})` |
+| `tbl.backfill("col")` | `table.refresh_column_async("col")`, a [job](/basics/jobs) |
+| a manifest's pip or conda packages | `pip`, `conda` and `env` on `@udf` |
+
+Moving a column means registering its UDF as a Function and declaring the column
+again with that Function; the Function page covers both, and what a Function
+packages with it.
+
+{/* end if */}
 ## Continue learning
 
 Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:

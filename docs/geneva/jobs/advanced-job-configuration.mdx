@@ -123,9 +123,9 @@ import geneva
 from geneva import udf
 
 db = geneva.connect(
-    uri="db://my-db",
-    host_override=os.getenv("LANCEDB_URI"),
-    api_key=os.getenv("LANCEDB_API_KEY"),
+    uri=os.environ["LANCEDB_URI"],                      # db://your-database
+    host_override=os.environ["LANCEDB_HOST_OVERRIDE"],  # https://your-endpoint
+    api_key=os.environ["LANCEDB_API_KEY"],
 )
 
 # Capture the local workspace; rely on the worker image for site-packages
