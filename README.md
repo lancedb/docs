@@ -57,8 +57,11 @@ that declares it, the assembler:
 - adds a sidebar `tag` when only one offering has it;
 - leaves `availability` out of the published frontmatter.
 
-A line `{/* availability-comparison */}` in a page becomes a table of every
-page that declares availability, in navigation order. Declarations are read from
+A line `{/* availability-comparison */}` in a page becomes the pages that
+declare availability, in navigation order: for each navigation section -- the
+outermost group holding a page, or its tab -- a `###` heading and a table of
+that section's pages, so the line belongs under a `##` heading. Pages outside
+the navigation come last, under "Other pages". Declarations are read from
 the page the site publishes, so an overlay's frontmatter replaces its reference
 page's. A malformed declaration, a `tag` set by hand, a page that opens with a
 badge of its own, or a misplaced comparison line stops the build. Pages that

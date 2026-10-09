@@ -266,9 +266,10 @@ def nav_page_paths(docs_json: dict) -> set[str]:
     return set(nav_page_order(docs_json))
 
 
-def nav_page_order(docs_json: dict) -> list[str]:
-    """What `nav_page_paths` collects, once each, in navigation order."""
-    found: dict[str, None] = {}
+def nav_page_sections(docs_json: dict) -> dict[str, str | None]:
+    """Each navigation page, once, in order, with the outermost group holding
+    it -- or, outside any group, its tab."""
+    found: dict[str, str | None] = {}
     # Keys whose values name something other than a page.
     non_page_keys = {"openapi", "href", "icon", "logo"}
     # Keys whose values are human-readable labels.
@@ -277,19 +278,28 @@ def nav_page_order(docs_json: dict) -> list[str]:
         "tag", "name", "title",
     }
 
-    def walk(node: object, key: str | None = None) -> None:
+    def walk(node: object, key: str | None, section: str | None, grouped: bool) -> None:
         if isinstance(node, dict):
+            if not grouped and isinstance(node.get("group"), str):
+                section, grouped = node["group"], True
+            elif not grouped and isinstance(node.get("tab"), str):
+                section = node["tab"]
             for child_key, value in node.items():
                 if child_key not in non_page_keys:
-                    walk(value, child_key)
+                    walk(value, child_key, section, grouped)
         elif isinstance(node, list):
             for value in node:
-                walk(value, key)
+                walk(value, key, section, grouped)
         elif isinstance(node, str) and key not in label_keys:
-            found.setdefault(node.lstrip("/"))
+            found.setdefault(node.lstrip("/"), section)
 
-    walk(docs_json.get("navigation", {}))
-    return list(found)
+    walk(docs_json.get("navigation", {}), None, None, False)
+    return found
+
+
+def nav_page_order(docs_json: dict) -> list[str]:
+    """What `nav_page_paths` collects, once each, in navigation order."""
+    return list(nav_page_sections(docs_json))
 
 
 def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
@@ -665,10 +675,9 @@ def page_route(rel: str) -> str:
     return route.removesuffix("/index") or "/"
 
 
-def comparison(entries: list[tuple[str, dict, dict]]) -> str:
-    # Two columns: Mintlify gives each column at least 150px, so a wider table
-    # scrolls sideways in the content column.
-    rows = ["| Topic | OSS / Enterprise |", "| --- | --- |"]
+def comparison(entries: list[tuple[str, dict, dict]], sections: dict[str, str]) -> str:
+    """Each navigation section's declaring pages: a heading, then a table."""
+    tables: dict[str, list[str]] = {}
     for rel, meta, declared in entries:
         route = page_route(rel)
         title = meta.get("sidebarTitle") or meta.get("title") or route
@@ -677,8 +686,26 @@ def comparison(entries: list[tuple[str, dict, dict]]) -> str:
             f"[{title}]({route}): {summary}",
             f"{STATUSES[declared['oss']]} / {STATUSES[declared['enterprise']]}",
         ]
-        rows.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
-    return "\n".join(rows)
+        row = "| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |"
+        tables.setdefault(sections.get(rel) or "Other pages", []).append(row)
+    blocks, anchors = [], set()
+    for section, rows in tables.items():
+        stem = "availability-" + (
+            re.sub(r"[^a-z0-9]+", "-", section.lower()).strip("-") or "section"
+        )
+        anchor, count = stem, 2
+        while anchor in anchors:
+            anchor, count = f"{stem}-{count}", count + 1
+        anchors.add(anchor)
+        # Two columns: Mintlify gives each column at least 150px, so a wider
+        # table scrolls sideways in the content column.
+        blocks.append(
+            "\n".join(
+                [f"### {section} {{#{anchor}}}", "", "| Topic | OSS / Enterprise |",
+                 "| --- | --- |", *rows]
+            )
+        )
+    return "\n\n".join(blocks)
 
 
 def annotate(resolved: Resolved, docs_json: dict) -> None:
@@ -687,8 +714,8 @@ def annotate(resolved: Resolved, docs_json: dict) -> None:
     Runs after `merge`, so a page's declaration is read from whichever root
     publishes it. A declaring page gets a label above its content, and a
     sidebar tag when it applies to one offering only. A page holding the
-    comparison marker gets a table of every declaring page in navigation
-    order. Every other page is published unchanged.
+    comparison marker gets the declaring pages in navigation order, a table
+    for each navigation section. Every other page is published unchanged.
     """
     texts = {
         rel: src.read_text(encoding="utf-8")
@@ -700,10 +727,17 @@ def annotate(resolved: Resolved, docs_json: dict) -> None:
         found = declared_availability(rel, text)
         if found:
             declared[rel] = found
+    nav = nav_page_sections(docs_json)
     order = {
         page + suffix: index
-        for index, page in enumerate(nav_page_order(docs_json))
+        for index, page in enumerate(nav)
         for suffix in PAGE_SUFFIXES
+    }
+    sections = {
+        page + suffix: section
+        for page, section in nav.items()
+        for suffix in PAGE_SUFFIXES
+        if section
     }
     entries = [
         (rel, *declared[rel])
@@ -725,7 +759,7 @@ def annotate(resolved: Resolved, docs_json: dict) -> None:
                     f"{rel}: has the availability comparison marker, "
                     "but no page declares availability"
                 )
-            page = page.replace(COMPARISON_MARKER, comparison(entries))
+            page = page.replace(COMPARISON_MARKER, comparison(entries, sections))
         if page != text:
             resolved.rendered[rel] = page
 

@@ -368,12 +368,68 @@ def test_comparison_lists_declaring_pages_in_navigation_order(base):
 
     assert (output / "offerings.mdx").read_text() == page(
         body="Intro.\n\n"
+        "### Pages {#availability-pages}\n\n"
         "| Topic | OSS / Enterprise |\n"
         "| --- | --- |\n"
         "| [A page](/views): Local views refresh in full; "
         "see [Against a deployment](/views#deployment). | Yes / Varies |\n"
         "| [Auth](/auth): A deployment checks every request. | No / Yes |\n"
         "\nAfter.\n"
+    )
+
+
+def test_comparison_has_a_table_per_navigation_section(base):
+    paths = site(base)
+    navigation = {
+        "tabs": [
+            {
+                "tab": "Documentation",
+                "groups": [
+                    {
+                        "group": "Search",
+                        "pages": [
+                            "search/index",
+                            {"group": "Nested", "pages": ["search/deep"]},
+                        ],
+                    },
+                    {"group": "Security", "pages": ["auth"]},
+                ],
+            },
+            {
+                "tab": "Integrations",
+                "pages": ["hf", {"group": "Search", "pages": ["search/more"]}],
+            },
+        ]
+    }
+    write(paths["reference"] / "docs.json", json.dumps({"navigation": navigation}))
+    pages = {
+        "search/index.mdx": page('sidebarTitle: "Overview"\n' + BOTH_AVAILABLE),
+        "search/deep.mdx": page(BOTH),
+        "search/more.mdx": page(BOTH_AVAILABLE),
+        "auth.mdx": page(ENTERPRISE_ONLY),
+        "hf.mdx": page(BOTH_AVAILABLE),
+        "unlisted.mdx": page(ENTERPRISE_ONLY),
+        "offerings.mdx": page(body="{/* availability-comparison */}\n"),
+    }
+    for rel, text in pages.items():
+        write(paths["reference"] / rel, text)
+
+    output = build(config(base, paths["reference"], public_root(paths)))
+
+    header = "| Topic | OSS / Enterprise |\n| --- | --- |\n"
+    both = "Works in both offerings. | Yes / Yes |\n"
+    assert (output / "offerings.mdx").read_text() == page(
+        body="### Search {#availability-search}\n\n" + header
+        + f"| [Overview](/search): {both}"
+        "| [A page](/search/deep): Local views refresh in full; "
+        "see [Against a deployment](/search/deep#deployment). | Yes / Varies |\n"
+        f"| [A page](/search/more): {both}"
+        "\n### Security {#availability-security}\n\n" + header
+        + "| [A page](/auth): A deployment checks every request. | No / Yes |\n"
+        "\n### Integrations {#availability-integrations}\n\n" + header
+        + f"| [A page](/hf): {both}"
+        "\n### Other pages {#availability-other-pages}\n\n" + header
+        + "| [A page](/unlisted): A deployment checks every request. | No / Yes |\n"
     )
 
 
