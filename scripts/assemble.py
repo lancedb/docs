@@ -604,14 +604,16 @@ def published_pages(resolved: Resolved) -> list[str]:
 # line with other text -- a table row, a list item -- gates that line alone.
 # `launches` in assemble.yaml says which features have launched, so the same
 # sources build either site.
-LAUNCH_KEY_RE = re.compile(r"^launch:[^\n]*\n", re.M)
+LAUNCH_LINE_RE = re.compile(r"""^(["']?)launch\1[ \t]*:.*\n(?:[ \t].*\n)*""", re.M)
 LAUNCH_MARKER_RE = re.compile(
-    r"\{/\*\s*if\s+(?P<name>[a-z][a-z0-9-]*)\s+(?P<negated>not\s+)?launched\s*\*/\}"
+    r"\{/\*[ \t]*if[ \t]+(?P<name>[a-z][a-z0-9-]*)[ \t]+(?P<negated>not[ \t]+)?"
+    r"launched[ \t]*\*/\}"
 )
-END_IF_RE = re.compile(r"\{/\*\s*end\s+if\s*\*/\}")
-# Anything shaped like a marker that the two above do not read: a misspelled
-# one would otherwise publish its section in every mode.
-MARKER_LIKE_RE = re.compile(r"\{/\*\s*(?:if\s+\S+\s+(?:not\s+)?launch|end\s*if)", re.I)
+END_IF_RE = re.compile(r"\{/\*[ \t]*end[ \t]+if[ \t]*\*/\}")
+# Comments that open with `if` or `end`, or mention a launch, are reserved for
+# the markers: a misspelled one would otherwise publish its section in every
+# mode.
+RESERVED_RE = re.compile(r"\{\s*/\*[\s*]*(?:(?:if|end|endif|fi)\b|[^*]*\b(?:un)?launch)", re.I)
 
 
 def launched(config: Config, rel: str, name: str) -> bool:
@@ -623,39 +625,51 @@ def launched(config: Config, rel: str, name: str) -> bool:
     return config.launches[name] == "launched"
 
 
-def page_launch(rel: str, text: str) -> str | None:
-    """The launch a page belongs to, from its frontmatter."""
+def page_launch(rel: str, text: str) -> tuple[str, str] | None:
+    """The launch a page belongs to, and the page as published once it launches."""
     parts = split_frontmatter(text)
-    if parts is None or not LAUNCH_KEY_RE.search(parts[0]):
+    if parts is None:
         return None
+    frontmatter, body = parts
     try:
-        name = (yaml.safe_load(parts[0]) or {}).get("launch")
+        meta = yaml.safe_load(frontmatter)
     except yaml.YAMLError as exc:
         raise AssembleError(f"{rel}: unreadable frontmatter: {exc}") from exc
-    if not isinstance(name, str):
+    if not isinstance(meta, dict):
+        return None
+    for key in meta:
+        if key != "launch" and str(key).strip().lower().startswith("launch"):
+            raise AssembleError(f"{rel}: frontmatter `{key}` is not `launch`")
+    if "launch" not in meta:
+        return None
+    if not isinstance(meta["launch"], str):
         raise AssembleError(f"{rel}: `launch` must name one feature")
-    return name
-
-
-def without_launch_key(rel: str, text: str) -> str:
-    frontmatter, body = split_frontmatter(text)
-    kept = LAUNCH_KEY_RE.sub("", frontmatter, count=1)
-    meta = yaml.safe_load(frontmatter)
-    if (yaml.safe_load(kept) or {}) != {k: v for k, v in meta.items() if k != "launch"}:
-        raise AssembleError(f"{rel}: write `launch:` on one line of its own")
-    return f"---\n{kept}---\n{body}"
+    kept = LAUNCH_LINE_RE.sub("", frontmatter, count=1)
+    try:
+        unchanged = (yaml.safe_load(kept) or {}) == {
+            k: v for k, v in meta.items() if k != "launch"
+        }
+    except yaml.YAMLError:
+        unchanged = False
+    if not unchanged:
+        raise AssembleError(f"{rel}: write `launch: {meta['launch']}` on a line of its own")
+    return meta["launch"], f"---\n{kept}---\n{body}"
 
 
 def gate_sections(config: Config, rel: str, text: str) -> str:
     """The page with each launch-marked section kept or left out."""
+    for match in RESERVED_RE.finditer(text):
+        start = match.start()
+        if not (LAUNCH_MARKER_RE.match(text, start) or END_IF_RE.match(text, start)):
+            number = len(text[: start + 1].splitlines())
+            line = text.splitlines()[number - 1].strip()
+            raise AssembleError(f"{rel}:{number}: cannot read the launch marker in {line!r}")
     out: list[str] = []
     block: tuple[bool, int] | None = None
     trim_blank = False
     for number, line in enumerate(text.splitlines(keepends=True), 1):
         ends = END_IF_RE.findall(line)
         markers = list(LAUNCH_MARKER_RE.finditer(line))
-        if len(MARKER_LIKE_RE.findall(line)) != len(ends) + len(markers):
-            raise AssembleError(f"{rel}:{number}: cannot read the launch marker in {line.strip()!r}")
         if ends:
             if markers or len(ends) > 1 or line.strip() != ends[0]:
                 raise AssembleError(f"{rel}:{number}: `end if` must be alone on its line")
@@ -735,12 +749,12 @@ def gate(config: Config, resolved: Resolved, docs_json: dict) -> bool:
     """
     excluded: dict[str, str] = {}
     for rel in published_pages(resolved):
-        text = published_text(resolved, rel)
-        name = page_launch(rel, text)
-        if name is None:
+        found = page_launch(rel, published_text(resolved, rel))
+        if found is None:
             continue
+        name, published = found
         if launched(config, rel, name):
-            resolved.rendered[rel] = without_launch_key(rel, text)
+            resolved.rendered[rel] = published
         else:
             excluded[rel] = name
     for rel in excluded:

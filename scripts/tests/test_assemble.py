@@ -602,7 +602,9 @@ FUNCTION_REDIRECT = {"source": "/old-functions", "destination": "/management/fun
 TABLE_REDIRECT = {"source": "/old-tables", "destination": "/management/table"}
 
 
-def launch_site(base: Path, functions: str, shared: str = SHARED) -> Path:
+def launch_site(
+    base: Path, functions: str, shared: str = SHARED, key: str = "launch: functions"
+) -> Path:
     paths = site(base)
     navigation = {
         "tabs": [
@@ -627,9 +629,9 @@ def launch_site(base: Path, functions: str, shared: str = SHARED) -> Path:
         "offerings.mdx": page(body="{/* availability-comparison */}\n"),
         "management/table.mdx": page(BOTH_AVAILABLE, shared),
         "management/function.mdx": page(
-            'sidebarTitle: "Function"\nlaunch: functions\n' + ENTERPRISE_ONLY, FUNCTION_BODY
+            f'sidebarTitle: "Function"\n{key}\n' + ENTERPRISE_ONLY, FUNCTION_BODY
         ),
-        "sql/function.mdx": page("launch: functions\n", "CREATE FUNCTION.\n"),
+        "sql/function.mdx": page(f"{key}\n", "CREATE FUNCTION.\n"),
         "snippets/function.mdx": FUNCTION_SNIPPET,
     }
     for rel, text in pages.items():
@@ -729,6 +731,95 @@ def test_the_unlaunched_build_is_the_default_without_a_launch_listed(base):
 def test_launch_markers_are_checked(base, shared, error):
     with pytest.raises(assemble.AssembleError, match=error):
         build(launch_site(base, "unlaunched", shared))
+
+
+def published_tree(output: Path) -> dict[str, bytes]:
+    return {rel: (output / rel).read_bytes() for rel in published_files(output)}
+
+
+@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
+@pytest.mark.parametrize(
+    "key",
+    [
+        '"launch": functions',
+        "launch : functions",
+        "'launch': functions",
+        'launch: "functions"',
+        "launch: functions  # until the launch",
+        "launch:\n  functions",
+    ],
+)
+def test_any_yaml_spelling_of_the_launch_key_gates_the_page(base, functions, key):
+    expected = build(launch_site(base / "canonical", functions))
+    output = build(launch_site(base / "spelled", functions, key=key))
+
+    assert published_tree(output) == published_tree(expected)
+    assert ("management/function.mdx" in published_files(output)) == (functions == "launched")
+
+
+@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
+@pytest.mark.parametrize(
+    ("key", "error"),
+    [
+        ("Launch: functions", r"function.mdx: frontmatter `Launch` is not `launch`"),
+        ("launches: functions", r"frontmatter `launches` is not `launch`"),
+        ("? launch\n: functions", r"write `launch: functions` on a line of its own"),
+        ('"\\x6caunch": functions', r"write `launch: functions` on a line of its own"),
+        ("launch: functions\nlaunch: functions", r"on a line of its own"),
+        ("launch: [functions]", r"`launch` must name one feature"),
+    ],
+)
+def test_a_launch_key_the_gate_cannot_remove_stops_the_build(base, functions, key, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(launch_site(base, functions, key=key))
+
+
+UNANNOUNCED = "| Unannounced | code |"
+UNREADABLE = r"table.mdx:\d+: cannot read the launch marker"
+
+
+@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
+@pytest.mark.parametrize(
+    ("marked", "error"),
+    [
+        (UNANNOUNCED + " {/* if functions launced */}", UNREADABLE),
+        ("{/* if functions launced */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        ("{/* If functions launched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        ("{/* if functions unlaunched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        ("{/* if not functions launched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        ("{/* iff functions launched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        ("{ /* if functions launched */ }\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        ("{/** if functions launched **/}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
+        (
+            "{/*\n  if functions launched\n*/}\n" + UNANNOUNCED + "\n{/*\n  end if\n*/}",
+            UNREADABLE,
+        ),
+        (UNANNOUNCED + " {/* if functions launched */", UNREADABLE),
+        ("{/* if functions launched */}\n" + UNANNOUNCED + "\n{/* end-if */}", UNREADABLE),
+        ("{/* if functions launched */}\n" + UNANNOUNCED + "\n{/* End if */}", UNREADABLE),
+        (
+            "{/* if function launched */}\n" + UNANNOUNCED + "\n{/* end if */}",
+            r"table.mdx: no launch named 'function'",
+        ),
+    ],
+)
+def test_a_misspelled_launch_marker_stops_the_build(base, functions, marked, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(launch_site(base, functions, SHARED + "\n" + marked + "\n"))
+
+
+@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
+def test_other_comments_are_published_unchanged(base, functions):
+    comments = (
+        "{/* TODO: tidy this table */}\n"
+        "{/* HF_SYNC:START — generated by `make hf-sync` */}\n"
+        "{/* [Evaluating](./examples/eval) */}\n"
+        "{/*\n<div>notes</div>\n*/}\n"
+        "{/* endpoint notes, if any */}\n"
+    )
+    output = build(launch_site(base, functions, SHARED + "\n" + comments))
+
+    assert (output / "management/table.mdx").read_text().endswith("End.\n\n" + comments)
 
 
 def test_launched_pages_may_link_to_each_other(base):

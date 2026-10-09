@@ -101,7 +101,9 @@ leaves out:
 - the examples on the pages it leaves out.
 
 A published page that still links to a left-out page, or a marker it cannot
-read, stops the build. Launching is changing the default in `assemble.yaml`.
+read, stops the build. Any comment that opens with `if` or `end`, or mentions a
+launch, is read as a marker, and so is any YAML spelling of the `launch` key.
+Launching is changing the default in `assemble.yaml`.
 Docs Check validates the launched site as well, so the pages a launch
 publishes have already passed. `mint dev` in a single root shows every
 section, both sides of each marker included; assemble to see either site.
