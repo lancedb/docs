@@ -8,12 +8,13 @@ this repository's `docs/`. CI checks each assembly and keeps it as a candidate;
 only the Publish workflow puts a chosen candidate on the `assembled` branch
 (see `candidate.py`).
 
-Six stages:
+Seven stages:
 
     resolve   walk each root in order and map output path -> source file
     validate  anchors unique per page, nav references resolve, no path escapes
     merge     let each overlay page replace the reference page at its path
     nav       fold each root's navigation fragment into the base docs.json
+    annotate  render the availability pages declare into their content
     emit      write the output tree
     check     `mint validate` and `mint broken-links`, run separately in CI
 
@@ -89,6 +90,8 @@ class Resolved:
     files: dict[str, tuple[Root, Path]] = field(default_factory=dict)
     overlays: dict[str, tuple[Root, Path]] = field(default_factory=dict)
     fragments: dict[str, Path] = field(default_factory=dict)
+    # Pages whose published text differs from their source: output path -> text.
+    rendered: dict[str, str] = field(default_factory=dict)
 
 
 ENV_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]*))?\}")
@@ -260,7 +263,12 @@ def nav_page_paths(docs_json: dict) -> set[str]:
     against the current navigation it finds 179 page paths and 46 labels with no
     misclassification either way.
     """
-    found: set[str] = set()
+    return set(nav_page_order(docs_json))
+
+
+def nav_page_order(docs_json: dict) -> list[str]:
+    """What `nav_page_paths` collects, once each, in navigation order."""
+    found: dict[str, None] = {}
     # Keys whose values name something other than a page.
     non_page_keys = {"openapi", "href", "icon", "logo"}
     # Keys whose values are human-readable labels.
@@ -278,10 +286,10 @@ def nav_page_paths(docs_json: dict) -> set[str]:
             for value in node:
                 walk(value, key)
         elif isinstance(node, str) and key not in label_keys:
-            found.add(node.lstrip("/"))
+            found.setdefault(node.lstrip("/"))
 
     walk(docs_json.get("navigation", {}))
-    return found
+    return list(found)
 
 
 def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
@@ -332,6 +340,19 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
             raise AssembleError(
                 f"{rel} differs between {reference.name} and {root.name}; an "
                 "overlay replaces pages, and its other files must match the reference"
+            )
+
+    # An overlay replaces the whole page, availability included.
+    for rel, (root, src) in sorted(resolved.overlays.items()):
+        reference_src = resolved.files[rel][1]
+        if (
+            rel.endswith(PAGE_SUFFIXES)
+            and declared_availability(rel, reference_src.read_text(encoding="utf-8"))
+            and not declared_availability(rel, src.read_text(encoding="utf-8"))
+        ):
+            warnings.append(
+                f"{rel}: the {root.name} page declares no availability, so the "
+                "availability its reference page declares is not published"
             )
 
     # The spec is synced from upstream and shipped so the REST overview can link
@@ -526,7 +547,191 @@ def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
 
 
 # --------------------------------------------------------------------------- #
-# stage 5: emit
+# stage 5: annotate
+# --------------------------------------------------------------------------- #
+
+# A page declares where it applies in its own frontmatter:
+#
+#     availability:
+#       oss: unavailable
+#       enterprise: available
+#       summary: A deployment authenticates every request.
+#
+# Its label, its sidebar tag and its row in the comparison are all rendered from
+# that, so no list of features elsewhere has to be kept in step with the pages.
+OFFERINGS = (("oss", "OSS", "green"), ("enterprise", "Enterprise", "red"))
+STATUSES = {"available": "Yes", "unavailable": "No", "varies": "Varies"}
+AVAILABILITY_KEYS = {"oss", "enterprise", "summary"}
+AVAILABILITY_LINE_RE = re.compile(r"^availability:")
+COMPARISON_MARKER = "{/* availability-comparison */}"
+BLANK_LINES_RE = re.compile(r"(?:[ \t]*\n)*")
+
+
+def split_frontmatter(text: str) -> tuple[str, str] | None:
+    """A page's YAML frontmatter and the body after it."""
+    if not text.startswith("---\n"):
+        return None
+    end = text.find("\n---\n", 3)
+    if end == -1:
+        return None
+    return text[4 : end + 1], text[end + 5 :]
+
+
+def declared_availability(rel: str, text: str) -> tuple[dict, dict] | None:
+    """A page's frontmatter and the availability it declares, checked."""
+    parts = split_frontmatter(text)
+    if parts is None or "availability" not in parts[0]:
+        return None
+    try:
+        meta = yaml.safe_load(parts[0])
+    except yaml.YAMLError as exc:
+        raise AssembleError(f"{rel}: unreadable frontmatter: {exc}") from exc
+    if not isinstance(meta, dict) or "availability" not in meta:
+        return None
+    declared = meta["availability"]
+    if not isinstance(declared, dict) or set(declared) != AVAILABILITY_KEYS:
+        raise AssembleError(
+            f"{rel}: `availability` must set exactly oss, enterprise and summary"
+        )
+    for key, _name, _color in OFFERINGS:
+        if not isinstance(declared[key], str) or declared[key] not in STATUSES:
+            raise AssembleError(
+                f"{rel}: availability.{key} is {declared[key]!r}, "
+                f"not one of {', '.join(STATUSES)}"
+            )
+    if declared["oss"] == declared["enterprise"] == "unavailable":
+        raise AssembleError(f"{rel}: availability says no offering has it")
+    summary = declared["summary"]
+    if not isinstance(summary, str) or not summary.strip() or "\n" in summary.strip():
+        raise AssembleError(f"{rel}: availability.summary must be one line of text")
+    return meta, declared
+
+
+def availability_tag(declared: dict) -> str | None:
+    """The sidebar tag of a page that applies to one offering only."""
+    names = [name for key, name, _ in OFFERINGS if declared[key] != "unavailable"]
+    return names[0] if len(names) == 1 else None
+
+
+def availability_label(declared: dict) -> str:
+    badges = []
+    for key, name, color in OFFERINGS:
+        if declared[key] != "unavailable":
+            text = name if declared[key] == "available" else f"{name}: varies"
+            badges.append(f'<Badge color="{color}">{text}</Badge>')
+    return " ".join([*badges, declared["summary"].strip()])
+
+
+def render_availability(rel: str, text: str, meta: dict, declared: dict) -> str:
+    """The page with its label added and `availability` replaced by its tag."""
+    frontmatter, body = split_frontmatter(text)
+    lines = frontmatter.splitlines(keepends=True)
+    start = next(
+        (i for i, line in enumerate(lines) if AVAILABILITY_LINE_RE.match(line)), None
+    )
+    kept = None
+    if start is not None:
+        end = start + 1
+        while end < len(lines) and (
+            lines[end][:1] in (" ", "\t") or not lines[end].strip()
+        ):
+            end += 1
+        kept = "".join(lines[:start] + lines[end:])
+    rest = {key: value for key, value in meta.items() if key != "availability"}
+    if kept is None or (yaml.safe_load(kept) or {}) != rest:
+        raise AssembleError(
+            f"{rel}: write `availability:` as a block of its own in the frontmatter"
+        )
+    if "tag" in meta:
+        raise AssembleError(
+            f"{rel}: its sidebar tag comes from `availability`; remove `tag`"
+        )
+    tag = availability_tag(declared)
+    if tag:
+        kept += f"tag: {json.dumps(tag)}\n"
+    # The label goes directly after the frontmatter: further down it could land
+    # inside an import or export, whose JavaScript may contain blank lines.
+    position = BLANK_LINES_RE.match(body).end()
+    if body.startswith("<Badge", position):
+        raise AssembleError(
+            f"{rel}: opens with a badge of its own; its availability label replaces it"
+        )
+    label = availability_label(declared)
+    return f"---\n{kept}---\n{body[:position]}{label}\n\n{body[position:]}"
+
+
+def page_route(rel: str) -> str:
+    route = "/" + rel.rsplit(".", 1)[0]
+    return route.removesuffix("/index") or "/"
+
+
+def comparison(entries: list[tuple[str, dict, dict]]) -> str:
+    # Two columns: Mintlify gives each column at least 150px, so a wider table
+    # scrolls sideways in the content column.
+    rows = ["| Topic | OSS / Enterprise |", "| --- | --- |"]
+    for rel, meta, declared in entries:
+        route = page_route(rel)
+        title = meta.get("sidebarTitle") or meta.get("title") or route
+        summary = declared["summary"].strip().replace("](#", f"]({route}#")
+        cells = [
+            f"[{title}]({route}): {summary}",
+            f"{STATUSES[declared['oss']]} / {STATUSES[declared['enterprise']]}",
+        ]
+        rows.append("| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |")
+    return "\n".join(rows)
+
+
+def annotate(resolved: Resolved, docs_json: dict) -> None:
+    """Render the availability pages declare into the published pages.
+
+    Runs after `merge`, so a page's declaration is read from whichever root
+    publishes it. A declaring page gets a label above its content, and a
+    sidebar tag when it applies to one offering only. A page holding the
+    comparison marker gets a table of every declaring page in navigation
+    order. Every other page is published unchanged.
+    """
+    texts = {
+        rel: src.read_text(encoding="utf-8")
+        for rel, (_root, src) in sorted(resolved.files.items())
+        if rel.endswith(PAGE_SUFFIXES)
+    }
+    declared = {}
+    for rel, text in texts.items():
+        found = declared_availability(rel, text)
+        if found:
+            declared[rel] = found
+    order = {
+        page + suffix: index
+        for index, page in enumerate(nav_page_order(docs_json))
+        for suffix in PAGE_SUFFIXES
+    }
+    entries = [
+        (rel, *declared[rel])
+        for rel in sorted(declared, key=lambda rel: (order.get(rel, len(order)), rel))
+    ]
+    marker_line = re.compile(rf"^{re.escape(COMPARISON_MARKER)}$", re.M)
+    for rel, text in texts.items():
+        page = (
+            render_availability(rel, text, *declared[rel]) if rel in declared else text
+        )
+        if COMPARISON_MARKER in page:
+            if page.count(COMPARISON_MARKER) > 1 or not marker_line.search(page):
+                raise AssembleError(
+                    f"{rel}: the availability comparison marker must be on a line "
+                    "of its own, once"
+                )
+            if not entries:
+                raise AssembleError(
+                    f"{rel}: has the availability comparison marker, "
+                    "but no page declares availability"
+                )
+            page = page.replace(COMPARISON_MARKER, comparison(entries))
+        if page != text:
+            resolved.rendered[rel] = page
+
+
+# --------------------------------------------------------------------------- #
+# stage 6: emit
 # --------------------------------------------------------------------------- #
 
 
@@ -576,7 +781,10 @@ def emit(
         if not dest.is_relative_to(output):
             raise AssembleError(f"{rel} resolves outside the output directory")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+        if rel in resolved.rendered:
+            dest.write_text(resolved.rendered[rel], encoding="utf-8")
+        else:
+            shutil.copy2(src, dest)
         written += 1
 
     if nav_raw is not None:
@@ -713,6 +921,7 @@ def main() -> int:
         docs_json, nav_raw = assemble_nav(resolved)
         warnings = validate(config, resolved, docs_json)
         merge(resolved)
+        annotate(resolved, docs_json)
         count = emit(config, resolved, docs_json, nav_raw)
     except AssembleError as exc:
         print(f"assemble: {exc}", file=sys.stderr)

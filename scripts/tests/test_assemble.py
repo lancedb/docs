@@ -1,4 +1,4 @@
-"""Tests for the assembler's overlay, navigation and private-root guards.
+"""Tests for the assembler's overlay, navigation, private-root and availability guards.
 
 Each test builds a small site in a temporary directory: a reference root that
 owns `enterprise/security` and the navigation, and a private overlay root at
@@ -8,6 +8,9 @@ Run with `make test-assemble`.
 """
 
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -99,6 +102,7 @@ def build(config_path: Path) -> Path:
     docs_json, nav_raw = assemble.assemble_nav(resolved)
     assemble.validate(loaded, resolved, docs_json)
     assemble.merge(resolved)
+    assemble.annotate(resolved, docs_json)
     assemble.emit(loaded, resolved, docs_json, nav_raw)
     return loaded.output
 
@@ -229,3 +233,277 @@ def test_overlay_without_a_reference_page_is_refused(base):
 
     with pytest.raises(assemble.AssembleError, match=r"no reference page"):
         build(config(base, paths["reference"], paths["public"]))
+
+
+ENTERPRISE_ONLY = """availability:
+  oss: unavailable
+  enterprise: available
+  summary: A deployment checks every request.
+"""
+BOTH = """availability:
+  oss: available
+  enterprise: varies
+  summary: Local views refresh in full; see [Against a deployment](#deployment).
+"""
+BOTH_AVAILABLE = """availability:
+  oss: available
+  enterprise: available
+  summary: Works in both offerings.
+"""
+IMPORTS = "import { Example } from '/snippets/example.mdx';\n"
+# Valid MDX whose JavaScript contains blank lines.
+MULTILINE_IMPORT = "import {\n  A,\n\n  B\n} from '/snippets/probe.mdx';\n\nContent.\n"
+MULTILINE_EXPORT = "export const helper = () => {\n\n  return 1;\n};\n\nContent.\n"
+# The MDX compiler Mint uses: `<mint>/node_modules/@mdx-js/mdx/index.js`.
+MDX_COMPILER = os.environ.get("MDX_COMPILER")
+
+
+def page(frontmatter: str = "", body: str = "First paragraph.\n") -> str:
+    return f'---\ntitle: "A page"\n{frontmatter}---\n\n{body}'
+
+
+def availability_site(base: Path, pages: dict[str, str], nav: list[str]) -> Path:
+    """A site whose reference root holds `pages`, listed in the order of `nav`."""
+    paths = site(base)
+    navigation = {
+        "tabs": [{"tab": "Documentation", "groups": [{"group": "Pages", "pages": nav}]}]
+    }
+    write(paths["reference"] / "docs.json", json.dumps({"navigation": navigation}))
+    for rel, text in pages.items():
+        write(paths["reference"] / rel, text)
+    return config(base, paths["reference"], public_root(paths))
+
+
+def test_availability_renders_a_label_and_a_tag(base):
+    body = f"{IMPORTS}\n## Section {{#section}}\n\n<Example />\n"
+    source = page(ENTERPRISE_ONLY + "icon: key\n", body)
+    output = build(availability_site(base, {"auth.mdx": source}, ["auth"]))
+
+    assert (output / "auth.mdx").read_text() == (
+        '---\ntitle: "A page"\nicon: key\ntag: "Enterprise"\n---\n\n'
+        '<Badge color="red">Enterprise</Badge> A deployment checks every request.\n\n'
+        f"{IMPORTS}\n"
+        "## Section {#section}\n\n<Example />\n"
+    )
+
+
+def render(base: Path, body: str) -> str:
+    output = build(
+        availability_site(base, {"p.mdx": page(BOTH_AVAILABLE, body)}, ["p"])
+    )
+    return (output / "p.mdx").read_text()
+
+
+@pytest.mark.parametrize("body", [MULTILINE_IMPORT, MULTILINE_EXPORT])
+def test_label_is_placed_before_any_javascript(base, body):
+    assert render(base, body) == (
+        '---\ntitle: "A page"\n---\n\n'
+        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> '
+        f"Works in both offerings.\n\n{body}"
+    )
+
+
+def compile_mdx(text: str) -> subprocess.CompletedProcess:
+    script = (
+        f"import {{compile}} from {json.dumps(MDX_COMPILER)};\n"
+        "let source = '';\n"
+        "for await (const chunk of process.stdin) source += chunk;\n"
+        "await compile(source);\n"
+    )
+    body = assemble.split_frontmatter(text)[1]
+    return subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        input=body,
+        capture_output=True,
+        text=True,
+    )
+
+
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
+)
+@pytest.mark.parametrize("body", [MULTILINE_IMPORT, MULTILINE_EXPORT])
+def test_labelled_page_still_compiles_as_mdx(base, body):
+    source = compile_mdx(page(BOTH_AVAILABLE, body))
+    assert source.returncode == 0, source.stderr
+    rendered = compile_mdx(render(base, body))
+    assert rendered.returncode == 0, rendered.stderr
+
+
+@pytest.mark.parametrize("declaration", [ENTERPRISE_ONLY, BOTH, BOTH_AVAILABLE])
+def test_hand_set_tag_is_refused_whatever_the_declaration(base, declaration):
+    source = page(declaration + "tag: Enterprise\n")
+    with pytest.raises(assemble.AssembleError, match=r"remove `tag`"):
+        build(availability_site(base, {"p.mdx": source}, ["p"]))
+
+
+def test_varies_is_labelled_and_untagged(base):
+    output = build(availability_site(base, {"views.mdx": page(BOTH)}, ["views"]))
+
+    assert (output / "views.mdx").read_text() == (
+        '---\ntitle: "A page"\n---\n\n'
+        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise: varies</Badge> '
+        "Local views refresh in full; see [Against a deployment](#deployment).\n\n"
+        "First paragraph.\n"
+    )
+
+
+def test_pages_without_availability_are_copied_unchanged(base):
+    plain = page(body='<Badge color="red">Enterprise</Badge> Hand-written.\n')
+    output = build(availability_site(base, {"plain.mdx": plain}, ["plain"]))
+
+    assert (output / "plain.mdx").read_text() == plain
+
+
+def test_comparison_lists_declaring_pages_in_navigation_order(base):
+    pages = {
+        "auth.mdx": page('sidebarTitle: "Auth"\n' + ENTERPRISE_ONLY),
+        "views.mdx": page(BOTH),
+        "offerings.mdx": page(
+            body="Intro.\n\n{/* availability-comparison */}\n\nAfter.\n"
+        ),
+    }
+    output = build(availability_site(base, pages, ["offerings", "views", "auth"]))
+
+    assert (output / "offerings.mdx").read_text() == page(
+        body="Intro.\n\n"
+        "| Topic | OSS / Enterprise |\n"
+        "| --- | --- |\n"
+        "| [A page](/views): Local views refresh in full; "
+        "see [Against a deployment](/views#deployment). | Yes / Varies |\n"
+        "| [Auth](/auth): A deployment checks every request. | No / Yes |\n"
+        "\nAfter.\n"
+    )
+
+
+def test_overlay_declaration_replaces_the_reference_one(base):
+    paths = site(base)
+    write(paths["reference"] / "enterprise/security.mdx", page(BOTH))
+    write(
+        paths["reference"] / "offerings.mdx",
+        page(body="{/* availability-comparison */}\n"),
+    )
+    write(paths["public"] / "enterprise/security.mdx", page(ENTERPRISE_ONLY, PUBLIC))
+
+    output = build(config(base, paths["reference"], paths["public"]))
+
+    published = (output / "enterprise/security.mdx").read_text()
+    assert (
+        '<Badge color="red">Enterprise</Badge> A deployment checks every request.'
+        in published
+    )
+    assert f"\n\n{PUBLIC}" in published and "varies" not in published
+    assert (
+        "A deployment checks every request. | No / Yes |"
+        in (output / "offerings.mdx").read_text()
+    )
+
+
+def test_overlay_that_drops_a_declaration_is_reported(base):
+    paths = site(base)
+    write(paths["reference"] / "enterprise/security.mdx", page(ENTERPRISE_ONLY))
+    loaded = assemble.load_config(config(base, paths["reference"], public_root(paths)))
+    resolved = assemble.resolve(loaded)
+    docs_json, _ = assemble.assemble_nav(resolved)
+
+    warnings = assemble.validate(loaded, resolved, docs_json)
+
+    assert warnings == [
+        "enterprise/security.mdx: the enterprise page declares no availability, so "
+        "the availability its reference page declares is not published"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("frontmatter", "body", "error"),
+    [
+        (
+            ENTERPRISE_ONLY.replace("unavailable", "yes"),
+            "Text.\n",
+            r"availability.oss is True",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("unavailable", "no"),
+            "Text.\n",
+            r"availability.oss is False",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("e: available", "e: Available"),
+            "Text.\n",
+            r"enterprise is 'Available'",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("  summary", "  sumary"),
+            "Text.\n",
+            r"exactly oss, enterprise and summary",
+        ),
+        (
+            ENTERPRISE_ONLY + "  label: Enterprise only\n",
+            "Text.\n",
+            r"exactly oss, enterprise",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("enterprise: available", "enterprise: unavailable"),
+            "Text.\n",
+            r"no offering",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("summary: A", "summary: |\n    One.\n    A"),
+            "Text.\n",
+            r"one line",
+        ),
+        (
+            ENTERPRISE_ONLY.replace(
+                "summary: A deployment checks every request.", "summary: 3"
+            ),
+            "Text.\n",
+            r"one line",
+        ),
+        ("availability: enterprise only\n", "Text.\n", r"exactly oss, enterprise"),
+        (
+            ENTERPRISE_ONLY.replace("availability:", '"availability":'),
+            "Text.\n",
+            r"block of its own",
+        ),
+        (
+            ENTERPRISE_ONLY,
+            '<Badge color="red">Enterprise</Badge> Text.\n',
+            r"badge of its own",
+        ),
+        ("availability: [\n", "Text.\n", r"unreadable frontmatter"),
+    ],
+)
+def test_malformed_availability_is_refused(base, frontmatter, body, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(availability_site(base, {"auth.mdx": page(frontmatter, body)}, ["auth"]))
+
+
+@pytest.mark.parametrize(
+    ("pages", "error"),
+    [
+        (
+            {
+                "a.mdx": page(ENTERPRISE_ONLY),
+                "b.mdx": page(body="See {/* availability-comparison */}\n"),
+            },
+            r"line of its own",
+        ),
+        (
+            {
+                "a.mdx": page(ENTERPRISE_ONLY),
+                "b.mdx": page(
+                    body="{/* availability-comparison */}\n\n{/* availability-comparison */}\n"
+                ),
+            },
+            r"once",
+        ),
+        (
+            {"b.mdx": page(body="{/* availability-comparison */}\n")},
+            r"no page declares availability",
+        ),
+    ],
+)
+def test_misplaced_comparison_is_refused(base, pages, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(availability_site(base, pages, sorted(rel[:-4] for rel in pages)))
