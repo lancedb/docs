@@ -97,8 +97,10 @@ jobs:
           set -euo pipefail
           make assemble | tee "$RUNNER_TEMP/assemble.log"
           sources=$(sed -n 's/^sources: //p' "$RUNNER_TEMP/assemble.log")
+          publication=$(sed -n 's/^publication: //p' "$RUNNER_TEMP/assemble.log")
           echo "sources=$sources" >> "$GITHUB_OUTPUT"
-          echo "Assembled from: \`$sources\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "publication=$publication" >> "$GITHUB_OUTPUT"
+          echo "Assembled from: \`$sources\`, publishing \`$publication\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate the assembled tree
         working-directory: build/site
@@ -130,11 +132,13 @@ jobs:
       - name: Record the candidate
         env:
           SOURCES: ${{ steps.assemble.outputs.sources }}
+          PUBLICATION: ${{ steps.assemble.outputs.publication }}
           LANCEDB_REF: ${{ inputs.lancedb_ref || 'main' }}
           SOPHON_REF: ${{ inputs.sophon_ref || 'main' }}
         run: |
           python3 scripts/candidate.py record build/site --sources "$SOURCES" \
             --ref "lancedb=$LANCEDB_REF" --ref "enterprise=$SOPHON_REF" \
+            --publication "$PUBLICATION" \
             --output build/candidate.json --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the candidate

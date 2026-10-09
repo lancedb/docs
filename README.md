@@ -9,11 +9,13 @@ the open-source pages in `lancedb/lancedb` and the Enterprise pages in
 `lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
 
 This repository's `docs/` holds the pages it still owns: the Geneva pages, the
-dataset cards and the REST API reference. The Geneva pages stay published until the official Function
-launch, because the Function pages do not replace their APIs. They and their
-snippets (`docs/snippets/geneva_*.mdx`) are kept as published at
-`deploy-freeze`; the tests that generated those snippets need the `geneva`
-package and are not in this repository, so the snippets are not regenerated.
+dataset cards and the REST API reference. The Geneva pages stay published
+through the official Function launch and the transition after it, because the
+Function pages do not replace their APIs; retiring them is a separate, later
+decision. They and their snippets (`docs/snippets/geneva_*.mdx`) are kept as
+published at `deploy-freeze`; the tests that generated those snippets need the
+`geneva` package and are not in this repository, so the snippets are not
+regenerated.
 
 Install the [Mintlify CLI](https://www.npmjs.com/package/mint) at the version CI
 uses:
@@ -32,7 +34,14 @@ cd build/site && mint dev
 
 To build from other checkouts or worktrees, point `LANCEDB_DOCS_ROOT` and
 `SOPHON_DOCS_ROOT` at their `docs/web` directories. The assembler prints the
-commit it read each root from, so every build names its inputs.
+commit it read each root from, and what it published of each unlaunched
+feature, so every build names its inputs.
+
+To preview the site as the Function launch will publish it:
+
+```bash
+DOCS_FUNCTIONS=launched make assemble
+```
 
 Check the assembled site the way CI does, and run the assembler's own tests:
 
@@ -72,13 +81,39 @@ compiler Mint uses when `MDX_COMPILER` names the `index.js` of the
 `@mdx-js/mdx` package installed with Mint and `node` is on the path; otherwise
 those tests are skipped.
 
+### Unlaunched features
+
+A feature can be documented before it launches. `launches` in `assemble.yaml`
+lists such features and whether each has launched; `functions` is `unlaunched`
+until the official Function launch. Until a feature launches, the assembler
+leaves out:
+
+- every page whose frontmatter says `launch: functions`, so its URL does not
+  resolve;
+- the navigation entries and redirects that reach those pages, and any group
+  left empty;
+- what other pages mark for the feature. A section between
+  `{/* if functions launched */}` and `{/* end if */}`, each on a line of its
+  own, is published only once the feature launches;
+  `{/* if functions not launched */}` marks one published only until then. On
+  a line with other text, such as a table row or a list item, the marker gates
+  that line alone;
+- the examples on the pages it leaves out.
+
+A published page that still links to a left-out page, or a marker it cannot
+read, stops the build. Launching is changing the default in `assemble.yaml`.
+Docs Check validates the launched site as well, so the pages a launch
+publishes have already passed. `mint dev` in a single root shows every
+section, both sides of each marker included; assemble to see either site.
+
 ## Publishing
 
 Merging publishes nothing. Every pull request and every push to `main` runs the
 Assemble workflow, which builds the site from the three roots, checks it as
 above, and keeps the checked tree as the run's `candidate` artifact, with a
-record of the commit each root was read from and a SHA-256 for every file. A
-checksum over those hashes names the candidate, and the run's summary shows it.
+record of the commit each root was read from, what it published of each
+unlaunched feature, and a SHA-256 for every file. A checksum over those hashes
+names the candidate, and the run's summary shows it.
 That workflow's token can only read.
 
 Publishing is a separate, manual step: run the Publish workflow with the ID of a
@@ -95,11 +130,12 @@ successful Assemble run and its candidate's checksum.
 Either way the published files are the candidate's, checked against its record
 and the checksum, and the record must name exactly the three source commits and
 both producers' refs. Nothing is rebuilt, so newer source commits cannot slip in.
-Each publication is a new commit on its branch that names the run, the checksum
-and the source commits, and nothing is force-pushed. To roll back, publish an
-earlier candidate again: its run ID and checksum are in its commit on
-`assembled`. Once its artifact has expired, after 90 days, that earlier commit's
-files are published again, after they are checked against the checksum.
+Each publication is a new commit on its branch that names the run, the
+checksum, the source commits and the publication, and nothing is force-pushed.
+To roll back, publish an earlier candidate again: its run ID and checksum are in
+its commit on `assembled`. Once its artifact has expired, after 90 days, that
+earlier commit's files are published again, after they are checked against the
+checksum.
 
 `scripts/candidate.py` records and publishes; `make test-assemble` runs its
 tests against disposable local repositories.
@@ -150,8 +186,8 @@ workflow. Prefer an example in a test over code written into a page.
 
 The only snippets in this repository are the four Geneva ones,
 `docs/snippets/geneva_*.mdx`. They are frozen copies, as published at
-`deploy-freeze`, and stay unchanged until the Geneva pages are retired at the
-official Function launch. `make snippets` stops and prints these instructions.
+`deploy-freeze`, and stay unchanged for as long as the Geneva pages are
+published. `make snippets` stops and prints these instructions.
 
 The assembler writes each example into the page that shows it, as an ordinary
 fenced code block with the same title and icon, so the page's Markdown export

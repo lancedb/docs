@@ -31,11 +31,19 @@ roots:
     private: true
 
   # What this repository still owns: the Geneva pages, which stay published
-  # until the official Function launch, the generated dataset cards, and the
-  # OpenAPI spec.
+  # through the Function launch and the transition after it, the generated
+  # dataset cards, and the OpenAPI spec.
   - name: build
     path: docs
     role: reference
+
+# Features documented ahead of their launch. Until a feature has `launched`,
+# the site leaves out its pages, the sections other pages mark for it, its
+# examples, and the navigation and redirects that reach them; see "Unlaunched
+# features" in README.md. DOCS_FUNCTIONS=launched previews the site as the
+# Function launch will publish it; launching is changing the default here.
+launches:
+  functions: ${DOCS_FUNCTIONS:-unlaunched}
 
 openapi:
   repo: lance-format/lance-namespace

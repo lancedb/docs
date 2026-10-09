@@ -8,12 +8,13 @@ this repository's `docs/`. CI checks each assembly and keeps it as a candidate;
 only the Publish workflow puts a chosen candidate on the `assembled` branch
 (see `candidate.py`).
 
-Eight stages:
+Nine stages:
 
     resolve   walk each root in order and map output path -> source file
     validate  anchors unique per page, nav references resolve, no path escapes
     merge     let each overlay page replace the reference page at its path
     nav       fold each root's navigation fragment into the base docs.json
+    gate      leave out what documents a feature that has not launched
     inline    write each snippet example into the page that shows it
     annotate  render the availability pages declare into their content
     emit      write the output tree
@@ -82,6 +83,8 @@ class Config:
     output: Path
     roots: list[Root]
     openapi: dict[str, str] | None = None
+    # Feature -> "launched" or "unlaunched".
+    launches: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -96,13 +99,16 @@ class Resolved:
 
 
 ENV_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]*))?\}")
+LAUNCH_NAME_RE = re.compile(r"[a-z][a-z0-9-]*")
+LAUNCH_STATES = ("launched", "unlaunched")
 
 
 def expand(value: str) -> str:
-    """Resolve ${VAR} and ${VAR:-default} in a configured path.
+    """Resolve ${VAR} and ${VAR:-default} in a configured path or launch state.
 
     Root paths point at sibling checkouts, which sit somewhere different in CI
-    than on a laptop. Everything else in the config stays literal.
+    than on a laptop, and a launch can be previewed before it is committed.
+    Everything else in the config stays literal.
     """
     return ENV_RE.sub(lambda m: os.environ.get(m.group(1), m.group(2) or ""), value)
 
@@ -132,10 +138,23 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         )
     if not any(r.role == "reference" for r in roots):
         raise AssembleError("at least one reference root is required")
+    launches = raw.get("launches") or {}
+    if not isinstance(launches, dict):
+        raise AssembleError("`launches` must map each feature to its launch state")
+    for name, value in launches.items():
+        if not isinstance(name, str) or not LAUNCH_NAME_RE.fullmatch(name):
+            raise AssembleError(f"launches: {name!r} is not a feature name")
+        state = expand(str(value))
+        if state not in LAUNCH_STATES:
+            raise AssembleError(
+                f"launches.{name} is {state!r}, not {' or '.join(LAUNCH_STATES)}"
+            )
+        launches[name] = state
     return Config(
         output=(REPO_ROOT / expand(raw["output"])).resolve(),
         roots=roots,
         openapi=raw.get("openapi"),
+        launches=launches,
     )
 
 
@@ -568,7 +587,206 @@ def published_pages(resolved: Resolved) -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
-# stage 5: inline
+# stage 5: gate
+# --------------------------------------------------------------------------- #
+
+# A feature can be documented before it launches. Its pages declare
+#
+#     launch: functions
+#
+# in their frontmatter, and a shared page marks what it says about the feature:
+#
+#     {/* if functions launched */}
+#     ...
+#     {/* end if */}
+#
+# `if functions not launched` marks what applies only until then. A marker on a
+# line with other text -- a table row, a list item -- gates that line alone.
+# `launches` in assemble.yaml says which features have launched, so the same
+# sources build either site.
+LAUNCH_KEY_RE = re.compile(r"^launch:[^\n]*\n", re.M)
+LAUNCH_MARKER_RE = re.compile(
+    r"\{/\*\s*if\s+(?P<name>[a-z][a-z0-9-]*)\s+(?P<negated>not\s+)?launched\s*\*/\}"
+)
+END_IF_RE = re.compile(r"\{/\*\s*end\s+if\s*\*/\}")
+# Anything shaped like a marker that the two above do not read: a misspelled
+# one would otherwise publish its section in every mode.
+MARKER_LIKE_RE = re.compile(r"\{/\*\s*(?:if\s+\S+\s+(?:not\s+)?launch|end\s*if)", re.I)
+
+
+def launched(config: Config, rel: str, name: str) -> bool:
+    if name not in config.launches:
+        raise AssembleError(
+            f"{rel}: no launch named {name!r}; assemble.yaml declares "
+            f"{', '.join(sorted(config.launches)) or 'none'}"
+        )
+    return config.launches[name] == "launched"
+
+
+def page_launch(rel: str, text: str) -> str | None:
+    """The launch a page belongs to, from its frontmatter."""
+    parts = split_frontmatter(text)
+    if parts is None or not LAUNCH_KEY_RE.search(parts[0]):
+        return None
+    try:
+        name = (yaml.safe_load(parts[0]) or {}).get("launch")
+    except yaml.YAMLError as exc:
+        raise AssembleError(f"{rel}: unreadable frontmatter: {exc}") from exc
+    if not isinstance(name, str):
+        raise AssembleError(f"{rel}: `launch` must name one feature")
+    return name
+
+
+def without_launch_key(rel: str, text: str) -> str:
+    frontmatter, body = split_frontmatter(text)
+    kept = LAUNCH_KEY_RE.sub("", frontmatter, count=1)
+    meta = yaml.safe_load(frontmatter)
+    if (yaml.safe_load(kept) or {}) != {k: v for k, v in meta.items() if k != "launch"}:
+        raise AssembleError(f"{rel}: write `launch:` on one line of its own")
+    return f"---\n{kept}---\n{body}"
+
+
+def gate_sections(config: Config, rel: str, text: str) -> str:
+    """The page with each launch-marked section kept or left out."""
+    out: list[str] = []
+    block: tuple[bool, int] | None = None
+    trim_blank = False
+    for number, line in enumerate(text.splitlines(keepends=True), 1):
+        ends = END_IF_RE.findall(line)
+        markers = list(LAUNCH_MARKER_RE.finditer(line))
+        if len(MARKER_LIKE_RE.findall(line)) != len(ends) + len(markers):
+            raise AssembleError(f"{rel}:{number}: cannot read the launch marker in {line.strip()!r}")
+        if ends:
+            if markers or len(ends) > 1 or line.strip() != ends[0]:
+                raise AssembleError(f"{rel}:{number}: `end if` must be alone on its line")
+            if block is None:
+                raise AssembleError(f"{rel}:{number}: `end if` closes nothing")
+            if not block[0]:
+                trim_blank = bool(out) and not out[-1].strip()
+            block = None
+            continue
+        if markers:
+            if len(markers) > 1:
+                raise AssembleError(f"{rel}:{number}: one launch marker per line")
+            marker = markers[0]
+            keep = launched(config, rel, marker["name"]) != bool(marker["negated"])
+            if line.strip() == marker[0]:
+                if block is not None:
+                    raise AssembleError(
+                        f"{rel}:{number}: launch sections cannot nest; the one "
+                        f"opened on line {block[1]} is still open"
+                    )
+                block = (keep, number)
+                continue
+            if block is not None and not block[0]:
+                continue
+            if keep:
+                before, after = line[: marker.start()], line[marker.end() :]
+                out.append(
+                    before.rstrip(" \t") + after
+                    if before.strip()
+                    else before + after.lstrip(" \t")
+                )
+            continue
+        if block is not None and not block[0]:
+            continue
+        if trim_blank and not line.strip():
+            trim_blank = False
+            continue
+        trim_blank = False
+        out.append(line)
+    if block is not None:
+        raise AssembleError(f"{rel}:{block[1]}: launch section is never closed")
+    return "".join(out)
+
+
+def prune_nav(node: object, excluded: set[str]) -> object:
+    """The navigation without the excluded pages, or groups left empty."""
+    if isinstance(node, list):
+        kept = []
+        for item in node:
+            if isinstance(item, str) and item.lstrip("/") in excluded:
+                continue
+            item = prune_nav(item, excluded)
+            if (
+                isinstance(item, dict)
+                and "group" in item
+                and not item.get("pages")
+                and not item.get("groups")
+            ):
+                continue
+            kept.append(item)
+        return kept
+    if isinstance(node, dict):
+        return {
+            key: prune_nav(value, excluded) if key in ("pages", "groups", "tabs") else value
+            for key, value in node.items()
+        }
+    return node
+
+
+def gate(config: Config, resolved: Resolved, docs_json: dict) -> bool:
+    """Leave out what documents an unlaunched feature. True if the nav changed.
+
+    The pages of an unlaunched feature are not published at all, so their URLs
+    do not resolve; the navigation entries and redirects that reach them go,
+    and every other page drops its marked sections. A link to a left-out page
+    from anything still published stops the build rather than 404ing.
+    """
+    excluded: dict[str, str] = {}
+    for rel in published_pages(resolved):
+        text = published_text(resolved, rel)
+        name = page_launch(rel, text)
+        if name is None:
+            continue
+        if launched(config, rel, name):
+            resolved.rendered[rel] = without_launch_key(rel, text)
+        else:
+            excluded[rel] = name
+    for rel in excluded:
+        del resolved.files[rel]
+        resolved.rendered.pop(rel, None)
+
+    for rel in published_pages(resolved):
+        text = published_text(resolved, rel)
+        gated = gate_sections(config, rel, text)
+        if gated != text:
+            resolved.rendered[rel] = gated
+
+    routes = {page_route(rel): name for rel, name in excluded.items()}
+    paths = {rel.rsplit(".", 1)[0] for rel in excluded}
+    before = json.dumps(docs_json, sort_keys=True)
+    docs_json["navigation"] = prune_nav(docs_json.get("navigation", {}), paths)
+    if "redirects" in docs_json:
+        docs_json["redirects"] = [
+            r
+            for r in docs_json["redirects"]
+            if r["destination"].split("#")[0].rstrip("/") not in routes
+        ]
+    if not routes:
+        return before != json.dumps(docs_json, sort_keys=True)
+
+    link = re.compile(
+        r"(?<![\w./-])("
+        + "|".join(re.escape(route) for route in sorted(routes, key=len, reverse=True))
+        + r")(?![\w.-])"
+    )
+    found = []
+    for rel in published_pages(resolved):
+        for match in link.finditer(published_text(resolved, rel)):
+            found.append(f"{rel} links to {match[1]}")
+    for match in link.finditer(json.dumps(docs_json)):
+        found.append(f"docs.json links to {match[1]}")
+    if found:
+        raise AssembleError(
+            "pages left out until their feature launches are still linked: "
+            + "; ".join(sorted(set(found)))
+        )
+    return before != json.dumps(docs_json, sort_keys=True)
+
+
+# --------------------------------------------------------------------------- #
+# stage 6: inline
 # --------------------------------------------------------------------------- #
 
 # The examples are tested programs whose snippets are generated into
@@ -720,7 +938,8 @@ def inline_examples(resolved: Resolved) -> None:
     """Write each page's snippet examples into it as fenced code.
 
     A snippet module is published only while a published page still refers to
-    it: every example is already in the page that shows it.
+    it: every example is in the page that shows it, and the module behind a
+    page left out until a launch must not be published in its place.
     """
     for rel in published_pages(resolved):
         if rel.startswith("snippets/"):
@@ -742,7 +961,7 @@ def inline_examples(resolved: Resolved) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# stage 6: annotate
+# stage 7: annotate
 # --------------------------------------------------------------------------- #
 
 # A page declares where it applies in its own frontmatter:
@@ -946,7 +1165,7 @@ def annotate(resolved: Resolved, docs_json: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# stage 7: emit
+# stage 8: emit
 # --------------------------------------------------------------------------- #
 
 
@@ -1098,6 +1317,11 @@ def check_spec(config: Config) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def publication(config: Config) -> str:
+    """What the build publishes of each launch, as the candidate records it."""
+    return " ".join(f"{name}={state}" for name, state in sorted(config.launches.items()))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     parser.add_argument(
@@ -1136,6 +1360,8 @@ def main() -> int:
         docs_json, nav_raw = assemble_nav(resolved)
         warnings = validate(config, resolved, docs_json)
         merge(resolved)
+        if gate(config, resolved, docs_json):
+            nav_raw = None
         inline_examples(resolved)
         annotate(resolved, docs_json)
         count = emit(config, resolved, docs_json, nav_raw)
@@ -1152,6 +1378,7 @@ def main() -> int:
         where = config.output
     print(f"assembled {count} files from {roots} into {where}")
     print("sources: " + " ".join(f"{r.name}={revision(r.path)}" for r in config.roots))
+    print(f"publication: {publication(config)}")
     return 0
 
 

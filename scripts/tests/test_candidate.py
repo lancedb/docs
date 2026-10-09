@@ -159,7 +159,13 @@ class Candidate:
         self.manifest = self.record()
         self.checksum = self.manifest["site_sha256"]
 
-    def record(self, refs=("lancedb=main", "enterprise=main"), sources=None, context=True):
+    def record(
+        self,
+        refs=("lancedb=main", "enterprise=main"),
+        sources=None,
+        context=True,
+        publication="functions=unlaunched",
+    ):
         env = environment()
         if context:
             env.update(
@@ -175,6 +181,7 @@ class Candidate:
         command += ["--sources", sources or self.sources]
         for ref in refs:
             command += ["--ref", ref]
+        command += ["--publication", publication]
         command += ["--output", str(self.dir / "candidate.json")]
         subprocess.run(command, env=env, check=True, capture_output=True, text=True)
         self.manifest = json.loads((self.dir / "candidate.json").read_text())
@@ -231,6 +238,7 @@ def test_record_lists_every_file_and_names_the_candidate(tmp_path, remote):
     assert manifest["site_sha256"] == checksum(SITE)
     assert manifest["sources"] == {**SOURCES, "build": remote["docs_commit"]}
     assert manifest["refs"] == {"lancedb": "main", "enterprise": "main"}
+    assert manifest["publication"] == {"functions": "unlaunched"}
     assert manifest["run"]["run_id"] == "1001"
     assert manifest["run"]["sha"] == remote["docs_commit"]
 
@@ -266,6 +274,39 @@ def test_record_refuses_a_symlink(tmp_path, remote):
     assert "linked.mdx is a symlink" in failure.value.stderr
 
 
+@pytest.mark.parametrize(
+    ("line", "recorded"),
+    [
+        ("functions=launched", {"functions": "launched"}),
+        ("", {}),
+    ],
+)
+def test_record_names_what_the_build_published(tmp_path, remote, line, recorded):
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    assert candidate.record(publication=line)["publication"] == recorded
+
+
+@pytest.mark.parametrize("line", ["functions=yes", "functions", "Functions=launched"])
+def test_record_refuses_an_unreadable_publication(tmp_path, remote, line):
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    with pytest.raises(subprocess.CalledProcessError) as failure:
+        candidate.record(publication=line)
+    assert "publication" in failure.value.stderr
+
+
+def test_a_record_from_before_publications_says_so_when_published(tmp_path, remote):
+    candidate = Candidate(tmp_path, remote["docs_commit"])
+    manifest = dict(candidate.manifest)
+    del manifest["publication"]
+    (candidate.dir / "candidate.json").write_text(json.dumps(manifest))
+
+    result = publish(remote, candidate)
+
+    assert result.returncode == 0, result.stderr
+    head = git(remote["bare"], "rev-parse", "assembled")
+    assert "Publication: unrecorded" in git(remote["bare"], "log", "-1", "--format=%B", head)
+
+
 # --------------------------------------------------------------------------- #
 # publishing
 # --------------------------------------------------------------------------- #
@@ -289,6 +330,7 @@ def test_production_publishes_exactly_the_candidate(tmp_path, remote):
     assert "Candidate-Run: 1001" in message
     assert f"Sources: {sources_line(remote['docs_commit'])}" in message
     assert "Refs: lancedb=main enterprise=main" in message
+    assert "Publication: functions=unlaunched" in message
     assert json.loads(result.stdout)["commit"] == head
 
 
@@ -827,7 +869,11 @@ def test_rollback_republishes_an_earlier_candidate_after_its_artifact_expired(tm
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["from"] == f"earlier publication {first_commit}"
+    assert json.loads(result.stdout)["publication"] == {"functions": "unlaunched"}
     head = git(remote["bare"], "rev-parse", "assembled")
+    assert "Publication: functions=unlaunched" in git(
+        remote["bare"], "log", "-1", "--format=%B", head
+    )
     assert published(remote["bare"], head) == SITE
     assert git(remote["bare"], "rev-parse", f"{head}^{{tree}}") == git(
         remote["bare"], "rev-parse", f"{first_commit}^{{tree}}"
