@@ -153,6 +153,11 @@ The only snippets in this repository are the four Geneva ones,
 `deploy-freeze`, and stay unchanged until the Geneva pages are retired at the
 official Function launch. `make snippets` stops and prints these instructions.
 
+The assembler writes each example into the page that shows it, as an ordinary
+fenced code block with the same title and icon, so the page's Markdown export
+carries the code itself rather than the name of a snippet constant. Snippet
+modules are not published once nothing imports them.
+
 ## Sync Hugging Face dataset pages
 
 The `Datasets` tab is populated from [`lance-format/lance-huggingface`](https://github.com/lance-format/lance-huggingface),

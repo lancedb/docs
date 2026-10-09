@@ -1,4 +1,5 @@
-"""Tests for the assembler's overlay, navigation, private-root and availability guards.
+"""Tests for the assembler's overlay, navigation, private-root, availability
+and example stages.
 
 Each test builds a small site in a temporary directory: a reference root that
 owns `enterprise/security` and the navigation, and a private overlay root at
@@ -102,6 +103,7 @@ def build(config_path: Path) -> Path:
     docs_json, nav_raw = assemble.assemble_nav(resolved)
     assemble.validate(loaded, resolved, docs_json)
     assemble.merge(resolved)
+    assemble.inline_examples(resolved)
     assemble.annotate(resolved, docs_json)
     assemble.emit(loaded, resolved, docs_json, nav_raw)
     return loaded.output
@@ -252,7 +254,7 @@ BOTH_AVAILABLE = """availability:
 """
 IMPORTS = "import { Example } from '/snippets/example.mdx';\n"
 # Valid MDX whose JavaScript contains blank lines.
-MULTILINE_IMPORT = "import {\n  A,\n\n  B\n} from '/snippets/probe.mdx';\n\nContent.\n"
+MULTILINE_IMPORT = "import {\n  A,\n\n  B\n} from '/snippets/probe.mdx';\n\n<A />\n<B />\n"
 MULTILINE_EXPORT = "export const helper = () => {\n\n  return 1;\n};\n\nContent.\n"
 # The MDX compiler Mint uses: `<mint>/node_modules/@mdx-js/mdx/index.js`.
 MDX_COMPILER = os.environ.get("MDX_COMPILER")
@@ -563,3 +565,144 @@ def test_malformed_availability_is_refused(base, frontmatter, body, error):
 def test_misplaced_comparison_is_refused(base, pages, error):
     with pytest.raises(assemble.AssembleError, match=error):
         build(availability_site(base, pages, sorted(rel[:-4] for rel in pages)))
+
+
+# --------------------------------------------------------------------------- #
+# examples
+# --------------------------------------------------------------------------- #
+
+SNIPPETS = (
+    'export const PyConnect = "import lancedb\\n\\ndb = lancedb.connect(\\"data\\")\\n";\n\n'
+    'export const PySearch = "table.search([1.0])\\n";\n\n'
+    'export const PyFence = "print(\\"```\\")\\n";\n\n'
+    'export const RsConnect = "let db = connect(uri);\\n";\n'
+)
+
+
+def example_site(base: Path, body: str, snippets: str = SNIPPETS) -> Path:
+    paths = site(base)
+    write(paths["reference"] / "snippets/examples.mdx", snippets)
+    write(paths["reference"] / "p.mdx", page(body=body))
+    return build(config(base, paths["reference"], public_root(paths)))
+
+
+def test_examples_are_published_as_fenced_code_where_they_are_shown(base):
+    body = (
+        "import {\n  PyConnect,\n  PySearch as Search,\n  RsConnect,\n} from '/snippets/examples.mdx';\n\n"
+        "<CodeGroup>\n"
+        '    <CodeBlock filename="Python (sync)" language="Python" icon="python">\n'
+        "    {PyConnect + Search}\n"
+        "    </CodeBlock>\n\n"
+        '    <CodeBlock filename="Rust" language="Rust" icon="rust">\n'
+        '    { "use lancedb::connect;\\n" }\n'
+        '    { "\\n" }\n'
+        "    {RsConnect}\n"
+        "    </CodeBlock>\n"
+        "</CodeGroup>\n"
+    )
+    output = example_site(base, body)
+
+    assert (output / "p.mdx").read_text() == page(
+        body="\n<CodeGroup>\n"
+        '    ```python Python (sync) icon="python"\n'
+        "    import lancedb\n\n"
+        '    db = lancedb.connect("data")\n'
+        "    table.search([1.0])\n"
+        "    ```\n\n"
+        '    ```rust Rust icon="rust"\n'
+        "    use lancedb::connect;\n\n"
+        "    let db = connect(uri);\n"
+        "    ```\n"
+        "</CodeGroup>\n"
+    )
+    assert not (output / "snippets/examples.mdx").exists()
+
+
+def test_a_fence_is_longer_than_any_backticks_in_the_code(base):
+    body = (
+        "import { PyFence } from '/snippets/examples.mdx';\n\n"
+        '<CodeBlock filename="Python" language="Python" icon="python">\n{PyFence}\n</CodeBlock>\n'
+    )
+    text = (example_site(base, body) / "p.mdx").read_text()
+    assert '````python Python icon="python"\nprint("```")\n````\n' in text
+
+
+def test_unused_imports_go_and_used_ones_stay(base):
+    body = (
+        "import { PyConnect, PySearch } from '/snippets/examples.mdx';\n"
+        "import { Widget } from '/snippets/widgets.mdx';\n\n"
+        '<CodeBlock filename="Python" language="Python" icon="python">\n{PyConnect}\n</CodeBlock>\n\n'
+        "<Widget />\n"
+    )
+    paths = site(base)
+    write(paths["reference"] / "snippets/examples.mdx", SNIPPETS)
+    write(paths["reference"] / "snippets/widgets.mdx", "export const Widget = () => null;\n")
+    write(paths["reference"] / "p.mdx", page(body=body))
+    output = build(config(base, paths["reference"], public_root(paths)))
+
+    text = (output / "p.mdx").read_text()
+    assert "examples.mdx" not in text
+    assert "import { Widget } from '/snippets/widgets.mdx';\n" in text
+    assert (output / "snippets/widgets.mdx").exists()
+    assert not (output / "snippets/examples.mdx").exists()
+
+
+def test_a_code_block_of_plain_text_is_left_alone(base):
+    body = '<CodeBlock filename="bash" language="bash" icon="terminal">\npip install lancedb\n</CodeBlock>\n'
+    assert (example_site(base, body) / "p.mdx").read_text() == page(body=body)
+
+
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        (
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{Missing}\n</CodeBlock>\n',
+            r"\{Missing\} is not imported",
+        ),
+        (
+            "import { PyGone } from '/snippets/examples.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{PyGone}\n</CodeBlock>\n',
+            r"exports no PyGone",
+        ),
+        (
+            "import { PyConnect } from '/snippets/nowhere.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{PyConnect}\n</CodeBlock>\n',
+            r"imports /snippets/nowhere.mdx, which no root provides",
+        ),
+        (
+            "import { PyConnect } from '/snippets/examples.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{PyConnect}\nprint(1)\n</CodeBlock>\n',
+            r"mixes examples with other text",
+        ),
+        (
+            "import { PyConnect } from '/snippets/examples.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" lines>\n{PyConnect}\n</CodeBlock>\n',
+            r"cannot carry",
+        ),
+    ],
+)
+def test_unreadable_examples_are_refused(base, body, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        example_site(base, body)
+
+
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
+)
+def test_inlined_examples_compile_as_mdx(base):
+    body = (
+        "import { PyConnect, PyFence } from '/snippets/examples.mdx';\n\n"
+        "<Accordion title=\"Records\">\n"
+        "    <CodeGroup>\n"
+        '        <CodeBlock filename="Python (sync)" language="Python" icon="python">\n'
+        "        {PyConnect}\n"
+        "        </CodeBlock>\n"
+        '        <CodeBlock filename="Python" language="Python" icon="python">\n'
+        "        {PyFence}\n"
+        "        </CodeBlock>\n"
+        "    </CodeGroup>\n"
+        "</Accordion>\n"
+    )
+    result = compile_mdx((example_site(base, body) / "p.mdx").read_text())
+    assert result.returncode == 0, result.stderr

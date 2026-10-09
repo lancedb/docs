@@ -8,12 +8,13 @@ this repository's `docs/`. CI checks each assembly and keeps it as a candidate;
 only the Publish workflow puts a chosen candidate on the `assembled` branch
 (see `candidate.py`).
 
-Seven stages:
+Eight stages:
 
     resolve   walk each root in order and map output path -> source file
     validate  anchors unique per page, nav references resolve, no path escapes
     merge     let each overlay page replace the reference page at its path
     nav       fold each root's navigation fragment into the base docs.json
+    inline    write each snippet example into the page that shows it
     annotate  render the availability pages declare into their content
     emit      write the output tree
     check     `mint validate` and `mint broken-links`, run separately in CI
@@ -556,8 +557,192 @@ def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
     return base, None
 
 
+def published_text(resolved: Resolved, rel: str) -> str:
+    if rel in resolved.rendered:
+        return resolved.rendered[rel]
+    return resolved.files[rel][1].read_text(encoding="utf-8")
+
+
+def published_pages(resolved: Resolved) -> list[str]:
+    return [rel for rel in sorted(resolved.files) if rel.endswith(PAGE_SUFFIXES)]
+
+
 # --------------------------------------------------------------------------- #
-# stage 5: annotate
+# stage 5: inline
+# --------------------------------------------------------------------------- #
+
+# The examples are tested programs whose snippets are generated into
+# `snippets/*.mdx` as string constants, which a page imports and places in a
+# `<CodeBlock>`. Mintlify renders that, but its Markdown export -- what agents
+# and `llms.txt` readers get -- shows the constant's name where the code was.
+# Published pages get the code itself, as an ordinary fenced block.
+SNIPPET_IMPORT_RE = re.compile(
+    r"^import\s*\{(?P<names>[^}]*)\}\s*from\s*(?P<quote>['\"])"
+    r"(?P<module>/snippets/[^'\"]+)(?P=quote);?[ \t]*(?:\n|$)",
+    re.M,
+)
+SNIPPET_EXPORT_RE = re.compile(
+    r'^export const (\w+)\s*=\s*("(?:[^"\\\n]|\\.)*");[ \t]*$', re.M
+)
+CODE_BLOCK_RE = re.compile(
+    r"^(?P<indent>[ ]*)<CodeBlock(?P<attrs>[^>\n]*)>[ \t]*\n"
+    r"(?P<body>(?:(?![ \t]*</CodeBlock>).*\n)*?)"
+    r"[ \t]*</CodeBlock>[ \t]*$",
+    re.M,
+)
+CODE_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+CODE_TERM_RE = re.compile(r'\s*(?:([A-Za-z_]\w*)|("(?:[^"\\]|\\.)*"))\s*(\+|$)')
+
+
+SNIPPET_REFERENCE_RE = re.compile(r"""['"]/(snippets/[^'"]+)['"]""")
+
+
+def import_parts(statement: re.Match) -> list[tuple[str, str, str]]:
+    """Each `A` or `A as B` an import names: (as written, exported, alias)."""
+    parts = []
+    for part in statement["names"].split(","):
+        part = part.strip()
+        if part:
+            exported, _, alias = (s.strip() for s in part.partition(" as "))
+            parts.append((part, exported, alias or exported))
+    return parts
+
+
+def snippet_exports(resolved: Resolved, module: str, rel: str) -> dict[str, str]:
+    path = module.lstrip("/")
+    if path not in resolved.files:
+        raise AssembleError(f"{rel}: imports {module}, which no root provides")
+    text = published_text(resolved, path)
+    return {name: json.loads(literal) for name, literal in SNIPPET_EXPORT_RE.findall(text)}
+
+
+def code_value(rel: str, line: str, lookup) -> tuple[str, set[str]]:
+    """The text of one `{A}`, `{"literal"}` or `{A + B}` line, and the names it uses."""
+    expression = line.strip()[1:-1]
+    value, names, position = "", set(), 0
+    while position < len(expression):
+        term = CODE_TERM_RE.match(expression, position)
+        if term is None or term.end() == position:
+            raise AssembleError(f"{rel}: cannot read the example {line.strip()}")
+        name, literal = term[1], term[2]
+        if name is not None:
+            value += lookup(name)
+            names.add(name)
+        else:
+            value += json.loads(literal)
+        position = term.end()
+    return value, names
+
+
+def fenced(rel: str, indent: str, attrs: str, code: str) -> str:
+    found = dict(CODE_ATTR_RE.findall(attrs))
+    unknown = sorted(set(found) - {"filename", "language", "icon"})
+    if unknown or CODE_ATTR_RE.sub("", attrs).strip():
+        raise AssembleError(f"{rel}: cannot carry <CodeBlock{attrs}> into a code fence")
+    title = found.get("filename", "")
+    if any(c in title for c in '`{}"'):
+        raise AssembleError(f"{rel}: code title {title!r} cannot go in a code fence")
+    meta = found.get("language", "text").lower()
+    if title:
+        meta += f" {title}"
+    if found.get("icon"):
+        meta += f' icon="{found["icon"]}"'
+    runs = re.findall(r"`+", code)
+    fence = "`" * max(3, max((len(run) + 1 for run in runs), default=3))
+    lines = [f"{indent}{fence}{meta}"]
+    lines += [f"{indent}{line}" if line else "" for line in code.rstrip("\n").split("\n")]
+    lines.append(f"{indent}{fence}")
+    return "\n".join(lines)
+
+
+def inline_page(resolved: Resolved, rel: str, text: str) -> str:
+    imports = list(SNIPPET_IMPORT_RE.finditer(text))
+    if not imports and "<CodeBlock" not in text:
+        return text
+    sources = {
+        alias: (statement["module"], exported)
+        for statement in imports
+        for _part, exported, alias in import_parts(statement)
+    }
+    modules: dict[str, dict[str, str]] = {}
+
+    def lookup(name: str) -> str:
+        if name not in sources:
+            raise AssembleError(f"{rel}: the example {{{name}}} is not imported from a snippet")
+        module, exported = sources[name]
+        if module not in modules:
+            modules[module] = snippet_exports(resolved, module, rel)
+        if exported not in modules[module]:
+            raise AssembleError(f"{rel}: {module} exports no {exported}")
+        return modules[module][exported]
+
+    used: set[str] = set()
+
+    def replace(block: re.Match) -> str:
+        lines = [line for line in block["body"].splitlines() if line.strip()]
+        expressions = [line for line in lines if re.fullmatch(r"\s*\{.*\}\s*", line)]
+        if not expressions:
+            return block[0]
+        if len(expressions) != len(lines):
+            raise AssembleError(f"{rel}: a <CodeBlock> mixes examples with other text")
+        code = ""
+        for line in expressions:
+            value, names = code_value(rel, line, lookup)
+            code += value
+            used.update(names)
+        if not code.strip():
+            raise AssembleError(f"{rel}: a <CodeBlock> has no code")
+        return fenced(rel, block["indent"], block["attrs"], code)
+
+    body = CODE_BLOCK_RE.sub(replace, text)
+    rest = SNIPPET_IMPORT_RE.sub("", body)
+
+    # An import left unused -- inlined above, or never used -- would put its
+    # module's constants in the Markdown export for nothing.
+    def rewrite(statement: re.Match) -> str:
+        parts = import_parts(statement)
+        kept = [
+            part
+            for part, _exported, alias in parts
+            if re.search(rf"(?<![\w.]){re.escape(alias)}(?!\w)", rest)
+        ]
+        if not kept:
+            return ""
+        if len(kept) == len(parts):
+            return statement[0]
+        quote = statement["quote"]
+        return f"import {{ {', '.join(kept)} }} from {quote}{statement['module']}{quote};\n"
+
+    return SNIPPET_IMPORT_RE.sub(rewrite, body)
+
+
+def inline_examples(resolved: Resolved) -> None:
+    """Write each page's snippet examples into it as fenced code.
+
+    A snippet module is published only while a published page still refers to
+    it: every example is already in the page that shows it.
+    """
+    for rel in published_pages(resolved):
+        if rel.startswith("snippets/"):
+            continue
+        text = published_text(resolved, rel)
+        inlined = inline_page(resolved, rel, text)
+        if inlined != text:
+            resolved.rendered[rel] = inlined
+    referenced = {
+        module
+        for rel in published_pages(resolved)
+        if not rel.startswith("snippets/")
+        for module in SNIPPET_REFERENCE_RE.findall(published_text(resolved, rel))
+    }
+    for rel in published_pages(resolved):
+        if rel.startswith("snippets/") and rel not in referenced:
+            del resolved.files[rel]
+            resolved.rendered.pop(rel, None)
+
+
+# --------------------------------------------------------------------------- #
+# stage 6: annotate
 # --------------------------------------------------------------------------- #
 
 # A page declares where it applies in its own frontmatter:
@@ -717,11 +902,7 @@ def annotate(resolved: Resolved, docs_json: dict) -> None:
     comparison marker gets the declaring pages in navigation order, a table
     for each navigation section. Every other page is published unchanged.
     """
-    texts = {
-        rel: src.read_text(encoding="utf-8")
-        for rel, (_root, src) in sorted(resolved.files.items())
-        if rel.endswith(PAGE_SUFFIXES)
-    }
+    texts = {rel: published_text(resolved, rel) for rel in published_pages(resolved)}
     declared = {}
     for rel, text in texts.items():
         found = declared_availability(rel, text)
@@ -765,7 +946,7 @@ def annotate(resolved: Resolved, docs_json: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# stage 6: emit
+# stage 7: emit
 # --------------------------------------------------------------------------- #
 
 
@@ -955,6 +1136,7 @@ def main() -> int:
         docs_json, nav_raw = assemble_nav(resolved)
         warnings = validate(config, resolved, docs_json)
         merge(resolved)
+        inline_examples(resolved)
         annotate(resolved, docs_json)
         count = emit(config, resolved, docs_json, nav_raw)
     except AssembleError as exc:
