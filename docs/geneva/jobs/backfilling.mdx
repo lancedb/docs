@@ -151,7 +151,7 @@ Or, you can use filters to add in or overwrite content in rows previously backfi
 # only backfill video content whose filenames start with 'a' or 'b' but only if content not pulled previously
 tbl.backfill("content", where="(starts_with(filename, 'a') or starts_with(filename, 'b')) and content is null")
 # only backfill embeddings of only those videos with content and no previous embeddings
-tbl.backfill("embedding", where="content is not null and embeddding is not null")
+tbl.backfill("embedding", where="content is not null and embedding is null")
 ```
 </CodeGroup>
 
