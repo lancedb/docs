@@ -981,7 +981,8 @@ def inline_examples(resolved: Resolved) -> None:
 # Its label, its sidebar tag and its row in the comparison are all rendered from
 # that, so no list of features elsewhere has to be kept in step with the pages.
 OFFERINGS = (("oss", "OSS", "green"), ("enterprise", "Enterprise", "red"))
-STATUSES = {"available": "Yes", "unavailable": "No", "varies": "Varies"}
+# Product support is binary. Setup, SDK and server constraints belong in prose.
+STATUSES = {"available": "Yes", "unavailable": "No"}
 AVAILABILITY_KEYS = {"oss", "enterprise", "summary"}
 AVAILABILITY_LINE_RE = re.compile(r"^availability:")
 COMPARISON_MARKER = "{/* availability-comparison */}"
@@ -1018,7 +1019,8 @@ def declared_availability(rel: str, text: str) -> tuple[dict, dict] | None:
         if not isinstance(declared[key], str) or declared[key] not in STATUSES:
             raise AssembleError(
                 f"{rel}: availability.{key} is {declared[key]!r}, "
-                f"not one of {', '.join(STATUSES)}"
+                f"not one of {', '.join(STATUSES)}; declare product support and "
+                "explain configuration, version or subfeature requirements in prose"
             )
     if declared["oss"] == declared["enterprise"] == "unavailable":
         raise AssembleError(f"{rel}: availability says no offering has it")
@@ -1038,8 +1040,7 @@ def availability_label(declared: dict) -> str:
     badges = []
     for key, name, color in OFFERINGS:
         if declared[key] != "unavailable":
-            text = name if declared[key] == "available" else f"{name}: varies"
-            badges.append(f'<Badge color="{color}">{text}</Badge>')
+            badges.append(f'<Badge color="{color}">{name}</Badge>')
     return " ".join([*badges, declared["summary"].strip()])
 
 

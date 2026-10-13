@@ -67,6 +67,21 @@ page's. A malformed declaration, a `tag` set by hand, a page that opens with a
 badge of its own, or a misplaced comparison line stops the build. Pages that
 declare nothing are copied unchanged.
 
+The `oss` and `enterprise` values must be `available` or `unavailable`. They
+describe product support. Setup switches, permissions, supported SDK or server
+versions, and narrower subfeature limits belong in the summary or page body;
+they do not make a supported feature `varies`. Unknown or legacy `varies`
+values stop assembly rather than being silently converted to support claims.
+The `launch` gate controls publication separately.
+
+When migrating older sources, update their declarations and qualifications
+before using this stricter assembler with them. Binary declarations also work
+with the previous assembler. CI reads producer `main` by default; explicit
+ref overrides must point at migrated sources. An older producer ref containing
+`varies` intentionally fails with a page and offering in the error, so update
+that ref before assembling. Keep availability source-owned; do not add a second
+feature map to the generator.
+
 `make test-assemble` also compiles its labelled test pages with the MDX
 compiler Mint uses when `MDX_COMPILER` names the `index.js` of the
 `@mdx-js/mdx` package installed with Mint and `node` is on the path; otherwise
