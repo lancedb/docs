@@ -247,7 +247,7 @@ ENTERPRISE_ONLY = """availability:
 """
 BOTH = """availability:
   oss: available
-  enterprise: varies
+  enterprise: available
   summary: Local views refresh in full; see [Against a deployment](#deployment).
 """
 BOTH_AVAILABLE = """availability:
@@ -343,15 +343,29 @@ def test_hand_set_tag_is_refused_whatever_the_declaration(base, declaration):
         build(availability_site(base, {"p.mdx": source}, ["p"]))
 
 
-def test_varies_is_labelled_and_untagged(base):
+def test_supported_feature_with_constraints_is_labelled_and_untagged(base):
     output = build(availability_site(base, {"views.mdx": page(BOTH)}, ["views"]))
 
     assert (output / "views.mdx").read_text() == (
         '---\ntitle: "A page"\n---\n\n'
-        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise: varies</Badge> '
+        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> '
         "Local views refresh in full; see [Against a deployment](#deployment).\n\n"
         "First paragraph.\n"
     )
+
+
+@pytest.mark.parametrize("offering", ["oss", "enterprise"])
+@pytest.mark.parametrize("status", ["varies", "unknown", "coming-soon"])
+def test_nonbinary_support_is_refused_without_coercion(base, offering, status):
+    declaration = BOTH_AVAILABLE.replace(
+        f"{offering}: available", f"{offering}: {status}"
+    )
+    error = (
+        rf"views.mdx: availability.{offering}.*"
+        r"not one of available, unavailable"
+    )
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(availability_site(base, {"views.mdx": page(declaration)}, ["views"]))
 
 
 def test_pages_without_availability_are_copied_unchanged(base):
@@ -377,7 +391,7 @@ def test_comparison_lists_declaring_pages_in_navigation_order(base):
         "| Topic | OSS / Enterprise |\n"
         "| --- | --- |\n"
         "| [A page](/views): Local views refresh in full; "
-        "see [Against a deployment](/views#deployment). | Yes / Varies |\n"
+        "see [Against a deployment](/views#deployment). | Yes / Yes |\n"
         "| [Auth](/auth): A deployment checks every request. | No / Yes |\n"
         "\nAfter.\n"
     )
@@ -427,7 +441,7 @@ def test_comparison_has_a_table_per_navigation_section(base):
         body="### Search {#availability-search}\n\n" + header
         + f"| [Overview](/search): {both}"
         "| [A page](/search/deep): Local views refresh in full; "
-        "see [Against a deployment](/search/deep#deployment). | Yes / Varies |\n"
+        "see [Against a deployment](/search/deep#deployment). | Yes / Yes |\n"
         f"| [A page](/search/more): {both}"
         "\n### Security {#availability-security}\n\n" + header
         + "| [A page](/auth): A deployment checks every request. | No / Yes |\n"
