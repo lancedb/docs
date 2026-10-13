@@ -116,16 +116,18 @@ zips your workspace (and, optionally, your site-packages), uploads the archives 
 connection, and returns a ready-to-use `GenevaManifest` you can attach to a transform with
 `manifest=`.
 
+Replace the connection placeholders below with your deployment details. In
+application code, load credentials from environment variables or a secrets manager.
+
 ```python
-import os
 import pyarrow as pa
 import geneva
 from geneva import udf
 
 db = geneva.connect(
-    uri=os.environ["LANCEDB_URI"],                      # db://your-database
-    host_override=os.environ["LANCEDB_HOST_OVERRIDE"],  # https://your-endpoint
-    api_key=os.environ["LANCEDB_API_KEY"],
+    uri="db://your-database",
+    host_override="https://your-endpoint",
+    api_key="your-api-key",
 )
 
 # Capture the local workspace; rely on the worker image for site-packages
