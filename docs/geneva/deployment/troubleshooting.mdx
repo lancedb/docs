@@ -11,14 +11,14 @@ We'll cover common problems you may encounter when using Geneva and troubleshoot
 
 Here are some areas to verify to identify the source of problems with your Geneva deployment:
 
-- **Versions compatibility** (Ray, Python, Lance)
+- **Version compatibility** (Ray, Python, Lance)
 - **Remote Ray execution** and hardware resource availability
 - **Sufficient permissions** to access data
 - **Worker code** only returns serializable values (no open files, no GPU resident buffers)
 
 ## Confirming Dependency Versions
 
-Geneva uses Ray for distributed execution. Ray requires the version deployed cluster services and clients to be exactly the same. Minor versions of Python must match both on client and cluster services (e.g. 3.10.3 and 3.10.5 are ok, but 3.10.3 and 3.12.1 are not.)
+Geneva uses Ray for distributed execution. Ray requires the versions of deployed cluster services and clients to be exactly the same. Minor versions of Python must match both on client and cluster services (e.g. 3.10.3 and 3.10.5 are ok, but 3.10.3 and 3.12.1 are not.)
 
 Geneva has been tested with Ray 2.44+ and Python 3.10.x and 3.12.x.
 
@@ -112,7 +112,7 @@ If you are using Geneva managed Ray deployed on GKE, the errors may look like th
 PermissionError: [Errno 13] google::cloud::Status(PERMISSION_DENIED: Permanent error, with a last message of Caller does not have storage.objects.get access to the Google Cloud Storage object. Permission 'storage.objects.get' denied on resource (or it may not exist). error_info={reason=forbidden, domain=global, metadata={gcloud-cpp.retry.function=GetObjectMetadata, gcloud-cpp.retry.reason=permanent-error, gcloud-cpp.retry.original-message=Caller does not have storage.objects.get access to the Google Cloud Storage object. Permission 'storage.objects.get' denied on resource (or it may not exist)., http_status_code=403}}). Detail: [errno 13] Permission denied
 ```
 
-This indicates that your workers and/or head node are not being run with the correct service account or with an account that has sufficient access. Please double check the service account's accesses and make sure to add your service account that has access to the buckets as a parameter to your Head and Worker specs. See `service_account="geneva-integ-test"` below:
+This indicates that your workers and/or head node are not being run with the correct service account or with an account that has sufficient access. Please double-check the service account's accesses and make sure to add your service account that has access to the buckets as a parameter to your Head and Worker specs. See `service_account="geneva-integ-test"` below:
 
 <CodeGroup>
 ```python Python icon="python"
@@ -150,7 +150,7 @@ Serialization is a critical subsystem of Geneva. In order to store UDFs and perf
 There are a few basic rules:
 
 1. **Python objects** passed to distributed processes or written to LanceDB must be able to be pickled or unpickled using the Python pickle or cloudpickle library.
-2. **Python code** used for distributed execution, including UDFs used to calculate values written to columns must be able to be pickled or unpickled using the Python pickle or cloudpickle library.
+2. **Python code** used for distributed execution, including UDFs used to calculate values written to columns, must be able to be pickled or unpickled using the Python pickle or cloudpickle library.
 3. **Python code or objects** need to have the same encoding and representation on the client-side and the server-side.
 
 Below is a list of error categories and examples and how to fix them.
@@ -232,7 +232,7 @@ def udf_function(...)
 
 ### Disconnect or Serialization Errors with GPU Dependent UDFs
 
-When using GPU code, the typical process loads some values and tensors from CPU memory to GPU memory. Even after moving data (`data.cpu().tolist()`), there may be references to GPU memory. While this is not a problem with local execution, when doing a distributed job it may cause problems because the GPU references are not serializable and not needed. You must take steps to eliminate references to structures in GPU memory since they cannot be serialized and sent between workers. This can be achieved by explicitly disconnecting references to the GPU memory (`data.cpu().detach().tolist()`) to get only-CPU resident fully serializable objects.
+When using GPU code, the typical process loads some values and tensors from CPU memory to GPU memory. Even after moving data (`data.cpu().tolist()`), there may be references to GPU memory. While this is not a problem with local execution, when doing a distributed job it may cause problems because the GPU references are not serializable and not needed. You must take steps to eliminate references to structures in GPU memory since they cannot be serialized and sent between workers. This can be achieved by explicitly disconnecting references to the GPU memory (`data.cpu().detach().tolist()`) to get fully serializable, CPU-resident objects.
 
 Here are some typical error messages:
 

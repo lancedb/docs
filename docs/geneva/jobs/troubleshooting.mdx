@@ -41,7 +41,7 @@ def my_udf(x): ...
 
 ### "UDF requires X CPUs + Y GPUs but no worker group can satisfy all requirements."
 
-Of course, if your cluster doesn't have enough GPUs, add them! But if you're surprised how many CPUs/GPUs your UDF is requesting, it may be because of concurrency. Your tasks's actual CPU/GPU requirement is `concurrency × CPUs/GPUs per task`. 
+Of course, if your cluster doesn't have enough GPUs, add them! But if you're surprised how many CPUs/GPUs your UDF is requesting, it may be because of concurrency. Your job's actual CPU/GPU requirement is `concurrency × CPUs/GPUs per task`. 
 
 **Fix:** Lower `concurrency` so that the total CPUs/GPUs needed (concurrency × CPUs/GPUs per task) does not exceed the cluster's CPU/GPU count.
 
@@ -111,7 +111,7 @@ The client could not connect to the Ray cluster (e.g. after starting a KubeRay o
 **Common causes:**
 
 - **Head not ready** – The Ray head pod may still be starting. Wait a bit and retry, or increase `GENEVA_RAY_INIT_MAX_RETRIES` (default 5).
-- **Image/architecture mismatch** – The Ray head image may not match the node architecture (e.g. arm64 vs x64). Use an image built for the same architecture as your nodes. (the function [`get_ray_image`](https://lancedb.github.io/geneva/api/utils/) can help find the right image name.)
+- **Image/architecture mismatch** – The Ray head image may not match the node architecture (e.g. arm64 vs x64). Use an image built for the same architecture as your nodes. (The function [`get_ray_image`](https://lancedb.github.io/geneva/api/utils/) can help find the right image name.)
 - **Network / firewall** – If using an external Ray cluster, ensure the `ray://` address is reachable and that no firewall is blocking the Ray client port.
 
 **Quick check:** From the same network as the client, try connecting with `ray.init("ray://<host>:<port>")` in a small script to see the exact error.

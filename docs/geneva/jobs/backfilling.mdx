@@ -75,14 +75,14 @@ tbl.backfill("embedding", min_checkpoint_size=10, max_checkpoint_size=100)
 
 ## Managing concurrency
 
-One way to speed up the execution of a job to give it more resources and to have it work in parallel.  There are a few settings you can use on the backfill command to tune this.
+One way to speed up the execution of a job is to give it more resources and to have it work in parallel.  There are a few settings you can use on the backfill command to tune this.
 
 * process-level `concurrency`
 * thread-level `intra_applier_concurrency`
 
-Process level concurrency can be set with the `concurrency` parameter.  This lets you specify the number of processes calculating values using the UDF.  The default is 8 and should be set to the number of GPUs you would like to dedicate to your job.  This can also be used based on CPU constraints.  So if you have 40 machines with 4 GPUs each, you could set this value to 160.  If you set the value higher than the resources available, Geneva will try to schedule as much of the resources as it can (and potentially auto-scale to get more resources).
+Process-level concurrency can be set with the `concurrency` parameter.  This lets you specify the number of processes calculating values using the UDF.  The default is 8 and should be set to the number of GPUs you would like to dedicate to your job.  This can also be used based on CPU constraints.  So if you have 40 machines with 4 GPUs each, you could set this value to 160.  If you set the value higher than the resources available, Geneva will try to schedule as much of the resources as it can (and potentially auto-scale to get more resources).
 
-Thread level concurrency can be set with the `intra_applier_concurrency` parameter.  This lets you specify the number of threads in each process is calculating values using the UDF.  The default is 1.  If you have CPU heavy jobs this may be the best setting to tweak to get more utilization out of your systems. If you set the value higher than the resources available, Geneva will try to schedule as much of the resources as it can get.
+Thread-level concurrency can be set with the `intra_applier_concurrency` parameter.  This lets you specify the number of threads in each process that calculate values using the UDF.  The default is 1.  If you have CPU-heavy jobs this may be the best setting to tweak to get more utilization out of your systems. If you set the value higher than the resources available, Geneva will try to schedule as much of the resources as it can get.
 
 The two settings can be used in combination.  So if your UDF requires 1 CPU and you set `concurrency` to 10 and `intra_applier_concurrency` to 5, you will potentially have 50 instances of the UDFs running in parallel.
 
@@ -100,7 +100,7 @@ Feature engineering jobs at scale can take days to complete.  Two settings can h
 * Limit the number of rows processed with `num_frags`
 * Perform intermediate commits with `commit_granularity`
 
-The `num_frags` parameter lets you limit the number of fragments processed before the job is considered complete.  If you have a table with 1000 fragments, you could set `num_frags` to 1 to see how your UDF performs and if to validate the values generated.  You can then later run with a larger `num_frags` value or without the `num_frags` setting to complete the backfill.  Any fragments previously computed are not computed again.
+The `num_frags` parameter lets you limit the number of fragments processed before the job is considered complete.  If you have a table with 1000 fragments, you could set `num_frags` to 1 to see how your UDF performs and to validate the values generated.  You can then later run with a larger `num_frags` value or without the `num_frags` setting to complete the backfill.  Any fragments previously computed are not computed again.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -109,7 +109,7 @@ tbl.backfill("embedding", num_frags=2)
 ```
 </CodeGroup>
 
-The `commit_granularity` parameter lets you specify how many fragments need to be ready to commit before a intermediate commit occurs and makes partial results visible to other readers.  So for our example with a table of 1000 fragments, you can set `commit_granularity` to 10 to see progress updates every 10 fragments.
+The `commit_granularity` parameter lets you specify how many fragments need to be ready to commit before an intermediate commit occurs and makes partial results visible to other readers.  So for our example with a table of 1000 fragments, you can set `commit_granularity` to 10 to see progress updates every 10 fragments.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -120,7 +120,7 @@ tbl.backfill("embedding", commit_granularity=10)
 
 ## Filtered Backfills
 
-Geneva allows you to specify SQL-style filters on the backfill operation. This lets you to apply backfills to a specified subset of the table's rows.
+Geneva allows you to specify SQL-style filters on the backfill operation. This lets you apply backfills to a specified subset of the table's rows.
 
 <CodeGroup>
 ```python Python icon="python"

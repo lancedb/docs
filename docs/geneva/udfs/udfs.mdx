@@ -57,7 +57,7 @@ def recordbatch_filename_len(batch: pa.RecordBatch) -> pa.Array:
     return pa.array(lengths, type=pa.int32())
 ```
 
-> **Note**:  Batch UDFS require you to specify `data_type` in the ``@udf`` decorator for batched UDFs which defines `pyarrow.DataType` of the returned `pyarrow.Array`.
+> **Note**:  Batched UDFs require you to specify `data_type` in the `@udf` decorator, which defines the `pyarrow.DataType` of the returned `pyarrow.Array`.
 
 ### Struct outputs
 
@@ -107,11 +107,11 @@ def sum_vals(vals: np.ndarray | None) -> int | None:
 
 You can also define a **stateful** UDF that retains its state across calls.
 
-This can be used to share code and **parameterize your UDFs**.  In the example below, the model being used is a parameter that can be specified at UDF registration time.  It can also be used to parameterize input column names of `pa.RecordBatch` batch UDFS.
+This can be used to share code and **parameterize your UDFs**.  In the example below, the model being used is a parameter that can be specified at UDF registration time.  It can also be used to parameterize input column names of `pa.RecordBatch` batch UDFs.
 
 This also can be used to **optimize expensive initialization** that may require heavy resources on the distributed workers.  For example, this can be used to load a model to the GPU once for all records sent to a worker instead of once per record or per batch of records.
 
-A stateful UDF is a `Callable` class, with `__call__()` method.  The call method can be a scalar function or a batched function.
+A stateful UDF is a `Callable` class with a `__call__()` method.  The call method can be a scalar function or a batched function.
 
 ```python
 from typing import Callable
@@ -136,16 +136,16 @@ class OpenAIEmbedding(Callable):
 For common providers like OpenAI and Gemini, Geneva ships [built-in UDFs](/geneva/udfs/providers) that handle API keys, retries, and batching for you — no custom class needed.
 </Tip>
 
-> **Note**:  The state is will be independently managed on each distributed Worker.
+> **Note**:  The state is independently managed on each distributed Worker.
 
 ## UDF options
 
 The `udf` can have extra annotations that specify resource requirements and operational characteristics.
-These are just add parameters to the `udf(...)`.
+Add them as parameters to `udf(...)`.
 
 ### Resource requirements for UDFs
 
-Some workers may require specific resources such as gpus, cpus and certain amounts of RAM.
+Some workers may require specific resources such as GPUs, CPUs, and certain amounts of RAM.
 
 You can provide these requirements by adding `num_cpus`, `num_gpus`, and `memory` parameters to the UDF.
 
@@ -281,7 +281,7 @@ tbl.add_columns(image_features)
 tbl.add_columns(geneva.UnpackedUDF(image_features, prefix="image_"))
 ```
 
-Batched UDFs require return type in their `udf` annotations
+Batched UDFs require a return type in their `udf` annotations
 
 ```python
 @udf(data_type=pa.int32())
@@ -323,13 +323,13 @@ tbl.add_columns({"embedding": OpenAIEmbedding()})
 
 ## Changing data in computed columns
 
-Let's say you backfilled data with your UDF then you noticed that your data has some issues.  Here are a few scenarios:
+Let's say you backfilled data with your UDF, then noticed that your data has some issues.  Here are a few scenarios:
 
 1. All the values are incorrect due to a bug in the UDF.
 2. Most values are correct but some values are incorrect due to a failure in UDF execution.
-3. Values calculated correctly and you want to perform a second pass to fixup some of the values.
+3. Values calculated correctly and you want to perform a second pass to fix up some of the values.
 
-In scenario 1, you'll most likely want to replace the UDF with a new version and recalculate all the values.  You should perform a `alter_table` and then `backfill`.
+In scenario 1, you'll most likely want to replace the UDF with a new version and recalculate all the values.  You should perform an `alter_table` and then `backfill`.
 
 In scenario 2, you'll most likely want to re-execute `backfill` to fill in the values.  If the error is in your code (certain cases not handled), you can modify the UDF, and perform an `alter_table`, and then `backfill` with some filters.
 
@@ -347,7 +347,7 @@ table.alter_columns({"path": "area", "udf": area_udf_v2} )
 
 After making this change, the existing data already in the table does not change. However, when you perform your next basic `backfill` operation, all values would be recalculated and updated. If you only wanted some rows updated, you could perform a filtered backfill, targeting the specific rows that need the new updates.
 
-For example, this filter would only update the rows where area was currently null.
+For example, this filter would only update the rows where area is currently null.
 ```python
 table.backfill("area", where="area is null")
 ```
