@@ -143,7 +143,13 @@ Missing `AWS_*` or `GOOGLE_APPLICATION_CREDENTIALS` can cause storage authentica
 
 #### Passing Environment Variables to Workers
 
-If critical environment variables are missing on workers, you can pass them via the manifest or cluster configuration.
+If critical environment variables are missing on workers, you can pass them via the manifest or cluster configuration. Set the values in the shell before starting the Python program:
+
+```shell
+export AWS_ACCESS_KEY_ID="your-access-key-id"
+export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
+export MY_API_KEY="your-api-key"
+```
 
 **Option 1: Via Manifest**
 
