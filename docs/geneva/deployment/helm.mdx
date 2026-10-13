@@ -11,7 +11,7 @@ icon: cogs
 In self-managed environments, Geneva can be installed into existing Kubernetes clusters using Helm. Please [contact LanceDB](https://lancedb.com/contact/) for access to the Helm Chart and related resources.
 </Tip>
 
-## Pre-requisites
+## Prerequisites
 
 - An existing Kubernetes cluster
 - An existing node pool(s) for Geneva workloads. By default, Geneva uses node selector
@@ -30,7 +30,7 @@ It includes services, service accounts, RBAC roles, etc. that are used by the Ge
 
 ## Install
 
-1. Authenticate with Kubernetes cluster, i.e. update kubeconfig
+1. Authenticate with your Kubernetes cluster (for example, update your kubeconfig)
 2. Configure Helm chart values
 
 In values.yaml, configure the service account, node selectors, and cloud resources, if applicable.
@@ -69,7 +69,7 @@ geneva:
     clientPrincipalId: ""
 ```
 
-3. Install kuberay operator
+3. Install KubeRay operator
 ```bash
 export NAMESPACE=lancedb
 
@@ -142,7 +142,7 @@ Configuration for the Ray cluster can be specified by modifying raycluster.yaml 
 
 ### Provision KubeRay clusters on demand
 
-Set `global.rayclusterUri` to an empty value to provision ephemeral KubeRay clusters on-demand for each execution job. The default KubeRay cluster configuration
+Set `global.rayclusterUri` to an empty value to provision ephemeral KubeRay clusters on demand for each execution job. The default KubeRay cluster configuration
 is specified in `geneva.defaults.cluster`, i.e.
 
 ```yaml

@@ -11,7 +11,7 @@ icon: cogs
 For manual installation in self-managed environments, follow the instructions below.
 </Tip>
 
-Feature Engineering can be deployed as part of LanceDB Enterprise in managed or self-managed environments. First class support is provided for Azure, AWS, and GCP, including deployment automation via Terraform and Helm.
+Feature Engineering can be deployed as part of LanceDB Enterprise in managed or self-managed environments. First-class support is provided for Azure, AWS, and GCP, including deployment automation via Terraform and Helm.
 
 ## Prerequisites
 
@@ -113,7 +113,7 @@ GKE provides the option for an out-of-the-box KubeRay operator deployment. The v
 
 Alternatively, you can also deploy your own KubeRay operator to get the latest KubeRay 1.3 version.
 
-The following sections describe in more details other required configuration settings required for Geneva to perform distributed execution.
+The following sections describe in more detail other configuration settings required for Geneva to perform distributed execution.
 
 ### GKE Node Pools
 
@@ -129,7 +129,7 @@ You can define your node pools however you want but Geneva uses three specific K
 
 ### GKE + k8s Permissions
 
-Geneva needs the ability to deploy a KubeRay cluster and submit jobs to Ray. The workers in the Ray cluster need the ability to read and write to the Google Cloud Storage (GCS) buckets. This requires setting up the proper k8s permissions and GCP IAM grants. There are three main areas to setup and verify:
+Geneva needs the ability to deploy a KubeRay cluster and submit jobs to Ray. The workers in the Ray cluster need the ability to read and write to the Google Cloud Storage (GCS) buckets. This requires setting up the proper k8s permissions and GCP IAM grants. There are three main areas to set up and verify:
 
 - Kubernetes Service Account (KSA)
 - Google Service Account (GSA)
@@ -190,7 +190,7 @@ gcloud storage buckets add-iam-policy-binding ${LANCEDB_URI} \
 
 #### GKE Workload Identity
 
-A GKE workload identity is required to enable k8s workloads access Google Cloud services securely and without needing to manually manage service account keys. The workload identity is attached to Google Cloud service accounts (GSA) and mapped to a Kubernetes service account (KSA). This feature needs to be enabled on the GKE cluster.
+A GKE workload identity is required to enable k8s workloads to access Google Cloud services securely and without needing to manually manage service account keys. The workload identity is attached to Google Cloud service accounts (GSA) and mapped to a Kubernetes service account (KSA). This feature needs to be enabled on the GKE cluster.
 
 You can confirm that your workers have abilities to read/write to the LanceDB bucket:
 
@@ -266,7 +266,7 @@ For example, this could be a laptop with credentials provided by environment var
 
 #### Create IAM Role for Geneva Client
 
-The Geneva Client IAM Role is assumed by the Geneva client to provision the Kuberay cluster and run remote jobs.
+The Geneva Client IAM Role is assumed by the Geneva client to provision the KubeRay cluster and run remote jobs.
 
 This role requires IAM permissions to access the storage bucket and Kubernetes API.
 

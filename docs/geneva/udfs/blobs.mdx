@@ -9,7 +9,7 @@ Geneva supports UDFs that take [Lance Blobs](https://docs.lancedb.com/tables/mul
 
 ## Reading Blobs
 
-Defining functions that read blob columns is straight forward.
+Defining functions that read blob columns is straightforward.
 
 For scalar UDFs, blob columns are expected to be of type `BlobFile`
 
@@ -22,7 +22,7 @@ from lance.blob import BlobFile
 def work_on_udf(blob: BlobFile) -> int:
     assert isinstance(blob, BlobFile)
     data = blob.read()
-    # do something intresting.
+    # do something interesting.
 
     return len(data)
 ```
@@ -39,7 +39,7 @@ def work_on_udf(blob: BlobFile) -> int:
 
 Defining UDFs that write out `Blob`s to a new column is straightforward.   Here we add the standard metadata annotation to the UDF so that Geneva knows to write out Blobs.
 
-For scalar udfs, your udf will return `bytes`, explicitly set the `data_type` to `pa.large_binary()`, and add the `field_metadata` that specifies blob encoding.
+For scalar UDFs, your UDF will return `bytes`, explicitly set the `data_type` to `pa.large_binary()`, and add the `field_metadata` that specifies blob encoding.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -50,7 +50,7 @@ def generate_blob(text: str, multiplier: int) -> bytes:
 ```
 </CodeGroup>
 
-For `pa.RecordBatch` batched UDFs you the effort is similar:
+For `pa.RecordBatch` batched UDFs, the effort is similar:
 
 <CodeGroup>
 ```python Python icon="python"

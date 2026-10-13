@@ -5,7 +5,7 @@ description: Learn how to use Geneva's materialized view feature to declarativel
 icon: microscope
 ---
 
-Geneva provides a materialized view feature that can be used to declaratively manage "batch" updates of expensive operations such as populating UDF columns. These updates are triggered via refresh operation. This can be used to optimize data layouts for training and to simplify some operations that traditionally may require external procedural orchestration (airflow, prefect, dagster).
+Geneva provides a materialized view feature that can be used to declaratively manage "batch" updates of expensive operations such as populating UDF columns. These updates are triggered via a refresh operation. This can be used to optimize data layouts for training and to simplify some operations that traditionally may require external procedural orchestration (Airflow, Prefect, Dagster).
 
 > **Note**: This is similar to how traditional databases offer a materialized view feature to declaratively manage expensive aggregation and join operations.
 
@@ -13,7 +13,7 @@ Geneva provides a materialized view feature that can be used to declaratively ma
 
 The process is straightforward:
 
-1. Define a query on table, optionally including UDFs in the select clause.
+1. Define a query on a table, optionally including UDFs in the select clause.
 2. Create the materialized view using `db.create_materialized_view(...)`.
 3. Populate the new materialized view table using the `refresh` operation.
 
@@ -43,7 +43,7 @@ raw_videos = db.create_table(
 ```
 </CodeGroup>
 
-Here's our UDFs, and the creation of a new empty materialized view.
+Here are our UDFs, and the creation of a new empty materialized view.
 
 <CodeGroup>
 ```python Python icon="python"
@@ -92,7 +92,7 @@ db.refresh("table_view")  # only materialize new or modified rows.
 
 The operation is incremental. So the next time refresh on the table is called, only new fragments with new data get materialized into the materialized view table.
 
-Materialized views are just tables so you can query them as well as modify them by adding new `add_columns`, `backfill` particular columns and deriving other materialized views or views from them.
+Materialized views are just tables, so you can query them as well as modify them by adding new columns with `add_columns`, backfilling particular columns with `backfill`, and deriving other materialized views or views from them.
 
 Reference:
 * [`create_materialized_view` API](https://lancedb.github.io/geneva/api/connection/#geneva.db.Connection.create_materialized_view)
@@ -101,11 +101,11 @@ Reference:
 
 ### Do we copy the UDFs from the source table?
 
-No. The UDF does not but any UDF calculated values in the original table come to the materialized table via refresh. New columns defined by the UDFs in the materialized view creation are attached only to the materialized view. They can be backfilled (since the UDF belongs to the view) or refreshed.
+No. The UDFs are not copied, but any UDF-calculated values in the original table come to the materialized table via refresh. New columns defined by the UDFs in the materialized view creation are attached only to the materialized view. They can be backfilled (since the UDF belongs to the view) or refreshed.
 
-### On MV refresh, do we force materialization of UDFs cols on the source table?
+### On MV refresh, do we force materialization of UDF columns on the source table?
 
-No. They are managed at the source table only. If it is null the null values are propagated. Future options may force materialization/backfill "recursively".
+No. They are managed at the source table only. If it is null, the null values are propagated. Future options may force materialization/backfill "recursively".
 
 ## API Reference
 

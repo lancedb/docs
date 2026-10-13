@@ -249,7 +249,7 @@ However, if an image is defined in both a Cluster and a Manifest, the definition
 
 ### Auto-upload local dependencies
 
-Geneva can package your local environment and send it to Ray workers. This includes the current workspace root (if you're in a python repo) or the current working directory (if you're not). [`GenevaManifest.create_site()`](https://lancedb.github.io/geneva/api/manifest/#geneva.manifest.mgr.GenevaManifest.create_site) additionally uploads your Python site-packages (defined by `site.getsitepackages()`) to workers. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
+Geneva can package your local environment and send it to Ray workers. This includes the current workspace root (if you're in a Python repo) or the current working directory (if you're not). [`GenevaManifest.create_site()`](https://lancedb.github.io/geneva/api/manifest/#geneva.manifest.mgr.GenevaManifest.create_site) additionally uploads your Python site-packages (defined by `site.getsitepackages()`) to workers. This is not recommended for production use, as it is prone to issues like architecture mismatches of built dependencies, but it can be a good way to iterate quickly during development.
 
 To upload site packages:
 

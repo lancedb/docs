@@ -18,7 +18,7 @@ When running Geneva UDFs on distributed workers, your code is serialized locally
 | `ArrowInvalid: cannot cast` / serialization errors | NumPy 1.x vs 2.x mismatch |
 | `ModuleNotFoundError` on workers | Package only installed locally |
 | Model loading failures | PyTorch version mismatch |
-| Permission denied errors | Missing API keys in envrionment variables |
+| Permission denied errors | Missing API keys in environment variables |
 
 These issues are notoriously difficult to debug because the error messages often don't indicate the root cause.
 
@@ -27,11 +27,11 @@ These issues are notoriously difficult to debug because the error messages often
 
 Geneva provides a diagnostic tool to compare your local environment against Ray workers.
 
-If you are encountering a hang or exception you can use the following diagnosis worklflow to resolve the problem.
+If you are encountering a hang or exception, you can use the following diagnosis workflow to resolve the problem.
 
 <Steps>
   <Step>
-  **Run the diagnostic tool** programatically or via the CLI.
+  **Run the diagnostic tool** programmatically or via the CLI.
   </Step>
   <Step>
   **Check PACKAGES and ENV VARS output sections for mismatches**.
