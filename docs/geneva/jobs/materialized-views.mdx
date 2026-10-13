@@ -43,22 +43,25 @@ raw_videos = db.create_table(
 ```
 </CodeGroup>
 
-Here's our UDFs, and the creation of a new empty materialized view.
+Define the transforms, then create an empty materialized view. This example
+uses video paths accessible to the workers. Install `openai-whisper` in the
+worker environment before running the transcription transform.
 
 <CodeGroup>
 ```python Python icon="python"
 @udf
-def transcribe(video_uri) -> str:
-  from whisper import load_model
-  model = load_model("base")
-  return model.transcribe(uri)["text"]
+def transcribe(video_uri: str) -> str:
+    from whisper import load_model
+    model = load_model("base")
+    return model.transcribe(video_uri)["text"]
 
 @udf(data_type=pa.binary())
-def load_video(video_uri: pa.Array) -> pa.Array:
-    videos = <expensive stuff>
-    return ...
+def load_video(video_uri: str) -> bytes:
+    from pathlib import Path
+    return Path(video_uri).read_bytes()
 
-q = raw_videos.search(None)
+q = (
+    raw_videos.search(None)
     .shuffle(seed=42)
     .select(
         {
@@ -67,6 +70,7 @@ q = raw_videos.search(None)
             "transcription": transcribe,
         }
     )
+)
 
 view_table = db.create_materialized_view("table_view", q)
 ```

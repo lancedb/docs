@@ -150,9 +150,10 @@ Some workers may require specific resources such as gpus, cpus and certain amoun
 You can provide these requirements by adding `num_cpus`, `num_gpus`, and `memory` parameters to the UDF.
 
 ```python
-@udf(..., num_cpus=1, num_gpus=0.5, memory = 4 * 1024**3) # require 1 CPU, 0.5 GPU, and 4GiB RAM
-def func(...):
-    ...
+@udf(num_cpus=1, num_gpus=0.5, memory=4 * 1024**3)
+def transform(value: str) -> str:
+    # Replace this body with your transformation.
+    return value
 ```
 
 ### Operational parameters for UDFs
