@@ -345,7 +345,7 @@ You now want to revise the code.  To make the change, you'd update the UDF used 
 table.alter_columns({"path": "area", "udf": area_udf_v2} )
 ```
 
-After making this change, the existing data already in the table does not change. However, when you perform your next basic `backfill` operation, all values would be recalculated and updated. If you only wanted some rows updated, you could perform a filtered backfill, targeting the specific rows that need the new upates.
+After making this change, the existing data already in the table does not change. However, when you perform your next basic `backfill` operation, all values would be recalculated and updated. If you only wanted some rows updated, you could perform a filtered backfill, targeting the specific rows that need the new updates.
 
 For example, this filter would only update the rows where area was currently null.
 ```python
