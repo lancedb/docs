@@ -30,6 +30,8 @@ SITE = {
     "guide/page.mdx": b"line one\r\nline two\r\n",
     # ... and no ignore rules, even the site's own.
     ".gitignore": b"*.png\n",
+    # Mintlify's own ignore file is part of the site: it keeps draft pages out.
+    ".mintignore": b"drafts/page.mdx\n",
     "static/logo.png": bytes(range(256)),
     ".cursor/rules/.cursorrules": b"hidden, and published\n",
 }
@@ -159,13 +161,7 @@ class Candidate:
         self.manifest = self.record()
         self.checksum = self.manifest["site_sha256"]
 
-    def record(
-        self,
-        refs=("lancedb=main", "enterprise=main"),
-        sources=None,
-        context=True,
-        publication="functions=unlaunched",
-    ):
+    def record(self, refs=("lancedb=main", "enterprise=main"), sources=None, context=True):
         env = environment()
         if context:
             env.update(
@@ -181,7 +177,6 @@ class Candidate:
         command += ["--sources", sources or self.sources]
         for ref in refs:
             command += ["--ref", ref]
-        command += ["--publication", publication]
         command += ["--output", str(self.dir / "candidate.json")]
         subprocess.run(command, env=env, check=True, capture_output=True, text=True)
         self.manifest = json.loads((self.dir / "candidate.json").read_text())
@@ -238,7 +233,6 @@ def test_record_lists_every_file_and_names_the_candidate(tmp_path, remote):
     assert manifest["site_sha256"] == checksum(SITE)
     assert manifest["sources"] == {**SOURCES, "build": remote["docs_commit"]}
     assert manifest["refs"] == {"lancedb": "main", "enterprise": "main"}
-    assert manifest["publication"] == {"functions": "unlaunched"}
     assert manifest["run"]["run_id"] == "1001"
     assert manifest["run"]["sha"] == remote["docs_commit"]
 
@@ -274,39 +268,6 @@ def test_record_refuses_a_symlink(tmp_path, remote):
     assert "linked.mdx is a symlink" in failure.value.stderr
 
 
-@pytest.mark.parametrize(
-    ("line", "recorded"),
-    [
-        ("functions=launched", {"functions": "launched"}),
-        ("", {}),
-    ],
-)
-def test_record_names_what_the_build_published(tmp_path, remote, line, recorded):
-    candidate = Candidate(tmp_path, remote["docs_commit"])
-    assert candidate.record(publication=line)["publication"] == recorded
-
-
-@pytest.mark.parametrize("line", ["functions=yes", "functions", "Functions=launched"])
-def test_record_refuses_an_unreadable_publication(tmp_path, remote, line):
-    candidate = Candidate(tmp_path, remote["docs_commit"])
-    with pytest.raises(subprocess.CalledProcessError) as failure:
-        candidate.record(publication=line)
-    assert "publication" in failure.value.stderr
-
-
-def test_a_record_from_before_publications_says_so_when_published(tmp_path, remote):
-    candidate = Candidate(tmp_path, remote["docs_commit"])
-    manifest = dict(candidate.manifest)
-    del manifest["publication"]
-    (candidate.dir / "candidate.json").write_text(json.dumps(manifest))
-
-    result = publish(remote, candidate)
-
-    assert result.returncode == 0, result.stderr
-    head = git(remote["bare"], "rev-parse", "assembled")
-    assert "Publication: unrecorded" in git(remote["bare"], "log", "-1", "--format=%B", head)
-
-
 # --------------------------------------------------------------------------- #
 # publishing
 # --------------------------------------------------------------------------- #
@@ -330,7 +291,7 @@ def test_production_publishes_exactly_the_candidate(tmp_path, remote):
     assert "Candidate-Run: 1001" in message
     assert f"Sources: {sources_line(remote['docs_commit'])}" in message
     assert "Refs: lancedb=main enterprise=main" in message
-    assert "Publication: functions=unlaunched" in message
+    assert "Publication:" not in message
     assert json.loads(result.stdout)["commit"] == head
 
 
@@ -457,6 +418,11 @@ REFUSALS = {
     ),
     "a record without file hashes": (
         lambda c: c.edit_manifest(file_sha256=None), {}, "the record has no file hashes"
+    ),
+    "a record from the retired launch gates": (
+        lambda c: c.edit_manifest(publication={"functions": "unlaunched"}),
+        {},
+        "the record ({'functions': 'unlaunched'}) names launch states",
     ),
 }
 
@@ -773,6 +739,8 @@ def assemble_sources(base: Path, index: bytes) -> dict:
     for name, files in {
         "lancedb": {
             "docs/web/docs.json": json.dumps(navigation).encode(),
+            "docs/web/.mintignore": b"drafts/page.mdx\n",
+            "docs/web/drafts/page.mdx": b"A draft page\n",
             "docs/web/index.mdx": index,
             "docs/web/enterprise/security.mdx": b"Open-source security\n",
         },
@@ -846,6 +814,9 @@ def test_promotion_publishes_the_checked_output_not_newer_sources(tmp_path, remo
     assert published(remote["bare"], "assembled") == checked
     assert checked["index.mdx"] == b"# Release one\n"
     assert checked["enterprise/security.mdx"] == b"Enterprise security\n"
+    # The draft page stays in the files, and so does the ignore file that hides it.
+    assert checked[".mintignore"] == b"drafts/page.mdx\n"
+    assert checked["drafts/page.mdx"] == b"A draft page\n"
 
     # Nor can the run's ID carry the newer build's checksum.
     before = refs(remote["bare"])
@@ -869,11 +840,7 @@ def test_rollback_republishes_an_earlier_candidate_after_its_artifact_expired(tm
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["from"] == f"earlier publication {first_commit}"
-    assert json.loads(result.stdout)["publication"] == {"functions": "unlaunched"}
     head = git(remote["bare"], "rev-parse", "assembled")
-    assert "Publication: functions=unlaunched" in git(
-        remote["bare"], "log", "-1", "--format=%B", head
-    )
     assert published(remote["bare"], head) == SITE
     assert git(remote["bare"], "rev-parse", f"{head}^{{tree}}") == git(
         remote["bare"], "rev-parse", f"{first_commit}^{{tree}}"
@@ -907,6 +874,26 @@ def test_an_earlier_publication_must_still_match_its_checksum(tmp_path, remote):
 
     assert result.returncode == 1
     assert "is not candidate" in result.stderr
+    assert refs(remote["bare"]) == before
+
+
+def test_an_earlier_publication_from_the_launch_gates_is_not_republished(tmp_path, remote):
+    candidate = Candidate(tmp_path, remote["docs_commit"], run_id="1005")
+    forge(
+        tmp_path,
+        remote,
+        {f"docs/{path}": data for path, data in SITE.items()},
+        f"Publish candidate\n\nCandidate-Site-SHA256: {candidate.checksum}\n"
+        f"Candidate-Run: 1005\nSources: {sources_line(remote['docs_commit'])}\n"
+        "Refs: lancedb=main enterprise=main\nPublication: functions=unlaunched\n",
+    )
+    shutil.rmtree(candidate.dir)
+    before = refs(remote["bare"])
+
+    result = publish(remote, candidate)
+
+    assert result.returncode == 1, result.stdout
+    assert "names launch states from the retired launch gates" in result.stderr
     assert refs(remote["bare"]) == before
 
 

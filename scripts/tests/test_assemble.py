@@ -1,5 +1,5 @@
 """Tests for the assembler's overlay, navigation, private-root, availability,
-launch and example stages.
+draft and example handling.
 
 Each test builds a small site in a temporary directory: a reference root that
 owns `enterprise/security` and the navigation, and a private overlay root at
@@ -79,9 +79,8 @@ def public_root(paths: dict[str, Path]) -> Path:
     return paths["public"]
 
 
-def config(base: Path, reference: Path, overlay: Path, functions: str | None = None) -> Path:
+def config(base: Path, reference: Path, overlay: Path) -> Path:
     path = base / "assemble.yaml"
-    launches = f"launches:\n  functions: {functions}\n" if functions else ""
     path.write_text(
         f"""output: {base / "output"}
 roots:
@@ -92,7 +91,7 @@ roots:
     path: {overlay}
     role: overlay
     private: true
-{launches}"""
+"""
     )
     return path
 
@@ -104,8 +103,6 @@ def build(config_path: Path) -> Path:
     docs_json, nav_raw = assemble.assemble_nav(resolved)
     assemble.validate(loaded, resolved, docs_json)
     assemble.merge(resolved)
-    if assemble.gate(loaded, resolved, docs_json):
-        nav_raw = None
     assemble.inline_examples(resolved)
     assemble.annotate(resolved, docs_json)
     assemble.emit(loaded, resolved, docs_json, nav_raw)
@@ -585,25 +582,44 @@ def test_misplaced_comparison_is_refused(base, pages, error):
 
 
 # --------------------------------------------------------------------------- #
-# launches
+# drafts
 # --------------------------------------------------------------------------- #
 
-SHARED = """Tables hold rows.
+# Documentation written before a release uses Mintlify's own controls: a whole
+# page is listed in `.mintignore` and left out of the navigation, and a section
+# is an ordinary MDX comment. The assembler publishes both as written. Mint
+# leaves them out, and its link check refuses a published link to an ignored page.
+DRAFTS = """Tables hold rows.
 
-{/* if functions launched */}
+{/*
+Draft for the X release.
+
+## Functions {#functions}
+
 A [function](/management/function) fills a column.
-{/* end if */}
-
-{/* if functions not launched */}
-Columns are filled by SQL.
-{/* end if */}
+*/}
 
 | Object | What |
 | --- | --- |
 | Table | rows |
-| [Function](/management/function) {/* if functions launched */} | code |
 
-End.
+{/*
+Draft for the X release. Add this row to the table above:
+| [Function](/management/function) | code |
+*/}
+
+Columns are filled by SQL. {/* Draft for the X release: or by a function. */}
+
+<CardGroup cols={2}>
+  <Card title="Tables" href="/management/table">
+    Rows.
+  </Card>
+  {/*
+  <Card title="Functions" href="/management/function">
+    Code.
+  </Card>
+  */}
+</CardGroup>
 """
 FUNCTION_BODY = """import { PyRegister } from '/snippets/function.mdx';
 
@@ -612,267 +628,88 @@ FUNCTION_BODY = """import { PyRegister } from '/snippets/function.mdx';
 </CodeBlock>
 """
 FUNCTION_SNIPPET = 'export const PyRegister = "db.create_function(double)\\n";\n'
-FUNCTION_REDIRECT = {"source": "/old-functions", "destination": "/management/function#apply"}
-TABLE_REDIRECT = {"source": "/old-tables", "destination": "/management/table"}
-
-
-def launch_site(
-    base: Path, functions: str, shared: str = SHARED, key: str = "launch: functions"
-) -> Path:
-    paths = site(base)
-    navigation = {
+IGNORED = "# Draft pages\nmanagement/function.mdx\n"
+NAVIGATION_WITH_DRAFTS = {
+    "navigation": {
         "tabs": [
             {
                 "tab": "Documentation",
-                "groups": [
-                    {"group": "Start", "pages": ["offerings"]},
-                    {
-                        "group": "Management",
-                        "pages": ["management/table", "management/function"],
-                    },
-                    {"group": "SQL", "pages": ["sql/function"]},
-                ],
+                "groups": [{"group": "Management", "pages": ["management/table"]}],
             }
         ]
-    }
-    write(
-        paths["reference"] / "docs.json",
-        json.dumps({"navigation": navigation, "redirects": [FUNCTION_REDIRECT, TABLE_REDIRECT]}),
-    )
-    pages = {
-        "offerings.mdx": page(body="{/* availability-comparison */}\n"),
-        "management/table.mdx": page(BOTH_AVAILABLE, shared),
-        "management/function.mdx": page(
-            f'sidebarTitle: "Function"\n{key}\n' + ENTERPRISE_ONLY, FUNCTION_BODY
-        ),
-        "sql/function.mdx": page(f"{key}\n", "CREATE FUNCTION.\n"),
-        "snippets/function.mdx": FUNCTION_SNIPPET,
-    }
-    for rel, text in pages.items():
-        write(paths["reference"] / rel, text)
-    return config(base, paths["reference"], public_root(paths), functions)
+    },
+    "redirects": [{"source": "/old-tables", "destination": "/management/table"}],
+}
+
+
+def draft_site(base: Path) -> tuple[Path, dict[str, Path]]:
+    paths = site(base)
+    write(paths["reference"] / "docs.json", json.dumps(NAVIGATION_WITH_DRAFTS))
+    write(paths["reference"] / ".mintignore", IGNORED)
+    write(paths["reference"] / "management/table.mdx", page(body=DRAFTS))
+    write(paths["reference"] / "management/function.mdx", page(body=FUNCTION_BODY))
+    write(paths["reference"] / "snippets/function.mdx", FUNCTION_SNIPPET)
+    return config(base, paths["reference"], public_root(paths)), paths
 
 
 def published_files(output: Path) -> list[str]:
     return sorted(p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file())
 
 
-def test_unlaunched_feature_is_left_out_of_every_output(base):
-    output = build(launch_site(base, "unlaunched"))
+def test_draft_sections_are_published_as_written(base):
+    output = build(draft_site(base)[0])
+
+    assert (output / "management/table.mdx").read_text() == page(body=DRAFTS)
+
+
+def test_ignored_pages_navigation_and_redirects_are_published_for_mint(base):
+    config_path, paths = draft_site(base)
+    output = build(config_path)
 
     assert published_files(output) == [
+        ".mintignore",
         "docs.json",
         "enterprise/security.mdx",
+        "management/function.mdx",
         "management/table.mdx",
-        "offerings.mdx",
         "static/styles/style.css",
     ]
-    docs = json.loads((output / "docs.json").read_text())
-    assert docs["navigation"]["tabs"][0]["groups"] == [
-        {"group": "Start", "pages": ["offerings"]},
-        {"group": "Management", "pages": ["management/table"]},
-    ]
-    assert docs["redirects"] == [TABLE_REDIRECT]
-    table = (output / "management/table.mdx").read_text()
-    assert table.split("Works in both offerings.\n\n", 1)[1] == (
-        "Tables hold rows.\n\n"
-        "Columns are filled by SQL.\n\n"
-        "| Object | What |\n| --- | --- |\n| Table | rows |\n\n"
-        "End.\n"
+    assert (output / ".mintignore").read_bytes() == IGNORED.encode()
+    assert (output / "docs.json").read_bytes() == (paths["reference"] / "docs.json").read_bytes()
+    # The ignored page is still assembled, examples included; Mint leaves it out.
+    assert (output / "management/function.mdx").read_text() == page(
+        body='\n```python Python icon="python"\ndb.create_function(double)\n```\n'
     )
-    assert "unction" not in (output / "offerings.mdx").read_text()
 
 
-def test_launched_feature_is_published_with_its_sections(base):
-    output = build(launch_site(base, "launched"))
-
-    assert "management/function.mdx" in published_files(output)
-    assert "sql/function.mdx" in published_files(output)
-    assert "snippets/function.mdx" not in published_files(output)
-    docs = json.loads((output / "docs.json").read_text())
-    assert [g["group"] for g in docs["navigation"]["tabs"][0]["groups"]] == [
-        "Start", "Management", "SQL"
-    ]
-    assert docs["redirects"] == [FUNCTION_REDIRECT, TABLE_REDIRECT]
-    table = (output / "management/table.mdx").read_text()
-    assert table.split("Works in both offerings.\n\n", 1)[1] == (
-        "Tables hold rows.\n\n"
-        "A [function](/management/function) fills a column.\n\n"
-        "| Object | What |\n| --- | --- |\n| Table | rows |\n"
-        "| [Function](/management/function) | code |\n\n"
-        "End.\n"
+def test_ignore_files_in_two_roots_must_agree(base):
+    config_path, paths = draft_site(base)
+    other = base / "docs/docs"
+    write(other / ".mintignore", "geneva/draft.mdx\n")
+    config_path.write_text(
+        config_path.read_text() + f"  - name: build\n    path: {other}\n    role: reference\n"
     )
-    function = (output / "management/function.mdx").read_text()
-    assert "launch:" not in function
-    assert function.startswith(
-        '---\ntitle: "A page"\nsidebarTitle: "Function"\ntag: "Enterprise"\n---\n'
-    )
-    assert function.endswith(
-        '```python Python icon="python"\ndb.create_function(double)\n```\n'
-    )
-    assert "[Function](/management/function): A deployment checks every request." in (
-        output / "offerings.mdx"
-    ).read_text()
+    with pytest.raises(
+        assemble.AssembleError, match=r"\.mintignore differs between lancedb and build"
+    ):
+        build(config_path)
 
 
-def test_the_unlaunched_build_is_the_default_without_a_launch_listed(base):
-    with pytest.raises(assemble.AssembleError, match=r"no launch named 'functions'"):
-        build(launch_site(base, ""))
-
-
-@pytest.mark.parametrize(
-    ("shared", "error"),
-    [
-        (SHARED + "\nSee [Functions](/management/function#apply).\n", r"table.mdx links to /management/function"),
-        (SHARED + '\n<Card href="/sql/function" />\n', r"links to /sql/function"),
-        (SHARED + "\n{/* if views launched */}\nViews.\n{/* end if */}\n", r"no launch named 'views'"),
-        (SHARED + "\n{/* if functions launched */}\nOpen.\n", r"never closed"),
-        (SHARED + "\n{/* end if */}\n", r"closes nothing"),
-        (
-            "{/* if functions launched */}\n{/* if functions not launched */}\n"
-            "{/* end if */}\n{/* end if */}\n",
-            r"cannot nest",
-        ),
-        (SHARED + "\n{/* if Functions launched */}\nX\n{/* end if */}\n", r"cannot read the launch marker"),
-        (SHARED + "\n{/* endif */}\n", r"cannot read the launch marker"),
-        (
-            SHARED + "\n| a {/* if functions launched */} | b {/* if functions launched */} |\n",
-            r"one launch marker per line",
-        ),
-        (SHARED + "\n{/* if functions launched */} {/* end if */}\n", r"alone on its line"),
-    ],
-)
-def test_launch_markers_are_checked(base, shared, error):
-    with pytest.raises(assemble.AssembleError, match=error):
-        build(launch_site(base, "unlaunched", shared))
-
-
-def published_tree(output: Path) -> dict[str, bytes]:
-    return {rel: (output / rel).read_bytes() for rel in published_files(output)}
-
-
-@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
-@pytest.mark.parametrize(
-    "key",
-    [
-        '"launch": functions',
-        "launch : functions",
-        "'launch': functions",
-        'launch: "functions"',
-        "launch: functions  # until the launch",
-        "launch:\n  functions",
-    ],
-)
-def test_any_yaml_spelling_of_the_launch_key_gates_the_page(base, functions, key):
-    expected = build(launch_site(base / "canonical", functions))
-    output = build(launch_site(base / "spelled", functions, key=key))
-
-    assert published_tree(output) == published_tree(expected)
-    assert ("management/function.mdx" in published_files(output)) == (functions == "launched")
-
-
-@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
-@pytest.mark.parametrize(
-    ("key", "error"),
-    [
-        ("Launch: functions", r"function.mdx: frontmatter `Launch` is not `launch`"),
-        ("launches: functions", r"frontmatter `launches` is not `launch`"),
-        ("? launch\n: functions", r"write `launch: functions` on a line of its own"),
-        ('"\\x6caunch": functions', r"write `launch: functions` on a line of its own"),
-        ("launch: functions\nlaunch: functions", r"on a line of its own"),
-        ("launch: [functions]", r"`launch` must name one feature"),
-    ],
-)
-def test_a_launch_key_the_gate_cannot_remove_stops_the_build(base, functions, key, error):
-    with pytest.raises(assemble.AssembleError, match=error):
-        build(launch_site(base, functions, key=key))
-
-
-UNANNOUNCED = "| Unannounced | code |"
-UNREADABLE = r"table.mdx:\d+: cannot read the launch marker"
-
-
-@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
-@pytest.mark.parametrize(
-    ("marked", "error"),
-    [
-        (UNANNOUNCED + " {/* if functions launced */}", UNREADABLE),
-        ("{/* if functions launced */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        ("{/* If functions launched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        ("{/* if functions unlaunched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        ("{/* if not functions launched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        ("{/* iff functions launched */}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        ("{ /* if functions launched */ }\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        ("{/** if functions launched **/}\n" + UNANNOUNCED + "\n{/* end if */}", UNREADABLE),
-        (
-            "{/*\n  if functions launched\n*/}\n" + UNANNOUNCED + "\n{/*\n  end if\n*/}",
-            UNREADABLE,
-        ),
-        (UNANNOUNCED + " {/* if functions launched */", UNREADABLE),
-        ("{/* if functions launched */}\n" + UNANNOUNCED + "\n{/* end-if */}", UNREADABLE),
-        ("{/* if functions launched */}\n" + UNANNOUNCED + "\n{/* End if */}", UNREADABLE),
-        (
-            "{/* if function launched */}\n" + UNANNOUNCED + "\n{/* end if */}",
-            r"table.mdx: no launch named 'function'",
-        ),
-    ],
-)
-def test_a_misspelled_launch_marker_stops_the_build(base, functions, marked, error):
-    with pytest.raises(assemble.AssembleError, match=error):
-        build(launch_site(base, functions, SHARED + "\n" + marked + "\n"))
-
-
-@pytest.mark.parametrize("functions", ["unlaunched", "launched"])
-def test_other_comments_are_published_unchanged(base, functions):
-    comments = (
-        "{/* TODO: tidy this table */}\n"
-        "{/* HF_SYNC:START — generated by `make hf-sync` */}\n"
-        "{/* [Evaluating](./examples/eval) */}\n"
-        "{/*\n<div>notes</div>\n*/}\n"
-        "{/* endpoint notes, if any */}\n"
-    )
-    output = build(launch_site(base, functions, SHARED + "\n" + comments))
-
-    assert (output / "management/table.mdx").read_text().endswith("End.\n\n" + comments)
-
-
-def test_launched_pages_may_link_to_each_other(base):
-    shared = SHARED + "\n{/* if functions launched */}\nSee [SQL](/sql/function).\n{/* end if */}\n"
-    output = build(launch_site(base, "launched", shared))
-
-    assert "See [SQL](/sql/function)." in (output / "management/table.mdx").read_text()
-
-
-def test_a_page_launch_must_be_known(base):
+def test_a_private_root_cannot_carry_an_ignore_file(base):
     paths = site(base)
-    write(paths["reference"] / "p.mdx", page("launch: views\n"))
-    with pytest.raises(assemble.AssembleError, match=r"p.mdx: no launch named 'views'"):
-        build(config(base, paths["reference"], public_root(paths), "unlaunched"))
+    write(public_root(paths) / ".mintignore", "enterprise/security.mdx\n")
+    with pytest.raises(assemble.AssembleError, match=r"\.mintignore is hidden"):
+        build(config(base, paths["reference"], paths["public"]))
 
 
-@pytest.mark.parametrize(
-    ("launches", "error"),
-    [
-        ("launches:\n  functions: soon\n", r"launches.functions is 'soon'"),
-        ("launches:\n  Functions: launched\n", r"'Functions' is not a feature name"),
-        ("launches: [functions]\n", r"must map each feature"),
-    ],
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
 )
-def test_malformed_launches_are_refused(base, launches, error):
-    paths = site(base)
-    path = config(base, paths["reference"], public_root(paths))
-    path.write_text(path.read_text() + launches)
-    with pytest.raises(assemble.AssembleError, match=error):
-        assemble.load_config(path)
-
-
-def test_launch_state_can_be_previewed_from_the_environment(base, monkeypatch):
-    paths = site(base)
-    path = config(base, paths["reference"], public_root(paths), "${DOCS_FUNCTIONS:-unlaunched}")
-    assert assemble.load_config(path).launches == {"functions": "unlaunched"}
-    monkeypatch.setenv("DOCS_FUNCTIONS", "launched")
-    assert assemble.load_config(path).launches == {"functions": "launched"}
-    assert assemble.publication(assemble.load_config(path)) == "functions=launched"
+def test_draft_comments_compile_as_mdx(base):
+    output = build(draft_site(base)[0])
+    result = compile_mdx((output / "management/table.mdx").read_text())
+    assert result.returncode == 0, result.stderr
 
 
 # --------------------------------------------------------------------------- #

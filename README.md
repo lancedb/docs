@@ -31,8 +31,7 @@ cd build/site && mint dev
 
 To build from other checkouts or worktrees, point `LANCEDB_DOCS_ROOT` and
 `SOPHON_DOCS_ROOT` at their `docs/web` directories. The assembler prints the
-commit it read each root from, and what it published of each unlaunched
-feature, so every build names its inputs.
+commit it read each root from, so every build names its inputs.
 
 Check the assembled site the way CI does, and run the assembler's own tests:
 
@@ -72,7 +71,8 @@ describe product support. Setup switches, permissions, supported SDK or server
 versions, and narrower subfeature limits belong in the summary or page body;
 they do not make a supported feature `varies`. Unknown or legacy `varies`
 values stop assembly rather than being silently converted to support claims.
-The `launch` gate controls publication separately.
+Availability does not decide whether a page is published; see
+[Writing docs before release](#writing-docs-before-release).
 
 When migrating older sources, update their declarations and qualifications
 before using this stricter assembler with them. Binary declarations also work
@@ -87,84 +87,67 @@ compiler Mint uses when `MDX_COMPILER` names the `index.js` of the
 `@mdx-js/mdx` package installed with Mint and `node` is on the path; otherwise
 those tests are skipped.
 
-### Publication gates
+### Writing docs before release
 
-Publication gates let sources document a feature before its documentation is
-ready to publish. They control the assembled documentation, not whether a
-server feature is enabled. Register each gate in `launches` in `assemble.yaml`.
-Names start with a lowercase letter and contain only lowercase letters, digits
-and hyphens; states are `launched` or `unlaunched`. For example:
+Documentation can be written before the feature it describes is released,
+without presenting it as available. Use Mintlify's own controls and ordinary
+edits. They change what the documentation shows, not what a server does, and
+they do not keep anything confidential: drafts stay in the source and can
+appear in the built site's page data.
 
-```yaml
-launches:
-  feature-name: ${DOCS_FEATURE_NAME:-unlaunched}
-```
+- **Draft pages.** List the page in `.mintignore`, beside `docs.json` in
+  lancedb's `docs/web`; the assembled site uses that file for pages from every
+  root. Keep the page out of the navigation and out of redirects, and do not
+  link to it from published pages. `mint validate` reports navigation to an
+  ignored page, and `mint broken-links --check-redirects` reports links and
+  redirects to one.
+- **Draft sections.** Wrap the section in an MDX comment whose first line names
+  the release:
 
-This example defaults to `unlaunched`; `DOCS_FEATURE_NAME=launched make assemble`
-previews its launched documentation. Changing the configured default changes
-what subsequent builds publish.
+  ```mdx
+  {/*
+  Draft for the Feature X release.
 
-In a page's source root, gate a whole page with a frontmatter line:
+  ## Feature X {#feature-x}
 
-```yaml
-launch: feature-name
-```
+  Feature X does ...
+  */}
+  ```
 
-Until that gate is `launched`, the assembler leaves out the page and its
-examples, the navigation entries and redirects that reach it, and any group
-left empty. On shared pages, gate a block with markers on their own lines:
+  Give a comment lines of its own, with a blank line before and after it, or
+  start it at the end of a line of text. A comment on a line of its own in the
+  middle of a paragraph splits the paragraph. Inside a component, indent the
+  comment with the component's children. A comment ends at the first `*/`.
+- **Tables and lists.** A comment between table rows breaks the table, and one
+  between list items breaks the list. Put draft rows or items in a comment
+  below the table or list, and say where they go:
 
-```mdx
-{/* if feature-name launched */}
-Content published when the gate is launched.
-{/* end if */}
-```
+  ```mdx
+  | Option | Effect |
+  | --- | --- |
+  | `a` | Available now. |
 
-Use `{/* if feature-name not launched */}` for content published only while
-the gate is unlaunched. A marker on a line with other text, such as a table row
-or a list item, gates that line alone and needs no closing marker. Blocks
-cannot nest. The assembler removes the gate frontmatter and markers from
-published pages.
-
-An unknown gate, an invalid state, a malformed marker, or a published page that
-still links to an omitted page stops the build. Any comment that opens with
-`if` or `end`, or mentions a launch, is reserved for markers, and any YAML
-spelling of the `launch` key is checked. `mint dev` in a single root shows both
-sides of the markers; assemble to preview a configured state.
-
-When adding a gate, register its default and optional environment override,
-mark the source-owned pages and shared sections, and run `make test-assemble`.
-Build and check both its unlaunched and launched states with `mint validate`
-and `mint broken-links --check-anchors --check-redirects` on each assembled
-tree. Add explicit scenarios to `.github/workflows/docs-ci.yml` with those
-checks before relying on CI for the new gate. The current workflow checks the
-configured defaults and a separate Functions-launched scenario; it does not
-automatically exercise future gates. Where gates refer to one another, include
-the supported combination needed to check those links.
-
-### Functions status and Geneva transition
-
-The `functions` gate currently defaults to `unlaunched` until the official
-Function launch. To preview its launched documentation:
-
-```bash
-DOCS_FUNCTIONS=launched make assemble
-```
-
-Docs Check explicitly validates this scenario as well as the configured
-defaults. The Geneva pages remain published through the Function launch and
-the transition after it; the Function pages do not replace their APIs.
-Retiring Geneva documentation is a separate decision. Its four frozen snippets
-stay unchanged.
+  {/*
+  Draft for the Feature X release. Add this row to the table above:
+  | `x` | Turns on Feature X. |
+  */}
+  ```
+- **Preview.** `mint dev` and assembled builds show what readers will see. To
+  check how a draft renders, remove its comment or its `.mintignore` entry in a
+  disposable copy, or in a local change you do not commit, then build and
+  preview as above.
+- **Release.** In the pull request that publishes the documentation, remove the
+  comments and their notes, remove the `.mintignore` entries, add the pages to
+  the navigation, restore their links and redirects, and run the checks above.
 
 ## Publishing
 
 Merging publishes nothing. Every pull request and every push to `main` runs the
 Assemble workflow, which builds the site from the three roots, checks it as
-above, and keeps the checked tree as the run's `candidate` artifact, with a
-record of the commit each root was read from, what it published of each
-unlaunched feature, and a SHA-256 for every file. A checksum over those hashes
-names the candidate, and the run's summary shows it.
+above, and keeps the checked tree, hidden files such as `.mintignore` included,
+as the run's `candidate` artifact, with a record of the commit each root was
+read from and a SHA-256 for every file. A checksum over those hashes names the
+candidate, and the run's summary shows it.
 That workflow's token can only read.
 
 Publishing is a separate, manual step: run the Publish workflow with the ID of a
@@ -181,12 +164,11 @@ successful Assemble run and its candidate's checksum.
 Either way the published files are the candidate's, checked against its record
 and the checksum, and the record must name exactly the three source commits and
 both producers' refs. Nothing is rebuilt, so newer source commits cannot slip in.
-Each publication is a new commit on its branch that names the run, the
-checksum, the source commits and the publication, and nothing is force-pushed.
-To roll back, publish an earlier candidate again: its run ID and checksum are in
-its commit on `assembled`. Once its artifact has expired, after 90 days, that
-earlier commit's files are published again, after they are checked against the
-checksum.
+Each publication is a new commit on its branch that names the run, the checksum
+and the source commits, and nothing is force-pushed. To roll back, publish an
+earlier candidate again: its run ID and checksum are in its commit on
+`assembled`. Once its artifact has expired, after 90 days, that earlier commit's
+files are published again, after they are checked against the checksum.
 
 `scripts/candidate.py` records and publishes; `make test-assemble` runs its
 tests against disposable local repositories.

@@ -30,20 +30,11 @@ roots:
     role: overlay
     private: true
 
-  # What this repository still owns: the Geneva pages, which stay published
-  # through the Function launch and the transition after it, the generated
-  # dataset cards, and the OpenAPI spec.
+  # What this repository still owns: the Geneva pages, the generated dataset
+  # cards, and the OpenAPI spec.
   - name: build
     path: docs
     role: reference
-
-# Documentation publication gates. Each registered feature is `launched` or
-# `unlaunched`; environment overrides can preview another state. Omitted pages,
-# marked sections, examples, navigation and redirects follow that state.
-# These gates do not enable server features. See "Publication gates" in
-# README.md for authoring, registration and required CI scenarios.
-launches:
-  functions: ${DOCS_FUNCTIONS:-unlaunched}
 
 openapi:
   repo: lance-format/lance-namespace

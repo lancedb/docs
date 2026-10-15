@@ -83,20 +83,3 @@ jobs:
       - name: Check links, anchors and redirects in the assembled tree
         working-directory: build/site
         run: mint broken-links --check-anchors --check-redirects
-
-      # Explicit Functions-launched scenario, in addition to the defaults above.
-      # New publication gates need explicit assembly, validation and link-check
-      # scenarios here; this override does not exercise their launched states.
-      - name: Assemble with Functions launched
-        run: make assemble
-        env:
-          ASSEMBLE_OUTPUT: build/site-launched
-          DOCS_FUNCTIONS: launched
-
-      - name: Validate the Functions-launched tree
-        working-directory: build/site-launched
-        run: mint validate
-
-      - name: Check links, anchors and redirects in the Functions-launched tree
-        working-directory: build/site-launched
-        run: mint broken-links --check-anchors --check-redirects

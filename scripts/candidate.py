@@ -25,8 +25,7 @@ Hard-fails before pushing whenever the evidence does not hold.
 
 Usage:
 
-    python scripts/candidate.py record SITE --sources LINE [--ref ROOT=REF ...]
-        [--publication LINE] --output FILE
+    python scripts/candidate.py record SITE --sources LINE [--ref ROOT=REF ...] --output FILE
     python scripts/candidate.py publish --target staging|production --run-id ID
         --site-sha256 HEX --run RUN_JSON --repository OWNER/NAME --content-dir DIR
         [--candidate DIR] [--remote REMOTE]
@@ -59,10 +58,14 @@ PRODUCERS = ("lancedb", "enterprise")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 CHECKSUM_RE = re.compile(r"[0-9a-f]{64}")
 REF_RE = re.compile(r"[A-Za-z0-9._/-]+")
-# What the assembler's `publication:` line names: each feature documented
-# ahead of its launch, and whether the build published it.
-PUBLICATION_RE = re.compile(r"[a-z][a-z0-9-]*")
-LAUNCH_STATES = ("launched", "unlaunched")
+# Candidates built while the assembler had launch gates also recorded each
+# gated feature's state, and their publications repeated it in a `Publication`
+# trailer. Publishing one now would drop that from the record, so such a
+# candidate is refused and has to be rebuilt.
+LAUNCH_STATES_REFUSED = (
+    "{} names launch states from the retired launch gates; "
+    "rebuild the candidate with the current Assemble workflow"
+)
 BOT = ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com")
 
 
@@ -166,25 +169,6 @@ def parse_refs(text: str) -> dict[str, str]:
     return check_refs(parse_pairs(text, "refs"))
 
 
-def check_publication(publication: dict) -> dict[str, str]:
-    """Each documented-ahead feature and its launch state, sorted by name."""
-    if not isinstance(publication, dict) or not all(
-        isinstance(k, str) and PUBLICATION_RE.fullmatch(k) and v in LAUNCH_STATES
-        for k, v in publication.items()
-    ):
-        raise CandidateError(f"publication {publication!r} is not a map of features to launch states")
-    return dict(sorted(publication.items()))
-
-
-def parse_publication(text: str) -> dict[str, str]:
-    """`functions=unlaunched`, as the assembler prints it."""
-    return check_publication(parse_pairs(text, "publication"))
-
-
-def publication_line(publication: dict[str, str]) -> str:
-    return " ".join(f"{k}={v}" for k, v in publication.items()) or "none"
-
-
 def run_context() -> dict[str, str] | None:
     """The workflow run recording the candidate; None outside GitHub Actions."""
     env = os.environ
@@ -201,9 +185,7 @@ def run_context() -> dict[str, str] | None:
     }
 
 
-def record(
-    site: Path, sources_line: str, refs: list[str], output: Path, publication: str = ""
-) -> dict:
+def record(site: Path, sources_line: str, refs: list[str], output: Path) -> dict:
     sources = parse_sources(sources_line)
     refs = parse_refs(" ".join(refs))
     hashes = file_hashes(site)
@@ -213,7 +195,6 @@ def record(
         "files": len(hashes),
         "sources": sources,
         "refs": refs,
-        "publication": parse_publication(publication),
         "run": run_context(),
         "file_sha256": hashes,
     }
@@ -227,8 +208,6 @@ def record_summary(manifest: dict) -> str:
         "### Candidate",
         "",
         f"Site checksum `{manifest['site_sha256']}`: {manifest['files']} files.",
-        "",
-        f"Publication: `{publication_line(manifest['publication'])}`.",
         "",
         "| Root | Commit | Ref |",
         "|---|---|---|",
@@ -418,11 +397,10 @@ def check_artifact(candidate: Path, run: dict, expected: str) -> tuple[dict, dic
         raise CandidateError(
             f"run {run['id']} recorded candidate {manifest['site_sha256']}, not {expected}"
         )
-    # Records made before launches were recorded have none to check.
-    publication = (
-        check_publication(manifest["publication"]) if "publication" in manifest else None
-    )
-    return check_sources(manifest.get("sources")), check_refs(manifest.get("refs")), publication
+    if "publication" in manifest:
+        found = f"the record ({manifest['publication']!r})"
+        raise CandidateError(LAUNCH_STATES_REFUSED.format(found))
+    return check_sources(manifest.get("sources")), check_refs(manifest.get("refs"))
 
 
 TRAILER = "^{}: (.+)$"
@@ -442,15 +420,12 @@ def earlier_publication(head: str | None, run_id: str, expected: str):
         if trailer(message, "Candidate-Run") == run_id and (
             trailer(message, "Candidate-Site-SHA256") == expected
         ):
+            if trailer(message, "Publication") is not None:
+                found = f"earlier publication {commit}"
+                raise CandidateError(LAUNCH_STATES_REFUSED.format(found))
             sources = parse_sources(trailer(message, "Sources") or "")
             refs = parse_refs(trailer(message, "Refs") or "")
-            recorded = trailer(message, "Publication")
-            publication = (
-                None
-                if recorded in (None, "unrecorded")
-                else {} if recorded == "none" else parse_publication(recorded)
-            )
-            return commit, sources, refs, publication
+            return commit, sources, refs
     return None
 
 
@@ -473,7 +448,7 @@ def publish(args: argparse.Namespace) -> dict:
     head = remote_head(args.remote, branch)
     artifact = args.candidate
     if artifact is not None and artifact.is_dir() and any(artifact.iterdir()):
-        sources, refs, publication = check_artifact(artifact, run, expected)
+        sources, refs = check_artifact(artifact, run, expected)
         paths = list(file_hashes(artifact / "site"))
         tree = write_tree(artifact / "site", paths, prefix)
         origin = "the run's artifact"
@@ -484,7 +459,7 @@ def publish(args: argparse.Namespace) -> dict:
                 f"run {args.run_id} has no candidate artifact, and {branch} has no "
                 f"earlier publication of candidate {expected} from it"
             )
-        commit, sources, refs, publication = earlier
+        commit, sources, refs = earlier
         tree = text("rev-parse", f"{commit}^{{tree}}")
         origin = f"earlier publication {commit}"
 
@@ -512,8 +487,6 @@ def publish(args: argparse.Namespace) -> dict:
         f"Candidate-Files: {len(published)}",
         "Sources: " + " ".join(f"{k}={v}" for k, v in sources.items()),
         "Refs: " + " ".join(f"{k}={v}" for k, v in refs.items()),
-        "Publication: "
-        + (publication_line(publication) if publication is not None else "unrecorded"),
     ]
     if os.environ.get("GITHUB_RUN_ID"):
         lines.append(
@@ -547,7 +520,6 @@ def publish(args: argparse.Namespace) -> dict:
         "run_id": args.run_id,
         "sources": sources,
         "refs": refs,
-        "publication": publication,
         "from": origin,
     }
 
@@ -560,9 +532,6 @@ def main() -> int:
     rec.add_argument("site", type=Path)
     rec.add_argument("--sources", required=True, help="the assembler's sources line")
     rec.add_argument("--ref", action="append", default=[], metavar="ROOT=REF")
-    rec.add_argument(
-        "--publication", required=True, help="the assembler's publication line"
-    )
     rec.add_argument("--output", type=Path, required=True)
     rec.add_argument("--summary", type=Path, help="append a Markdown summary to this file")
 
@@ -580,11 +549,10 @@ def main() -> int:
 
     try:
         if args.command == "record":
-            manifest = record(args.site, args.sources, args.ref, args.output, args.publication)
+            manifest = record(args.site, args.sources, args.ref, args.output)
             print(
                 f"candidate {manifest['site_sha256']}: {manifest['files']} files from "
                 + " ".join(f"{k}={v}" for k, v in manifest["sources"].items())
-                + f"; publication {publication_line(manifest['publication'])}"
             )
             if args.summary:
                 with args.summary.open("a") as summary:
