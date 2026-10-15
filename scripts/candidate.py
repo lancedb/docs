@@ -58,14 +58,6 @@ PRODUCERS = ("lancedb", "enterprise")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 CHECKSUM_RE = re.compile(r"[0-9a-f]{64}")
 REF_RE = re.compile(r"[A-Za-z0-9._/-]+")
-# Candidates built while the assembler had launch gates also recorded each
-# gated feature's state, and their publications repeated it in a `Publication`
-# trailer. Publishing one now would drop that from the record, so such a
-# candidate is refused and has to be rebuilt.
-LAUNCH_STATES_REFUSED = (
-    "{} names launch states from the retired launch gates; "
-    "rebuild the candidate with the current Assemble workflow"
-)
 BOT = ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com")
 
 
@@ -397,9 +389,6 @@ def check_artifact(candidate: Path, run: dict, expected: str) -> tuple[dict, dic
         raise CandidateError(
             f"run {run['id']} recorded candidate {manifest['site_sha256']}, not {expected}"
         )
-    if "publication" in manifest:
-        found = f"the record ({manifest['publication']!r})"
-        raise CandidateError(LAUNCH_STATES_REFUSED.format(found))
     return check_sources(manifest.get("sources")), check_refs(manifest.get("refs"))
 
 
@@ -420,9 +409,6 @@ def earlier_publication(head: str | None, run_id: str, expected: str):
         if trailer(message, "Candidate-Run") == run_id and (
             trailer(message, "Candidate-Site-SHA256") == expected
         ):
-            if trailer(message, "Publication") is not None:
-                found = f"earlier publication {commit}"
-                raise CandidateError(LAUNCH_STATES_REFUSED.format(found))
             sources = parse_sources(trailer(message, "Sources") or "")
             refs = parse_refs(trailer(message, "Refs") or "")
             return commit, sources, refs

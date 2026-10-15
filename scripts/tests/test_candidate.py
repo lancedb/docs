@@ -419,11 +419,6 @@ REFUSALS = {
     "a record without file hashes": (
         lambda c: c.edit_manifest(file_sha256=None), {}, "the record has no file hashes"
     ),
-    "a record from the retired launch gates": (
-        lambda c: c.edit_manifest(publication={"functions": "unlaunched"}),
-        {},
-        "the record ({'functions': 'unlaunched'}) names launch states",
-    ),
 }
 
 
@@ -874,26 +869,6 @@ def test_an_earlier_publication_must_still_match_its_checksum(tmp_path, remote):
 
     assert result.returncode == 1
     assert "is not candidate" in result.stderr
-    assert refs(remote["bare"]) == before
-
-
-def test_an_earlier_publication_from_the_launch_gates_is_not_republished(tmp_path, remote):
-    candidate = Candidate(tmp_path, remote["docs_commit"], run_id="1005")
-    forge(
-        tmp_path,
-        remote,
-        {f"docs/{path}": data for path, data in SITE.items()},
-        f"Publish candidate\n\nCandidate-Site-SHA256: {candidate.checksum}\n"
-        f"Candidate-Run: 1005\nSources: {sources_line(remote['docs_commit'])}\n"
-        "Refs: lancedb=main enterprise=main\nPublication: functions=unlaunched\n",
-    )
-    shutil.rmtree(candidate.dir)
-    before = refs(remote["bare"])
-
-    result = publish(remote, candidate)
-
-    assert result.returncode == 1, result.stdout
-    assert "names launch states from the retired launch gates" in result.stderr
     assert refs(remote["bare"]) == before
 
 
