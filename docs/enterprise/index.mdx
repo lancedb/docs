@@ -24,7 +24,7 @@ If you are evaluating LanceDB for a production AI system, Enterprise is built ar
 very large vector workloads, running feature engineering close to the data, and operating the platform with production
 visibility.
 
-### 1\. Scale to hundreds of billions of rows {#1-scale-to-hundreds-of-billions-of-rows}
+### 1\. Scale shared workloads {#1-scale-to-hundreds-of-billions-of-rows}
 
 LanceDB Enterprise is built for demanding workloads that exceed the capabilities of a single machine, whether from extremely large data volumes or a high number of concurrent queries. Instead of asking your
 application to own caching, query scaling, and maintenance, Enterprise turns those into **platform** capabilities.
@@ -38,11 +38,8 @@ more concurrent requests.
 - **Horizontal query throughput**: Instead of relying on one application process to answer every query, Enterprise can
   spread search traffic across multiple nodes. This lets teams add capacity as usage grows, rather than re-architecting
   the application each time demand spikes.
-- **Distributed search**: <Badge color="purple">Coming soon</Badge>. Enterprise is adding dynamic horizontal scaling to search execution to allow for low latency search at much higher volumes and concurrency.
-- **Distributed indexing and compaction**: <Badge color="purple">Coming soon</Badge>. Enterprise is expanding support for large-table maintenance so
-  indexing and storage cleanup can happen as platform workflows rather than as manual operator tasks.
-- **Enterprise training cache**: <Badge color="purple">Coming soon</Badge>. Enterprise is extending the same storage-aware caching model to training and
-  feature engineering pipelines so large jobs can use GPU capacity more efficiently.
+- **Background maintenance**: Enterprise builds indexes and compacts tables on
+  background workers, reducing the maintenance work your application needs to schedule.
 
 ### 2\. Feature engineering {#2-feature-engineering}
 
@@ -77,12 +74,11 @@ not require a data conversion step.
 | Dimension | LanceDB OSS | LanceDB Enterprise | What the difference means |
 |:----------|:------------|:-------------------|:-------------------------|
 | **Mode** | Single process | Distributed fleet | OSS lives on one host. Enterprise spreads work across nodes and keeps serving even if one node fails. |
-| **Latency from object storage** | 500–1000 ms | 50–200 ms | Enterprise mitigates network delay with an SSD cache and parallel reads. |
-| **Throughput** | 10–50 QPS | Up to 10,000 QPS | A cluster can serve thousands of concurrent users; a single process cannot. |
+| **Query serving** | Uses the resources of your application process | Adds independently scaled query compute | Size the Enterprise cluster for your workload and latency target. See [Benchmarks](/enterprise/benchmarks) for representative measurements. |
 | **Cache** | In-process index and metadata caches | Adds a distributed NVMe data cache | OSS caches indexes and metadata in your application's memory. Enterprise also keeps hot table data near compute and avoids repeated S3 calls. |
-| **Indexing & compaction** | Manual | Platform-managed workflows | OSS requires operator-managed maintenance; Enterprise is moving more of that work into the platform as support expands. |
-| **Data format** | Supports multiple available standards | Supports multiple available standards | No vendor lock-in; data moves freely between editions. |
-| **Deployment** | Embedded in your code | BYOC or Managed | Enterprise meets uptime, compliance, and support goals that OSS cannot. |
+| **Indexing & compaction** | Manual | Platform-managed workflows | OSS requires application-managed maintenance; Enterprise schedules it in the background. |
+| **Data format** | Lance | Lance | Both use the same open table format. Plan catalog registration, access and transfer when moving existing data. |
+| **Deployment** | Embedded in your code | BYOC or Managed | Enterprise adds deployment operations and support for shared workloads. |
 
 ### Architecture and scale {#architecture-and-scale}
 
@@ -95,7 +91,7 @@ Read More: [LanceDB Enterprise Architecture](/enterprise/architecture/)
 
 ### Latency of data retrieval {#latency-of-data-retrieval}
 
-With LanceDB OSS, read latency depends heavily on where the data lives. If you use local disk or shared file storage, reads can be quite fast. But if you point an embedded deployment at S3, GCS, or Azure Blob, every read still takes a full round trip to remote object storage, especially when the data is cold.
+With LanceDB OSS, read latency depends heavily on where the data lives. If you use local disk or shared file storage, reads can be quite fast. But if you point an embedded deployment at S3, GCS, or Azure Blob, cold reads can require network requests to object storage.
 
 LanceDB Enterprise is designed for the object-storage-backed case. It uses NVMe SSDs as a hybrid cache and spreads reads across a distributed serving layer, so repeated reads can skip the full object-store round trip. The first read fills the cache, subsequent reads come from local disk, and parallel chunked reads further reduce tail latency. This matters when the application serves interactive dashboards, real-time recommendations, or other latency-sensitive workloads on top of object storage.
 
@@ -103,17 +99,18 @@ Read More: [LanceDB Enterprise Benchmarks](/enterprise/benchmarks/)
 
 ### Throughput of search queries {#throughput-of-search-queries}
 
-A single LanceDB OSS process shares one CPU pool with the rest of the application. When concurrent queries hit that CPU, retrieval and similarity processes compete for cores. The server cannot process more work in parallel and any extra traffic waits in the queue, raising latency without increasing queries per second.
+A single LanceDB OSS process shares one CPU pool with the rest of the application. When concurrent queries hit that CPU, retrieval and similarity processes compete for cores. Once the process exhausts its available capacity, additional traffic waits
+in the queue and latency rises.
 
-LanceDB Enterprise distributes queries across many execution nodes. A load balancer assigns queries to the least-loaded
-node, so throughput grows as more nodes join the cluster instead of stalling at a single-process ceiling.
+LanceDB Enterprise distributes queries across many execution nodes. Its routing and query fleets can scale independently of your application.
+Measure throughput under your workload when choosing a cluster size.
 
 ### Caching of commonly retrieved data {#caching-of-commonly-retrieved-data}
 
 LanceDB OSS caches opened indexes and table metadata in the memory of your application process. A `Session` sets
 their sizes (6 GiB for indexes and 1 GiB for metadata by default) and lets connections in the same process share
-them. These caches do not hold table data, and they last only as long as the process, so column data still comes
-from object storage and a new process starts cold.
+them. These caches do not hold table data, and they last only as long as the process, so a new process starts without those in-memory caches. Table-data caching
+depends on the storage and runtime configuration.
 
 LanceDB Enterprise also shards a data cache across the fleet with consistent hashing. Popular vectors remain on local NVMe drives until they age out under a least-recently-used policy. Cache misses fall back to the object store, fill the local shard, and serve future reads faster. This design slashes both latency and egress cost for workloads with temporal locality.
 
@@ -122,9 +119,8 @@ LanceDB Enterprise also shards a data cache across the fleet with consistent has
 Vector indexes fragment when data is inserted, updated, or deleted. Fragmentation slows queries because the engine must
 scan more blocks. LanceDB OSS provides `optimize()` to compact data and update indexes, but you must schedule it yourself.
 
-LanceDB Enterprise is designed to move more of this maintenance into background platform workflows so operators spend
-less time managing it manually. We are continuing to expand distributed indexing and compaction support for the
-largest workloads.
+LanceDB Enterprise runs indexing and compaction as background jobs. Operators configure
+the maintenance policies, while applications can inspect index status and job progress.
 
 Read More: [Indexing in LanceDB](/indexing/)
 

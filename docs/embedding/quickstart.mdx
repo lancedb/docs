@@ -5,14 +5,6 @@ description: "Quickstart guide for generating and working with embeddings."
 icon: "rocket"
 ---
 
-import {
-    TsQuickstartConnect,
-    TsQuickstartCreateTable,
-    TsQuickstartImports,
-    TsQuickstartInitModel,
-    TsQuickstartQuery,
-    TsQuickstartSchema,
-} from '/snippets/sentence-transformers.mdx';
 
 LanceDB will automatically vectorize the data both at ingestion and query time. All you need to do is specify which model to use.
 Popular embedding models like OpenAI, Hugging Face, Sentence Transformers, CLIP, and more, are supported.
@@ -28,9 +20,11 @@ from lancedb.pydantic import LanceModel, Vector
 from lancedb.embeddings import get_registry
 ```
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsQuickstartImports}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    import * as lancedb from "@lancedb/lancedb";
+    import "@lancedb/lancedb/embedding/transformers";
+    import { Utf8 } from "apache-arrow";
+    ```
 </CodeGroup>
 
 - `lancedb`: The main database connection and operations
@@ -50,9 +44,9 @@ Establish a connection to your LanceDB OSS directory or Enterprise cluster:
 db = lancedb.connect(...)
 ```
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsQuickstartConnect}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const db = await lancedb.connect("data/sample-lancedb");
+    ```
 </CodeGroup>
 
 ## Step 3: Initialize the Embedding Function {#step-3-initialize-the-embedding-function}
@@ -64,9 +58,12 @@ Choose and configure your embedding model:
 model = get_registry().get("sentence-transformers").create(name="BAAI/bge-small-en-v1.5", )
 ```
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsQuickstartInitModel}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const model = (await lancedb.embedding
+      .getRegistry()
+      .get("huggingface")
+      ?.create()) as lancedb.embedding.EmbeddingFunction;
+    ```
 </CodeGroup>
 
 This creates an embedding function from the local embedding registry. The Python snippet uses the
@@ -87,9 +84,12 @@ class Words(LanceModel):
     vector: Vector(model.ndims()) = model.VectorField()
 ```
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsQuickstartSchema}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const wordsSchema = lancedb.embedding.LanceSchema({
+      text: model.sourceField(new Utf8()),
+      vector: model.vectorField(),
+    });
+    ```
 </CodeGroup>
 
 - `SourceField()`: This field will be embedded
@@ -110,9 +110,12 @@ table.add([
 ])
 ```
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsQuickstartCreateTable}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const table = await db.createEmptyTable("words", wordsSchema, {
+      mode: "overwrite",
+    });
+    await table.add([{ text: "hello world" }, { text: "goodbye world" }]);
+    ```
 </CodeGroup>
 
 The `table.add()` call automatically:
@@ -140,9 +143,11 @@ actual = table.search(query).limit(1).to_pydantic(Words)[0]
 print(actual.text)
 ```
 
-    <CodeBlock filename="TypeScript" language="typescript" icon="square-js">
-    {TsQuickstartQuery}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const query = "greetings";
+    const actual = (await table.search(query).limit(1).toArray())[0];
+    console.log(actual.text);
+    ```
 </CodeGroup>
 
 The search process:

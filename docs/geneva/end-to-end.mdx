@@ -18,18 +18,21 @@ All you need is an existing **LanceDB Enterprise deployment**. Distributed job e
 clusters, and dependency manifests are managed for you — there is no Kubernetes or cluster
 setup in this example.
 
+Get the database URI, HTTPS endpoint and API key from your LanceDB Enterprise
+administrator, then replace the placeholders in the example. In application code,
+load credentials from environment variables or a secrets manager.
+
 ## 1. Connect and create a table
 
 ```python
-import os
 import pyarrow as pa
 import geneva
 
 # Connect to LanceDB Enterprise
 db = geneva.connect(
-    uri="db://my-db",
-    host_override=os.getenv("LANCEDB_URI"),
-    api_key=os.getenv("LANCEDB_API_KEY"),
+    uri="db://your-database",
+    host_override="https://your-endpoint",
+    api_key="your-api-key",
 )
 
 # Create a raw product table

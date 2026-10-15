@@ -4,12 +4,6 @@ sidebarTitle: "Agno"
 description: "Build a search assistant using the Agno agent framework with LanceDB as the knowledge backend."
 ---
 
-import {
-  PyFrameworksAgnoAgent,
-  PyFrameworksAgnoCliChat,
-  PyFrameworksAgnoIngestYoutube,
-  PyFrameworksAgnoSetup,
-} from '/snippets/integrations.mdx';
 
 [Agno](https://docs.agno.com/introduction) is a framework for building agentic AI applications.
 It supports LanceDB as a knowledge backend, allowing you to easily ingest and retrieve external content for your agents.
@@ -40,18 +34,56 @@ uv add agno openai lancedb youtube-transcript-api beautifulsoup4
 First, you can initialize the core `Knowledge` object that your agent will use for retrieval.
 It configures LanceDB as the vector store, enables hybrid search with native LanceDB FTS, and sets the embedding model.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyFrameworksAgnoSetup}
-</CodeBlock>
+```python Python icon="python"
+import os
+import re
+
+from agno.agent import Agent
+from agno.knowledge.embedder.openai import OpenAIEmbedder
+from agno.knowledge.knowledge import Knowledge
+from agno.models.openai import OpenAIResponses
+from agno.vectordb.lancedb import LanceDb, SearchType
+from youtube_transcript_api import YouTubeTranscriptApi
+
+if "OPENAI_API_KEY" not in os.environ:
+    os.environ["OPENAI_API_KEY"] = "sk-..."
+
+def extract_video_id(youtube_url: str) -> str:
+    match = re.search(r"(?<=v=)[\w-]+", youtube_url) or re.search(
+        r"(?<=be/)[\w-]+", youtube_url
+    )
+    if not match:
+        raise ValueError("Could not parse YouTube video ID from URL")
+    return match.group(0)
+
+knowledge = Knowledge(
+    vector_db=LanceDb(
+        uri="./tmp/lancedb",
+        table_name="youtube_transcripts",
+        search_type=SearchType.hybrid,
+        embedder=OpenAIEmbedder(id="text-embedding-3-small"),
+    ),
+)
+```
 
 ## Step 2: Fetch and ingest the YouTube transcript {#step-2-fetch-and-ingest-the-youtube-transcript}
 
 Next, extract a YouTube video ID, fetch the full transcript, and flatten it into text for indexing.
 The snippet shown below then inserts that transcript text into the Agno knowledge base, which writes vectors and metadata to LanceDB.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyFrameworksAgnoIngestYoutube}
-</CodeBlock>
+```python Python icon="python"
+youtube_url = "https://www.youtube.com/watch?v=wl6mFyXoxos"
+video_id = extract_video_id(youtube_url)
+ytt = YouTubeTranscriptApi()
+transcript_segments = ytt.fetch(video_id, languages=["en", "en-US"]).to_raw_data()
+transcript_text = " ".join(segment["text"] for segment in transcript_segments)
+
+knowledge.insert(
+    name=f"YouTube Transcript ({video_id})",
+    text_content=transcript_text,
+    metadata={"source": "youtube", "video_id": video_id, "video_url": youtube_url},
+)
+```
 
 <Info>
 This path explicitly fetches the transcript first, then inserts transcript text into LanceDB through Agno.
@@ -65,18 +97,32 @@ With `search_knowledge=True`, the agent performs retrieval before answering, so 
 In Agno, retrieval is exposed as a tool call that the model can invoke at runtime.
 When `search_knowledge=True`, Agno makes a knowledge-search tool (shown in output as `search_knowledge_base(...)`) available to the model; the model decides when to call it, Agno executes the tool, and the returned context is fed back into the final answer.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyFrameworksAgnoAgent}
-</CodeBlock>
+```python Python icon="python"
+agent = Agent(
+    model=OpenAIResponses(id="gpt-5-mini"),
+    knowledge=knowledge,
+    search_knowledge=True,
+    instructions="Search the transcript and answer only from retrieved context.",
+    markdown=True,
+)
+```
 
 ## Step 4: Start a CLI chat loop {#step-4-start-a-cli-chat-loop}
 
 You can now ask an initial question and then start an interactive loop for follow-up queries.
 Each prompt runs through the same retrieval pipeline, so you can iteratively inspect what the transcript contains.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyFrameworksAgnoCliChat}
-</CodeBlock>
+```python Python icon="python"
+agent.print_response(
+    "Summarize the loaded video transcript in 5 concise bullet points.",
+    stream=True,
+)
+while True:
+    question = input("You: ").strip()
+    if question.lower() in {"exit", "quit", "bye"}:
+        break
+    agent.print_response(question, stream=True)
+```
 
 <Info>
 Want local-first inference? Replace OpenAI model/embedder classes with Agno's Ollama providers. See Agno's Ollama knowledge examples: [docs.agno.com/examples/models/ollama/chat/knowledge](https://docs.agno.com/examples/models/ollama/chat/knowledge).

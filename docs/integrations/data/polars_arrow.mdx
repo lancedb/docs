@@ -1,16 +1,10 @@
 ---
 title: "Polars"
 sidebarTitle: "Polars & Arrow"
-
 ---
 
-import {
-  PyPlatformsPolarsCreateTable,
-  PyPlatformsPolarsImports,
-  PyPlatformsPolarsLazyframe,
-  PyPlatformsPolarsPydantic,
-  PyPlatformsPolarsVectorSearch,
-} from '/snippets/integrations.mdx';
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Polars data goes into `create_table`, and query results come back as Polars DataFrames, for local and deployment tables alike; a LazyFrame over a whole table is local only.
 
 LanceDB supports [Polars](https://github.com/pola-rs/polars), a blazingly fast DataFrame library for Python written in Rust. Under the hood, both Lance and Polars speak Arrow, so passing data back and forth stays zero-copy and ergonomic.
 
@@ -18,34 +12,65 @@ LanceDB supports [Polars](https://github.com/pola-rs/polars), a blazingly fast D
 
 Import the required libraries, including the optional Pydantic helpers if you plan to define schemas.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPolarsImports}
-</CodeBlock>
+```python Python icon="python"
+import tempfile
+from pathlib import Path
+
+import lancedb
+import polars as pl
+from lancedb.pydantic import LanceModel, Vector
+```
 
 Build a Polars `DataFrame`, convert it to Arrow, and use it directly when creating a LanceDB table.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPolarsCreateTable}
-</CodeBlock>
+```python Python icon="python"
+birds = pl.DataFrame(
+    {
+        "text": ["phoenix", "sparrow"],
+        "vector": [
+            [0.1, 0.2, 0.3],
+            [0.8, 0.6, 0.5],
+        ],
+    }
+)
+polars_db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "polars-demo"))
+polars_table = polars_db.create_table(
+    "birds", data=birds.to_arrow(), mode="overwrite"
+)
+```
 
 Run vector search and keep the results as a Polars `DataFrame` for further processing or visualization.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPolarsVectorSearch}
-</CodeBlock>
+```python Python icon="python"
+polars_results = (
+    polars_table.search([0.1, 0.2, 0.3])
+    .select(["text", "_distance"])
+    .limit(1)
+    .to_polars()
+)
+print(polars_results)
+```
 
 ## Work with LazyFrames {#work-with-lazyframes}
 
-When you want to operate on the entire table (potentially larger than RAM), convert to a Polars `LazyFrame` so you can chain transformations without loading everything at once.
+When you want to operate on the entire table (potentially larger than RAM), convert to a Polars `LazyFrame` so you can chain transformations without loading everything at once. This works for local tables only; with LanceDB Enterprise, `search(...).to_polars()` returns an eager DataFrame of query results.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPolarsLazyframe}
-</CodeBlock>
+```python Python icon="python"
+lazy_frame = polars_table.to_polars().lazy()
+print(lazy_frame.select(["text"]).collect())
+```
 
 ## Define Schemas with Pydantic {#define-schemas-with-pydantic}
 
 You can also describe your table via `LanceModel` and continue ingesting data from Polars. This is useful when multiple teams share a schema or when you want validation.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPolarsPydantic}
-</CodeBlock>
+```python Python icon="python"
+class BirdModel(LanceModel):
+    text: str
+    vector: Vector(3)
+
+schema_table = polars_db.create_table(
+    "birds_schema", schema=BirdModel, mode="overwrite"
+)
+schema_table.add(birds.to_dicts())
+```

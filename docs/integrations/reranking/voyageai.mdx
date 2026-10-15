@@ -5,7 +5,6 @@ description: Integrate VoyageAI's cutting-edge reranking models with LanceDB. Fe
 
 ---
 
-import { PyRerankingVoyageaiUsage } from '/snippets/integrations.mdx';
 
 # VoyageAI Reranker
 
@@ -17,10 +16,53 @@ This reranker uses the [VoyageAI](https://docs.voyageai.com/docs/) API to rerank
 > **Note:** Supported query types – Hybrid, Vector, and FTS.
 
 
+Replace `your-api-key` with your provider API key. In application code, load
+credentials from environment variables or a secrets manager.
+
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyRerankingVoyageaiUsage}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+  from lancedb.rerankers import VoyageAIReranker
+
+  embedder = get_registry().get("sentence-transformers").create()
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "voyageai-rerank"))
+
+  class Schema(LanceModel):
+      text: str = embedder.SourceField()
+      vector: Vector(embedder.ndims()) = embedder.VectorField()
+
+  data = [
+      {"text": "hello world"},
+      {"text": "goodbye world"},
+  ]
+  tbl = db.create_table("test", schema=Schema)
+  tbl.add(data)
+  reranker = VoyageAIReranker(api_key="your-api-key", model_name="rerank-2")
+
+  # Run vector search with a reranker
+  vector_results = tbl.search("hello").rerank(reranker=reranker).to_list()
+  print(vector_results)
+
+  # Build the full-text index before either FTS or hybrid search.
+  tbl.create_fts_index("text", replace=True)
+
+  # Run FTS search with a reranker
+  fts_results = (
+      tbl.search("hello", query_type="fts").rerank(reranker=reranker).to_list()
+  )
+  print(fts_results)
+
+  # Run hybrid search with a reranker
+  hybrid_results = (
+      tbl.search("hello", query_type="hybrid").rerank(reranker=reranker).to_list()
+  )
+  print(hybrid_results)
+  ```
 </CodeGroup>
 
 ## Accepted Arguments {#accepted-arguments}

@@ -3,15 +3,6 @@ title: "Voxel51"
 sidebarTitle: "Voxel51"
 ---
 
-import {
-  PyPlatformsVoxel51BackendFlag,
-  PyPlatformsVoxel51BackendParams,
-  PyPlatformsVoxel51BrainConfig,
-  PyPlatformsVoxel51Cleanup,
-  PyPlatformsVoxel51ComputeSimilarity,
-  PyPlatformsVoxel51LoadDataset,
-  PyPlatformsVoxel51SortBySimilarity,
-} from '/snippets/integrations.mdx';
 
 # FiftyOne
 
@@ -96,23 +87,40 @@ The basic workflow shown below uses LanceDB to create a similarity index on your
 Let's jump on a quick example that demonstrates this workflow.
 
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsVoxel51LoadDataset}
-</CodeBlock>
+```python Python icon="python"
+import fiftyone as fo
+import fiftyone.brain as fob
+import fiftyone.zoo as foz
+
+# Step 1: Load your data into FiftyOne
+dataset = foz.load_zoo_dataset("quickstart")
+```
 Make sure you install torch ([guide here](https://pytorch.org/get-started/locally/)) before proceeding. 
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsVoxel51ComputeSimilarity}
-</CodeBlock>
+```python Python icon="python"
+# Steps 2 and 3: Compute embeddings and create a similarity index
+lancedb_index = fob.compute_similarity(
+    dataset,
+    model="clip-vit-base32-torch",
+    brain_key="lancedb_index",
+    backend="lancedb",
+)
+```
 
 !!! note
     Running the code above will download the clip model (2.6Gb)
 
 Once the similarity index has been generated, we can query our data in FiftyOne by specifying the `brain_key`:
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsVoxel51SortBySimilarity}
-</CodeBlock>
+```python Python icon="python"
+# Step 4: Query your data
+query = dataset.first().id  # query by sample ID
+view = dataset.sort_by_similarity(
+    query,
+    brain_key="lancedb_index",
+    k=10,  # limit to 10 most similar samples
+)
+```
 
 The returned result are of type - `DatasetView`.
 
@@ -130,9 +138,15 @@ Performing a similarity search on a `DatasetView` will only return results from 
 
 This means that you can index an entire Dataset once and then perform searches on subsets of the dataset by constructing views that contain the images of interest.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsVoxel51Cleanup}
-</CodeBlock>
+```python Python icon="python"
+# Step 5 (optional): Cleanup
+
+# Delete the LanceDB table
+lancedb_index.cleanup()
+
+# Delete run record from FiftyOne
+dataset.delete_brain_run("lancedb_index")
+```
 
 
 ## Using LanceDB backend {#using-lancedb-backend}
@@ -140,9 +154,17 @@ By default, calling `compute_similarity()` or `sort_by_similarity()` will use an
 
 To use the LanceDB backend, simply set the optional `backend` parameter of `compute_similarity()` to `"lancedb"`:
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsVoxel51BackendFlag}
-</CodeBlock>
+```python Python icon="python"
+import fiftyone.brain as fob
+
+# Re-run similarity creation using the LanceDB backend explicitly
+fob.compute_similarity(
+    dataset,
+    model="clip-vit-base32-torch",
+    brain_key="lancedb_index",
+    backend="lancedb",
+)
+```
 
 Alternatively, you can configure FiftyOne to use the LanceDB backend by setting the following environment variable.
 
@@ -173,9 +195,12 @@ Alternatively, you can **permanently** configure FiftyOne to use the LanceDB bac
 ```
 This will override the default `brain_config` and will set it according to your customization. You can check the configuration by running the following code : 
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsVoxel51BrainConfig}
-</CodeBlock>
+```python Python icon="python"
+import fiftyone.brain as fob
+
+# Print your current brain config
+print(fob.brain_config)
+```
 
 ## LanceDB config parameters {#lancedb-config-parameters}
 
@@ -205,8 +230,16 @@ There are two ways to specify/customize the parameters:
 
 2. **Directly passing to `compute_similarity()` to configure a specific new index** : 
 
-<CodeBlock filename="Python" language="Python" icon="python">
-    {PyPlatformsVoxel51BackendParams}
-</CodeBlock>
+```python Python icon="python"
+lancedb_index = fob.compute_similarity(
+    dataset,
+    model="clip-vit-base32-torch",
+    backend="lancedb",
+    brain_key="lancedb_index",
+    table_name="your-table",
+    metric="euclidean",
+    uri="/tmp/lancedb",
+)
+```
 
 For a much more in depth walkthrough of the integration, visit the LanceDB x Voxel51 [docs page](https://docs.voxel51.com/integrations/lancedb.html).

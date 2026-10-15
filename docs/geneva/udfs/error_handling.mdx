@@ -196,11 +196,15 @@ Note: `on_error=` and `error_handling=` cannot be used together.
     Retry(ConnectionError, backoff="exponential"),
     Retry(TimeoutError, backoff="fixed"),  # Error: different backoff!
 ])
+def invalid_backoff(value: str) -> str:
+    return value
 
 @udf(on_error=[
     Retry(ConnectionError, backoff="fixed"),
     Retry(TimeoutError, backoff="fixed"),  # Same backoff - OK
 ])
+def consistent_backoff(value: str) -> str:
+    return value
 ```
 
 - **Invalid regex patterns are rejected at construction time:**

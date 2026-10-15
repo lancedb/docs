@@ -3,7 +3,6 @@ title: Gemini
 sidebarTitle: Gemini
 ---
 
-import { PyEmbeddingGeminiUsage } from '/snippets/integrations.mdx';
 
 With Google's Gemini, you can represent text (words, sentences, and blocks of text) in a vectorized form, making it easier to compare and contrast embeddings. For example, two texts that share a similar subject matter or sentiment should have similar embeddings, which can be identified through mathematical comparison techniques such as cosine similarity. For more on how and why you should use embeddings, refer to the Embeddings guide.
 The Gemini Embedding Model API supports various task types:
@@ -20,7 +19,27 @@ The Gemini Embedding Model API supports various task types:
 Usage Example:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingGeminiUsage}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  import pandas as pd
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+
+  model = get_registry().get("gemini-text").create()
+
+  class TextModel(LanceModel):
+      text: str = model.SourceField()
+      vector: Vector(model.ndims()) = model.VectorField()
+
+  df = pd.DataFrame({"text": ["hello world", "goodbye world"]})
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "gemini-demo"))
+  tbl = db.create_table("test", schema=TextModel, mode="overwrite")
+
+  tbl.add(df)
+  rs = tbl.search("hello").limit(1).to_pandas()
+  print(rs.head())
+  ```
 </CodeGroup>

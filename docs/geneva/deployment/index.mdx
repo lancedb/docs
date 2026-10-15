@@ -139,14 +139,16 @@ Geneva needs the ability to deploy a KubeRay cluster and submit jobs to Ray. The
 
 #### Geneva Security Requirements
 
-In the following sections we'll use these variables:
+In the following sections we'll use these variables. `STORAGE_URI` is the
+underlying `gs://` storage path used for bucket permissions and storage access;
+it is separate from `LANCEDB_URI`, the database's `db://` URI used to connect.
 
 ```bash
 NAMESPACE=lancedb  # replace with your actual namespace if different
 KSA_NAME=geneva-ray-runner # replace with an identity name
 PROJECT_ID=...  # replace with your google cloud project name
 GSA_EMAIL=${KSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
-LANCEDB_URI=gs://bucket/db  # replace with your own path
+STORAGE_URI=gs://bucket/db  # the bucket path your database is stored under
 ```
 
 #### Google Service Account (GSA)
@@ -183,7 +185,7 @@ gcloud iam service-accounts get-iam-policy $GSA_EMAIL \
 Give your GSA rights to access the LanceDB bucket:
 
 ```bash
-gcloud storage buckets add-iam-policy-binding ${LANCEDB_URI} \
+gcloud storage buckets add-iam-policy-binding ${STORAGE_URI} \
   --member="serviceAccount:${KSA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
   --role="roles/storage.objectAdmin"
 ```
@@ -201,7 +203,7 @@ kubectl run gcs-test --rm -it --image=google/cloud-sdk:slim \
   -- bash
 
 echo "hello" > test.txt
-gsutil cp test.txt ${LANCEDB_URI}/demo-check/test-write.txt
+gsutil cp test.txt ${STORAGE_URI}/demo-check/test-write.txt
 ```
 
 Confirm the identity inside the pod:

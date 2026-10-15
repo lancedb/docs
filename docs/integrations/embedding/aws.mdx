@@ -3,7 +3,6 @@ title: AWS Bedrock
 sidebarTitle: AWS
 ---
 
-import { PyEmbeddingAwsUsage } from '/snippets/integrations.mdx';
 
 AWS Bedrock supports multiple base models for generating text embeddings. You need to setup the AWS credentials to use this embedding function.
 You can do so by using `awscli` and also add your session_token:
@@ -36,7 +35,27 @@ Supported parameters (to be passed in `create` method) are:
 Usage Example:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingAwsUsage}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  import pandas as pd
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+
+  model = get_registry().get("bedrock-text").create()
+
+  class TextModel(LanceModel):
+      text: str = model.SourceField()
+      vector: Vector(model.ndims()) = model.VectorField()
+
+  df = pd.DataFrame({"text": ["hello world", "goodbye world"]})
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "bedrock-demo"))
+  tbl = db.create_table("test", schema=TextModel, mode="overwrite")
+
+  tbl.add(df)
+  rs = tbl.search("hello").limit(1).to_pandas()
+  print(rs.head())
+  ```
 </CodeGroup>

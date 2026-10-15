@@ -3,7 +3,6 @@ title: Ollama
 sidebarTitle: Ollama
 ---
 
-import { PyEmbeddingOllamaUsage } from '/snippets/integrations.mdx';
 
 Generate embeddings via the [ollama](https://github.com/ollama/ollama-python) python library. More details:
 
@@ -19,7 +18,31 @@ Generate embeddings via the [ollama](https://github.com/ollama/ollama-python) py
 | `ollama_client_kwargs` | `dict`                     | `{}`                     | kwargs that can be past to the `ollama.Client`.                                                                                                |
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingOllamaUsage}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "ollama-demo"))
+  func = get_registry().get("ollama").create(name="nomic-embed-text")
+
+  class Words(LanceModel):
+      text: str = func.SourceField()
+      vector: Vector(func.ndims()) = func.VectorField()
+
+  table = db.create_table("words", schema=Words, mode="overwrite")
+  table.add(
+      [
+          {"text": "hello world"},
+          {"text": "goodbye world"},
+      ]
+  )
+
+  query = "greetings"
+  actual = table.search(query).limit(1).to_pydantic(Words)[0]
+  print(actual.text)
+  ```
 </CodeGroup>

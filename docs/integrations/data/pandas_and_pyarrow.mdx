@@ -1,15 +1,10 @@
 ---
 title: "Pandas and PyArrow"
 sidebarTitle: "Pandas & PyArrow"
-
 ---
 
-import {
-  PyPlatformsPandasAsyncExample,
-  PyPlatformsPandasCreateTable,
-  PyPlatformsPandasImports,
-  PyPlatformsPandasVectorSearch,
-} from '/snippets/integrations.mdx';
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> DataFrames go into `create_table` and come back from query results the same way for local and deployment tables.
 
 Because Lance is built on top of [Apache Arrow](https://arrow.apache.org/),
 LanceDB fits naturally into Pandas-first workflows. You can ingest a `DataFrame`,
@@ -19,28 +14,66 @@ query it with LanceDB's vector operators, and keep working in Pandas without any
 
 Start by importing LanceDB alongside your usual Pandas utilities and connect to a temporary database.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPandasImports}
-</CodeBlock>
+```python Python icon="python"
+import asyncio
+import tempfile
+from pathlib import Path
+
+import lancedb
+import pandas as pd
+```
 
 Use the familiar `pd.DataFrame` API to prepare your rows, then pass the entire frame to `db.create_table`.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPandasCreateTable}
-</CodeBlock>
+```python Python icon="python"
+pandas_df = pd.DataFrame(
+    [
+        {"id": "1", "text": "dragon", "vector": [0.9, 0.1, 0.3]},
+        {"id": "2", "text": "griffin", "vector": [0.4, 0.5, 0.2]},
+        {"id": "3", "text": "phoenix", "vector": [0.7, 0.3, 0.6]},
+    ]
+)
+pandas_db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "pandas-demo"))
+pandas_table = pandas_db.create_table("creatures", data=pandas_df, mode="overwrite")
+```
 
 ## Vector search {#vector-search}
 
 Queries can return Pandas frames as well, so you can immediately inspect the results or pipe them into downstream analytics.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPandasVectorSearch}
-</CodeBlock>
+```python Python icon="python"
+pandas_results = (
+    pandas_table.search([0.9, 0.1, 0.3])
+    .select(["text", "_distance"])
+    .limit(1)
+    .to_pandas()
+)
+print(pandas_results)
+```
 
 ## Async API {#async-api}
 
 For web services or background jobs that already rely on `asyncio`, use the asynchronous helpers to keep everything non-blocking.
 
-<CodeBlock filename="Python" language="Python" icon="python">
-  {PyPlatformsPandasAsyncExample}
-</CodeBlock>
+```python Python icon="python"
+async def run_pandas_async_example() -> pd.DataFrame:
+    async_db = await lancedb.connect_async(
+        str(Path(tempfile.mkdtemp()) / "pandas-async")
+    )
+    async_df = pd.DataFrame(
+        [
+            {"id": "10", "text": "sage", "vector": [0.6, 0.4, 0.8]},
+            {"id": "11", "text": "bard", "vector": [0.2, 0.7, 0.3]},
+        ]
+    )
+    async_table = await async_db.create_table(
+        "creatures_async", data=async_df, mode="overwrite"
+    )
+    # An async search returns its query builder from an await
+    query = await async_table.search([0.6, 0.4, 0.8])
+    async_results = await query.select(["text", "_distance"]).limit(1).to_pandas()
+    print(async_results)
+    return async_results
+
+async_results = asyncio.run(run_pandas_async_example())
+```

@@ -5,18 +5,6 @@ description: Find memory leaks and runaway peak usage in stateful UDFs with memr
 icon: chart-line
 ---
 
-import {
-  PyStatefulUdfClass,
-  PyMemrayTrackerUdf,
-  PyRayClusterProfile,
-  PyLogMemory,
-  PyLeakyCache,
-  PyBoundedCache,
-  PyLeakyAggregator,
-  PyLeakyClosure,
-  PyTorchInferenceMode,
-  PyConfidenceCheck,
-} from '/snippets/geneva_profiling_memory.mdx';
 
 Stateful UDFs are the most common source of worker memory pressure in Geneva. Unlike scalar UDFs, a stateful UDF instance lives for the **entire lifetime of a Ray actor**, processing many batches in sequence. Anything your `setup()` allocates is held for the duration of the job, and anything `__call__` retains accumulates batch after batch — sometimes silently, until a worker OOMs partway through a large backfill.
 
@@ -31,9 +19,20 @@ If your worker is being OOM-killed and you don't know why, **profile a single ac
 A stateful UDF in Geneva is a class:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyStatefulUdfClass}
-  </CodeBlock>
+  ```python Python icon="python"
+  @geneva.udf(data_type=pa.list_(pa.float32(), 512))
+  class MyEmbedding:
+      def __init__(self):
+          self.model = None
+
+      def setup(self):
+          self.model = load_model()  # allocated once per actor
+
+      def __call__(self, text: str) -> list[float]:
+          if self.model is None:
+              self.setup()
+          return self.model.embed(text)
+  ```
 </CodeGroup>
 
 A few facts make memory behavior easy to get wrong:
@@ -65,9 +64,42 @@ The trick to profiling under Ray is that **workers run in separate processes**. 
 ### Step 1 — add an opt-in tracker to your UDF
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyMemrayTrackerUdf}
-  </CodeBlock>
+  ```python Python icon="python"
+  import os, pathlib, uuid
+  from typing import Any
+  import memray
+  import geneva
+  import pyarrow as pa
+
+  _MEMRAY_OUT_DIR_ENV = "MY_UDF_MEMRAY_OUT_DIR"
+
+
+  @geneva.udf(data_type=pa.list_(pa.float32(), 512))
+  class MyEmbedding:
+      def __init__(self):
+          self.model = None
+          self._tracker: Any = None  # memray.Tracker, when profiling is on
+
+      def setup(self):
+          # Open a memray tracker per worker process, if requested. Each
+          # worker writes its own .bin file so traces don't collide.
+          out_dir = os.environ.get(_MEMRAY_OUT_DIR_ENV)
+          if out_dir:
+              pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
+              bin_path = pathlib.Path(out_dir) / (
+                  f"memray-{os.getpid()}-{uuid.uuid4().hex}.bin"
+              )
+              self._tracker = memray.Tracker(
+                  str(bin_path), native_traces=False, follow_fork=False
+              )
+              self._tracker.__enter__()
+          self.model = load_model()
+
+      def __call__(self, text: str) -> list[float]:
+          if self.model is None:
+              self.setup()
+          return self.model.embed(text)
+  ```
 </CodeGroup>
 
 The tracker is a no-op when `MY_UDF_MEMRAY_OUT_DIR` isn't set, so leaving this code in your UDF is safe for production runs.
@@ -77,9 +109,15 @@ The tracker is a no-op when `MY_UDF_MEMRAY_OUT_DIR` isn't set, so leaving this c
 Ray workers don't inherit driver environment variables by default. When you start a local Ray cluster from Geneva, pass `extra_env` so the variable reaches each worker:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyRayClusterProfile}
-  </CodeBlock>
+  ```python Python icon="python"
+  from geneva.runners.ray._mgr import ray_cluster
+
+  with ray_cluster(
+      local=True,
+      extra_env={"MY_UDF_MEMRAY_OUT_DIR": "/tmp/my-udf-profile"},
+  ):
+      table.backfill("embedding", concurrency=1)
+  ```
 </CodeGroup>
 
 <Tip>
@@ -132,9 +170,24 @@ memray gives you the *Python-side* allocation story. For real diagnosis of "wher
 Drop this into your UDF (or anywhere on the worker) to log a snapshot:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyLogMemory}
-  </CodeBlock>
+  ```python Python icon="python"
+  import resource, pyarrow as pa
+
+  def log_memory(seq: int) -> None:
+      rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+      # ru_maxrss is bytes on macOS, KiB on Linux:
+      import sys
+      if sys.platform != "darwin":
+          rss_bytes *= 1024
+      arrow_live = pa.total_allocated_bytes()
+      print(
+          f"seq={seq} "
+          f"rss_mb={rss_bytes // 1024**2} "
+          f"arrow_live_mb={arrow_live // 1024**2} "
+          f"gap_mb={(rss_bytes - arrow_live) // 1024**2}",
+          flush=True,
+      )
+  ```
 </CodeGroup>
 
 The three numbers answer different questions:
@@ -164,9 +217,16 @@ The reference UDFs in Geneva's own integration test (`src/stress_tests/_memray_p
 ### 1. The growing cache
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyLeakyCache}
-  </CodeBlock>
+  ```python Python icon="python"
+  class BadEmbedding:
+      def __init__(self):
+          self.cache: dict[str, list[float]] = {}
+
+      def __call__(self, text: str) -> list[float]:
+          if text not in self.cache:
+              self.cache[text] = self.model.embed(text)
+          return self.cache[text]
+  ```
 </CodeGroup>
 
 Looks harmless. Fine on a unit test with 10 inputs. **Catastrophic on a backfill of 10M rows**, where most inputs are unique and the cache grows to fill the worker.
@@ -174,17 +234,36 @@ Looks harmless. Fine on a unit test with 10 inputs. **Catastrophic on a backfill
 **Fix:** Use a bounded cache (`functools.lru_cache` with `maxsize`, or a manual size cap), or skip caching when you don't know the cardinality.
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyBoundedCache}
-  </CodeBlock>
+  ```python Python icon="python"
+  from functools import lru_cache
+
+  class GoodEmbedding:
+      def __init__(self):
+          self._embed = None
+
+      def setup(self):
+          model = load_model()
+          self._embed = lru_cache(maxsize=1024)(model.embed)
+
+      def __call__(self, text: str) -> list[float]:
+          if self._embed is None:
+              self.setup()
+          return self._embed(text)
+  ```
 </CodeGroup>
 
 ### 2. Accumulating per-call buffers
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyLeakyAggregator}
-  </CodeBlock>
+  ```python Python icon="python"
+  class BadAggregator:
+      def __init__(self):
+          self.history = []
+
+      def __call__(self, batch: pa.RecordBatch) -> pa.Array:
+          self.history.append(batch)  # holds every batch ever processed
+          ...
+  ```
 </CodeGroup>
 
 **Fix:** Don't hold references to inputs past the return of `__call__`. If you need rolling state, summarize into a small aggregate (counts, sums) instead of holding the raw batches.
@@ -192,9 +271,16 @@ Looks harmless. Fine on a unit test with 10 inputs. **Catastrophic on a backfill
 ### 3. Closures capturing batch arrays
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyLeakyClosure}
-  </CodeBlock>
+  ```python Python icon="python"
+  class BadDeferred:
+      def __init__(self):
+          self.work_queue = []
+
+      def __call__(self, x: pa.Array) -> pa.Array:
+          # Lambda captures `x` by reference — the whole Array stays alive
+          self.work_queue.append(lambda: expensive(x))
+          ...
+  ```
 </CodeGroup>
 
 **Fix:** Extract only the small values you actually need into the closure, or execute the work eagerly.
@@ -204,9 +290,11 @@ Looks harmless. Fine on a unit test with 10 inputs. **Catastrophic on a backfill
 Some ML libraries retain per-call state internally (KV caches, gradient buffers, autograd graphs). If you're using PyTorch:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyTorchInferenceMode}
-  </CodeBlock>
+  ```python Python icon="python"
+  def __call__(self, text: str) -> list[float]:
+      with torch.inference_mode():            # <-- prevents autograd graph retention
+          return self.model.encode(text)
+  ```
 </CodeGroup>
 
 For Hugging Face pipelines, ensure you're in `eval()` mode and not accumulating gradients. For long-running stateful UDFs on GPUs, also see `torch.cuda.empty_cache()` between large batches.
@@ -216,9 +304,12 @@ For Hugging Face pipelines, ensure you're in `eval()` mode and not accumulating 
 A useful "does my profiling actually work?" sanity check: temporarily introduce a deliberate leak and confirm memray catches it.
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="python" icon="python">
-  {PyConfidenceCheck}
-  </CodeBlock>
+  ```python Python icon="python"
+  def __call__(self, x):
+      scratch = bytearray(8 * 1024 * 1024)  # 8 MiB
+      self._scratches.append(scratch)        # <-- deliberate leak
+      return ...
+  ```
 </CodeGroup>
 
 If `memray summary` doesn't show leaked bytes growing roughly with batch count after this change, your tracker isn't actually attached (most often: the env var isn't reaching workers — re-check `extra_env`).

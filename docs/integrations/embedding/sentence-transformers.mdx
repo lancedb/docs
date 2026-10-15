@@ -3,7 +3,6 @@ title: Sentence Transformers
 sidebarTitle: Sentence Transformers
 ---
 
-import { PyEmbeddingSentenceTransformersBaai } from '/snippets/integrations.mdx';
 
 Allows you to set parameters when registering a `sentence-transformers` object.
 
@@ -160,9 +159,37 @@ You can also load many other model architectures from the library. For example m
 Here is an example that uses the BAAI embedding model from the Hugging Face Hub [supported models](https://huggingface.co/models?library=sentence-transformers).
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingSentenceTransformersBaai}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "sentence-transformers"))
+  model = (
+      get_registry()
+      .get("sentence-transformers")
+      .create(name="BAAI/bge-small-en-v1.5", device="cpu")
+  )
+
+  class Words(LanceModel):
+      text: str = model.SourceField()
+      vector: Vector(model.ndims()) = model.VectorField()
+
+  table = db.create_table("words", schema=Words)
+  table.add(
+      [
+          {"text": "hello world"},
+          {"text": "goodbye world"},
+      ]
+  )
+
+  query = "greetings"
+  actual = table.search(query).limit(1).to_pydantic(Words)[0]
+  print(actual.text)
+  ```
 </CodeGroup>
 </Note>
 Visit sentence-transformers [HuggingFace HUB](https://huggingface.co/sentence-transformers) page for more information on the available models.

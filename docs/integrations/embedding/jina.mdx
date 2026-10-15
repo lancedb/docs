@@ -3,10 +3,6 @@ title: Jina
 sidebarTitle: Jina
 ---
 
-import {
-  PyEmbeddingJinaText,
-  PyEmbeddingJinaMultimodal,
-} from '/snippets/integrations.mdx';
 
 ## Text Embedding Models {#text-embedding-models}
 
@@ -23,10 +19,37 @@ Supported parameters (to be passed in `create` method) are:
 
 Usage Example:
 
+Replace `your-api-key` with your Jina API key. This provider reads it from `JINA_API_KEY`; the example sets it explicitly. In application code, supply it through your environment or a secrets manager.
+
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingJinaText}
-  </CodeBlock>
+  ```python Python icon="python"
+  import os
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  from lancedb.embeddings import EmbeddingFunctionRegistry
+  from lancedb.pydantic import LanceModel, Vector
+
+  os.environ["JINA_API_KEY"] = "your-api-key"
+
+  jina_embed = (
+      EmbeddingFunctionRegistry.get_instance()
+      .get("jina")
+      .create(name="jina-embeddings-v2-base-en")
+  )
+
+  class TextModel(LanceModel):
+      text: str = jina_embed.SourceField()
+      vector: Vector(jina_embed.ndims()) = jina_embed.VectorField()
+
+  data = [{"text": "hello world"}, {"text": "goodbye world"}]
+
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "jina-text"))
+  tbl = db.create_table("test", schema=TextModel, mode="overwrite")
+
+  tbl.add(data)
+  ```
 </CodeGroup>
 
 ## Multimodal Embedding Models {#multimodal-embedding-models}
@@ -43,7 +66,42 @@ Supported parameters (to be passed in `create` method) are:
 Usage Example:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingJinaMultimodal}
-  </CodeBlock>
+  ```python Python icon="python"
+  import os
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  import pandas as pd
+  import requests
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+
+  os.environ["JINA_API_KEY"] = "your-api-key"
+
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "jina-images"))
+  func = get_registry().get("jina").create()
+
+  class Images(LanceModel):
+      label: str
+      image_uri: str = func.SourceField()
+      image_bytes: bytes = func.SourceField()
+      vector: Vector(func.ndims()) = func.VectorField()
+      vec_from_bytes: Vector(func.ndims()) = func.VectorField()
+
+  table = db.create_table("images", schema=Images)
+  labels = ["cat", "cat", "dog", "dog", "horse", "horse"]
+  uris = [
+      "http://farm1.staticflickr.com/53/167798175_7c7845bbbd_z.jpg",
+      "http://farm1.staticflickr.com/134/332220238_da527d8140_z.jpg",
+      "http://farm9.staticflickr.com/8387/8602747737_2e5c2a45d4_z.jpg",
+      "http://farm5.staticflickr.com/4092/5017326486_1f46057f5f_z.jpg",
+      "http://farm9.staticflickr.com/8216/8434969557_d37882c42d_z.jpg",
+      "http://farm6.staticflickr.com/5142/5835678453_4f3a4edb45_z.jpg",
+  ]
+  image_bytes = [requests.get(uri).content for uri in uris]
+  table.add(
+      pd.DataFrame({"label": labels, "image_uri": uris, "image_bytes": image_bytes})
+  )
+  ```
 </CodeGroup>

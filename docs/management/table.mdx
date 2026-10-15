@@ -6,125 +6,23 @@ icon: table
 keywords: ["table", "create_table", "open_table", "clone", "rename", "drop"]
 ---
 
-import {
-    PySchemaAddSetup,
-    TsSchemaAddSetup as TsSchemaAddSetup,
-    RsSchemaAddSetup as RsSchemaAddSetup,
-    PyAddColumnsDefaultValues as AddColumnsDefaultValues,
-    TsAddColumnsDefaultValues as TsAddColumnsDefaultValues,
-    RsAddColumnsDefaultValues as RsAddColumnsDefaultValues,
-    PyAddColumnsNullable as AddColumnsNullable,
-    TsAddColumnsNullable as TsAddColumnsNullable,
-    RsAddColumnsNullable as RsAddColumnsNullable,
-    PySchemaAlterSetup as SchemaAlterSetup,
-    TsSchemaAlterSetup as TsSchemaAlterSetup,
-    RsSchemaAlterSetup as RsSchemaAlterSetup,
-    PyAlterColumnsRename as AlterColumnsRename,
-    TsAlterColumnsRename as TsAlterColumnsRename,
-    RsAlterColumnsRename as RsAlterColumnsRename,
-    PyAlterColumnsDataType as AlterColumnsDataType,
-    TsAlterColumnsDataType as TsAlterColumnsDataType,
-    RsAlterColumnsDataType as RsAlterColumnsDataType,
-    PyAlterColumnsNullable as AlterColumnsNullable,
-    TsAlterColumnsNullable as TsAlterColumnsNullable,
-    RsAlterColumnsNullable as RsAlterColumnsNullable,
-    PyAlterColumnsMultiple as AlterColumnsMultiple,
-    TsAlterColumnsMultiple as TsAlterColumnsMultiple,
-    PyAlterColumnsWithExpression as AlterColumnsWithExpression,
-    TsAlterColumnsWithExpression as TsAlterColumnsWithExpression,
-    RsAlterColumnsMultiple as RsAlterColumnsMultiple,
-    RsAlterColumnsWithExpression as RsAlterColumnsWithExpression,
-    PySchemaDropSetup as SchemaDropSetup,
-    TsSchemaDropSetup as TsSchemaDropSetup,
-    RsSchemaDropSetup as RsSchemaDropSetup,
-    PyDropColumnsSingle as DropColumnsSingle,
-    TsDropColumnsSingle as TsDropColumnsSingle,
-    RsDropColumnsSingle as RsDropColumnsSingle,
-    PyDropColumnsMultiple as DropColumnsMultiple,
-    TsDropColumnsMultiple as TsDropColumnsMultiple,
-    RsDropColumnsMultiple as RsDropColumnsMultiple,
-    PyAlterVectorColumn as AlterVectorColumn,
-    TsAlterVectorColumn as TsAlterVectorColumn,
-    RsAlterVectorColumn as RsAlterVectorColumn,
-    PySchemaFieldMetadataMerge as SchemaFieldMetadataMerge,
-    TsSchemaFieldMetadataMerge as TsSchemaFieldMetadataMerge,
-    RsSchemaFieldMetadataMerge as RsSchemaFieldMetadataMerge,
-    PySchemaFieldMetadataReplace as SchemaFieldMetadataReplace,
-    TsSchemaFieldMetadataReplace as TsSchemaFieldMetadataReplace,
-    RsSchemaFieldMetadataReplace as RsSchemaFieldMetadataReplace,
-    PyVersioningBasicSetup as VersioningBasicSetup,
-    TsVersioningBasicSetup as TsVersioningBasicSetup,
-    RsVersioningBasicSetup as RsVersioningBasicSetup,
-    PyVersioningCheckInitialVersion as VersioningCheckInitialVersion,
-    TsVersioningCheckInitialVersion as TsVersioningCheckInitialVersion,
-    RsVersioningCheckInitialVersion as RsVersioningCheckInitialVersion,
-    PyVersioningUpdateData as VersioningUpdateData,
-    TsVersioningUpdateData as TsVersioningUpdateData,
-    RsVersioningUpdateData as RsVersioningUpdateData,
-    PyVersioningAddData as VersioningAddData,
-    TsVersioningAddData as TsVersioningAddData,
-    RsVersioningAddData as RsVersioningAddData,
-    PyVersioningCheckVersionsAfterMod as VersioningCheckVersionsAfterMod,
-    TsVersioningCheckVersionsAfterMod as TsVersioningCheckVersionsAfterMod,
-    RsVersioningCheckVersionsAfterMod as RsVersioningCheckVersionsAfterMod,
-    PyVersioningListAllVersions as VersioningListAllVersions,
-    TsVersioningListAllVersions as TsVersioningListAllVersions,
-    RsVersioningListAllVersions as RsVersioningListAllVersions,
-    PyVersioningRollback as VersioningRollback,
-    TsVersioningRollback as TsVersioningRollback,
-    RsVersioningRollback as RsVersioningRollback,
-    PyVersioningCheckoutLatest as VersioningCheckoutLatest,
-    TsVersioningCheckoutLatest as TsVersioningCheckoutLatest,
-    RsVersioningCheckoutLatest as RsVersioningCheckoutLatest,
-    PyVersioningDeleteData as VersioningDeleteData,
-    TsVersioningDeleteData as TsVersioningDeleteData,
-    RsVersioningDeleteData as RsVersioningDeleteData,
-    PyVersioningTags as VersioningTags,
-    TsVersioningTags as TsVersioningTags,
-    RsVersioningTags as RsVersioningTags,
-    RsVersioningMakeQuotesReader as RsVersioningMakeQuotesReader,
-} from '/snippets/tables.mdx';
-import {
-    PyMultimodalImports as MultimodalImports,
-    TsMultimodalImports as TsMultimodalImports,
-    RsMultimodalImports as RsMultimodalImports,
-    PyCreateDummyData as CreateDummyData,
-    TsCreateDummyData as TsCreateDummyData,
-    RsCreateDummyData as RsCreateDummyData,
-    PyDefineSchema as DefineSchema,
-    TsDefineSchema as TsDefineSchema,
-    RsDefineSchema as RsDefineSchema,
-    PyIngestData as IngestData,
-    TsIngestData as TsIngestData,
-    RsIngestData as RsIngestData,
-    PySearchData as SearchData,
-    TsSearchData as TsSearchData,
-    RsSearchData as RsSearchData,
-    PyProcessResults as ProcessResults,
-    TsProcessResults as TsProcessResults,
-    RsProcessResults as RsProcessResults,
-    PyBlobApiSchema as BlobApiSchema,
-    TsBlobApiSchema as TsBlobApiSchema,
-    RsBlobApiSchema as RsBlobApiSchema,
-    PyBlobApiIngest as BlobApiIngest,
-    TsBlobApiIngest as TsBlobApiIngest,
-    RsBlobApiIngest as RsBlobApiIngest,
-    PyBlobApiToPandas as BlobApiToPandas,
-    PyQueryToPandasKwargs as QueryToPandasKwargs,
-} from '/snippets/multimodal.mdx';
 
-A table is rows and columns, versioned. It is what searches read, what writes
-commit to, and what indexes and branches belong to.
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Tables are created, evolved, versioned and dropped in the embedded library and in LanceDB Enterprise. Renaming, cloning, dropping every table and pruning old versions differ between the two.
 
-This page covers the table as a catalog object. Getting data into one is
-[Ingest](/ingestion); changing its shape is
-[Schema evolution](/management/table#schema).
+A table stores data in rows and columns and keeps a history of committed
+versions. Queries read table data, writes update it, and indexes accelerate
+searches over its columns. Branches let you make changes separately from the
+main table history.
+
+This page covers table management, data types, schema changes and version
+history. For loading records, see [Ingestion](/ingestion). For changes to
+columns, see [Schema evolution](/management/table#schema).
 
 <Note>
-Tables are created and dropped in SQL with [`CREATE TABLE` and `DROP TABLE`](/sql/ddl/table).
+In LanceDB Enterprise, tables are also created and dropped in SQL with [`CREATE TABLE` and `DROP TABLE`](/sql/ddl/table).
 </Note>
 
-## What a table carries {#carries}
+## Table structure and metadata {#carries}
 
 | | |
 | --- | --- |
@@ -133,7 +31,7 @@ Tables are created and dropped in SQL with [`CREATE TABLE` and `DROP TABLE`](/sq
 | **Indexes** | vector, full-text and scalar, built over its columns |
 | **Branches** | isolated lines of change you can [merge or discard](/tables/branching) |
 
-## Creating {#create}
+## Create a table {#create}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -156,19 +54,18 @@ frame, or Pydantic models. [Ingesting data](/ingestion) covers each, plus
 `exist_ok` and `mode="overwrite"` for re-runnable scripts.
 
 <Warning>
-An explicit schema is where nullability is decided. Creation is also the only
-point at which the SDK can give a table **stable row ids**, which a deployment
-may require on a [materialized view](/management/materialized-view) source. See
-[Limits](/basics/limits#schema).
+An explicit schema is where nullability is decided. In the embedded library,
+creation is also the only point at which a table can be given **stable row
+ids**; in LanceDB Enterprise, whether a new table gets them is the deployment's
+setting. See [Limits](/basics/limits#schema).
 </Warning>
 
-## Opening and listing {#open}
+## Open and list tables {#open}
 
 <CodeGroup>
 ```python Python icon="python"
 tbl = db.open_table("documents")
 db.table_names()
-db.table_exists("documents")
 ```
 
 ```typescript TypeScript icon="square-js"
@@ -179,9 +76,18 @@ await db.tableNames();
 </CodeGroup>
 
 Each accepts `namespace_path` to act inside a [namespace](/management/namespace)
-rather than at the database root. TypeScript has no `tableExists`.
+rather than at the database root.
 
-## Renaming and cloning {#rename-clone}
+To find out whether a table exists, open it and handle the error, or look for
+its name in a listing. A missing table raises `ValueError` on a local directory
+or a deployment, and `lance_namespace.TableNotFoundError` on a connection from
+`connect_namespace`. A listing returns one page of names at a time, so check
+every page. Python's `table_exists` is no substitute: a local directory or a
+deployment raises `NotImplementedError` for it, and on a connection from
+`connect_namespace("dir", ...)` or `connect_namespace("rest", ...)` it fails with
+an `AttributeError`. TypeScript has no `tableExists`.
+
+## Rename and clone tables {#rename-clone}
 
 ```python
 db.rename_table("documents", "docs")
@@ -194,6 +100,10 @@ db.clone_table(
 )
 ```
 
+Renaming is not supported on a local directory connection. In LanceDB Enterprise,
+whether a table can be renamed or cloned at all depends on how the deployment
+stores its catalog.
+
 A **shallow** clone -- the default -- references the source's data files rather
 than copying them, so it is fast and cheap regardless of table size. It is the
 practical way to branch an experiment off a known version, or to pin a training
@@ -204,18 +114,20 @@ A shallow clone depends on the source's files continuing to exist. If the source
 is [compacted](/maintenance/compaction) past the retention window, the version
 the clone points at can be pruned. Local OSS connections support shallow clones
 only; `is_shallow=False` is not implemented. If the copy must outlive the
-source's history, copy its data into an independent table instead. For remote
-connections, confirm which clone modes your deployment supports.
+source's history, copy its data into an independent table instead. A deployment
+that supports cloning also makes shallow clones only, and one whose catalog
+does not support it refuses every clone.
 </Warning>
 
 <Note>
-**Enterprise job type:** `drop_table`. Fences the table's directory with a
-marker and deletes its content in the background -- see
-[Background jobs](/maintenance/background-jobs#teardown) for the namespace,
-view, and function equivalent.
+**Enterprise job type:** on an Enterprise cluster that drops tables in the background,
+the teardown runs as a job: `drop_table`, which fences the table's directory
+with a marker and deletes its content, or `drop_object`, depending on how the
+deployment stores its catalog. See
+[Background jobs](/maintenance/background-jobs#teardown).
 </Note>
 
-## Dropping {#drop}
+## Drop a table {#drop}
 
 <CodeGroup>
 ```python Python icon="python"
@@ -238,13 +150,16 @@ DROP TABLE documents
 <Warning>
 Dropping removes the table and **every version of it**.
 [Versioning](/management/table#versioning) does not survive a drop, and neither
-`drop_all_tables` nor `drop_database` asks for confirmation.
+`drop_all_tables` nor `drop_database` asks for confirmation. Both work only on
+a local database; on an Enterprise connection the SDK raises instead.
 </Warning>
 
 On a large table the drop can take a while, so `drop_table_async` returns a
-[job](/basics/jobs) rather than blocking.
+[job](/basics/jobs) rather than blocking when the deployment drops tables in the
+background. In the embedded library, and on an Enterprise cluster that drops inline, the
+returned job has already finished.
 
-## The full surface {#surface}
+## Table management APIs {#surface}
 
 | | Python | TypeScript | SQL |
 | --- | --- | --- | --- |
@@ -298,17 +213,36 @@ To store binary data, define a binary Arrow field in your schema (`pa.binary()` 
 First, import the necessary libraries for LanceDB and Arrow in your SDK.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {MultimodalImports}
-    </CodeBlock>
+    ```python Python icon="python"
+    import lancedb
+    import pyarrow as pa
+    import pandas as pd
+    import numpy as np
+    import io
+    from PIL import Image
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsMultimodalImports}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    import * as arrow from "apache-arrow";
+    import { Buffer } from "node:buffer";
+    import * as lancedb from "@lancedb/lancedb";
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsMultimodalImports}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use arrow_array::types::Float32Type;
+    use arrow_array::{
+        BinaryArray, FixedSizeListArray, Int32Array, Int64Array, LargeBinaryArray, RecordBatch,
+        RecordBatchIterator, StringArray,
+    };
+    use arrow_schema::{DataType, Field, Schema};
+    use futures_util::TryStreamExt;
+    use lancedb::connect;
+    use lancedb::database::CreateTableMode;
+    use lancedb::query::{ExecutableQuery, QueryBase};
+    ```
 </CodeGroup>
 
 #### 2\. Prepare data {#multimodal-2-prepare-data}
@@ -316,17 +250,81 @@ First, import the necessary libraries for LanceDB and Arrow in your SDK.
 For this example, we'll create some dummy in-memory images. In a real application, you would read these from files or an API. The key is to convert your data (image, audio, etc.) into a raw `bytes` object.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {CreateDummyData}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Create some dummy images
+    def create_dummy_image(color):
+        img = Image.new('RGB', (100, 100), color=color)
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        return buf.getvalue()
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsCreateDummyData}
-    </CodeBlock>
+    # Create dataset with metadata, vectors, and image blobs
+    data = [
+        {
+            "id": 1,
+            "filename": "red_square.png",
+            "vector": np.random.rand(128).astype(np.float32),
+            "image_blob": create_dummy_image('red'),
+            "label": "red"
+        },
+        {
+            "id": 2,
+            "filename": "blue_square.png",
+            "vector": np.random.rand(128).astype(np.float32),
+            "image_blob": create_dummy_image('blue'),
+            "label": "blue"
+        }
+    ]
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsCreateDummyData}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const createDummyImage = (color: string): Uint8Array => {
+      const pngHeader = Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10]);
+      return Buffer.concat([Buffer.from(pngHeader), Buffer.from(color, "utf8")]);
+    };
+
+    const data = [
+      {
+        id: 1,
+        filename: "red_square.png",
+        vector: Array.from({ length: 128 }, (_, i) => (i % 16) / 16),
+        image_blob: createDummyImage("red"),
+        label: "red",
+      },
+      {
+        id: 2,
+        filename: "blue_square.png",
+        vector: Array.from({ length: 128 }, (_, i) => ((i + 8) % 16) / 16),
+        image_blob: createDummyImage("blue"),
+        label: "blue",
+      },
+    ];
+    ```
+
+    ```rust Rust icon="rust"
+    let create_dummy_image = |color: u8| -> Vec<u8> {
+        let mut png_like = vec![137, 80, 78, 71, 13, 10, 26, 10];
+        png_like.push(color);
+        png_like
+    };
+
+    let data = vec![
+        (
+            1_i32,
+            "red_square.png",
+            vec![0.1_f32; 128],
+            create_dummy_image(1),
+            "red",
+        ),
+        (
+            2_i32,
+            "blue_square.png",
+            vec![0.2_f32; 128],
+            create_dummy_image(2),
+            "blue",
+        ),
+    ];
+    ```
 </CodeGroup>
 
 #### 3\. Define the schema {#multimodal-3-define-the-schema}
@@ -334,17 +332,46 @@ For this example, we'll create some dummy in-memory images. In a real applicatio
 When creating the table, it is **highly recommended** to define the schema explicitly. This ensures that your binary data is correctly interpreted as a `binary` type by Arrow/LanceDB and not as a generic string or list.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {DefineSchema}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Define schema explicitly to ensure image_blob is treated as binary
+    schema = pa.schema([
+        pa.field("id", pa.int32()),
+        pa.field("filename", pa.string()),
+        pa.field("vector", pa.list_(pa.float32(), 128)),
+        pa.field("image_blob", pa.binary()), # Important: Use pa.binary() for blobs
+        pa.field("label", pa.string())
+    ])
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsDefineSchema}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const schema = new arrow.Schema([
+      new arrow.Field("id", new arrow.Int32()),
+      new arrow.Field("filename", new arrow.Utf8()),
+      new arrow.Field(
+        "vector",
+        new arrow.FixedSizeList(
+          128,
+          new arrow.Field("item", new arrow.Float32(), true),
+        ),
+      ),
+      new arrow.Field("image_blob", new arrow.Binary()),
+      new arrow.Field("label", new arrow.Utf8()),
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsDefineSchema}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let schema = Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("filename", DataType::Utf8, false),
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 128),
+            false,
+        ),
+        Field::new("image_blob", DataType::Binary, false),
+        Field::new("label", DataType::Utf8, false),
+    ]);
+    ```
 </CodeGroup>
 
 #### 4\. Ingest data {#multimodal-4-ingest-data}
@@ -352,17 +379,47 @@ When creating the table, it is **highly recommended** to define the schema expli
 Now, create the table using the data and the defined schema.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {IngestData}
-    </CodeBlock>
+    ```python Python icon="python"
+    tbl = db.create_table("images", data=data, schema=schema, mode="overwrite")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsIngestData}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const multimodalData = lancedb.makeArrowTable(data, { schema });
+    const tbl = await db.createTable("images", multimodalData, {
+      mode: "overwrite",
+    });
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsIngestData}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let schema = Arc::new(schema);
+    let image_batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int32Array::from_iter_values(data.iter().map(|row| row.0))),
+            Arc::new(StringArray::from_iter_values(data.iter().map(|row| row.1))),
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    data.iter()
+                        .map(|row| Some(row.2.iter().copied().map(Some).collect::<Vec<_>>())),
+                    128,
+                ),
+            ),
+            Arc::new(BinaryArray::from_iter_values(
+                data.iter().map(|row| row.3.as_slice()),
+            )),
+            Arc::new(StringArray::from_iter_values(data.iter().map(|row| row.4))),
+        ],
+    )
+    .unwrap();
+    let image_reader: Box<dyn arrow_array::RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(image_batch)].into_iter(), schema.clone()));
+    let table = db
+        .create_table("images", image_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 ### Retrieve and use blobs {#multimodal-retrieve-and-use-blobs}
@@ -370,17 +427,31 @@ Now, create the table using the data and the defined schema.
 When you search your LanceDB table, you can retrieve the binary column just like any other metadata.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {SearchData}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Search for similar images
+    query_vector = np.random.rand(128).astype(np.float32)
+    results = tbl.search(query_vector).limit(1).to_pandas()
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsSearchData}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const queryVector = Array.from({ length: 128 }, (_, i) => (i % 16) / 16);
+    const results = await tbl.search(queryVector).limit(1).toArray();
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsSearchData}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let query_vector = vec![0.1_f32; 128];
+    let results = table
+        .query()
+        .nearest_to(query_vector)
+        .unwrap()
+        .limit(1)
+        .execute()
+        .await
+        .unwrap()
+        .try_collect::<Vec<_>>()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Convert bytes back to objects {#multimodal-convert-bytes-back-to-objects}
@@ -388,17 +459,49 @@ When you search your LanceDB table, you can retrieve the binary column just like
 Once you have the bytes back from the search result, you can decode them into the original format (for example, an image object or audio buffer).
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {ProcessResults}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Convert back to PIL Image
+    for _, row in results.iterrows():
+        image_bytes = row['image_blob']
+        image = Image.open(io.BytesIO(image_bytes))
+        print(f"Retrieved image: {row['filename']}, Size: {image.size}")
+        # You can now use 'image' with other libraries or display it
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsProcessResults}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    for (const row of results) {
+      const imageBytes = row.image_blob as Uint8Array;
+      console.log(
+        `Retrieved image: ${row.filename}, Byte length: ${imageBytes.length}`,
+      );
+    }
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsProcessResults}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    for batch in &results {
+        let filenames = batch
+            .column_by_name("filename")
+            .unwrap()
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        let images = batch
+            .column_by_name("image_blob")
+            .unwrap()
+            .as_any()
+            .downcast_ref::<BinaryArray>()
+            .unwrap();
+
+        for row in 0..batch.num_rows() {
+            let image_bytes = images.value(row);
+            println!(
+                "Retrieved image: {}, Byte length: {}",
+                filenames.value(row),
+                image_bytes.len()
+            );
+        }
+    }
+    ```
 </CodeGroup>
 
 ### Large Blobs (Blob API) {#multimodal-large-blobs-blob-api}
@@ -410,17 +513,42 @@ For larger files like high-resolution images or videos, Lance provides a special
 To use the Blob API, you must mark the column with `{"lance-encoding:blob": "true"}` metadata.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {BlobApiSchema}
-    </CodeBlock>
+    ```python Python icon="python"
+    import pyarrow as pa
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsBlobApiSchema}
-    </CodeBlock>
+    # Define schema with Blob API metadata for lazy loading
+    schema = pa.schema([
+        pa.field("id", pa.int64()),
+        pa.field(
+            "video", 
+            pa.large_binary(), 
+            metadata={"lance-encoding:blob": "true"} # Enable Blob API
+        ),
+    ])
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsBlobApiSchema}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const blobSchema = new arrow.Schema([
+      new arrow.Field("id", new arrow.Int64()),
+      new arrow.Field(
+        "video",
+        new arrow.LargeBinary(),
+        true,
+        new Map([["lance-encoding:blob", "true"]]),
+      ),
+    ]);
+    ```
+
+    ```rust Rust icon="rust"
+    let blob_metadata = HashMap::from([(
+        "lance-encoding:blob".to_string(),
+        "true".to_string(),
+    )]);
+    let blob_schema = Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("video", DataType::LargeBinary, true).with_metadata(blob_metadata),
+    ]);
+    ```
 </CodeGroup>
 
 #### 2\. Ingest large blobs {#multimodal-2-ingest-large-blobs}
@@ -428,17 +556,60 @@ To use the Blob API, you must mark the column with `{"lance-encoding:blob": "tru
 You can then ingest data normally, and Lance will handle the optimized storage.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {BlobApiIngest}
-    </CodeBlock>
+    ```python Python icon="python"
+    import lancedb
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsBlobApiIngest}
-    </CodeBlock>
+    db = lancedb.connect(db_path_factory("blob_db"))
+        
+    # Create sample data
+    data = [
+        {"id": 1, "video": b"fake_video_bytes_1"},
+        {"id": 2, "video": b"fake_video_bytes_2"}
+    ]
+        
+    # Create the table
+    tbl = db.create_table("videos", data=data, schema=schema)
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsBlobApiIngest}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const blobData = lancedb.makeArrowTable(
+      [
+        { id: 1, video: Buffer.from("fake_video_bytes_1") },
+        { id: 2, video: Buffer.from("fake_video_bytes_2") },
+      ],
+      { schema: blobSchema },
+    );
+    const blobTable = await db.createTable("videos", blobData, {
+      mode: "overwrite",
+    });
+    ```
+
+    ```rust Rust icon="rust"
+    let blob_rows = vec![
+        (1_i64, b"fake_video_bytes_1".to_vec()),
+        (2_i64, b"fake_video_bytes_2".to_vec()),
+    ];
+
+    let blob_schema = Arc::new(blob_schema);
+    let blob_batch = RecordBatch::try_new(
+        blob_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from_iter_values(blob_rows.iter().map(|row| row.0))),
+            Arc::new(LargeBinaryArray::from_iter_values(
+                blob_rows.iter().map(|row| row.1.as_slice()),
+            )),
+        ],
+    )
+    .unwrap();
+    let blob_reader: Box<dyn arrow_array::RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(blob_batch)].into_iter(), blob_schema));
+    let blob_table = db
+        .create_table("videos", blob_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 <Card>
@@ -456,14 +627,24 @@ When you call `to_pandas()` on a local LanceDB table that contains Blob API colu
 - `"bytes"`: eagerly materializes each blob as `bytes`. Use this when you need the raw payload in the DataFrame, for example to decode an image or audio clip in-process.
 - `"descriptions"`: returns blob descriptors (offsets, sizes, and positions) instead of the data itself. Use this when you want to plan I/O without paying the cost of loading every blob.
 
-`"bytes"` and `"descriptions"` require a filesystem-backed Lance dataset and are not supported on in-memory tables.
+`"bytes"` is not supported on in-memory tables.
 
 Extra keyword arguments are forwarded to the underlying PyArrow / Lance pandas conversion, so you can also pass options like `split_blocks` or `self_destruct`:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {BlobApiToPandas}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Default: blob columns come back lazily
+    df_lazy = tbl.to_pandas()
+
+    # Materialize blob bytes eagerly
+    df_bytes = tbl.to_pandas(blob_mode="bytes")
+
+    # Return descriptors instead of payloads
+    df_desc = tbl.to_pandas(blob_mode="descriptions")
+
+    # Forward extra kwargs to PyArrow's to_pandas
+    df_typed = tbl.to_pandas(split_blocks=True, self_destruct=True)
+    ```
 </CodeGroup>
 
 Query builders also accept `blob_mode` on their `to_pandas()` method:
@@ -473,9 +654,32 @@ Query builders also accept `blob_mode` on their `to_pandas()` method:
 - This works on both sync and async query builders. Extra PyArrow kwargs like `split_blocks` and `self_destruct` are still forwarded.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {QueryToPandasKwargs}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Plain scan query: blob_mode is supported end to end
+    df_lazy = (
+        tbl.search()
+        .where("id = 1")
+        .select(["id", "video"])
+        .to_pandas(blob_mode="lazy")
+    )
+
+    # Same call shape works on async query builders
+    df_bytes = await (
+        tbl_async.query()
+        .where("id = 1")
+        .select(["id", "video"])
+        .to_pandas(blob_mode="bytes")
+    )
+
+    # Vector / FTS / hybrid queries can't materialize blob columns,
+    # so omit them from the projection
+    df_vec = (
+        tbl.search(query_vector)
+        .limit(10)
+        .select(["id", "vector"])
+        .to_pandas(split_blocks=True, self_destruct=True)
+    )
+    ```
 </CodeGroup>
 
 ### Other modalities {#multimodal-other-modalities}
@@ -535,17 +739,101 @@ New columns are populated based on SQL expressions you provide.
 First, let's create a sample table with product data to demonstrate schema evolution:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PySchemaAddSetup}
-    </CodeBlock>
+    ```python Python icon="python"
+    import numpy as np
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsSchemaAddSetup}
-    </CodeBlock>
+    data = [
+        {
+            "id": 1,
+            "name": "Laptop",
+            "price": 1200.00,
+            "vector": np.random.random(128).tolist(),
+        },
+        {
+            "id": 2,
+            "name": "Smartphone",
+            "price": 800.00,
+            "vector": np.random.random(128).tolist(),
+        },
+        {
+            "id": 3,
+            "name": "Headphones",
+            "price": 150.00,
+            "vector": np.random.random(128).tolist(),
+        },
+    ]
+    table = db.create_table("schema_evolution_add_example", data, mode="overwrite")
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsSchemaAddSetup}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const schemaAddData = [
+      {
+        id: 1,
+        name: "Laptop",
+        price: 1200.0,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+      {
+        id: 2,
+        name: "Smartphone",
+        price: 800.0,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+      {
+        id: 3,
+        name: "Headphones",
+        price: 150.0,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+    ];
+    const schemaAddTable = await db.createTable(
+      "schema_evolution_add_example",
+      schemaAddData,
+      { mode: "overwrite" },
+    );
+    ```
+
+    ```rust Rust icon="rust"
+    let schema_add_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("price", DataType::Float64, false),
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 128),
+            false,
+        ),
+    ]));
+    let schema_add_batch = RecordBatch::try_new(
+        schema_add_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3])),
+            Arc::new(StringArray::from(vec!["Laptop", "Smartphone", "Headphones"])),
+            Arc::new(Float64Array::from(vec![1200.0, 800.0, 150.0])),
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![
+                        Some(vec![Some(0.1_f32); 128]),
+                        Some(vec![Some(0.2_f32); 128]),
+                        Some(vec![Some(0.3_f32); 128]),
+                    ],
+                    128,
+                ),
+            ),
+        ],
+    )
+    .unwrap();
+    let schema_add_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
+        vec![Ok(schema_add_batch)].into_iter(),
+        schema_add_schema.clone(),
+    ));
+    let schema_add_table = db
+        .create_table("schema_evolution_add_example", schema_add_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 <Note>
@@ -559,17 +847,34 @@ deriving values is a feature-engineering job rather than a schema one.
 Add boolean columns with default values for status tracking:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AddColumnsDefaultValues}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Add a stock status column with default value
+    table.add_columns({"in_stock": "cast(true as boolean)"})
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAddColumnsDefaultValues}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Add a stock status column with default value
+    await schemaAddTable.addColumns([
+      {
+        name: "in_stock",
+        valueSql: "cast(true as boolean)",
+      },
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAddColumnsDefaultValues}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Add a stock status column with default value
+    schema_add_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![(
+                "in_stock".to_string(),
+                "cast(true as boolean)".to_string(),
+            )]),
+            None,
+        )
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Add nullable columns {#schema-add-nullable-columns}
@@ -577,17 +882,34 @@ Add boolean columns with default values for status tracking:
 Add timestamp columns that can contain NULL values:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AddColumnsNullable}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Add a nullable timestamp column
+    table.add_columns({"last_ordered": "cast(NULL as timestamp)"})
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAddColumnsNullable}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Add a nullable timestamp column
+    await schemaAddTable.addColumns([
+      {
+        name: "last_ordered",
+        valueSql: "cast(NULL as timestamp)",
+      },
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAddColumnsNullable}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Add a nullable timestamp column
+    schema_add_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![(
+                "last_ordered".to_string(),
+                "cast(NULL as timestamp)".to_string(),
+            )]),
+            None,
+        )
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 <Warning title="NULL Values in New Columns">
@@ -609,17 +931,116 @@ method in Python, [`alterColumns`](https://lancedb.github.io/lancedb/js/classes/
 Create a table with a custom schema to demonstrate column alterations:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {SchemaAlterSetup}
-    </CodeBlock>
+    ```python Python icon="python"
+    table_name = "schema_evolution_alter_example"
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200,
+                "discount_price": 1080.0,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800,
+                "discount_price": 720.0,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    schema = pa.schema(
+        {
+            "id": pa.int64(),
+            "name": pa.string(),
+            "price": pa.int32(),
+            "discount_price": pa.float64(),
+            "vector": pa.list_(pa.float32(), 128),
+        }
+    )
+    table = tmp_db.create_table(table_name, data, schema=schema, mode="overwrite")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsSchemaAlterSetup}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const schemaAlter = new arrow.Schema([
+      new arrow.Field("id", new arrow.Int64()),
+      new arrow.Field("name", new arrow.Utf8()),
+      new arrow.Field("price", new arrow.Int32()),
+      new arrow.Field("discount_price", new arrow.Float64()),
+      new arrow.Field(
+        "vector",
+        new arrow.FixedSizeList(
+          128,
+          new arrow.Field("item", new arrow.Float32(), true),
+        ),
+      ),
+    ]);
+    const schemaAlterData = lancedb.makeArrowTable(
+      [
+        {
+          id: 1,
+          name: "Laptop",
+          price: 1200,
+          discount_price: 1080.0,
+          vector: Array.from({ length: 128 }, () => Math.random()),
+        },
+        {
+          id: 2,
+          name: "Smartphone",
+          price: 800,
+          discount_price: 720.0,
+          vector: Array.from({ length: 128 }, () => Math.random()),
+        },
+      ],
+      { schema: schemaAlter },
+    );
+    const schemaAlterTable = await db.createTable(
+      "schema_evolution_alter_example",
+      schemaAlterData,
+      { mode: "overwrite" },
+    );
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsSchemaAlterSetup}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let schema_alter_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("price", DataType::Int32, false),
+        Field::new("discount_price", DataType::Float64, false),
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 128),
+            false,
+        ),
+    ]));
+    let schema_alter_batch = RecordBatch::try_new(
+        schema_alter_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2])),
+            Arc::new(StringArray::from(vec!["Laptop", "Smartphone"])),
+            Arc::new(Int32Array::from(vec![1200, 800])),
+            Arc::new(Float64Array::from(vec![1080.0, 720.0])),
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![Some(vec![Some(0.1_f32); 128]), Some(vec![Some(0.2_f32); 128])],
+                    128,
+                ),
+            ),
+        ],
+    )
+    .unwrap();
+    let schema_alter_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
+        vec![Ok(schema_alter_batch)].into_iter(),
+        schema_alter_schema.clone(),
+    ));
+    let schema_alter_table = db
+        .create_table("schema_evolution_alter_example", schema_alter_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Rename columns {#schema-rename-columns}
@@ -627,17 +1048,26 @@ Create a table with a custom schema to demonstrate column alterations:
 Change column names to better reflect their purpose:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AlterColumnsRename}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Rename discount_price to sale_price
+    table.alter_columns({"path": "discount_price", "rename": "sale_price"})
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAlterColumnsRename}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Rename discount_price to sale_price
+    await schemaAlterTable.alterColumns([
+      { path: "discount_price", rename: "sale_price" },
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAlterColumnsRename}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Rename discount_price to sale_price
+    schema_alter_table
+        .alter_columns(&[ColumnAlteration::new("discount_price".to_string())
+            .rename("sale_price".to_string())])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Change data types {#schema-change-data-types}
@@ -645,17 +1075,25 @@ Change column names to better reflect their purpose:
 Convert column data types for better performance or compatibility:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AlterColumnsDataType}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Change price from int32 to int64 for larger numbers
+    table.alter_columns({"path": "price", "data_type": pa.int64()})
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAlterColumnsDataType}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Change price from int32 to int64 for larger numbers
+    await schemaAlterTable.alterColumns([
+      { path: "price", dataType: new arrow.Int64() },
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAlterColumnsDataType}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Change price from int32 to int64 for larger numbers
+    schema_alter_table
+        .alter_columns(&[ColumnAlteration::new("price".to_string()).cast_to(DataType::Int64)])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Make columns nullable {#schema-make-columns-nullable}
@@ -663,17 +1101,23 @@ Convert column data types for better performance or compatibility:
 You can alter columns to contain NULL values:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AlterColumnsNullable}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Make the name column nullable
+    table.alter_columns({"path": "name", "nullable": True})
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAlterColumnsNullable}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Make the name column nullable
+    await schemaAlterTable.alterColumns([{ path: "name", nullable: true }]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAlterColumnsNullable}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Make the name column nullable
+    schema_alter_table
+        .alter_columns(&[ColumnAlteration::new("name".to_string()).set_nullable(true)])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 Changing a column to nullable affects future writes and merges too: missing values are accepted
@@ -684,17 +1128,40 @@ only when the target column is nullable.
 Apply several alterations in a single operation:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AlterColumnsMultiple}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Rename, change type, and make nullable in one operation
+    table.alter_columns(
+        {
+            "path": "sale_price",
+            "rename": "final_price",
+            "data_type": pa.float64(),
+            "nullable": True,
+        }
+    )
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAlterColumnsMultiple}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Rename, change type, and make nullable in one operation
+    await schemaAlterTable.alterColumns([
+      {
+        path: "sale_price",
+        rename: "final_price",
+        dataType: new arrow.Float64(),
+        nullable: true,
+      },
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAlterColumnsMultiple}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Rename, change type, and make nullable in one operation
+    schema_alter_table
+        .alter_columns(&[ColumnAlteration::new("sale_price".to_string())
+            .rename("final_price".to_string())
+            .cast_to(DataType::Float64)
+            .set_nullable(true)])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Expression-based type changes {#schema-expression-based-type-changes}
@@ -702,17 +1169,83 @@ Apply several alterations in a single operation:
 For transformations that are not simple casts (for example, converting `"$100"` to an integer), use a SQL-expression column add, then drop and rename:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AlterColumnsWithExpression}
-    </CodeBlock>
+    ```python Python icon="python"
+    # For custom transforms, create a new column from a SQL expression.
+    expression_table = tmp_db.create_table(
+        "schema_evolution_expression_example",
+        [{"id": 1, "price_text": "$100"}],
+        mode="overwrite",
+    )
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAlterColumnsWithExpression}
-    </CodeBlock>
+    expression_table.add_columns(
+        {"price_numeric": "cast(replace(price_text, '$', '') as int)"}
+    )
+    expression_table.drop_columns(["price_text"])
+    expression_table.alter_columns({"path": "price_numeric", "rename": "price"})
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAlterColumnsWithExpression}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // For custom transforms, create a new column from a SQL expression.
+    const expressionTable = await db.createTable(
+      "schema_evolution_expression_example",
+      [{ id: 1, price_text: "$100" }],
+      { mode: "overwrite" },
+    );
+
+    await expressionTable.addColumns([
+      {
+        name: "price_numeric",
+        valueSql: "cast(replace(price_text, '$', '') as int)",
+      },
+    ]);
+    await expressionTable.dropColumns(["price_text"]);
+    await expressionTable.alterColumns([
+      { path: "price_numeric", rename: "price" },
+    ]);
+    ```
+
+    ```rust Rust icon="rust"
+    // For custom transforms, create a new column from a SQL expression.
+    let expression_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("price_text", DataType::Utf8, false),
+    ]));
+    let expression_batch = RecordBatch::try_new(
+        expression_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![1])),
+            Arc::new(StringArray::from(vec!["$100"])),
+        ],
+    )
+    .unwrap();
+    let expression_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
+        vec![Ok(expression_batch)].into_iter(),
+        expression_schema.clone(),
+    ));
+    let expression_table = db
+        .create_table("schema_evolution_expression_example", expression_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    expression_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![(
+                "price_numeric".to_string(),
+                "cast(replace(price_text, '$', '') as int)".to_string(),
+            )]),
+            None,
+        )
+        .await
+        .unwrap();
+    expression_table.drop_columns(&["price_text"]).await.unwrap();
+    expression_table
+        .alter_columns(&[ColumnAlteration::new("price_numeric".to_string())
+            .rename("price".to_string())])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Alter embedding types and dimensions {#schema-alter-embedding-types-and-dimensions}
@@ -724,17 +1257,112 @@ It's quite common to need to change an embedding column's schema, in case a new 
 For dimension changes, use this 3-step pattern: add a new column with the target type, drop the old column, then rename the new column to the original name.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {AlterVectorColumn}
-    </CodeBlock>
+    ```python Python icon="python"
+    vector_dim = 768  # Your embedding dimension
+    table_name = "vector_alter_example"
+    db = tmp_db
+    data = [
+        {
+            "id": 1,
+            "embedding": np.random.random(vector_dim).tolist(),
+        },
+    ]
+    table = db.create_table(table_name, data, mode="overwrite")
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsAlterVectorColumn}
-    </CodeBlock>
+    table.alter_columns(
+        dict(path="embedding", data_type=pa.list_(pa.float32(), vector_dim))
+    )
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsAlterVectorColumn}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const oldDim = 384;
+    const newDim = 1024;
+    const vectorSchema = new arrow.Schema([
+      new arrow.Field("id", new arrow.Int64()),
+      new arrow.Field(
+        "embedding",
+        new arrow.FixedSizeList(
+          oldDim,
+          new arrow.Field("item", new arrow.Float16(), true),
+        ),
+        true,
+      ),
+    ]);
+    const vectorData = lancedb.makeArrowTable(
+      [{ id: 1, embedding: Array.from({ length: oldDim }, () => Math.random()) }],
+      { schema: vectorSchema },
+    );
+    const vectorTable = await db.createTable("vector_alter_example", vectorData, {
+      mode: "overwrite",
+    });
+
+    // Changing FixedSizeList dimensions (384 -> 1024) is not supported via alterColumns.
+    // Use addColumns + dropColumns + alterColumns(rename) to replace the column.
+    await vectorTable.addColumns([
+      {
+        name: "embedding_v2",
+        valueSql: `arrow_cast(NULL, 'FixedSizeList(${newDim}, Float16)')`,
+      },
+    ]);
+    await vectorTable.dropColumns(["embedding"]);
+    await vectorTable.alterColumns([{ path: "embedding_v2", rename: "embedding" }]);
+    ```
+
+    ```rust Rust icon="rust"
+    let old_dim = 384;
+    let new_dim = 1024;
+    let vector_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new(
+            "embedding",
+            DataType::FixedSizeList(
+                Arc::new(Field::new("item", DataType::Float32, true)),
+                old_dim,
+            ),
+            true,
+        ),
+    ]));
+    let vector_batch = RecordBatch::try_new(
+        vector_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![1])),
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![Some(vec![Some(0.1_f32); old_dim as usize])],
+                    old_dim,
+                ),
+            ),
+        ],
+    )
+    .unwrap();
+    let vector_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(vector_batch)].into_iter(), vector_schema.clone()));
+    let vector_table = db
+        .create_table("vector_alter_example", vector_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    // Changing FixedSizeList dimensions (384 -> 1024) is not supported via alter_columns.
+    // Use add_columns + drop_columns + alter_columns(rename) to replace the column.
+    vector_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![(
+                "embedding_v2".to_string(),
+                format!("arrow_cast(NULL, 'FixedSizeList({}, Float32)')", new_dim),
+            )]),
+            None,
+        )
+        .await
+        .unwrap();
+    vector_table.drop_columns(&["embedding"]).await.unwrap();
+    vector_table
+        .alter_columns(&[ColumnAlteration::new("embedding_v2".to_string())
+            .rename("embedding".to_string())])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 <Warning>
@@ -767,33 +1395,89 @@ mention are preserved, and passing `None` (Python) or `null` (TypeScript) delete
 `replace: true` to swap the field's entire metadata map instead of merging.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {SchemaFieldMetadataMerge}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Set two metadata keys on the `category` field.
+    res = table.update_field_metadata(
+        {"path": "category", "metadata": {"unit": "label", "pii": "false"}}
+    )
+    print(res.version)
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsSchemaFieldMetadataMerge}
-    </CodeBlock>
+    # Merge: add a new key, delete one with None, keep the rest.
+    table.update_field_metadata(
+        {"path": "category", "metadata": {"source": "import", "pii": None}}
+    )
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsSchemaFieldMetadataMerge}
-    </CodeBlock>
+    # Arrow stores field metadata as bytes.
+    assert table.schema.field("category").metadata == {
+        b"unit": b"label",
+        b"source": b"import",
+    }
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    // Set two metadata keys on the `category` field.
+    const res = await fieldMetadataTable.updateFieldMetadata([
+      { path: "category", metadata: { unit: "label", pii: "false" } },
+    ]);
+    console.log(res.version);
+
+    // Merge: add a new key, delete one via null, keep the rest.
+    await fieldMetadataTable.updateFieldMetadata([
+      { path: "category", metadata: { source: "import", pii: null } },
+    ]);
+    ```
+
+    ```rust Rust icon="rust"
+    // Set two metadata keys on the `category` field.
+    let res = field_metadata_table
+        .update_field_metadata(&[FieldMetadataUpdate::new("category")
+            .set("unit", "label")
+            .set("pii", "false")])
+        .await
+        .unwrap();
+    println!("version: {}", res.version);
+
+    // Merge: add a new key, delete one with `.remove`, keep the rest.
+    field_metadata_table
+        .update_field_metadata(&[FieldMetadataUpdate::new("category")
+            .set("source", "import")
+            .remove("pii")])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 To overwrite a field's metadata entirely instead of merging, set `replace` to `true`:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {SchemaFieldMetadataReplace}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.update_field_metadata(
+        {
+            "path": "category",
+            "metadata": {"owner": "search-team"},
+            "replace": True,
+        }
+    )
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsSchemaFieldMetadataReplace}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    await fieldMetadataTable.updateFieldMetadata([
+      {
+        path: "category",
+        metadata: { owner: "search-team" },
+        replace: true,
+      },
+    ]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsSchemaFieldMetadataReplace}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    field_metadata_table
+        .update_field_metadata(&[FieldMetadataUpdate::new("category")
+            .set("owner", "search-team")
+            .replace()])
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 <Tip>
@@ -830,17 +1514,116 @@ You can remove columns using the [`drop_columns`](https://lancedb.github.io/lanc
 Create a table with temporary columns that we'll remove:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {SchemaDropSetup}
-    </CodeBlock>
+    ```python Python icon="python"
+    if data is None:
+        data = [
+            {
+                "id": 1,
+                "name": "Laptop",
+                "price": 1200.00,
+                "temp_col1": "X",
+                "temp_col2": 100,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 2,
+                "name": "Smartphone",
+                "price": 800.00,
+                "temp_col1": "Y",
+                "temp_col2": 200,
+                "vector": np.random.random(128).tolist(),
+            },
+            {
+                "id": 3,
+                "name": "Headphones",
+                "price": 150.00,
+                "temp_col1": "Z",
+                "temp_col2": 300,
+                "vector": np.random.random(128).tolist(),
+            },
+        ]
+    table = tmp_db.create_table("schema_evolution_drop_example", data, mode="overwrite")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsSchemaDropSetup}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const schemaDropData = [
+      {
+        id: 1,
+        name: "Laptop",
+        price: 1200.0,
+        temp_col1: "X",
+        temp_col2: 100,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+      {
+        id: 2,
+        name: "Smartphone",
+        price: 800.0,
+        temp_col1: "Y",
+        temp_col2: 200,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+      {
+        id: 3,
+        name: "Headphones",
+        price: 150.0,
+        temp_col1: "Z",
+        temp_col2: 300,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+    ];
+    const schemaDropTable = await db.createTable(
+      "schema_evolution_drop_example",
+      schemaDropData,
+      { mode: "overwrite" },
+    );
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsSchemaDropSetup}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let schema_drop_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("price", DataType::Float64, false),
+        Field::new("temp_col1", DataType::Utf8, false),
+        Field::new("temp_col2", DataType::Int32, false),
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 128),
+            false,
+        ),
+    ]));
+    let schema_drop_batch = RecordBatch::try_new(
+        schema_drop_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3])),
+            Arc::new(StringArray::from(vec!["Laptop", "Smartphone", "Headphones"])),
+            Arc::new(Float64Array::from(vec![1200.0, 800.0, 150.0])),
+            Arc::new(StringArray::from(vec!["X", "Y", "Z"])),
+            Arc::new(Int32Array::from(vec![100, 200, 300])),
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![
+                        Some(vec![Some(0.1_f32); 128]),
+                        Some(vec![Some(0.2_f32); 128]),
+                        Some(vec![Some(0.3_f32); 128]),
+                    ],
+                    128,
+                ),
+            ),
+        ],
+    )
+    .unwrap();
+    let schema_drop_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
+        vec![Ok(schema_drop_batch)].into_iter(),
+        schema_drop_schema.clone(),
+    ));
+    let schema_drop_table = db
+        .create_table("schema_evolution_drop_example", schema_drop_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Drop single columns {#schema-drop-single-columns}
@@ -848,17 +1631,20 @@ Create a table with temporary columns that we'll remove:
 Remove individual columns that are no longer needed:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {DropColumnsSingle}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Remove the first temporary column
+    table.drop_columns(["temp_col1"])
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsDropColumnsSingle}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Remove the first temporary column
+    await schemaDropTable.dropColumns(["temp_col1"]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsDropColumnsSingle}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Remove the first temporary column
+    schema_drop_table.drop_columns(&["temp_col1"]).await.unwrap();
+    ```
 </CodeGroup>
 
 #### Drop multiple columns {#schema-drop-multiple-columns}
@@ -866,21 +1652,29 @@ Remove individual columns that are no longer needed:
 Remove several columns at once for efficiency:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {DropColumnsMultiple}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Remove the second temporary column
+    table.drop_columns(["temp_col2"])
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsDropColumnsMultiple}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    // Remove the second temporary column
+    await schemaDropTable.dropColumns(["temp_col2"]);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsDropColumnsMultiple}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    // Remove the second temporary column
+    schema_drop_table.drop_columns(&["temp_col2"]).await.unwrap();
+    ```
 </CodeGroup>
 
-<Warning title="Irreversible Column Deletion">
-Dropping columns cannot be undone. Make sure you have backups or are certain before removing columns.
+<Warning title="Dropping a column is undone only by restoring a version">
+Dropping a column changes the latest version only. Until
+[cleanup](/maintenance/cleanup) prunes the versions from before the drop,
+[restoring](#versioning) one of them brings the column and its values back --
+along with the rest of the table as it was then. Once those versions are
+pruned, the drop cannot be undone, so check before dropping a column you may
+need.
 </Warning>
 
 ## Versioning {#versioning}
@@ -897,24 +1691,92 @@ Let's create a table with sample data to demonstrate LanceDB's versioning capabi
 First, let's create a table with some sample data:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningBasicSetup}
-    </CodeBlock>
+    ```python Python icon="python"
+    import pyarrow as pa
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningBasicSetup}
-    </CodeBlock>
+    db = tmp_db
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningBasicSetup}
-    </CodeBlock>
+    table_name = "quotes_versioning_example"
+    data = [
+        {"id": 1, "author": "Richard", "quote": "Wubba Lubba Dub Dub!"},
+        {"id": 2, "author": "Morty", "quote": "Rick, what's going on?"},
+        {
+            "id": 3,
+            "author": "Richard",
+            "quote": "I turned myself into a pickle, Morty!",
+        },
+    ]
+
+    # Define schema
+    schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            pa.field("author", pa.string()),
+            pa.field("quote", pa.string()),
+        ]
+    )
+
+    table = db.create_table(table_name, data, schema=schema, mode="overwrite")
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const tableName = "quotes_versioning_example";
+    const data = [
+      { id: 1, author: "Richard", quote: "Wubba Lubba Dub Dub!" },
+      { id: 2, author: "Morty", quote: "Rick, what's going on?" },
+      {
+        id: 3,
+        author: "Richard",
+        quote: "I turned myself into a pickle, Morty!",
+      },
+    ];
+    const table = await db.createTable(tableName, data, { mode: "overwrite" });
+    ```
+
+    ```rust Rust icon="rust"
+    let table_name = "quotes_versioning_example";
+    let data = vec![
+        (1, "Richard", "Wubba Lubba Dub Dub!"),
+        (2, "Morty", "Rick, what's going on?"),
+        (3, "Richard", "I turned myself into a pickle, Morty!"),
+    ];
+
+    let table = db
+        .create_table(table_name, make_quotes_reader(data))
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 <Expandable title="Rust helper used in this page">
 <CodeGroup>
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningMakeQuotesReader}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    fn make_quotes_reader(rows: Vec<(i64, &str, &str)>) -> Box<dyn RecordBatchReader + Send> {
+        let ids: Vec<i64> = rows.iter().map(|(id, _, _)| *id).collect();
+        let authors: Vec<&str> = rows.iter().map(|(_, author, _)| *author).collect();
+        let quotes: Vec<&str> = rows.iter().map(|(_, _, quote)| *quote).collect();
+
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("author", DataType::Utf8, false),
+            Field::new("quote", DataType::Utf8, false),
+        ]));
+
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(Int64Array::from(ids)),
+                Arc::new(StringArray::from(authors)),
+                Arc::new(StringArray::from(quotes)),
+            ],
+        )
+        .unwrap();
+        let reader = RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema);
+        Box::new(reader)
+    }
+    ```
 </CodeGroup>
 </Expandable>
 
@@ -923,17 +1785,26 @@ First, let's create a table with some sample data:
 After creating the table, let's check the initial version information:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningCheckInitialVersion}
-    </CodeBlock>
+    ```python Python icon="python"
+    versions = table.list_versions()
+    current_version = table.version
+    print(f"Number of versions after creation: {len(versions)}")
+    print(f"Current version: {current_version}")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningCheckInitialVersion}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const versions = await table.listVersions();
+    const currentVersion = await table.version();
+    console.log(`Number of versions after creation: ${versions.length}`);
+    console.log(`Current version: ${currentVersion}`);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningCheckInitialVersion}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let versions = table.list_versions().await.unwrap();
+    let current_version = table.version().await.unwrap();
+    println!("Number of versions after creation: {}", versions.len());
+    println!("Current version: {}", current_version);
+    ```
 </CodeGroup>
 
 ### Modify Data {#versioning-modify-data}
@@ -945,17 +1816,40 @@ When you modify data through operations like update or delete, LanceDB automatic
 Let's update some existing records to see versioning in action:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningUpdateData}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.update(where="author='Richard'", values={"author": "Richard Daniel Sanchez"})
+    rows_after_update = table.count_rows("author = 'Richard Daniel Sanchez'")
+    print(f"Rows updated to Richard Daniel Sanchez: {rows_after_update}")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningUpdateData}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    await table.update({
+      where: "author = 'Richard'",
+      values: { author: "Richard Daniel Sanchez" },
+    });
+    const rowsAfterUpdate = await table.countRows(
+      "author = 'Richard Daniel Sanchez'",
+    );
+    console.log(`Rows updated to Richard Daniel Sanchez: ${rowsAfterUpdate}`);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningUpdateData}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    table
+        .update()
+        .only_if("author = 'Richard'")
+        .column("author", "'Richard Daniel Sanchez'")
+        .execute()
+        .await
+        .unwrap();
+    let rows_after_update = table
+        .count_rows(Some("author = 'Richard Daniel Sanchez'".to_string()))
+        .await
+        .unwrap();
+    println!(
+        "Rows updated to Richard Daniel Sanchez: {}",
+        rows_after_update
+    );
+    ```
 </CodeGroup>
 
 #### Add New Data {#versioning-add-new-data}
@@ -963,17 +1857,41 @@ Let's update some existing records to see versioning in action:
 Now let's add more records to the table:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningAddData}
-    </CodeBlock>
+    ```python Python icon="python"
+    more_data = [
+        {
+            "id": 4,
+            "author": "Richard Daniel Sanchez",
+            "quote": "That's the way the news goes!",
+        },
+        {"id": 5, "author": "Morty", "quote": "Aww geez, Rick!"},
+    ]
+    table.add(more_data)
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningAddData}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const moreData = [
+      {
+        id: 4,
+        author: "Richard Daniel Sanchez",
+        quote: "That's the way the news goes!",
+      },
+      { id: 5, author: "Morty", quote: "Aww geez, Rick!" },
+    ];
+    await table.add(moreData);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningAddData}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let more_data = vec![
+        (4, "Richard Daniel Sanchez", "That's the way the news goes!"),
+        (5, "Morty", "Aww geez, Rick!"),
+    ];
+    table
+        .add(make_quotes_reader(more_data))
+        .execute()
+        .await
+        .unwrap();
+    ```
 </CodeGroup>
 
 #### Check Version Changes {#versioning-check-version-changes}
@@ -981,17 +1899,34 @@ Now let's add more records to the table:
 Let's see how the versions have changed after our modifications:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningCheckVersionsAfterMod}
-    </CodeBlock>
+    ```python Python icon="python"
+    versions = table.list_versions()
+    version_count_after_mod = len(versions)
+    version_after_mod = table.version
+    print(f"Number of versions after modifications: {version_count_after_mod}")
+    print(f"Current version: {version_after_mod}")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningCheckVersionsAfterMod}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const versionsAfterMod = await table.listVersions();
+    const versionCountAfterMod = versionsAfterMod.length;
+    const versionAfterMod = await table.version();
+    console.log(
+      `Number of versions after modifications: ${versionCountAfterMod}`,
+    );
+    console.log(`Current version: ${versionAfterMod}`);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningCheckVersionsAfterMod}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let versions_after_mod = table.list_versions().await.unwrap();
+    let version_count_after_mod = versions_after_mod.len();
+    let version_after_mod = table.version().await.unwrap();
+    println!(
+        "Number of versions after modifications: {}",
+        version_count_after_mod
+    );
+    println!("Current version: {}", version_after_mod);
+    ```
 </CodeGroup>
 
 ### Rollback to Previous Versions {#versioning-rollback-to-previous-versions}
@@ -1003,17 +1938,25 @@ LanceDB supports fast rollbacks to any previous version without data duplication
 First, let's see all the versions we've created:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningListAllVersions}
-    </CodeBlock>
+    ```python Python icon="python"
+    versions = table.list_versions()
+    for v in versions:
+        print(f"Version {v['version']}, created at {v['timestamp']}")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningListAllVersions}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    const allVersions = await table.listVersions();
+    for (const v of allVersions) {
+      console.log(`Version ${v.version}, created at ${v.timestamp}`);
+    }
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningListAllVersions}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    let all_versions = table.list_versions().await.unwrap();
+    for v in &all_versions {
+        println!("Version {}, created at {}", v.version, v.timestamp);
+    }
+    ```
 </CodeGroup>
 
 #### Restore a Version Snapshot {#versioning-restore-a-version-snapshot}
@@ -1021,17 +1964,33 @@ First, let's see all the versions we've created:
 Now let's restore a captured version snapshot:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningRollback}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.restore(version_after_mod)
+    versions = table.list_versions()
+    version_count_after_rollback = len(versions)
+    print(f"Total number of versions after rollback: {version_count_after_rollback}")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningRollback}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    await table.checkout(versionAfterMod);
+    await table.restore();
+    const versionsAfterRollback = await table.listVersions();
+    const versionCountAfterRollback = versionsAfterRollback.length;
+    console.log(
+      `Total number of versions after rollback: ${versionCountAfterRollback}`,
+    );
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningRollback}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    table.checkout(version_after_mod).await.unwrap();
+    table.restore().await.unwrap();
+    let versions_after_rollback = table.list_versions().await.unwrap();
+    let version_count_after_rollback = versions_after_rollback.len();
+    println!(
+        "Total number of versions after rollback: {}",
+        version_count_after_rollback
+    );
+    ```
 </CodeGroup>
 
 ### Tag-Based Versioning {#versioning-tag-based-versioning}
@@ -1040,24 +1999,95 @@ Numeric table versions like `v3` or `v17` are precise but hard to remember. Tags
 let you attach human-readable labels (e.g., `"prod"`, `"baseline"`,
 `"q3-evaluation"`) to specific versions and check those out by name. They are
 conceptually similar to git tags, and unlike numeric versions, **tagged versions
-are preserved when old versions are pruned** (see the cleanup note at the bottom
-of this page).
+are never pruned** -- a tagged version that is older than the retention window and
+is not the latest stops cleanup instead (see the cleanup note at the bottom of this
+page).
 
 The tags API supports the standard CRUD operations — create, list, update, delete —
 plus checking out by tag name.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningTags}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Create a tag pointing at a specific version
+    table.tags.create("baseline", 1)
+    table.tags.create("with-edits", table.version)
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningTags}
-    </CodeBlock>
+    # List all tags on this table
+    print(table.tags.list())
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningTags}
-    </CodeBlock>
+    # Look up the version a tag points at
+    print(table.tags.get_version("baseline"))
+
+    # Move an existing tag to a different version
+    table.tags.update("baseline", 2)
+
+    # Check out a version by tag name
+    table.checkout("baseline")
+    print(table.version)
+
+    # Delete a tag (does not delete the underlying version)
+    table.tags.delete("with-edits")
+
+    # Return to the latest version
+    table.checkout_latest()
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const tags = await tagsTable.tags();
+
+    // Create a tag pointing at a specific version
+    await tags.create("baseline", 1);
+    await tags.create("with-edits", await tagsTable.version());
+
+    // List all tags on this table
+    console.log(await tags.list());
+
+    // Look up the version a tag points at
+    console.log(await tags.getVersion("baseline"));
+
+    // Move an existing tag to a different version
+    await tags.update("baseline", 2);
+
+    // Check out a version by tag name
+    await tagsTable.checkout("baseline");
+    console.log(await tagsTable.version());
+
+    // Delete a tag (does not delete the underlying version)
+    await tags.delete("with-edits");
+
+    // Return to the latest version
+    await tagsTable.checkoutLatest();
+    ```
+
+    ```rust Rust icon="rust"
+    let mut tags = tags_table.tags().await.unwrap();
+
+    // Create a tag pointing at a specific version
+    tags.create("baseline", 1).await.unwrap();
+    let current_version = tags_table.version().await.unwrap();
+    tags.create("with-edits", current_version).await.unwrap();
+
+    // List all tags on this table
+    let all_tags = tags.list().await.unwrap();
+    println!("Tags: {:?}", all_tags);
+
+    // Look up the version a tag points at
+    let baseline_version = tags.get_version("baseline").await.unwrap();
+    println!("baseline -> v{}", baseline_version);
+
+    // Move an existing tag to a different version
+    tags.update("baseline", 2).await.unwrap();
+
+    // Check out a version by tag name (separate method in Rust)
+    tags_table.checkout_tag("baseline").await.unwrap();
+    println!("Current version: {}", tags_table.version().await.unwrap());
+
+    // Delete a tag (does not delete the underlying version)
+    tags.delete("with-edits").await.unwrap();
+
+    // Return to the latest version
+    tags_table.checkout_latest().await.unwrap();
+    ```
 </CodeGroup>
 
 <Note>
@@ -1084,17 +2114,17 @@ Let's demonstrate how deletions also create new versions:
 First, let's return to the latest version:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningCheckoutLatest}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.checkout_latest()
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningCheckoutLatest}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    await table.checkoutLatest();
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningCheckoutLatest}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    table.checkout_latest().await.unwrap();
+    ```
 </CodeGroup>
 
 #### Delete Data {#versioning-delete-data}
@@ -1102,17 +2132,23 @@ First, let's return to the latest version:
 Now let's delete some data to see how it affects versioning:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VersioningDeleteData}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.delete("author = 'Morty'")
+    rows_after_deletion = table.count_rows()
+    print(f"Number of rows after deletion: {rows_after_deletion}")
+    ```
 
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsVersioningDeleteData}
-    </CodeBlock>
+    ```typescript TypeScript icon="square-js"
+    await table.delete("author = 'Morty'");
+    const rowsAfterDeletion = await table.countRows();
+    console.log(`Number of rows after deletion: ${rowsAfterDeletion}`);
+    ```
 
-    <CodeBlock filename="Rust" language="Rust" icon="rust">
-    {RsVersioningDeleteData}
-    </CodeBlock>
+    ```rust Rust icon="rust"
+    table.delete("author = 'Morty'").await.unwrap();
+    let rows_after_deletion = table.count_rows(None).await.unwrap();
+    println!("Number of rows after deletion: {}", rows_after_deletion);
+    ```
 </CodeGroup>
 
 #### Version History and Operations {#versioning-version-history-and-operations}
@@ -1137,10 +2173,17 @@ mixing in lower-level Lance file operations.
 **System Operations**
 
 System operations like `optimize()`, index updates, and table compaction also increment table version numbers.
-In LanceDB OSS and Enterprise, `optimize()` can prune older versions based on its retention setting (`cleanup_older_than`, 7 days by default),
-which is when old-version files are removed and disk space is reclaimed.
+In LanceDB OSS, `optimize()` can prune older versions based on its retention setting (`cleanup_older_than`, 7 days by default),
+which is when old-version files are removed and disk space is reclaimed. A deployment prunes them in the background
+when its configuration enables [cleanup](/maintenance/cleanup); `optimize()` is not available there.
 
-**Tagged versions are exempt from cleanup.** A version with a tag pointing at it is
-retained regardless of age, and its files are not removed by `optimize()`. To make
-a tagged version eligible for pruning, [delete the tag](#versioning-tag-based-versioning) first.
+**Tagged versions are never pruned.** A version with a tag pointing at it is
+retained regardless of age. When a tagged version is older than the retention window and
+is not the latest, cleanup refuses to run instead of pruning around it: `optimize()` raises
+an error naming the tag and prunes nothing. A tag on the latest version does not cause
+this, but `optimize()` compacts before it prunes, and compacting commits a new version
+whenever it merges files, so a tag on what was the latest version can become an older
+one by the time cleanup runs; the error then comes after compacting, and the index
+update does not run. To let cleanup proceed, [move the tag](#versioning-tag-based-versioning)
+to a version inside the retention window, delete it, or widen the window.
 </Note>

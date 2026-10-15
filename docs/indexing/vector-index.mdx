@@ -5,26 +5,8 @@ description: "Build and manage LanceDB vector indexes."
 icon: "arrow-up-right-dots"
 ---
 
-import {
-    PyVectorIndexConfigureIvf as VectorIndexConfigureIvf,
-    PyVectorIndexSetup as VectorIndexSetup,
-    PyVectorIndexBuildIvf as VectorIndexBuildIvf,
-    PyVectorIndexNestedField as VectorIndexNestedField,
-    PyVectorIndexAsyncConfig as VectorIndexAsyncConfig,
-    PyVectorIndexQueryIvf as VectorIndexQueryIvf,
-    PyVectorIndexBuildHnsw as VectorIndexBuildHnsw,
-    PyVectorIndexQueryHnsw as VectorIndexQueryHnsw,
-    PyVectorIndexBinarySchema as VectorIndexBinarySchema,
-    PyVectorIndexBinaryAddData as VectorIndexBinaryAddData,
-    PyVectorIndexBinaryBuildIndex as VectorIndexBinaryBuildIndex,
-    PyVectorIndexBinarySearch as VectorIndexBinarySearch,
-    PyVectorIndexCheckStatus as VectorIndexCheckStatus,
-    PyVectorIndexNprobes as VectorIndexNprobes,
-    PyVectorIndexDistanceRange as VectorIndexDistanceRange,
-    PyVectorIndexBypassRecall as VectorIndexBypassRecall,
-    PyVectorIndexCustomName as VectorIndexCustomName,
-    PyQuantizationCustomParams as QuantizationCustomParams,
-} from '/snippets/indexing.mdx';
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Vector indexes are built in the embedded library and in LanceDB Enterprise. The embedded library builds an index before `create_index()` returns; a deployment builds it in the background, keeps it up to date, and builds only `IVF_FLAT`, `IVF_PQ`, `IVF_RQ` and `IVF_HNSW_SQ`.
 
 Vector indexes are robust tools in facilitating fast searches across large numeric datasets. 
 LanceDB implements **ANN (Approximate Nearest-Neighbor)** queries with several techniques that provide benefits across a variety of use cases.
@@ -53,7 +35,7 @@ Lance with `index_type`.
 | Maximum compression | `IVF_RQ` | IVF indexing with RaBitQ quantization | Around `1/32` of raw size | `IvfRq` |
 | Higher accuracy at small dimensions (`dimension <= 256`) | `IVF_PQ` | IVF indexing with product quantization | Usually `1/64` to `1/16` of raw size (depends on `num_sub_vectors`) | `IvfPq` |
 | Best recall/latency trade-off | `IVF_HNSW_SQ` | IVF-HNSW indexing with scalar | Typically a little larger than `1/4` of raw size | `IvfHnswSq` |
-| Highest recall / no quantization | `IVF_HNSW_FLAT` | IVF-HNSW indexing with no quantization | Around raw vector size plus HNSW graph overhead | `IvfHnswFlat` |
+| Highest recall / no quantization | `IVF_HNSW_FLAT` | IVF-HNSW indexing with no quantization; embedded library only | Around raw vector size plus HNSW graph overhead | `IvfHnswFlat` |
 
 <Warning>
 If your vector search frequently includes metadata filters (`where(...)`), use `IVF_RQ` or `IVF_PQ`. In filtered workloads, HNSW-backed IVF indexes such as `IVF_HNSW_FLAT` and `IVF_HNSW_SQ` can show higher latency variance.
@@ -114,7 +96,7 @@ your destination. This iterative series of road networks mimics the layered grap
 In LanceDB, HNSW is not exposed as a top-level vector index. Instead, it's available as a substructure which 
 further indexes the selected vectors inside each IVF partition. 
 This combines the scalability of IVF with the high recall of HNSW.
-LanceDB supports IVF-HNSW-based quantized indexes `IVF_HNSW_FLAT`, `IVF_HNSW_PQ`, and `IVF_HNSW_SQ`. 
+LanceDB supports IVF-HNSW-based quantized indexes `IVF_HNSW_FLAT`, `IVF_HNSW_PQ`, and `IVF_HNSW_SQ`; a deployment builds only `IVF_HNSW_SQ`.
 </Info>
 
 
@@ -139,9 +121,9 @@ Learn how to configure, build, and search LanceDB vector indexes, including buil
 | Parameter | Description |
 | :--- | :--- |
 | `limit` | Number of results to return (the `k` in `k-ANN`). |
-| `nprobes` | Shorthand that sets both `minimum_nprobes` and `maximum_nprobes` to the same value. LanceDB defaults this to 20 which is a good default for many cases.  At very high scales you will likely need to experiment to find your preferred recall / latency balance. |
-| `minimum_nprobes` | Minimum number of partitions scanned. |
-| `maximum_nprobes` | Maximum number of partitions scanned. Only scans more than `minimum_nprobes` if an initial pass does not return enough results — useful for narrow filters. Set to `0` to remove the cap. |
+| `nprobes` | Sets both `minimum_nprobes` and `maximum_nprobes` to the same value in Lance. Leave unset to use Lance's adaptive defaults. At very high scales you will likely need to experiment to find your preferred recall / latency balance. |
+| `minimum_nprobes` | Minimum number of partitions scanned. Leave unset to use Lance's default. |
+| `maximum_nprobes` | Maximum number of partitions scanned. Only scans more than `minimum_nprobes` if an initial pass does not return enough results, which is useful for narrow filters. Leave unset, or set to `0`, to remove the cap. |
 | `ef` | HNSW search-time exploration factor. Start around `1.5 * k` and increase up to `10 * k` for higher recall. |
 | `refine_factor` | Reads and reranks additional candidates in memory to recover recall lost to quantization. Start between `5` and `50` (a factor of `25` reads and reranks the top `25 * k` candidates) and measure the latency cost, typically a few milliseconds, against the recall gained. |
 | `distance_range(lower_bound, upper_bound)` | Return only rows whose distance falls within `[lower_bound, upper_bound)`. Either bound is optional. Useful for near-duplicate detection or "close-enough" matching. |
@@ -152,8 +134,8 @@ The `distance_type` can be specified at search time in addition to build time. I
 you do this, set it to the same value used to build the vector index. If the search
 metric does not match the index metric, LanceDB cannot use the index and falls
 back to a costly flat search. On LanceDB Cloud, the brute-force KNN safety limit
-can reject that search on a large table instead of executing it. LanceDB
-Enterprise doesn't have the limit.
+can reject that search on a large table instead of executing it. An Enterprise
+deployment applies the same limit only when it is configured to.
 
 When the search metric is omitted, current SDKs use the index metric if an index
 is available. Some older SDK versions sent `l2` when it was omitted, so explicitly
@@ -165,22 +147,33 @@ older client.
 
 | Index type | Guidance |
 | :--- | :--- |
-| `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Keep the default `nprobes`, then tune `ef` first. Expect higher latency variance under filtered search. |
-| `IVF_RQ`, `IVF_PQ` | Keep the default `nprobes` and raise when recall is insufficient.  If using a selective filter you may need to increase `maximum_nprobes` if you do not received enough results. |
+| `IVF_HNSW_FLAT`, `IVF_HNSW_SQ` | Leave the probe settings unset, then tune `ef` first. Expect higher latency variance under filtered search. |
+| `IVF_RQ`, `IVF_PQ` | Leave the probe settings unset and configure them only when recall is insufficient. If using a selective filter you may need to increase `maximum_nprobes` if you do not receive enough results. |
 
 
 <Note>
 **Filtered queries and adaptive `nprobes`.** When a `where(...)` filter is active, LanceDB initially scans `minimum_nprobes` 
 partitions and uses a wider scan if too few rows are found. 
 Set `minimum_nprobes == maximum_nprobes` or call `nprobes(n)` to instead fix the partition count.
+Whether a deployment widens the scan this way depends on its version; one that does not scans exactly
+`minimum_nprobes` partitions.
 </Note>
 
 Here is an example of a vector search exercising several of the above parameters.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexNprobes}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Always scan 10 partitions; scan up to 50 only if the initial pass
+    # returns fewer than `limit` results (common with narrow filters).
+    (
+        table.search(np.random.random(128))
+        .minimum_nprobes(10)
+        .maximum_nprobes(50)
+        .where("id > 100")
+        .limit(5)
+        .to_pandas()
+    )
+    ```
 </CodeGroup>
 
 
@@ -189,9 +182,16 @@ LanceDB also supports advanced search-time controls for thresholded retrieval, r
 **Thresholding with `distance_range`:**
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexDistanceRange}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Only return results whose distance falls within [0.0, 0.5).
+    # Useful for near-duplicate detection or thresholded similarity search.
+    (
+        table.search(np.random.random(128))
+        .distance_range(lower_bound=0.0, upper_bound=0.5)
+        .limit(10)
+        .to_pandas()
+    )
+    ```
 </CodeGroup>
 
 **Using `bypass_vector_index`:**
@@ -199,9 +199,18 @@ LanceDB also supports advanced search-time controls for thresholded retrieval, r
 Use `bypass_vector_index` to compute an exact **kNN** result. Note that exact queries may be prohibitively slow on production scales.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBypassRecall}
-    </CodeBlock>
+    ```python Python icon="python"
+    query = np.random.random(128)
+    k = 10
+
+    # Ground truth: flat (exhaustive) scan, ignoring the ANN index.
+    truth = set(table.search(query).bypass_vector_index().limit(k).to_pandas()["id"])
+
+    # ANN results with the current nprobes setting.
+    ann = set(table.search(query).nprobes(20).limit(k).to_pandas()["id"])
+
+    recall_at_k = len(truth & ann) / k
+    ```
 </CodeGroup>
 
 <Note title="Multivector distance constraint">
@@ -211,12 +220,35 @@ Multivector indexing currently requires `distance_type="cosine"`. Use `bypass_ve
 #### Async API and Config Objects
 
 Create vector indexes asynchronously with `await table.create_index("vector", config=...)`. The `config` object 
-admits the same build-time parameters described above — pass an instance of a Python config class from the table in [Choosing the Right Index](#choosing-the-right-index):
+admits the same build-time parameters described above. Pass an instance of a Python config class from the table in [Choosing the Right Index](#choosing-the-right-index):
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexAsyncConfig}
-    </CodeBlock>
+    ```python Python icon="python"
+    import lancedb
+    import numpy as np
+    from lancedb.index import IvfPq
+
+    async def main():
+        data = [
+            {"id": i, "vector": np.random.random(8).astype(np.float32).tolist()}
+            for i in range(512)
+        ]
+
+        db = await lancedb.connect_async("ex_lancedb")
+        table = await db.create_table(
+            "vector_index_async", data=data, mode="overwrite"
+        )
+
+        await table.create_index(
+            "vector",
+            config=IvfPq(
+                distance_type="cosine",
+                num_partitions=16,
+                num_sub_vectors=4,
+            ),
+        )
+        return await table.list_indices()
+    ```
 </CodeGroup>
 
 ### IVF Indexes
@@ -225,21 +257,44 @@ This example creates and queries an `IVF_PQ` index for a table of vectors with r
 Specify `vector_column_name` if you have multiple vector columns or non-default names. 
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBuildIvf + VectorIndexQueryIvf}
-    </CodeBlock>
+    ```python Python icon="python"
+    table_name = "vector-index-build-ivf"
+    table = db.open_table(table_name)
+    table.create_index(
+        metric="cosine",
+        vector_column_name="keywords_embeddings",
+    )
+    tbl = table
+    tbl.search(np.random.random((1536))).limit(2).nprobes(20).refine_factor(
+        10
+    ).to_pandas()
+    ```
 </CodeGroup>
 
 <Note>
 TypeScript currently doesn't support `IvfSq` (IVF with Scalar Quantization).
 </Note>
 
-For a vector field nested inside a struct, pass its full dotted path as `vector_column_name` (e.g. `image.embedding`) — the same path is used at query time and is what `list_indices()` reports under `columns`. See [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full path syntax.
+For a vector field nested inside a struct, pass its full dotted path as `vector_column_name` (e.g. `image.embedding`). The same path is used at query time and is what `list_indices()` reports under `columns`. See [Selecting the vector column](/search/vector-search#selecting-the-vector-column) for the full path syntax.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexNestedField}
-    </CodeBlock>
+    ```python Python icon="python"
+    # The vector column `embedding` is nested inside the `image` struct.
+    # Pass its full dotted path as `vector_column_name`; the same path is used
+    # at query time and is what `list_indices()` reports under `columns`.
+    table.create_index(
+        vector_column_name="image.embedding",
+        num_partitions=1,
+        num_sub_vectors=1,
+        name="image_embedding_idx",
+    )
+
+    results = (
+        table.search([0.0, 1.0], vector_column_name="image.embedding")
+        .limit(1)
+        .to_list()
+    )
+    ```
 </CodeGroup>
 
 ### IVF-HNSW Indexes
@@ -255,9 +310,11 @@ Partition sizing follows the general `num_partitions`/`target_partition_size` gu
 The snippet below builds and queries an `IVF_HNSW_SQ` index. 
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexBuildHnsw + VectorIndexQueryHnsw}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.create_index(index_type="IVF_HNSW_SQ")
+    tbl = table
+    tbl.search(np.random.random((16))).limit(2).to_pandas()
+    ```
 </CodeGroup>
 
 ### Managing Vector Indexes
@@ -265,17 +322,18 @@ The snippet below builds and queries an `IVF_HNSW_SQ` index.
  <Badge color="red">Enterprise-only</Badge> 
 In LanceDB Enterprise, vector indexes are managed **automatically**. The system asynchronously updates and optimizes indexes as a background process:
 - Automatically manages indexing parameters and storage
-- Infers vector columns from the schema
-- GPU-based indexing is available on request -- [contact support](/deployment/support) to enable it for your deployment. A few billion vectors index in under 4 hours on GPU.
+- Can build an `IVF_PQ` index automatically on a vector column the deployment is configured to index
+- GPU-based `IVF_PQ` builds are available on request -- [contact support](/deployment/support) to enable them for your deployment. Build time depends on dataset size, dimensions and GPU resources.
 
  <Badge color="gray">Open-Source</Badge> 
  LanceDB OSS users can manually create vector indexes by calling `table.create_index()`. 
  See the above sections for guidance on manually tuning index parameters as data changes.
 
 <Note>
-`create_index()` returns immediately, but the vector index builds asynchronously. 
-To wait until all data is indexed, specify the `wait_timeout` parameter, or call `wait_for_index(...)` afterward — 
-it waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`.
+In LanceDB Enterprise, `create_index()` returns immediately and the vector index builds asynchronously.
+To wait until all data is indexed, specify the `wait_timeout` parameter, or call `wait_for_index(...)` afterward.
+It waits for the named index to exist and for `index_stats(...)` to report `num_unindexed_rows == 0`.
+In the embedded library the index is built before `create_index()` returns.
 </Note>
 
 <Note>
@@ -287,11 +345,12 @@ fallback and searches only indexed rows.
 <Info>
 **Operational checks**
 
-After appends or other writes, use `optimize()` to fold new rows into existing indexes.
+In the embedded library, use `optimize()` after appends or other writes to fold new rows into existing indexes.
+A deployment does this in the background, and `optimize()` is not available there.
 </Info>
 #### Check Index Status
 
-Vector index creation runs in the background and may take some time to complete. 
+In LanceDB Enterprise, vector index creation runs in the background and may take some time to complete.
 While it is ongoing, you can check its status through the API or the **LanceDB Enterprise UI**.
 
 In the LanceDB Enterprise UI, navigate to your table page - the "Index" column reflects each column's index status: it is blank when no index exists, shows an "in progress" label while the index is being built, and shows the index type once the build completes.
@@ -311,14 +370,16 @@ Each entry returned by `list_indices()` also carries detailed per-index metadata
 
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexCheckStatus}
-    </CodeBlock>
+    ```python Python icon="python"
+    index_name = "keywords_embeddings_idx"
+    table.wait_for_index([index_name])
+    print(table.index_stats(index_name))
+    ```
 </CodeGroup>
 
 
 <Note>
-These fields are populated for local and embedded tables. On LanceDB Enterprise remote tables they are returned as `None` / `undefined` until the server response surfaces them.
+These fields are populated for local tables. In LanceDB Enterprise, `list_indices()` returns them except `num_unindexed_rows`; use `index_stats()` for index coverage.
 </Note>
 #### Custom Index Names
 
@@ -326,9 +387,16 @@ The `{column}_idx` suffix is the default naming convention.
 Pass `name=...` to `create_index()` to override it. Once set, the custom name will be reflected in `list_indices()`, `index_stats(name)`, and `wait_for_index([name])`.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {VectorIndexCustomName}
-    </CodeBlock>
+    ```python Python icon="python"
+    # Override the default `{column}_idx` convention by passing `name=...`.
+    table.create_index(
+        metric="cosine",
+        vector_column_name="keywords_embeddings",
+        name="my_custom_index",
+    )
+    table.wait_for_index(["my_custom_index"])
+    print(table.index_stats("my_custom_index"))
+    ```
 </CodeGroup>
 
 ## Quantization {#quantization}
@@ -343,9 +411,10 @@ compactly store an index.
 
 #### Product Quantization (PQ)
 To visualize PQ, assume a vector dataset has $d$ dimensions, with a **chunk** of a vector denoting a contiguous block of entries. Imagine that each vector has
- $m$ disjoint chunks of $d/m$ entries each, where the first chunk represents entries $0$ through $d-1$, the second contains entries $d$ through $2d - 1$, and so on.
+ $m$ disjoint chunks of $d/m$ entries each, where the first chunk contains entries $0$ through $d/m-1$, the second contains
+entries $d/m$ through $2d/m-1$, and so on.
 
-Now, for each $i$, let $S_i$ represent the set containing chunk $i$ of each vector (entries $(i-1)d$ to $di - 1$).
+Now, for each $i$, let $S_i$ represent the set containing chunk $i$ of each vector (entries $(i-1)d/m$ to $id/m-1$).
 For each $S_i$ independently, a small set of **centroids** is computed corresponding to an approximate solution to the $k$-means clustering problem.
 
 For each original vector in the dataset, every chunk is associated to its nearest centroid; thus, the vector itself is associated with the concatenation of $m$ centroids.
@@ -397,12 +466,17 @@ among all integral multiples $\{j \times 10^5: -128 \leq j \leq 127 \}$.
 
 | Parameter | Description |
 | :--- | :--- |
-| `num_bits` | Bits per dimension for quantization. Only applies to `IVF_PQ`/`IVF_HNSW_PQ` (default `8`) and `IVF_RQ` (default `1`, RaBitQ) — not used by `IVF_FLAT`/`IVF_SQ`/`IVF_HNSW_FLAT`/`IVF_HNSW_SQ`. Higher values improve accuracy at the cost of additional storage. |
+| `num_bits` | Bits per dimension for quantization. Only applies to `IVF_PQ`/`IVF_HNSW_PQ` (default `8`) and `IVF_RQ` (default `1`, RaBitQ); not used by `IVF_FLAT`/`IVF_SQ`/`IVF_HNSW_FLAT`/`IVF_HNSW_SQ`. Higher values improve accuracy at the cost of additional storage. |
 
 `max_iterations` and `sample_rate` also affect quantizer training, but since they apply to every IVF/HNSW index type (not just quantized ones), they're documented as general [Build-time Parameters](/indexing/vector-index#build-time-parameters) instead. All three are passed as keyword arguments to `create_index`, alongside `index_type`:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {QuantizationCustomParams}
-    </CodeBlock>
+    ```python Python icon="python"
+    table.create_index(
+        index_type="IVF_RQ",
+        num_bits=2,
+        max_iterations=100,
+        sample_rate=512,
+    )
+    ```
 </CodeGroup>

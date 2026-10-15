@@ -3,10 +3,13 @@ title: Cohere
 sidebarTitle: Cohere
 ---
 
-import { PyEmbeddingCohereUsage } from '/snippets/integrations.mdx';
 
 Using cohere API requires cohere package, which can be installed using `pip install cohere`. Cohere embeddings are used to generate embeddings for text data. The embeddings can be used for various tasks like semantic search, clustering, and classification.
 You also need to set the `COHERE_API_KEY` environment variable to use the Cohere API.
+
+```shell
+export COHERE_API_KEY="your-api-key"
+```
 
 Supported models are:
 
@@ -45,7 +48,28 @@ Cohere supports following input types:
 Usage Example:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingCohereUsage}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  from lancedb.embeddings import EmbeddingFunctionRegistry
+  from lancedb.pydantic import LanceModel, Vector
+
+  cohere = (
+      EmbeddingFunctionRegistry.get_instance()
+      .get("cohere")
+      .create(name="embed-multilingual-v2.0")
+  )
+
+  class TextModel(LanceModel):
+      text: str = cohere.SourceField()
+      vector: Vector(cohere.ndims()) = cohere.VectorField()
+
+  data = [{"text": "hello world"}, {"text": "goodbye world"}]
+
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "cohere-demo"))
+  tbl = db.create_table("test", schema=TextModel, mode="overwrite")
+  tbl.add(data)
+  ```
 </CodeGroup>

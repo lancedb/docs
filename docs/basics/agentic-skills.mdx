@@ -6,11 +6,6 @@ icon: robot
 keywords: ["agents", "plugin", "claude code", "codex", "cursor", "copilot"]
 ---
 
-import {
-  PyCamelotSchema,
-  PyCamelotBatches,
-  PyCamelotOssIngestion,
-} from '/snippets/build_with_ai_agents.mdx';
 
 A coding agent writing LanceDB code from memory writes whatever was in its
 training data -- often an older API, sometimes one that never existed. The
@@ -184,9 +179,31 @@ The plugin encourages the agent to validate each record with Pydantic before wri
 The agent should ideally define a schema for the table and a nested schema for the
 `stats` field.
 
-<CodeBlock filename="ingest_multimodal.py" language="Python" icon="python">
-  {PyCamelotSchema}
-</CodeBlock>
+```python ingest_multimodal.py icon="python"
+from lancedb.pydantic import LanceModel
+from pydantic import ConfigDict
+
+
+class Stats(LanceModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    strength: int
+    courage: int
+    magic: int
+    wisdom: int
+
+
+class Character(LanceModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    id: int
+    name: str
+    role: str
+    description: str
+    stats: Stats
+    image_filename: str
+    image: bytes
+```
 
 In this case, our agent correctly defined `Character` and `Stats` Pydantic models
 and validated the JSON before adding it to the table.
@@ -198,9 +215,35 @@ in LanceDB. The plugin encourages the agent to collect incoming rows into batche
 write them with a single `table.add()` call. When you use the plugin, the agent should
 produce something like this:
 
-<CodeBlock filename="ingest_multimodal.py" language="Python" icon="python">
-  {PyCamelotBatches}
-</CodeBlock>
+```python ingest_multimodal.py icon="python"
+import json
+from collections.abc import Iterator
+from pathlib import Path
+
+
+def validated_batches(
+    input_path: Path, batch_size: int
+) -> Iterator[list[dict]]:
+    raw_records = json.loads(input_path.read_text())
+    asset_root = input_path.parent.parent
+    batch: list[dict] = []
+
+    for raw in raw_records:
+        payload = dict(raw)
+        image_path = asset_root / payload.pop("img")
+        payload["image_filename"] = image_path.name
+        payload["image"] = image_path.read_bytes()
+
+        character = Character.model_validate(payload)
+        batch.append(character.model_dump(mode="python"))
+
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+
+    if batch:
+        yield batch
+```
 
 The script calls `Character.model_validate(...)` before adding a record to the
 batch. If validation fails, that batch is never written. The function yields up
@@ -212,9 +255,33 @@ For LanceDB OSS, the plugin instructs the agent to call
 `table.optimize()` after the ingestion loop. This compacts small fragments, cleans up
 old versions according to the retention policy, and incorporates new data into indexes.
 
-<CodeBlock filename="ingest_multimodal.py" language="Python" icon="python">
-  {PyCamelotOssIngestion}
-</CodeBlock>
+```python ingest_multimodal.py icon="python"
+import lancedb
+
+
+def ingest_oss(
+    input_path: Path,
+    uri: str = "data/camelot.lancedb",
+    table_name: str = "camelot_multimodal",
+    batch_size: int = 64,
+):
+    db = lancedb.connect(uri)
+    if table_name in db.list_tables():
+        raise ValueError(
+            f"Table {table_name!r} already exists. Choose a fresh table name."
+        )
+
+    table = db.create_table(table_name, schema=Character)
+    for batch in validated_batches(input_path, batch_size):
+        table.add(batch)
+
+    table.optimize()
+    return table
+
+
+if __name__ == "__main__":
+    ingest_oss(Path("data/camelot.json"))
+```
 
 If you're using LanceDB Enterprise, the plugin mentions that this step is not needed
 because LanceDB Enterprise handles maintenance automatically.
@@ -269,10 +336,11 @@ where appropriate.
 
 Choose [LanceDB Enterprise](/enterprise) when the resulting table becomes
 shared production infrastructure, and the workload needs distributed capacity,
-private deployment, or platform-managed operations. The underlying data format and table
-API stay the same, so the pipeline does not need to be redesigned. The agent
-instead connects to a remote `db://` table and lets the cluster handle
-maintenance and background work.
+private deployment, or platform-managed operations. The data format and the core
+table API stay the same, so the pipeline's table and search code carries over:
+the agent connects to a remote `db://` table, leaves maintenance to the
+deployment instead of calling `optimize()`, and submits long-running work as
+jobs. See [Moving to LanceDB Enterprise](/basics/sdk#moving-to-enterprise).
 
 ## What agents are good at here {#workflows}
 

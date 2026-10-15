@@ -3,10 +3,6 @@ title: ColPali
 sidebarTitle: ColPali
 ---
 
-import {
-  PyEmbeddingColpaliSetup,
-  PyEmbeddingColpaliTextSearch,
-} from '/snippets/integrations.mdx';
 
 We support [ColPali](https://github.com/illuin-tech/colpali) model embeddings for multimodal multi-vector retrieval. ColPali produces multiple embedding vectors per input (multi-vector), enabling more nuanced similarity matching between text queries and image documents.
 
@@ -38,16 +34,50 @@ Supported parameters (to be passed in `create` method) are:
 This embedding function supports ingesting images as both bytes and URLs. You can query them using text.
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingColpaliSetup}
-  </CodeBlock>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  import pandas as pd
+  import requests
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, MultiVector
+
+  db = lancedb.connect(str(Path(tempfile.mkdtemp()) / "colpali-demo"))
+  func = get_registry().get("colpali").create()
+
+  class Images(LanceModel):
+      label: str
+      image_uri: str = func.SourceField()
+      image_bytes: bytes = func.SourceField()
+      vector: MultiVector(func.ndims()) = func.VectorField()
+      vec_from_bytes: MultiVector(func.ndims()) = func.VectorField()
+
+  table = db.create_table("images", schema=Images)
+  labels = ["cat", "dog", "horse"]
+  uris = [
+      "http://farm1.staticflickr.com/53/167798175_7c7845bbbd_z.jpg",
+      "http://farm9.staticflickr.com/8387/8602747737_2e5c2a45d4_z.jpg",
+      "http://farm9.staticflickr.com/8216/8434969557_d37882c42d_z.jpg",
+  ]
+  image_bytes = [requests.get(uri).content for uri in uris]
+  table.add(
+      pd.DataFrame({"label": labels, "image_uri": uris, "image_bytes": image_bytes})
+  )
+  ```
 </CodeGroup>
 
 Now we can search using text queries:
 
 <CodeGroup>
-  <CodeBlock filename="Python" language="Python" icon="python">
-    {PyEmbeddingColpaliTextSearch}
-  </CodeBlock>
+  ```python Python icon="python"
+  actual = (
+      table.search("a furry pet", vector_column_name="vector")
+      .limit(1)
+      .to_pydantic(Images)[0]
+  )
+  print(actual.label)
+  ```
 </CodeGroup>
 

@@ -1,10 +1,19 @@
 ---
-title: "Storage"
-sidebarTitle: "Storage"
-description: "Choosing and configuring where LanceDB stores its data -- how you deploy an embedded database."
+title: "Embedded storage configuration"
+sidebarTitle: "Embedded Storage"
+description: "Choose and configure local disk or object storage for tables accessed by the embedded LanceDB OSS library."
 icon: database
 keywords: ["storage", "s3", "gcs", "azure", "object store", "configuration", "deploy"]
+tag: "OSS"
 ---
+
+<Badge color="green">OSS</Badge> The embedded library chooses and configures its storage backend from the connection URI and `storage_options`. In LanceDB Enterprise, storage is part of the deployment's own configuration instead.
+
+This page is about the embedded library, where your connection chooses and
+configures the storage backend. A LanceDB Enterprise deployment sets up its own
+storage when it is deployed, so a `db://` connection passes none of these
+options except an Azure storage account name -- see
+[Deployment](/enterprise/deployment) for how a deployment is set up.
 
 LanceDB's storage layer is built on modular, disk-first components. That design makes it flexible enough to run across local NVMe, EBS, EFS, and any object store that exposes an S3-compatible API. It also supports region-specific backends such as [Tencent COS](/storage/configuration#tencent-cos) and cache-acceleration layers such as [GooseFS](/storage/configuration#goosefs).
 
@@ -76,35 +85,6 @@ A few `storage_options` keys shape new tables in ways that depend on the backend
 - `new_table_enable_stable_row_ids` keeps row IDs stable across compaction, delete, and merge. The choice is independent of the backend but affects any system that joins on row ID.
 - `new_table_data_storage_version` selects the on-disk format. The default `stable` is recommended for all new tables; pick `legacy` only when older readers must keep working.
 
-import {
-    PyStorageAzureAccount,
-    PyStorageAzureSas,
-    PyStorageConnectAzure,
-    PyStorageConnectGcs,
-    PyStorageConnectS3,
-    PyStorageConnectTimeout,
-    PyStorageGcsServiceAccount,
-    PyStorageS3Express,
-    PyStorageS3Minio,
-    PyStorageS3SseKms,
-    PyStorageTableTimeout,
-    PyStorageTigrisConnect,
-    PyStorageCosConnect,
-    PyStorageGoosefsConnect,
-    TsStorageAzureAccount,
-    TsStorageAzureSas,
-    TsStorageConnectAzure,
-    TsStorageConnectGcs,
-    TsStorageConnectS3,
-    TsStorageConnectTimeout,
-    TsStorageGcsServiceAccount,
-    TsStorageS3Express,
-    TsStorageS3Minio,
-    TsStorageS3SseKms,
-    TsStorageTableTimeout,
-    TsStorageTigrisConnect,
-    TsStorageGoosefsConnect,
-} from '/snippets/storage.mdx';
 
 ### Configuring a backend {#configuring}
 
@@ -119,30 +99,39 @@ In LanceDB Enterprise, you connect with `db://...` and the cluster owns the stor
 LanceDB supports AWS S3 (and compatible stores), Azure Blob Storage, and Google Cloud Storage. The URI scheme in your `connect` call selects the backend.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageConnectS3}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageConnectS3}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect("s3://bucket/path")
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageConnectS3() {
+      const db = await lancedb.connect("s3://bucket/path");
+      return db;
+    }
+    ```
 </CodeGroup>
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageConnectGcs}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageConnectGcs}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect("gs://bucket/path")
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageConnectGcs() {
+      const db = await lancedb.connect("gs://bucket/path");
+      return db;
+    }
+    ```
 </CodeGroup>
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageConnectAzure}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageConnectAzure}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect("az://bucket/path")
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageConnectAzure() {
+      const db = await lancedb.connect("az://bucket/path");
+      return db;
+    }
+    ```
 </CodeGroup>
 
 ### Configuration options {#configuration-options}
@@ -150,12 +139,20 @@ LanceDB supports AWS S3 (and compatible stores), Azure Blob Storage, and Google 
 When running inside the target cloud with correct IAM bindings, LanceDB often needs no extra configuration. When running elsewhere, provide credentials via environment variables or `storage_options`.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageConnectTimeout}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageConnectTimeout}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "s3://bucket/path",
+        storage_options={"timeout": "60s"},
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageConnectTimeout() {
+      const db = await lancedb.connect("s3://bucket/path", {
+        storageOptions: { timeout: "60s" },
+      });
+      return db;
+    }
+    ```
 </CodeGroup>
 
 <Info>
@@ -167,18 +164,30 @@ Keys are case-insensitive. Use lowercase in `storage_options` and uppercase in e
 Table-level `storage_options` inherit every key from the connection and override on a per-key basis. Pass them to `create_table` or `open_table` for options that should apply to a single table:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageTableTimeout}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageTableTimeout}
-    </CodeBlock>
+    ```python Python icon="python"
+    table = db.create_table(
+        "table",
+        [{"a": 1, "b": 2}],
+        storage_options={"timeout": "60s"},
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageTableTimeout() {
+      const db = await lancedb.connect("s3://bucket/path");
+      const table = await db.createTable(
+        "table",
+        [{ a: 1, b: 2 }],
+        { storageOptions: { timeout: "60s" } },
+      );
+      return table;
+    }
+    ```
 </CodeGroup>
 
 <Tip>
-**Inspect the effective options**
+**Inspect a table's own options**
 
-On `AsyncTable`, `await table.initial_storage_options()` returns the options the table was opened with, and `await table.latest_storage_options()` returns the current options after any provider-driven refresh. The deprecated `table.storage_options()` method will be removed in a future release.
+On `AsyncTable`, `await table.initial_storage_options()` returns the options passed when the table was opened, and `await table.latest_storage_options()` returns them after any provider-driven refresh. Neither includes what the table inherits from its connection's `storage_options`, which still apply. The deprecated `table.storage_options()` method will be removed in a future release.
 </Tip>
 
 #### General object store options {#general-object-store-options}
@@ -268,12 +277,26 @@ Minimum permissions usually include `s3:PutObject`, `s3:GetObject`, `s3:DeleteOb
 ### S3-compatible stores {#s3-compatible-stores}
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageS3Minio}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageS3Minio}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "s3://bucket/path",
+        storage_options={
+            "region": "us-east-1",
+            "endpoint": "http://minio:9000",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageS3Minio() {
+      const db = await lancedb.connect("s3://bucket/path", {
+        storageOptions: {
+          region: "us-east-1",
+          endpoint: "http://minio:9000",
+        },
+      });
+      return db;
+    }
+    ```
 </CodeGroup>
 
 If the endpoint is `http://` (common in local development), also set `ALLOW_HTTP=true` or pass `allow_http=True` in `storage_options`.
@@ -281,12 +304,29 @@ If the endpoint is `http://` (common in local development), also set `ALLOW_HTTP
 ### S3 Express {#s3-express}
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageS3Express}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageS3Express}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "s3://my-bucket--use1-az4--x-s3/path",
+        storage_options={
+            "region": "us-east-1",
+            "s3_express": "true",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageS3Express() {
+      const db = await lancedb.connect(
+        "s3://my-bucket--use1-az4--x-s3/path",
+        {
+          storageOptions: {
+            region: "us-east-1",
+            s3Express: "true",
+          },
+        },
+      );
+      return db;
+    }
+    ```
 </CodeGroup>
 
 Consult AWS networking requirements for S3 Express before enabling.
@@ -302,12 +342,26 @@ LanceDB aborts multipart uploads on graceful shutdown, but crashes can leave inc
 To encrypt at rest with an AWS KMS key, set `aws_server_side_encryption` to `aws:kms` and `aws_sse_kms_key_id` to the key ID or ARN. The same options apply at connection or table level and combine with bucket-level default encryption.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageS3SseKms}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageS3SseKms}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "s3://bucket/path",
+        storage_options={
+            "aws_server_side_encryption": "aws:kms",
+            "aws_sse_kms_key_id": "<your-kms-key-id-or-arn>",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageS3SseKms() {
+      const db = await lancedb.connect("s3://bucket/path", {
+        storageOptions: {
+          awsServerSideEncryption: "aws:kms",
+          awsSseKmsKeyId: "<your-kms-key-id-or-arn>",
+        },
+      });
+      return db;
+    }
+    ```
 </CodeGroup>
 
 The IAM principal needs `kms:Encrypt`, `kms:Decrypt`, and `kms:GenerateDataKey` on the configured KMS key.
@@ -319,12 +373,27 @@ The IAM principal needs `kms:Encrypt`, `kms:Decrypt`, and `kms:GenerateDataKey` 
 Provide credentials via `GOOGLE_SERVICE_ACCOUNT` (path to JSON) or include the path in `storage_options`. GCS defaults to HTTP/1; set `HTTP1_ONLY=false` if you need HTTP/2.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageGcsServiceAccount}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageGcsServiceAccount}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "gs://my-bucket/my-database",
+        storage_options={
+            "service_account": "path/to/service-account.json",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageGcsServiceAccount() {
+      const db = await lancedb.connect(
+        "gs://my-bucket/my-database",
+        {
+          storageOptions: {
+            serviceAccount: "path/to/service-account.json",
+          },
+        },
+      );
+      return db;
+    }
+    ```
 </CodeGroup>
 
 ### Azure Blob Storage {#azure-blob-storage}
@@ -334,23 +403,57 @@ Provide credentials via `GOOGLE_SERVICE_ACCOUNT` (path to JSON) or include the p
 Set `AZURE_STORAGE_ACCOUNT_NAME` and `AZURE_STORAGE_ACCOUNT_KEY` as environment variables, or pass them via `storage_options`.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageAzureAccount}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageAzureAccount}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "az://my-container/my-database",
+        storage_options={
+            "account_name": "some-account",
+            "account_key": "some-key",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageAzureAccount() {
+      const db = await lancedb.connect(
+        "az://my-container/my-database",
+        {
+          storageOptions: {
+            accountName: "some-account",
+            accountKey: "some-key",
+          },
+        },
+      );
+      return db;
+    }
+    ```
 </CodeGroup>
 
 For SAS-token auth, set `azure_storage_account_name` and `azure_storage_sas_token`:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageAzureSas}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageAzureSas}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "az://my-container/my-database",
+        storage_options={
+            "azure_storage_account_name": "some-account",
+            "azure_storage_sas_token": "<sas-token>",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageAzureSas() {
+      const db = await lancedb.connect(
+        "az://my-container/my-database",
+        {
+          storageOptions: {
+            azureStorageAccountName: "some-account",
+            azureStorageSasToken: "<sas-token>",
+          },
+        },
+      );
+      return db;
+    }
+    ```
 </CodeGroup>
 
 Other supported keys include service principal credentials (`azure_client_id`, `azure_client_secret`, `azure_tenant_id`), managed identities, and custom endpoints.
@@ -362,12 +465,29 @@ Other supported keys include service principal credentials (`azure_client_id`, `
 Tigris exposes an S3-compatible API. Configure the endpoint and region:
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageTigrisConnect}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageTigrisConnect}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "s3://your-bucket/path",
+        storage_options={
+            "endpoint": "https://t3.storage.dev",
+            "region": "auto",
+        },
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageTigrisConnect() {
+      const db = await lancedb.connect(
+        "s3://your-bucket/path",
+        {
+          storageOptions: {
+            endpoint: "https://t3.storage.dev",
+            region: "auto",
+          },
+        },
+      );
+      return db;
+    }
+    ```
 </CodeGroup>
 
 Environment variables `AWS_ENDPOINT=https://t3.storage.dev` and `AWS_DEFAULT_REGION=auto` achieve the same configuration.
@@ -377,9 +497,16 @@ Environment variables `AWS_ENDPOINT=https://t3.storage.dev` and `AWS_DEFAULT_REG
 [Tencent Cloud Object Storage (COS)](https://www.tencentcloud.com/products/cos) is the primary object store for workloads running in the China region. Use the `cos://` URI scheme to connect directly to a COS bucket.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageCosConnect}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect(
+        "cos://my-bucket/my-database",
+        storage_options={
+            "secret_id": "<tencent-cloud-secret-id>",
+            "secret_key": "<tencent-cloud-secret-key>",
+            "region": "ap-guangzhou",
+        },
+    )
+    ```
 </CodeGroup>
 
 Supported keys include `secret_id`, `secret_key`, `region`, and `endpoint`. You can also authenticate via the `TENCENTCLOUD_SECRET_ID` and `TENCENTCLOUD_SECRET_KEY` environment variables.
@@ -395,12 +522,15 @@ COS is bundled in the Python wheel by default. To use it from Rust or the Node b
 [GooseFS](https://www.tencentcloud.com/document/product/1424) is Tencent Cloud's distributed cache acceleration layer for COS and S3. It is a common choice when the same hot dataset is read repeatedly, such as vector search and AI training workloads. Connect using the `goosefs://` URI scheme.
 
 <CodeGroup>
-    <CodeBlock filename="Python" language="Python" icon="python">
-    {PyStorageGoosefsConnect}
-    </CodeBlock>
-    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
-    {TsStorageGoosefsConnect}
-    </CodeBlock>
+    ```python Python icon="python"
+    db = lancedb.connect("goosefs://my-namespace/my-database")
+    ```
+    ```typescript TypeScript icon="square-js"
+    async function storageGoosefsConnect() {
+      const db = await lancedb.connect("goosefs://my-namespace/my-database");
+      return db;
+    }
+    ```
 </CodeGroup>
 
 GooseFS reads credentials and endpoint configuration from the GooseFS client environment. See the [GooseFS documentation](https://www.tencentcloud.com/document/product/1424) for cluster setup.
