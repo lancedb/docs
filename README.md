@@ -9,13 +9,10 @@ the open-source pages in `lancedb/lancedb` and the Enterprise pages in
 `lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
 
 This repository's `docs/` holds the pages it still owns: the Geneva pages, the
-dataset cards and the REST API reference. The Geneva pages stay published
-through the official Function launch and the transition after it, because the
-Function pages do not replace their APIs; retiring them is a separate, later
-decision. They and their snippets (`docs/snippets/geneva_*.mdx`) are kept as
-published at `deploy-freeze`; the tests that generated those snippets need the
-`geneva` package and are not in this repository, so the snippets are not
-regenerated.
+dataset cards and the REST API reference. The four Geneva snippets
+(`docs/snippets/geneva_*.mdx`) are frozen copies from `deploy-freeze`; the tests
+that generated them need the `geneva` package and are not in this repository,
+so the snippets are not regenerated.
 
 Install the [Mintlify CLI](https://www.npmjs.com/package/mint) at the version CI
 uses:
@@ -36,12 +33,6 @@ To build from other checkouts or worktrees, point `LANCEDB_DOCS_ROOT` and
 `SOPHON_DOCS_ROOT` at their `docs/web` directories. The assembler prints the
 commit it read each root from, and what it published of each unlaunched
 feature, so every build names its inputs.
-
-To preview the site as the Function launch will publish it:
-
-```bash
-DOCS_FUNCTIONS=launched make assemble
-```
 
 Check the assembled site the way CI does, and run the assembler's own tests:
 
@@ -81,32 +72,75 @@ compiler Mint uses when `MDX_COMPILER` names the `index.js` of the
 `@mdx-js/mdx` package installed with Mint and `node` is on the path; otherwise
 those tests are skipped.
 
-### Unlaunched features
+### Publication gates
 
-A feature can be documented before it launches. `launches` in `assemble.yaml`
-lists such features and whether each has launched; `functions` is `unlaunched`
-until the official Function launch. Until a feature launches, the assembler
-leaves out:
+Publication gates let sources document a feature before its documentation is
+ready to publish. They control the assembled documentation, not whether a
+server feature is enabled. Register each gate in `launches` in `assemble.yaml`.
+Names start with a lowercase letter and contain only lowercase letters, digits
+and hyphens; states are `launched` or `unlaunched`. For example:
 
-- every page whose frontmatter says `launch: functions`, so its URL does not
-  resolve;
-- the navigation entries and redirects that reach those pages, and any group
-  left empty;
-- what other pages mark for the feature. A section between
-  `{/* if functions launched */}` and `{/* end if */}`, each on a line of its
-  own, is published only once the feature launches;
-  `{/* if functions not launched */}` marks one published only until then. On
-  a line with other text, such as a table row or a list item, the marker gates
-  that line alone;
-- the examples on the pages it leaves out.
+```yaml
+launches:
+  feature-name: ${DOCS_FEATURE_NAME:-unlaunched}
+```
 
-A published page that still links to a left-out page, or a marker it cannot
-read, stops the build. Any comment that opens with `if` or `end`, or mentions a
-launch, is read as a marker, and so is any YAML spelling of the `launch` key.
-Launching is changing the default in `assemble.yaml`.
-Docs Check validates the launched site as well, so the pages a launch
-publishes have already passed. `mint dev` in a single root shows every
-section, both sides of each marker included; assemble to see either site.
+This example defaults to `unlaunched`; `DOCS_FEATURE_NAME=launched make assemble`
+previews its launched documentation. Changing the configured default changes
+what subsequent builds publish.
+
+In a page's source root, gate a whole page with a frontmatter line:
+
+```yaml
+launch: feature-name
+```
+
+Until that gate is `launched`, the assembler leaves out the page and its
+examples, the navigation entries and redirects that reach it, and any group
+left empty. On shared pages, gate a block with markers on their own lines:
+
+```mdx
+{/* if feature-name launched */}
+Content published when the gate is launched.
+{/* end if */}
+```
+
+Use `{/* if feature-name not launched */}` for content published only while
+the gate is unlaunched. A marker on a line with other text, such as a table row
+or a list item, gates that line alone and needs no closing marker. Blocks
+cannot nest. The assembler removes the gate frontmatter and markers from
+published pages.
+
+An unknown gate, an invalid state, a malformed marker, or a published page that
+still links to an omitted page stops the build. Any comment that opens with
+`if` or `end`, or mentions a launch, is reserved for markers, and any YAML
+spelling of the `launch` key is checked. `mint dev` in a single root shows both
+sides of the markers; assemble to preview a configured state.
+
+When adding a gate, register its default and optional environment override,
+mark the source-owned pages and shared sections, and run `make test-assemble`.
+Build and check both its unlaunched and launched states with `mint validate`
+and `mint broken-links --check-anchors --check-redirects` on each assembled
+tree. Add explicit scenarios to `.github/workflows/docs-ci.yml` with those
+checks before relying on CI for the new gate. The current workflow checks the
+configured defaults and a separate Functions-launched scenario; it does not
+automatically exercise future gates. Where gates refer to one another, include
+the supported combination needed to check those links.
+
+### Functions status and Geneva transition
+
+The `functions` gate currently defaults to `unlaunched` until the official
+Function launch. To preview its launched documentation:
+
+```bash
+DOCS_FUNCTIONS=launched make assemble
+```
+
+Docs Check explicitly validates this scenario as well as the configured
+defaults. The Geneva pages remain published through the Function launch and
+the transition after it; the Function pages do not replace their APIs.
+Retiring Geneva documentation is a separate decision. Its four frozen snippets
+stay unchanged.
 
 ## Publishing
 

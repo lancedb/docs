@@ -587,23 +587,16 @@ def published_pages(resolved: Resolved) -> list[str]:
 
 
 # --------------------------------------------------------------------------- #
-# stage 5: gate
+# stage 5: apply publication gates
 # --------------------------------------------------------------------------- #
 
-# A feature can be documented before it launches. Its pages declare
-#
-#     launch: functions
-#
-# in their frontmatter, and a shared page marks what it says about the feature:
-#
-#     {/* if functions launched */}
-#     ...
-#     {/* end if */}
-#
-# `if functions not launched` marks what applies only until then. A marker on a
-# line with other text -- a table row, a list item -- gates that line alone.
-# `launches` in assemble.yaml says which features have launched, so the same
-# sources build either site.
+# Publication gates select documentation from the resolved source pages using
+# the feature states in assemble.yaml. Whole-page gates remove pages and their
+# navigation and redirects; section gates keep the matching block or inline
+# line. Gate metadata and markers are removed from the published output.
+# Unknown features, malformed or nested blocks, and remaining links to omitted
+# pages stop the build. This controls docs publication, not server enablement.
+# Authoring syntax and configuration guidance live in README.md.
 LAUNCH_LINE_RE = re.compile(r"""^(["']?)launch\1[ \t]*:.*\n(?:[ \t].*\n)*""", re.M)
 LAUNCH_MARKER_RE = re.compile(
     r"\{/\*[ \t]*if[ \t]+(?P<name>[a-z][a-z0-9-]*)[ \t]+(?P<negated>not[ \t]+)?"

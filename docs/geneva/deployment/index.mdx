@@ -139,7 +139,9 @@ Geneva needs the ability to deploy a KubeRay cluster and submit jobs to Ray. The
 
 #### Geneva Security Requirements
 
-In the following sections we'll use these variables:
+In the following sections we'll use these variables. `STORAGE_URI` is the
+underlying `gs://` storage path used for bucket permissions and storage access;
+it is separate from `LANCEDB_URI`, the database's `db://` URI used to connect.
 
 ```bash
 NAMESPACE=lancedb  # replace with your actual namespace if different

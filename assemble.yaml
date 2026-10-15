@@ -37,11 +37,11 @@ roots:
     path: docs
     role: reference
 
-# Features documented ahead of their launch. Until a feature has `launched`,
-# the site leaves out its pages, the sections other pages mark for it, its
-# examples, and the navigation and redirects that reach them; see "Unlaunched
-# features" in README.md. DOCS_FUNCTIONS=launched previews the site as the
-# Function launch will publish it; launching is changing the default here.
+# Documentation publication gates. Each registered feature is `launched` or
+# `unlaunched`; environment overrides can preview another state. Omitted pages,
+# marked sections, examples, navigation and redirects follow that state.
+# These gates do not enable server features. See "Publication gates" in
+# README.md for authoring, registration and required CI scenarios.
 launches:
   functions: ${DOCS_FUNCTIONS:-unlaunched}
 
