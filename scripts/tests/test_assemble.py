@@ -1,4 +1,5 @@
-"""Tests for the assembler's overlay, navigation and private-root guards.
+"""Tests for the assembler's overlay, navigation, private-root, availability,
+draft and example handling.
 
 Each test builds a small site in a temporary directory: a reference root that
 owns `enterprise/security` and the navigation, and a private overlay root at
@@ -8,6 +9,9 @@ Run with `make test-assemble`.
 """
 
 import json
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -99,6 +103,8 @@ def build(config_path: Path) -> Path:
     docs_json, nav_raw = assemble.assemble_nav(resolved)
     assemble.validate(loaded, resolved, docs_json)
     assemble.merge(resolved)
+    assemble.inline_examples(resolved)
+    assemble.annotate(resolved, docs_json)
     assemble.emit(loaded, resolved, docs_json, nav_raw)
     return loaded.output
 
@@ -229,3 +235,619 @@ def test_overlay_without_a_reference_page_is_refused(base):
 
     with pytest.raises(assemble.AssembleError, match=r"no reference page"):
         build(config(base, paths["reference"], paths["public"]))
+
+
+ENTERPRISE_ONLY = """availability:
+  oss: unavailable
+  enterprise: available
+  summary: A deployment checks every request.
+"""
+BOTH = """availability:
+  oss: available
+  enterprise: available
+  summary: Local views refresh in full; see [Against a deployment](#deployment).
+"""
+BOTH_AVAILABLE = """availability:
+  oss: available
+  enterprise: available
+  summary: Works in both offerings.
+"""
+IMPORTS = "import { Example } from '/snippets/example.mdx';\n"
+# Valid MDX whose JavaScript contains blank lines.
+MULTILINE_IMPORT = "import {\n  A,\n\n  B\n} from '/snippets/probe.mdx';\n\n<A />\n<B />\n"
+MULTILINE_EXPORT = "export const helper = () => {\n\n  return 1;\n};\n\nContent.\n"
+# The MDX compiler Mint uses: `<mint>/node_modules/@mdx-js/mdx/index.js`.
+MDX_COMPILER = os.environ.get("MDX_COMPILER")
+
+
+def page(frontmatter: str = "", body: str = "First paragraph.\n") -> str:
+    return f'---\ntitle: "A page"\n{frontmatter}---\n\n{body}'
+
+
+def availability_site(base: Path, pages: dict[str, str], nav: list[str]) -> Path:
+    """A site whose reference root holds `pages`, listed in the order of `nav`."""
+    paths = site(base)
+    navigation = {
+        "tabs": [{"tab": "Documentation", "groups": [{"group": "Pages", "pages": nav}]}]
+    }
+    write(paths["reference"] / "docs.json", json.dumps({"navigation": navigation}))
+    for rel, text in pages.items():
+        write(paths["reference"] / rel, text)
+    return config(base, paths["reference"], public_root(paths))
+
+
+def test_availability_renders_a_label_and_a_tag(base):
+    body = f"{IMPORTS}\n## Section {{#section}}\n\n<Example />\n"
+    source = page(ENTERPRISE_ONLY + "icon: key\n", body)
+    output = build(availability_site(base, {"auth.mdx": source}, ["auth"]))
+
+    assert (output / "auth.mdx").read_text() == (
+        '---\ntitle: "A page"\nicon: key\ntag: "Enterprise"\n---\n\n'
+        '<Badge color="red">Enterprise</Badge> A deployment checks every request.\n\n'
+        f"{IMPORTS}\n"
+        "## Section {#section}\n\n<Example />\n"
+    )
+
+
+def render(base: Path, body: str) -> str:
+    output = build(
+        availability_site(base, {"p.mdx": page(BOTH_AVAILABLE, body)}, ["p"])
+    )
+    return (output / "p.mdx").read_text()
+
+
+@pytest.mark.parametrize("body", [MULTILINE_IMPORT, MULTILINE_EXPORT])
+def test_label_is_placed_before_any_javascript(base, body):
+    assert render(base, body) == (
+        '---\ntitle: "A page"\n---\n\n'
+        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> '
+        f"Works in both offerings.\n\n{body}"
+    )
+
+
+def compile_mdx(text: str) -> subprocess.CompletedProcess:
+    script = (
+        f"import {{compile}} from {json.dumps(MDX_COMPILER)};\n"
+        "let source = '';\n"
+        "for await (const chunk of process.stdin) source += chunk;\n"
+        "await compile(source);\n"
+    )
+    body = assemble.split_frontmatter(text)[1]
+    return subprocess.run(
+        ["node", "--input-type=module", "-e", script],
+        input=body,
+        capture_output=True,
+        text=True,
+    )
+
+
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
+)
+@pytest.mark.parametrize("body", [MULTILINE_IMPORT, MULTILINE_EXPORT])
+def test_labelled_page_still_compiles_as_mdx(base, body):
+    source = compile_mdx(page(BOTH_AVAILABLE, body))
+    assert source.returncode == 0, source.stderr
+    rendered = compile_mdx(render(base, body))
+    assert rendered.returncode == 0, rendered.stderr
+
+
+@pytest.mark.parametrize("declaration", [ENTERPRISE_ONLY, BOTH, BOTH_AVAILABLE])
+def test_hand_set_tag_is_refused_whatever_the_declaration(base, declaration):
+    source = page(declaration + "tag: Enterprise\n")
+    with pytest.raises(assemble.AssembleError, match=r"remove `tag`"):
+        build(availability_site(base, {"p.mdx": source}, ["p"]))
+
+
+def test_supported_feature_with_constraints_is_labelled_and_untagged(base):
+    output = build(availability_site(base, {"views.mdx": page(BOTH)}, ["views"]))
+
+    assert (output / "views.mdx").read_text() == (
+        '---\ntitle: "A page"\n---\n\n'
+        '<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> '
+        "Local views refresh in full; see [Against a deployment](#deployment).\n\n"
+        "First paragraph.\n"
+    )
+
+
+@pytest.mark.parametrize("offering", ["oss", "enterprise"])
+@pytest.mark.parametrize("status", ["varies", "unknown", "coming-soon"])
+def test_nonbinary_support_is_refused_without_coercion(base, offering, status):
+    declaration = BOTH_AVAILABLE.replace(
+        f"{offering}: available", f"{offering}: {status}"
+    )
+    error = (
+        rf"views.mdx: availability.{offering}.*"
+        r"not one of available, unavailable"
+    )
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(availability_site(base, {"views.mdx": page(declaration)}, ["views"]))
+
+
+def test_pages_without_availability_are_copied_unchanged(base):
+    plain = page(body='<Badge color="red">Enterprise</Badge> Hand-written.\n')
+    output = build(availability_site(base, {"plain.mdx": plain}, ["plain"]))
+
+    assert (output / "plain.mdx").read_text() == plain
+
+
+def test_comparison_lists_declaring_pages_in_navigation_order(base):
+    pages = {
+        "auth.mdx": page('sidebarTitle: "Auth"\n' + ENTERPRISE_ONLY),
+        "views.mdx": page(BOTH),
+        "offerings.mdx": page(
+            body="Intro.\n\n{/* availability-comparison */}\n\nAfter.\n"
+        ),
+    }
+    output = build(availability_site(base, pages, ["offerings", "views", "auth"]))
+
+    assert (output / "offerings.mdx").read_text() == page(
+        body="Intro.\n\n"
+        "### Pages {#availability-pages}\n\n"
+        "| Topic | OSS / Enterprise |\n"
+        "| --- | --- |\n"
+        "| [A page](/views): Local views refresh in full; "
+        "see [Against a deployment](/views#deployment). | Yes / Yes |\n"
+        "| [Auth](/auth): A deployment checks every request. | No / Yes |\n"
+        "\nAfter.\n"
+    )
+
+
+def test_comparison_has_a_table_per_navigation_section(base):
+    paths = site(base)
+    navigation = {
+        "tabs": [
+            {
+                "tab": "Documentation",
+                "groups": [
+                    {
+                        "group": "Search",
+                        "pages": [
+                            "search/index",
+                            {"group": "Nested", "pages": ["search/deep"]},
+                        ],
+                    },
+                    {"group": "Security", "pages": ["auth"]},
+                ],
+            },
+            {
+                "tab": "Integrations",
+                "pages": ["hf", {"group": "Search", "pages": ["search/more"]}],
+            },
+        ]
+    }
+    write(paths["reference"] / "docs.json", json.dumps({"navigation": navigation}))
+    pages = {
+        "search/index.mdx": page('sidebarTitle: "Overview"\n' + BOTH_AVAILABLE),
+        "search/deep.mdx": page(BOTH),
+        "search/more.mdx": page(BOTH_AVAILABLE),
+        "auth.mdx": page(ENTERPRISE_ONLY),
+        "hf.mdx": page(BOTH_AVAILABLE),
+        "unlisted.mdx": page(ENTERPRISE_ONLY),
+        "offerings.mdx": page(body="{/* availability-comparison */}\n"),
+    }
+    for rel, text in pages.items():
+        write(paths["reference"] / rel, text)
+
+    output = build(config(base, paths["reference"], public_root(paths)))
+
+    header = "| Topic | OSS / Enterprise |\n| --- | --- |\n"
+    both = "Works in both offerings. | Yes / Yes |\n"
+    assert (output / "offerings.mdx").read_text() == page(
+        body="### Search {#availability-search}\n\n" + header
+        + f"| [Overview](/search): {both}"
+        "| [A page](/search/deep): Local views refresh in full; "
+        "see [Against a deployment](/search/deep#deployment). | Yes / Yes |\n"
+        f"| [A page](/search/more): {both}"
+        "\n### Security {#availability-security}\n\n" + header
+        + "| [A page](/auth): A deployment checks every request. | No / Yes |\n"
+        "\n### Integrations {#availability-integrations}\n\n" + header
+        + f"| [A page](/hf): {both}"
+        "\n### Other pages {#availability-other-pages}\n\n" + header
+        + "| [A page](/unlisted): A deployment checks every request. | No / Yes |\n"
+    )
+
+
+def test_overlay_declaration_replaces_the_reference_one(base):
+    paths = site(base)
+    write(paths["reference"] / "enterprise/security.mdx", page(BOTH))
+    write(
+        paths["reference"] / "offerings.mdx",
+        page(body="{/* availability-comparison */}\n"),
+    )
+    write(paths["public"] / "enterprise/security.mdx", page(ENTERPRISE_ONLY, PUBLIC))
+
+    output = build(config(base, paths["reference"], paths["public"]))
+
+    published = (output / "enterprise/security.mdx").read_text()
+    assert (
+        '<Badge color="red">Enterprise</Badge> A deployment checks every request.'
+        in published
+    )
+    assert f"\n\n{PUBLIC}" in published and "varies" not in published
+    assert (
+        "A deployment checks every request. | No / Yes |"
+        in (output / "offerings.mdx").read_text()
+    )
+
+
+def test_overlay_that_drops_a_declaration_is_reported(base):
+    paths = site(base)
+    write(paths["reference"] / "enterprise/security.mdx", page(ENTERPRISE_ONLY))
+    loaded = assemble.load_config(config(base, paths["reference"], public_root(paths)))
+    resolved = assemble.resolve(loaded)
+    docs_json, _ = assemble.assemble_nav(resolved)
+
+    warnings = assemble.validate(loaded, resolved, docs_json)
+
+    assert warnings == [
+        "enterprise/security.mdx: the enterprise page declares no availability, so "
+        "the availability its reference page declares is not published"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("frontmatter", "body", "error"),
+    [
+        (
+            ENTERPRISE_ONLY.replace("unavailable", "yes"),
+            "Text.\n",
+            r"availability.oss is True",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("unavailable", "no"),
+            "Text.\n",
+            r"availability.oss is False",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("e: available", "e: Available"),
+            "Text.\n",
+            r"enterprise is 'Available'",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("  summary", "  sumary"),
+            "Text.\n",
+            r"exactly oss, enterprise and summary",
+        ),
+        (
+            ENTERPRISE_ONLY + "  label: Enterprise only\n",
+            "Text.\n",
+            r"exactly oss, enterprise",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("enterprise: available", "enterprise: unavailable"),
+            "Text.\n",
+            r"no offering",
+        ),
+        (
+            ENTERPRISE_ONLY.replace("summary: A", "summary: |\n    One.\n    A"),
+            "Text.\n",
+            r"one line",
+        ),
+        (
+            ENTERPRISE_ONLY.replace(
+                "summary: A deployment checks every request.", "summary: 3"
+            ),
+            "Text.\n",
+            r"one line",
+        ),
+        ("availability: enterprise only\n", "Text.\n", r"exactly oss, enterprise"),
+        (
+            ENTERPRISE_ONLY.replace("availability:", '"availability":'),
+            "Text.\n",
+            r"block of its own",
+        ),
+        (
+            ENTERPRISE_ONLY,
+            '<Badge color="red">Enterprise</Badge> Text.\n',
+            r"badge of its own",
+        ),
+        ("availability: [\n", "Text.\n", r"unreadable frontmatter"),
+    ],
+)
+def test_malformed_availability_is_refused(base, frontmatter, body, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(availability_site(base, {"auth.mdx": page(frontmatter, body)}, ["auth"]))
+
+
+@pytest.mark.parametrize(
+    ("pages", "error"),
+    [
+        (
+            {
+                "a.mdx": page(ENTERPRISE_ONLY),
+                "b.mdx": page(body="See {/* availability-comparison */}\n"),
+            },
+            r"line of its own",
+        ),
+        (
+            {
+                "a.mdx": page(ENTERPRISE_ONLY),
+                "b.mdx": page(
+                    body="{/* availability-comparison */}\n\n{/* availability-comparison */}\n"
+                ),
+            },
+            r"once",
+        ),
+        (
+            {"b.mdx": page(body="{/* availability-comparison */}\n")},
+            r"no page declares availability",
+        ),
+    ],
+)
+def test_misplaced_comparison_is_refused(base, pages, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        build(availability_site(base, pages, sorted(rel[:-4] for rel in pages)))
+
+
+# --------------------------------------------------------------------------- #
+# drafts
+# --------------------------------------------------------------------------- #
+
+# Documentation written before a release uses Mintlify's own controls: a whole
+# page is listed in `.mintignore` and left out of the navigation, and a section
+# is an ordinary MDX comment. The assembler publishes both as written. Mint
+# leaves them out, and its link check refuses a published link to an ignored page.
+DRAFTS = """Tables hold rows.
+
+{/*
+Draft for the X release.
+
+## Functions {#functions}
+
+A [function](/management/function) fills a column.
+*/}
+
+| Object | What |
+| --- | --- |
+| Table | rows |
+
+{/*
+Draft for the X release. Add this row to the table above:
+| [Function](/management/function) | code |
+*/}
+
+Columns are filled by SQL. {/* Draft for the X release: or by a function. */}
+
+<CardGroup cols={2}>
+  <Card title="Tables" href="/management/table">
+    Rows.
+  </Card>
+  {/*
+  <Card title="Functions" href="/management/function">
+    Code.
+  </Card>
+  */}
+</CardGroup>
+"""
+FUNCTION_BODY = """import { PyRegister } from '/snippets/function.mdx';
+
+<CodeBlock filename="Python" language="Python" icon="python">
+{PyRegister}
+</CodeBlock>
+"""
+FUNCTION_SNIPPET = 'export const PyRegister = "db.create_function(double)\\n";\n'
+IGNORED = "# Draft pages\nmanagement/function.mdx\n"
+NAVIGATION_WITH_DRAFTS = {
+    "navigation": {
+        "tabs": [
+            {
+                "tab": "Documentation",
+                "groups": [{"group": "Management", "pages": ["management/table"]}],
+            }
+        ]
+    },
+    "redirects": [{"source": "/old-tables", "destination": "/management/table"}],
+}
+
+
+def draft_site(base: Path) -> tuple[Path, dict[str, Path]]:
+    paths = site(base)
+    write(paths["reference"] / "docs.json", json.dumps(NAVIGATION_WITH_DRAFTS))
+    write(paths["reference"] / ".mintignore", IGNORED)
+    write(paths["reference"] / "management/table.mdx", page(body=DRAFTS))
+    write(paths["reference"] / "management/function.mdx", page(body=FUNCTION_BODY))
+    write(paths["reference"] / "snippets/function.mdx", FUNCTION_SNIPPET)
+    return config(base, paths["reference"], public_root(paths)), paths
+
+
+def published_files(output: Path) -> list[str]:
+    return sorted(p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file())
+
+
+def test_draft_sections_are_published_as_written(base):
+    output = build(draft_site(base)[0])
+
+    assert (output / "management/table.mdx").read_text() == page(body=DRAFTS)
+
+
+def test_ignored_pages_navigation_and_redirects_are_published_for_mint(base):
+    config_path, paths = draft_site(base)
+    output = build(config_path)
+
+    assert published_files(output) == [
+        ".mintignore",
+        "docs.json",
+        "enterprise/security.mdx",
+        "management/function.mdx",
+        "management/table.mdx",
+        "static/styles/style.css",
+    ]
+    assert (output / ".mintignore").read_bytes() == IGNORED.encode()
+    assert (output / "docs.json").read_bytes() == (paths["reference"] / "docs.json").read_bytes()
+    # The ignored page is still assembled, examples included; Mint leaves it out.
+    assert (output / "management/function.mdx").read_text() == page(
+        body='\n```python Python icon="python"\ndb.create_function(double)\n```\n'
+    )
+
+
+def test_ignore_files_in_two_roots_must_agree(base):
+    config_path, paths = draft_site(base)
+    other = base / "docs/docs"
+    write(other / ".mintignore", "geneva/draft.mdx\n")
+    config_path.write_text(
+        config_path.read_text() + f"  - name: build\n    path: {other}\n    role: reference\n"
+    )
+    with pytest.raises(
+        assemble.AssembleError, match=r"\.mintignore differs between lancedb and build"
+    ):
+        build(config_path)
+
+
+def test_a_private_root_cannot_carry_an_ignore_file(base):
+    paths = site(base)
+    write(public_root(paths) / ".mintignore", "enterprise/security.mdx\n")
+    with pytest.raises(assemble.AssembleError, match=r"\.mintignore is hidden"):
+        build(config(base, paths["reference"], paths["public"]))
+
+
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
+)
+def test_draft_comments_compile_as_mdx(base):
+    output = build(draft_site(base)[0])
+    result = compile_mdx((output / "management/table.mdx").read_text())
+    assert result.returncode == 0, result.stderr
+
+
+# --------------------------------------------------------------------------- #
+# examples
+# --------------------------------------------------------------------------- #
+
+SNIPPETS = (
+    'export const PyConnect = "import lancedb\\n\\ndb = lancedb.connect(\\"data\\")\\n";\n\n'
+    'export const PySearch = "table.search([1.0])\\n";\n\n'
+    'export const PyFence = "print(\\"```\\")\\n";\n\n'
+    'export const RsConnect = "let db = connect(uri);\\n";\n'
+)
+
+
+def example_site(base: Path, body: str, snippets: str = SNIPPETS) -> Path:
+    paths = site(base)
+    write(paths["reference"] / "snippets/examples.mdx", snippets)
+    write(paths["reference"] / "p.mdx", page(body=body))
+    return build(config(base, paths["reference"], public_root(paths)))
+
+
+def test_examples_are_published_as_fenced_code_where_they_are_shown(base):
+    body = (
+        "import {\n  PyConnect,\n  PySearch as Search,\n  RsConnect,\n} from '/snippets/examples.mdx';\n\n"
+        "<CodeGroup>\n"
+        '    <CodeBlock filename="Python (sync)" language="Python" icon="python">\n'
+        "    {PyConnect + Search}\n"
+        "    </CodeBlock>\n\n"
+        '    <CodeBlock filename="Rust" language="Rust" icon="rust">\n'
+        '    { "use lancedb::connect;\\n" }\n'
+        '    { "\\n" }\n'
+        "    {RsConnect}\n"
+        "    </CodeBlock>\n"
+        "</CodeGroup>\n"
+    )
+    output = example_site(base, body)
+
+    assert (output / "p.mdx").read_text() == page(
+        body="\n<CodeGroup>\n"
+        '    ```python Python (sync) icon="python"\n'
+        "    import lancedb\n\n"
+        '    db = lancedb.connect("data")\n'
+        "    table.search([1.0])\n"
+        "    ```\n\n"
+        '    ```rust Rust icon="rust"\n'
+        "    use lancedb::connect;\n\n"
+        "    let db = connect(uri);\n"
+        "    ```\n"
+        "</CodeGroup>\n"
+    )
+    assert not (output / "snippets/examples.mdx").exists()
+
+
+def test_a_fence_is_longer_than_any_backticks_in_the_code(base):
+    body = (
+        "import { PyFence } from '/snippets/examples.mdx';\n\n"
+        '<CodeBlock filename="Python" language="Python" icon="python">\n{PyFence}\n</CodeBlock>\n'
+    )
+    text = (example_site(base, body) / "p.mdx").read_text()
+    assert '````python Python icon="python"\nprint("```")\n````\n' in text
+
+
+def test_unused_imports_go_and_used_ones_stay(base):
+    body = (
+        "import { PyConnect, PySearch } from '/snippets/examples.mdx';\n"
+        "import { Widget } from '/snippets/widgets.mdx';\n\n"
+        '<CodeBlock filename="Python" language="Python" icon="python">\n{PyConnect}\n</CodeBlock>\n\n'
+        "<Widget />\n"
+    )
+    paths = site(base)
+    write(paths["reference"] / "snippets/examples.mdx", SNIPPETS)
+    write(paths["reference"] / "snippets/widgets.mdx", "export const Widget = () => null;\n")
+    write(paths["reference"] / "p.mdx", page(body=body))
+    output = build(config(base, paths["reference"], public_root(paths)))
+
+    text = (output / "p.mdx").read_text()
+    assert "examples.mdx" not in text
+    assert "import { Widget } from '/snippets/widgets.mdx';\n" in text
+    assert (output / "snippets/widgets.mdx").exists()
+    assert not (output / "snippets/examples.mdx").exists()
+
+
+def test_a_code_block_of_plain_text_is_left_alone(base):
+    body = '<CodeBlock filename="bash" language="bash" icon="terminal">\npip install lancedb\n</CodeBlock>\n'
+    assert (example_site(base, body) / "p.mdx").read_text() == page(body=body)
+
+
+@pytest.mark.parametrize(
+    ("body", "error"),
+    [
+        (
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{Missing}\n</CodeBlock>\n',
+            r"\{Missing\} is not imported",
+        ),
+        (
+            "import { PyGone } from '/snippets/examples.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{PyGone}\n</CodeBlock>\n',
+            r"exports no PyGone",
+        ),
+        (
+            "import { PyConnect } from '/snippets/nowhere.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{PyConnect}\n</CodeBlock>\n',
+            r"imports /snippets/nowhere.mdx, which no root provides",
+        ),
+        (
+            "import { PyConnect } from '/snippets/examples.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" icon="python">\n{PyConnect}\nprint(1)\n</CodeBlock>\n',
+            r"mixes examples with other text",
+        ),
+        (
+            "import { PyConnect } from '/snippets/examples.mdx';\n\n"
+            '<CodeBlock filename="Python" language="Python" lines>\n{PyConnect}\n</CodeBlock>\n',
+            r"cannot carry",
+        ),
+    ],
+)
+def test_unreadable_examples_are_refused(base, body, error):
+    with pytest.raises(assemble.AssembleError, match=error):
+        example_site(base, body)
+
+
+@pytest.mark.skipif(
+    not (MDX_COMPILER and shutil.which("node")),
+    reason="set MDX_COMPILER to @mdx-js/mdx's index.js and put node on PATH",
+)
+def test_inlined_examples_compile_as_mdx(base):
+    body = (
+        "import { PyConnect, PyFence } from '/snippets/examples.mdx';\n\n"
+        "<Accordion title=\"Records\">\n"
+        "    <CodeGroup>\n"
+        '        <CodeBlock filename="Python (sync)" language="Python" icon="python">\n'
+        "        {PyConnect}\n"
+        "        </CodeBlock>\n"
+        '        <CodeBlock filename="Python" language="Python" icon="python">\n'
+        "        {PyFence}\n"
+        "        </CodeBlock>\n"
+        "    </CodeGroup>\n"
+        "</Accordion>\n"
+    )
+    result = compile_mdx((example_site(base, body) / "p.mdx").read_text())
+    assert result.returncode == 0, result.stderr

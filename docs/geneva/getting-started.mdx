@@ -74,17 +74,20 @@ all indexes.
 
 ## Quickstart
 
+Get the database URI, HTTPS endpoint and API key from your LanceDB Enterprise
+administrator, then replace the placeholders in the example. In application code,
+load credentials from environment variables or a secrets manager.
+
 <CodeGroup>
 ```python Python icon="python"
-import os
 import geneva
 import pyarrow as pa
 
 # Connect to LanceDB Enterprise
 db = geneva.connect(
-    uri="db://my-db",
-    host_override=os.getenv("LANCEDB_URI", "http://localhost:10024"),
-    api_key=os.getenv("LANCEDB_API_KEY"),
+    uri="db://your-database",
+    host_override="https://your-endpoint",
+    api_key="your-api-key",
 )
 
 tbl = db.open_table("my_table")

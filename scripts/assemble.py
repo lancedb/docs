@@ -8,12 +8,14 @@ this repository's `docs/`. CI checks each assembly and keeps it as a candidate;
 only the Publish workflow puts a chosen candidate on the `assembled` branch
 (see `candidate.py`).
 
-Six stages:
+Eight stages:
 
     resolve   walk each root in order and map output path -> source file
     validate  anchors unique per page, nav references resolve, no path escapes
     merge     let each overlay page replace the reference page at its path
     nav       fold each root's navigation fragment into the base docs.json
+    inline    write each snippet example into the page that shows it
+    annotate  render the availability pages declare into their content
     emit      write the output tree
     check     `mint validate` and `mint broken-links`, run separately in CI
 
@@ -89,6 +91,8 @@ class Resolved:
     files: dict[str, tuple[Root, Path]] = field(default_factory=dict)
     overlays: dict[str, tuple[Root, Path]] = field(default_factory=dict)
     fragments: dict[str, Path] = field(default_factory=dict)
+    # Pages whose published text differs from their source: output path -> text.
+    rendered: dict[str, str] = field(default_factory=dict)
 
 
 ENV_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::-([^}]*))?\}")
@@ -260,7 +264,13 @@ def nav_page_paths(docs_json: dict) -> set[str]:
     against the current navigation it finds 179 page paths and 46 labels with no
     misclassification either way.
     """
-    found: set[str] = set()
+    return set(nav_page_order(docs_json))
+
+
+def nav_page_sections(docs_json: dict) -> dict[str, str | None]:
+    """Each navigation page, once, in order, with the outermost group holding
+    it -- or, outside any group, its tab."""
+    found: dict[str, str | None] = {}
     # Keys whose values name something other than a page.
     non_page_keys = {"openapi", "href", "icon", "logo"}
     # Keys whose values are human-readable labels.
@@ -269,19 +279,28 @@ def nav_page_paths(docs_json: dict) -> set[str]:
         "tag", "name", "title",
     }
 
-    def walk(node: object, key: str | None = None) -> None:
+    def walk(node: object, key: str | None, section: str | None, grouped: bool) -> None:
         if isinstance(node, dict):
+            if not grouped and isinstance(node.get("group"), str):
+                section, grouped = node["group"], True
+            elif not grouped and isinstance(node.get("tab"), str):
+                section = node["tab"]
             for child_key, value in node.items():
                 if child_key not in non_page_keys:
-                    walk(value, child_key)
+                    walk(value, child_key, section, grouped)
         elif isinstance(node, list):
             for value in node:
-                walk(value, key)
+                walk(value, key, section, grouped)
         elif isinstance(node, str) and key not in label_keys:
-            found.add(node.lstrip("/"))
+            found.setdefault(node.lstrip("/"), section)
 
-    walk(docs_json.get("navigation", {}))
+    walk(docs_json.get("navigation", {}), None, None, False)
     return found
+
+
+def nav_page_order(docs_json: dict) -> list[str]:
+    """What `nav_page_paths` collects, once each, in navigation order."""
+    return list(nav_page_sections(docs_json))
 
 
 def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
@@ -332,6 +351,19 @@ def validate(config: Config, resolved: Resolved, docs_json: dict) -> list[str]:
             raise AssembleError(
                 f"{rel} differs between {reference.name} and {root.name}; an "
                 "overlay replaces pages, and its other files must match the reference"
+            )
+
+    # An overlay replaces the whole page, availability included.
+    for rel, (root, src) in sorted(resolved.overlays.items()):
+        reference_src = resolved.files[rel][1]
+        if (
+            rel.endswith(PAGE_SUFFIXES)
+            and declared_availability(rel, reference_src.read_text(encoding="utf-8"))
+            and not declared_availability(rel, src.read_text(encoding="utf-8"))
+        ):
+            warnings.append(
+                f"{rel}: the {root.name} page declares no availability, so the "
+                "availability its reference page declares is not published"
             )
 
     # The spec is synced from upstream and shipped so the REST overview can link
@@ -525,8 +557,397 @@ def assemble_nav(resolved: Resolved) -> tuple[dict, bytes | None]:
     return base, None
 
 
+def published_text(resolved: Resolved, rel: str) -> str:
+    if rel in resolved.rendered:
+        return resolved.rendered[rel]
+    return resolved.files[rel][1].read_text(encoding="utf-8")
+
+
+def published_pages(resolved: Resolved) -> list[str]:
+    return [rel for rel in sorted(resolved.files) if rel.endswith(PAGE_SUFFIXES)]
+
+
 # --------------------------------------------------------------------------- #
-# stage 5: emit
+# stage 5: inline
+# --------------------------------------------------------------------------- #
+
+# The examples are tested programs whose snippets are generated into
+# `snippets/*.mdx` as string constants, which a page imports and places in a
+# `<CodeBlock>`. Mintlify renders that, but its Markdown export -- what agents
+# and `llms.txt` readers get -- shows the constant's name where the code was.
+# Published pages get the code itself, as an ordinary fenced block.
+SNIPPET_IMPORT_RE = re.compile(
+    r"^import\s*\{(?P<names>[^}]*)\}\s*from\s*(?P<quote>['\"])"
+    r"(?P<module>/snippets/[^'\"]+)(?P=quote);?[ \t]*(?:\n|$)",
+    re.M,
+)
+SNIPPET_EXPORT_RE = re.compile(
+    r'^export const (\w+)\s*=\s*("(?:[^"\\\n]|\\.)*");[ \t]*$', re.M
+)
+CODE_BLOCK_RE = re.compile(
+    r"^(?P<indent>[ ]*)<CodeBlock(?P<attrs>[^>\n]*)>[ \t]*\n"
+    r"(?P<body>(?:(?![ \t]*</CodeBlock>).*\n)*?)"
+    r"[ \t]*</CodeBlock>[ \t]*$",
+    re.M,
+)
+CODE_ATTR_RE = re.compile(r'(\w+)="([^"]*)"')
+CODE_TERM_RE = re.compile(r'\s*(?:([A-Za-z_]\w*)|("(?:[^"\\]|\\.)*"))\s*(\+|$)')
+
+
+SNIPPET_REFERENCE_RE = re.compile(r"""['"]/(snippets/[^'"]+)['"]""")
+
+
+def import_parts(statement: re.Match) -> list[tuple[str, str, str]]:
+    """Each `A` or `A as B` an import names: (as written, exported, alias)."""
+    parts = []
+    for part in statement["names"].split(","):
+        part = part.strip()
+        if part:
+            exported, _, alias = (s.strip() for s in part.partition(" as "))
+            parts.append((part, exported, alias or exported))
+    return parts
+
+
+def snippet_exports(resolved: Resolved, module: str, rel: str) -> dict[str, str]:
+    path = module.lstrip("/")
+    if path not in resolved.files:
+        raise AssembleError(f"{rel}: imports {module}, which no root provides")
+    text = published_text(resolved, path)
+    return {name: json.loads(literal) for name, literal in SNIPPET_EXPORT_RE.findall(text)}
+
+
+def code_value(rel: str, line: str, lookup) -> tuple[str, set[str]]:
+    """The text of one `{A}`, `{"literal"}` or `{A + B}` line, and the names it uses."""
+    expression = line.strip()[1:-1]
+    value, names, position = "", set(), 0
+    while position < len(expression):
+        term = CODE_TERM_RE.match(expression, position)
+        if term is None or term.end() == position:
+            raise AssembleError(f"{rel}: cannot read the example {line.strip()}")
+        name, literal = term[1], term[2]
+        if name is not None:
+            value += lookup(name)
+            names.add(name)
+        else:
+            value += json.loads(literal)
+        position = term.end()
+    return value, names
+
+
+def fenced(rel: str, indent: str, attrs: str, code: str) -> str:
+    found = dict(CODE_ATTR_RE.findall(attrs))
+    unknown = sorted(set(found) - {"filename", "language", "icon"})
+    if unknown or CODE_ATTR_RE.sub("", attrs).strip():
+        raise AssembleError(f"{rel}: cannot carry <CodeBlock{attrs}> into a code fence")
+    title = found.get("filename", "")
+    if any(c in title for c in '`{}"'):
+        raise AssembleError(f"{rel}: code title {title!r} cannot go in a code fence")
+    meta = found.get("language", "text").lower()
+    if title:
+        meta += f" {title}"
+    if found.get("icon"):
+        meta += f' icon="{found["icon"]}"'
+    runs = re.findall(r"`+", code)
+    fence = "`" * max(3, max((len(run) + 1 for run in runs), default=3))
+    lines = [f"{indent}{fence}{meta}"]
+    lines += [f"{indent}{line}" if line else "" for line in code.rstrip("\n").split("\n")]
+    lines.append(f"{indent}{fence}")
+    return "\n".join(lines)
+
+
+def inline_page(resolved: Resolved, rel: str, text: str) -> str:
+    imports = list(SNIPPET_IMPORT_RE.finditer(text))
+    if not imports and "<CodeBlock" not in text:
+        return text
+    sources = {
+        alias: (statement["module"], exported)
+        for statement in imports
+        for _part, exported, alias in import_parts(statement)
+    }
+    modules: dict[str, dict[str, str]] = {}
+
+    def lookup(name: str) -> str:
+        if name not in sources:
+            raise AssembleError(f"{rel}: the example {{{name}}} is not imported from a snippet")
+        module, exported = sources[name]
+        if module not in modules:
+            modules[module] = snippet_exports(resolved, module, rel)
+        if exported not in modules[module]:
+            raise AssembleError(f"{rel}: {module} exports no {exported}")
+        return modules[module][exported]
+
+    used: set[str] = set()
+
+    def replace(block: re.Match) -> str:
+        lines = [line for line in block["body"].splitlines() if line.strip()]
+        expressions = [line for line in lines if re.fullmatch(r"\s*\{.*\}\s*", line)]
+        if not expressions:
+            return block[0]
+        if len(expressions) != len(lines):
+            raise AssembleError(f"{rel}: a <CodeBlock> mixes examples with other text")
+        code = ""
+        for line in expressions:
+            value, names = code_value(rel, line, lookup)
+            code += value
+            used.update(names)
+        if not code.strip():
+            raise AssembleError(f"{rel}: a <CodeBlock> has no code")
+        return fenced(rel, block["indent"], block["attrs"], code)
+
+    body = CODE_BLOCK_RE.sub(replace, text)
+    rest = SNIPPET_IMPORT_RE.sub("", body)
+
+    # An import left unused -- inlined above, or never used -- would put its
+    # module's constants in the Markdown export for nothing.
+    def rewrite(statement: re.Match) -> str:
+        parts = import_parts(statement)
+        kept = [
+            part
+            for part, _exported, alias in parts
+            if re.search(rf"(?<![\w.]){re.escape(alias)}(?!\w)", rest)
+        ]
+        if not kept:
+            return ""
+        if len(kept) == len(parts):
+            return statement[0]
+        quote = statement["quote"]
+        return f"import {{ {', '.join(kept)} }} from {quote}{statement['module']}{quote};\n"
+
+    return SNIPPET_IMPORT_RE.sub(rewrite, body)
+
+
+def inline_examples(resolved: Resolved) -> None:
+    """Write each page's snippet examples into it as fenced code.
+
+    A snippet module is published only while a published page still refers to
+    it: every example is in the page that shows it.
+    """
+    for rel in published_pages(resolved):
+        if rel.startswith("snippets/"):
+            continue
+        text = published_text(resolved, rel)
+        inlined = inline_page(resolved, rel, text)
+        if inlined != text:
+            resolved.rendered[rel] = inlined
+    referenced = {
+        module
+        for rel in published_pages(resolved)
+        if not rel.startswith("snippets/")
+        for module in SNIPPET_REFERENCE_RE.findall(published_text(resolved, rel))
+    }
+    for rel in published_pages(resolved):
+        if rel.startswith("snippets/") and rel not in referenced:
+            del resolved.files[rel]
+            resolved.rendered.pop(rel, None)
+
+
+# --------------------------------------------------------------------------- #
+# stage 6: annotate
+# --------------------------------------------------------------------------- #
+
+# A page declares where it applies in its own frontmatter:
+#
+#     availability:
+#       oss: unavailable
+#       enterprise: available
+#       summary: A deployment authenticates every request.
+#
+# Its label, its sidebar tag and its row in the comparison are all rendered from
+# that, so no list of features elsewhere has to be kept in step with the pages.
+OFFERINGS = (("oss", "OSS", "green"), ("enterprise", "Enterprise", "red"))
+# Product support is binary. Setup, SDK and server constraints belong in prose.
+STATUSES = {"available": "Yes", "unavailable": "No"}
+AVAILABILITY_KEYS = {"oss", "enterprise", "summary"}
+AVAILABILITY_LINE_RE = re.compile(r"^availability:")
+COMPARISON_MARKER = "{/* availability-comparison */}"
+BLANK_LINES_RE = re.compile(r"(?:[ \t]*\n)*")
+
+
+def split_frontmatter(text: str) -> tuple[str, str] | None:
+    """A page's YAML frontmatter and the body after it."""
+    if not text.startswith("---\n"):
+        return None
+    end = text.find("\n---\n", 3)
+    if end == -1:
+        return None
+    return text[4 : end + 1], text[end + 5 :]
+
+
+def declared_availability(rel: str, text: str) -> tuple[dict, dict] | None:
+    """A page's frontmatter and the availability it declares, checked."""
+    parts = split_frontmatter(text)
+    if parts is None or "availability" not in parts[0]:
+        return None
+    try:
+        meta = yaml.safe_load(parts[0])
+    except yaml.YAMLError as exc:
+        raise AssembleError(f"{rel}: unreadable frontmatter: {exc}") from exc
+    if not isinstance(meta, dict) or "availability" not in meta:
+        return None
+    declared = meta["availability"]
+    if not isinstance(declared, dict) or set(declared) != AVAILABILITY_KEYS:
+        raise AssembleError(
+            f"{rel}: `availability` must set exactly oss, enterprise and summary"
+        )
+    for key, _name, _color in OFFERINGS:
+        if not isinstance(declared[key], str) or declared[key] not in STATUSES:
+            raise AssembleError(
+                f"{rel}: availability.{key} is {declared[key]!r}, "
+                f"not one of {', '.join(STATUSES)}; declare product support and "
+                "explain configuration, version or subfeature requirements in prose"
+            )
+    if declared["oss"] == declared["enterprise"] == "unavailable":
+        raise AssembleError(f"{rel}: availability says no offering has it")
+    summary = declared["summary"]
+    if not isinstance(summary, str) or not summary.strip() or "\n" in summary.strip():
+        raise AssembleError(f"{rel}: availability.summary must be one line of text")
+    return meta, declared
+
+
+def availability_tag(declared: dict) -> str | None:
+    """The sidebar tag of a page that applies to one offering only."""
+    names = [name for key, name, _ in OFFERINGS if declared[key] != "unavailable"]
+    return names[0] if len(names) == 1 else None
+
+
+def availability_label(declared: dict) -> str:
+    badges = []
+    for key, name, color in OFFERINGS:
+        if declared[key] != "unavailable":
+            badges.append(f'<Badge color="{color}">{name}</Badge>')
+    return " ".join([*badges, declared["summary"].strip()])
+
+
+def render_availability(rel: str, text: str, meta: dict, declared: dict) -> str:
+    """The page with its label added and `availability` replaced by its tag."""
+    frontmatter, body = split_frontmatter(text)
+    lines = frontmatter.splitlines(keepends=True)
+    start = next(
+        (i for i, line in enumerate(lines) if AVAILABILITY_LINE_RE.match(line)), None
+    )
+    kept = None
+    if start is not None:
+        end = start + 1
+        while end < len(lines) and (
+            lines[end][:1] in (" ", "\t") or not lines[end].strip()
+        ):
+            end += 1
+        kept = "".join(lines[:start] + lines[end:])
+    rest = {key: value for key, value in meta.items() if key != "availability"}
+    if kept is None or (yaml.safe_load(kept) or {}) != rest:
+        raise AssembleError(
+            f"{rel}: write `availability:` as a block of its own in the frontmatter"
+        )
+    if "tag" in meta:
+        raise AssembleError(
+            f"{rel}: its sidebar tag comes from `availability`; remove `tag`"
+        )
+    tag = availability_tag(declared)
+    if tag:
+        kept += f"tag: {json.dumps(tag)}\n"
+    # The label goes directly after the frontmatter: further down it could land
+    # inside an import or export, whose JavaScript may contain blank lines.
+    position = BLANK_LINES_RE.match(body).end()
+    if body.startswith("<Badge", position):
+        raise AssembleError(
+            f"{rel}: opens with a badge of its own; its availability label replaces it"
+        )
+    label = availability_label(declared)
+    return f"---\n{kept}---\n{body[:position]}{label}\n\n{body[position:]}"
+
+
+def page_route(rel: str) -> str:
+    route = "/" + rel.rsplit(".", 1)[0]
+    return route.removesuffix("/index") or "/"
+
+
+def comparison(entries: list[tuple[str, dict, dict]], sections: dict[str, str]) -> str:
+    """Each navigation section's declaring pages: a heading, then a table."""
+    tables: dict[str, list[str]] = {}
+    for rel, meta, declared in entries:
+        route = page_route(rel)
+        title = meta.get("sidebarTitle") or meta.get("title") or route
+        summary = declared["summary"].strip().replace("](#", f"]({route}#")
+        cells = [
+            f"[{title}]({route}): {summary}",
+            f"{STATUSES[declared['oss']]} / {STATUSES[declared['enterprise']]}",
+        ]
+        row = "| " + " | ".join(c.replace("|", "\\|") for c in cells) + " |"
+        tables.setdefault(sections.get(rel) or "Other pages", []).append(row)
+    blocks, anchors = [], set()
+    for section, rows in tables.items():
+        stem = "availability-" + (
+            re.sub(r"[^a-z0-9]+", "-", section.lower()).strip("-") or "section"
+        )
+        anchor, count = stem, 2
+        while anchor in anchors:
+            anchor, count = f"{stem}-{count}", count + 1
+        anchors.add(anchor)
+        # Two columns: Mintlify gives each column at least 150px, so a wider
+        # table scrolls sideways in the content column.
+        blocks.append(
+            "\n".join(
+                [f"### {section} {{#{anchor}}}", "", "| Topic | OSS / Enterprise |",
+                 "| --- | --- |", *rows]
+            )
+        )
+    return "\n\n".join(blocks)
+
+
+def annotate(resolved: Resolved, docs_json: dict) -> None:
+    """Render the availability pages declare into the published pages.
+
+    Runs after `merge`, so a page's declaration is read from whichever root
+    publishes it. A declaring page gets a label above its content, and a
+    sidebar tag when it applies to one offering only. A page holding the
+    comparison marker gets the declaring pages in navigation order, a table
+    for each navigation section. Every other page is published unchanged.
+    """
+    texts = {rel: published_text(resolved, rel) for rel in published_pages(resolved)}
+    declared = {}
+    for rel, text in texts.items():
+        found = declared_availability(rel, text)
+        if found:
+            declared[rel] = found
+    nav = nav_page_sections(docs_json)
+    order = {
+        page + suffix: index
+        for index, page in enumerate(nav)
+        for suffix in PAGE_SUFFIXES
+    }
+    sections = {
+        page + suffix: section
+        for page, section in nav.items()
+        for suffix in PAGE_SUFFIXES
+        if section
+    }
+    entries = [
+        (rel, *declared[rel])
+        for rel in sorted(declared, key=lambda rel: (order.get(rel, len(order)), rel))
+    ]
+    marker_line = re.compile(rf"^{re.escape(COMPARISON_MARKER)}$", re.M)
+    for rel, text in texts.items():
+        page = (
+            render_availability(rel, text, *declared[rel]) if rel in declared else text
+        )
+        if COMPARISON_MARKER in page:
+            if page.count(COMPARISON_MARKER) > 1 or not marker_line.search(page):
+                raise AssembleError(
+                    f"{rel}: the availability comparison marker must be on a line "
+                    "of its own, once"
+                )
+            if not entries:
+                raise AssembleError(
+                    f"{rel}: has the availability comparison marker, "
+                    "but no page declares availability"
+                )
+            page = page.replace(COMPARISON_MARKER, comparison(entries, sections))
+        if page != text:
+            resolved.rendered[rel] = page
+
+
+# --------------------------------------------------------------------------- #
+# stage 7: emit
 # --------------------------------------------------------------------------- #
 
 
@@ -576,7 +997,10 @@ def emit(
         if not dest.is_relative_to(output):
             raise AssembleError(f"{rel} resolves outside the output directory")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+        if rel in resolved.rendered:
+            dest.write_text(resolved.rendered[rel], encoding="utf-8")
+        else:
+            shutil.copy2(src, dest)
         written += 1
 
     if nav_raw is not None:
@@ -713,6 +1137,8 @@ def main() -> int:
         docs_json, nav_raw = assemble_nav(resolved)
         warnings = validate(config, resolved, docs_json)
         merge(resolved)
+        inline_examples(resolved)
+        annotate(resolved, docs_json)
         count = emit(config, resolved, docs_json, nav_raw)
     except AssembleError as exc:
         print(f"assemble: {exc}", file=sys.stderr)

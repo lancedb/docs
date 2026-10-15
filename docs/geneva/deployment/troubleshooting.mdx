@@ -205,10 +205,9 @@ bucket = storage_client.bucket(BUCKET_NAME) # this has a reference to storage_cl
 ...
 
 @udf
-def udf_function(...)
-  ...
-  blob = bucket.blob(video_path) # the udf's closure captures the unpickleable storage_client
-  ...
+def udf_function(video_path: str) -> bytes:
+    # The closure captures bucket and its unpickleable client.
+    return bucket.blob(video_path).download_as_bytes()
 ```
 </CodeGroup>
 
@@ -221,12 +220,11 @@ from google.cloud import storage
 # ...
 
 @udf
-def udf_function(...)
-  # ...
-  storage_client = storage.Client() # this has unpickleable state
-  bucket = storage_client.bucket(BUCKET_NAME)
-  blob = bucket.blob(video_path) # blob is bytes and is pickleable so is safe
-  # ...
+def udf_function(video_path: str) -> bytes:
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(BUCKET_NAME)
+    # Keep the client inside the worker; return only the downloaded bytes.
+    return bucket.blob(video_path).download_as_bytes()
 ```
 </CodeGroup>
 

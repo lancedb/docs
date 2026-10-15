@@ -30,6 +30,8 @@ SITE = {
     "guide/page.mdx": b"line one\r\nline two\r\n",
     # ... and no ignore rules, even the site's own.
     ".gitignore": b"*.png\n",
+    # Mintlify's own ignore file is part of the site: it keeps draft pages out.
+    ".mintignore": b"drafts/page.mdx\n",
     "static/logo.png": bytes(range(256)),
     ".cursor/rules/.cursorrules": b"hidden, and published\n",
 }
@@ -289,6 +291,7 @@ def test_production_publishes_exactly_the_candidate(tmp_path, remote):
     assert "Candidate-Run: 1001" in message
     assert f"Sources: {sources_line(remote['docs_commit'])}" in message
     assert "Refs: lancedb=main enterprise=main" in message
+    assert "Publication:" not in message
     assert json.loads(result.stdout)["commit"] == head
 
 
@@ -731,6 +734,8 @@ def assemble_sources(base: Path, index: bytes) -> dict:
     for name, files in {
         "lancedb": {
             "docs/web/docs.json": json.dumps(navigation).encode(),
+            "docs/web/.mintignore": b"drafts/page.mdx\n",
+            "docs/web/drafts/page.mdx": b"A draft page\n",
             "docs/web/index.mdx": index,
             "docs/web/enterprise/security.mdx": b"Open-source security\n",
         },
@@ -804,6 +809,9 @@ def test_promotion_publishes_the_checked_output_not_newer_sources(tmp_path, remo
     assert published(remote["bare"], "assembled") == checked
     assert checked["index.mdx"] == b"# Release one\n"
     assert checked["enterprise/security.mdx"] == b"Enterprise security\n"
+    # The draft page stays in the files, and so does the ignore file that hides it.
+    assert checked[".mintignore"] == b"drafts/page.mdx\n"
+    assert checked["drafts/page.mdx"] == b"A draft page\n"
 
     # Nor can the run's ID carry the newer build's checksum.
     before = refs(remote["bare"])

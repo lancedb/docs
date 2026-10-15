@@ -8,7 +8,7 @@ Embed text and generate completions using Google's Gemini models.
 See the API reference for [Gemini UDFs](https://lancedb.github.io/geneva/api/gemini/) and
 [Embedding UDFs](https://lancedb.github.io/geneva/api/embeddings/) for all parameters.
 
-```python
+```shell
 pip install 'geneva[udf-text-gemini]'
 ```
 
@@ -20,6 +20,10 @@ or more API requests billed to your account. Review
 
 <Note>
 Set the `GEMINI_API_KEY` environment variable before calling any factory function below.
+
+```shell
+export GEMINI_API_KEY="your-api-key"
+```
 The key is read **at UDF creation time** and serialized with the UDF — no cluster-level
 `env_vars` configuration is needed.
 </Note>

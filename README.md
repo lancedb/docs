@@ -9,11 +9,10 @@ the open-source pages in `lancedb/lancedb` and the Enterprise pages in
 `lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
 
 This repository's `docs/` holds the pages it still owns: the Geneva pages, the
-dataset cards and the REST API reference. The Geneva pages stay published until the official Function
-launch, because the Function pages do not replace their APIs. They and their
-snippets (`docs/snippets/geneva_*.mdx`) are kept as published at
-`deploy-freeze`; the tests that generated those snippets need the `geneva`
-package and are not in this repository, so the snippets are not regenerated.
+dataset cards and the REST API reference. The four Geneva snippets
+(`docs/snippets/geneva_*.mdx`) are frozen copies from `deploy-freeze`; the tests
+that generated them need the `geneva` package and are not in this repository,
+so the snippets are not regenerated.
 
 Install the [Mintlify CLI](https://www.npmjs.com/package/mint) at the version CI
 uses:
@@ -45,13 +44,110 @@ make test-assemble
 open-source and Enterprise pages do not resolve there, so check links on the
 assembled site.
 
+### Availability
+
+A page in any root can declare in its frontmatter whether LanceDB OSS and
+LanceDB Enterprise have what it describes. The Documentation section of
+lancedb's `CONTRIBUTING.md` describes the `availability` key. For each page
+that declares it, the assembler:
+
+- puts a label, the offerings' badges and the page's one-sentence summary,
+  directly after the frontmatter, ahead of any imports;
+- adds a sidebar `tag` when only one offering has it;
+- leaves `availability` out of the published frontmatter.
+
+A line `{/* availability-comparison */}` in a page becomes the pages that
+declare availability, in navigation order: for each navigation section -- the
+outermost group holding a page, or its tab -- a `###` heading and a table of
+that section's pages, so the line belongs under a `##` heading. Pages outside
+the navigation come last, under "Other pages". Declarations are read from
+the page the site publishes, so an overlay's frontmatter replaces its reference
+page's. A malformed declaration, a `tag` set by hand, a page that opens with a
+badge of its own, or a misplaced comparison line stops the build. Pages that
+declare nothing are copied unchanged.
+
+The `oss` and `enterprise` values must be `available` or `unavailable`. They
+describe product support. Setup switches, permissions, supported SDK or server
+versions, and narrower subfeature limits belong in the summary or page body;
+they do not make a supported feature `varies`. Unknown or legacy `varies`
+values stop assembly rather than being silently converted to support claims.
+Availability does not decide whether a page is published; see
+[Writing docs before release](#writing-docs-before-release).
+
+When migrating older sources, update their declarations and qualifications
+before using this stricter assembler with them. Binary declarations also work
+with the previous assembler. CI reads producer `main` by default; explicit
+ref overrides must point at migrated sources. An older producer ref containing
+`varies` intentionally fails with a page and offering in the error, so update
+that ref before assembling. Keep availability source-owned; do not add a second
+feature map to the generator.
+
+`make test-assemble` also compiles its labelled test pages with the MDX
+compiler Mint uses when `MDX_COMPILER` names the `index.js` of the
+`@mdx-js/mdx` package installed with Mint and `node` is on the path; otherwise
+those tests are skipped.
+
+### Writing docs before release
+
+Documentation can be written before the feature it describes is released,
+without presenting it as available. Use Mintlify's own controls and ordinary
+edits. They change what the documentation shows, not what a server does, and
+they do not keep anything confidential: drafts stay in the source and can
+appear in the built site's page data.
+
+- **Draft pages.** List the page in `.mintignore`, beside `docs.json` in
+  lancedb's `docs/web`; the assembled site uses that file for pages from every
+  root. Keep the page out of the navigation and out of redirects, and do not
+  link to it from published pages. `mint validate` reports navigation to an
+  ignored page, and `mint broken-links --check-redirects` reports links and
+  redirects to one.
+- **Draft sections.** Wrap the section in an MDX comment whose first line names
+  the release:
+
+  ```mdx
+  {/*
+  Draft for the Feature X release.
+
+  ## Feature X {#feature-x}
+
+  Feature X does ...
+  */}
+  ```
+
+  Give a comment lines of its own, with a blank line before and after it, or
+  start it at the end of a line of text. A comment on a line of its own in the
+  middle of a paragraph splits the paragraph. Inside a component, indent the
+  comment with the component's children. A comment ends at the first `*/`.
+- **Tables and lists.** A comment between table rows breaks the table, and one
+  between list items breaks the list. Put draft rows or items in a comment
+  below the table or list, and say where they go:
+
+  ```mdx
+  | Option | Effect |
+  | --- | --- |
+  | `a` | Available now. |
+
+  {/*
+  Draft for the Feature X release. Add this row to the table above:
+  | `x` | Turns on Feature X. |
+  */}
+  ```
+- **Preview.** `mint dev` and assembled builds show what readers will see. To
+  check how a draft renders, remove its comment or its `.mintignore` entry in a
+  disposable copy, or in a local change you do not commit, then build and
+  preview as above.
+- **Release.** In the pull request that publishes the documentation, remove the
+  comments and their notes, remove the `.mintignore` entries, add the pages to
+  the navigation, restore their links and redirects, and run the checks above.
+
 ## Publishing
 
 Merging publishes nothing. Every pull request and every push to `main` runs the
 Assemble workflow, which builds the site from the three roots, checks it as
-above, and keeps the checked tree as the run's `candidate` artifact, with a
-record of the commit each root was read from and a SHA-256 for every file. A
-checksum over those hashes names the candidate, and the run's summary shows it.
+above, and keeps the checked tree, hidden files such as `.mintignore` included,
+as the run's `candidate` artifact, with a record of the commit each root was
+read from and a SHA-256 for every file. A checksum over those hashes names the
+candidate, and the run's summary shows it.
 That workflow's token can only read.
 
 Publishing is a separate, manual step: run the Publish workflow with the ID of a
@@ -123,8 +219,13 @@ workflow. Prefer an example in a test over code written into a page.
 
 The only snippets in this repository are the four Geneva ones,
 `docs/snippets/geneva_*.mdx`. They are frozen copies, as published at
-`deploy-freeze`, and stay unchanged until the Geneva pages are retired at the
-official Function launch. `make snippets` stops and prints these instructions.
+`deploy-freeze`, and stay unchanged for as long as the Geneva pages are
+published. `make snippets` stops and prints these instructions.
+
+The assembler writes each example into the page that shows it, as an ordinary
+fenced code block with the same title and icon, so the page's Markdown export
+carries the code itself rather than the name of a snippet constant. Snippet
+modules are not published once nothing imports them.
 
 ## Sync Hugging Face dataset pages
 
