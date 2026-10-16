@@ -59,9 +59,11 @@ keeps finding, with a case that it catches and a case that it leaves alone.
 
 Consumers pin a release by URL, so a change reaches them only when their URL
 moves. After a change merges, bump `version` in `LanceDB/meta.json`, then build
-the archive from the merged commit and attach it to a release:
+the archive from the merged commit and attach it to a release. Archiving a
+directory stamps its files with the current time, so set `--mtime` to the
+commit time to get the same archive every time:
 
 ```bash
-git archive --format=zip --prefix=LanceDB/ -o LanceDB.zip <commit>:vale/LanceDB
+git archive --format=zip --prefix=LanceDB/ --mtime="$(git log -1 --format=%cI <commit>)" -o LanceDB.zip <commit>:vale/LanceDB
 gh release create vale-lancedb-v<version> LanceDB.zip --target <commit>
 ```
