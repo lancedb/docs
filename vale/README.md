@@ -36,8 +36,9 @@ vale $(git diff --name-only origin/main -- '*.mdx')
 Pull requests run the same rules with the
 [Vale action](https://github.com/vale-cli/vale-action), which reports only the
 lines the pull request adds or changes. Editing a line makes it yours, so an
-older problem on that line is reported too. The check is advisory and never
-fails.
+older problem on that line is reported too. Findings are advisory and never
+fail the check; a failure to install Vale, sync the package or read the
+configuration still fails the job.
 
 In this repository, `.vale.ini` uses the working copy of the package, so a
 rule change applies to this repository's pages as soon as it is synced.

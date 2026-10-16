@@ -1,9 +1,10 @@
 name: Prose style
 
-# Vale checks the mechanical rules in STYLE.md. It annotates only the lines a
-# pull request adds or changes and never fails the build: style is advice, and
-# reviewers decide everything else. The rules job tests the shared package
-# that lancedb/lancedb and lancedb/sophon pin by release.
+# Vale checks the mechanical rules in STYLE.md. Its findings are advisory
+# annotations on the lines a pull request adds or changes and never fail the
+# job; an install, sync or configuration error still does. Reviewers decide
+# everything else. The rules job tests the shared package that lancedb/lancedb
+# and lancedb/sophon pin by release.
 
 on:
   pull_request:

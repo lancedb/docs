@@ -6,9 +6,10 @@ Geneva, dataset and REST pages in this repository. [WRITING.md](WRITING.md)
 covers Mintlify mechanics.
 
 [Vale](https://vale.sh) checks the rules below, with the shared package in
-[`vale/`](vale/README.md). It reports suggestions on the lines a pull request
-changes and never blocks a merge. Everything else in this guide is left to
-review.
+[`vale/`](vale/README.md). Its findings are advisory: it reports them on the
+lines a pull request changes, and they never fail the check, although a failure
+to install or configure Vale still does. Everything else in this guide is left
+to review.
 
 ## Names
 
