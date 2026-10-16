@@ -31,3 +31,6 @@ scratch
 
 # Second assembly, used by CI to prove the pipeline is deterministic.
 /build/
+
+# Vale styles installed by `vale sync`
+/.vale/
