@@ -58,13 +58,37 @@ keeps finding, with a case that it catches and a case that it leaves alone.
 
 ## Release
 
-Consumers pin a release by URL, so a change reaches them only when their URL
-moves. After a change merges, bump `version` in `LanceDB/meta.json`, then build
-the archive from the merged commit and attach it to a release. Archiving a
-directory stamps its files with the current time, so set `--mtime` to the
-commit time to get the same archive every time:
+Consumers pin a package release by URL. To release updated rules, change
+`version` in `LanceDB/meta.json` in the same pull request as the package changes.
+Use a new stable `major.minor.patch` version for each release.
 
-```bash
-git archive --format=zip --prefix=LanceDB/ --mtime="$(git log -1 --format=%cI <commit>)" -o LanceDB.zip <commit>:vale/LanceDB
-gh release create vale-lancedb-v<version> LanceDB.zip --target <commit>
-```
+When that version change merges into `main`, the **Release Vale package**
+workflow tests the package, builds `LanceDB.zip` from that exact commit and
+publishes `vale-lancedb-v<version>`. The archive uses the commit timestamp so
+repeated builds from that commit on the same toolchain produce identical bytes. No local ZIP build
+or personal access token is needed; the workflow uses GitHub's repository token.
+
+Pull requests run the existing Vale rule tests on Ubuntu, then build and check
+the archive without publishing. Only a successful run on `main` can enter the
+separate publishing job with write permission.
+
+Adding or changing the release workflow also starts it on `main`. The workflow can be started from the Actions page on `main` to
+retry a failure. Before publishing, it checks for the version's tag and release:
+
+- If neither exists, it publishes the new version.
+- If both exist, it verifies that the tagged package source matches the current
+  package, rebuilds it, and compares the unpacked files with the published
+  download. Matching files skip publication; ZIP timestamps are ignored.
+- Different contents, a missing or incomplete asset, a draft release, or a tag
+  without a release stop the run. Nothing is replaced or deleted. Inspect the
+  failure; use a new version for changed rules.
+
+The manually published `0.1.0` package is already available. Merging this
+workflow verifies that package and skips publication if it matches.
+
+After publication, update the release URL in each consumer's `.vale.ini` and
+check its CI before merging. Consumer updates remain explicit; publishing a
+new package does not silently change another repository's rules.
+
+This workflow publishes only the Vale package. It does not publish staging or
+production documentation, deploy Gatekeeper, or update consumer repositories.

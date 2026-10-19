@@ -1,0 +1,122 @@
+name: Release Vale package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "vale/LanceDB/meta.json"
+      - ".github/workflows/vale-release.yml"
+  pull_request:
+    paths:
+      - "vale/**"
+      - ".github/workflows/vale-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vale-package-${{ github.ref }}
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.package.outputs.tag }}
+      exists: ${{ steps.package.outputs.exists }}
+    env:
+      VALE_VERSION: 3.24.0
+      VALE_SHA256: 867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Vale
+        run: |
+          archive="vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/vale-cli/vale/releases/download/v${VALE_VERSION}/$archive"
+          echo "${VALE_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" vale
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Test the Vale rules
+        working-directory: vale/LanceDB
+        run: vale test --coverage styles ../tests
+
+      - name: Build and check the package
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(jq -er '.version | select(type == "string")' vale/LanceDB/meta.json)"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          tag="vale-lancedb-v$version"
+          revision=HEAD
+          exists=false
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null || status=$?
+          case "$status" in
+            0)
+              git fetch --no-tags origin "refs/tags/$tag"
+              revision="$(git rev-parse 'FETCH_HEAD^{commit}')"
+              if [[ "$(git rev-parse "$revision:vale/LanceDB")" != "$(git rev-parse HEAD:vale/LanceDB)" ]]; then
+                echo "$tag has different package contents. Bump the version." >&2
+                exit 1
+              fi
+              [[ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease --jq '.isDraft or .isPrerelease')" == false ]]
+              gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern LanceDB.zip --dir "$RUNNER_TEMP/published"
+              exists=true
+              ;;
+            2) ;;
+            *) echo "Could not check existing tags; stopping." >&2; exit "$status" ;;
+          esac
+          # Build from the verified source commit.
+          git archive --format=zip --prefix=LanceDB/ \
+            --mtime="$(git show -s --format=%cI "$revision")" \
+            --output="$RUNNER_TEMP/LanceDB.zip" "$revision:vale/LanceDB"
+          if [[ "$exists" == true ]]; then
+            # ZIP timestamps can vary across platforms; compare the actual files.
+            unzip -q "$RUNNER_TEMP/LanceDB.zip" -d "$RUNNER_TEMP/built-files"
+            unzip -q "$RUNNER_TEMP/published/LanceDB.zip" -d "$RUNNER_TEMP/published-files"
+            diff -r "$RUNNER_TEMP/built-files" "$RUNNER_TEMP/published-files"
+            echo "Published package matches; skipping publication."
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "exists=$exists" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.package.outputs.exists != 'true'
+        with:
+          name: vale-package
+          path: ${{ runner.temp }}/LanceDB.zip
+          if-no-files-found: error
+
+  publish:
+    needs: package
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.package.outputs.exists != 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vale-package
+          path: ${{ runner.temp }}/vale-package
+
+      - name: Publish a new version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.package.outputs.tag }}
+        run: |
+          # Atomically reserve the tag; never reuse a tag created by another run.
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/vale-package/LanceDB.zip" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$RELEASE_TAG" --latest=false \
+            --notes "Shared LanceDB Vale rules. Source commit: $GITHUB_SHA. This release does not publish the documentation site."
