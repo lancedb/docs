@@ -74,12 +74,15 @@ jobs:
             2) ;;
             *) echo "Could not check existing tags; stopping." >&2; exit "$status" ;;
           esac
-          # Rebuild an existing version at its original timestamp for exact comparison.
+          # Build from the verified source commit.
           git archive --format=zip --prefix=LanceDB/ \
             --mtime="$(git show -s --format=%cI "$revision")" \
             --output="$RUNNER_TEMP/LanceDB.zip" "$revision:vale/LanceDB"
           if [[ "$exists" == true ]]; then
-            cmp "$RUNNER_TEMP/LanceDB.zip" "$RUNNER_TEMP/published/LanceDB.zip"
+            # ZIP timestamps can vary across platforms; compare the actual files.
+            unzip -q "$RUNNER_TEMP/LanceDB.zip" -d "$RUNNER_TEMP/built-files"
+            unzip -q "$RUNNER_TEMP/published/LanceDB.zip" -d "$RUNNER_TEMP/published-files"
+            diff -r "$RUNNER_TEMP/built-files" "$RUNNER_TEMP/published-files"
             echo "Published package matches; skipping publication."
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"

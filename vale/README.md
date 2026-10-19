@@ -65,7 +65,7 @@ Use a new stable `major.minor.patch` version for each release.
 When that version change merges into `main`, the **Release Vale package**
 workflow tests the package, builds `LanceDB.zip` from that exact commit and
 publishes `vale-lancedb-v<version>`. The archive uses the commit timestamp so
-repeated builds from that commit produce identical bytes. No local ZIP build
+repeated builds from that commit on the same toolchain produce identical bytes. No local ZIP build
 or personal access token is needed; the workflow uses GitHub's repository token.
 
 Pull requests run the existing Vale rule tests on Ubuntu, then build and check
@@ -77,8 +77,8 @@ retry a failure. Before publishing, it checks for the version's tag and release:
 
 - If neither exists, it publishes the new version.
 - If both exist, it verifies that the tagged package source matches the current
-  package, rebuilds it using the original tag timestamp, and compares the ZIP
-  with the published download. An exact match skips publication successfully.
+  package, rebuilds it, and compares the unpacked files with the published
+  download. Matching files skip publication; ZIP timestamps are ignored.
 - Different contents, a missing or incomplete asset, a draft release, or a tag
   without a release stop the run. Nothing is replaced or deleted. Inspect the
   failure; use a new version for changed rules.
