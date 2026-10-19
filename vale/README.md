@@ -11,6 +11,7 @@ components and runs the tests below.
 | `LanceDB.ProductNames` | warning | A misspelled LanceDB product name or one of a few third-party names |
 | `LanceDB.VagueHeadings` | suggestion | A heading that names no topic, such as "Then what" |
 | `LanceDB.VaguePhrases` | suggestion | A sentence about the page or the writing instead of the subject |
+| `LanceDB.PlainLanguage` | suggestion | A few wordy expressions with simpler alternatives; technical nouns such as GPU utilization are left alone |
 | `Vale.Repetition` | warning | A repeated word |
 
 Code, inline code, imports, MDX expressions and comments, URLs and component

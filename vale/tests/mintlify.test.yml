@@ -107,3 +107,23 @@
     Lancedb in this last paragraph is the only prose violation here.
   want: |
     37:1:LanceDB.ProductNames:Use 'LanceDB' instead of 'Lancedb'.
+
+- name: plain language works in prose but leaves code and attributes alone
+  format: mdx
+  input: |
+    <Note>
+      Utilize an index in order to search faster.
+    </Note>
+
+    Measure GPU utilization. Call `utilize()`.
+
+    <Card title="Utilize an index in order to search" />
+
+    {/* Utilize an index in order to search. */}
+
+    ```python
+    utilized = "in order to"
+    ```
+  want: |
+    2:3:LanceDB.PlainLanguage:Consider 'use' instead of 'Utilize'.
+    2:20:LanceDB.PlainLanguage:Consider 'to' instead of 'in order to'.
