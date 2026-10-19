@@ -6,19 +6,25 @@ on:
     paths:
       - "vale/LanceDB/meta.json"
       - ".github/workflows/vale-release.yml"
+      - "scripts/vale_release.py"
+  pull_request:
+    paths:
+      - "vale/**"
+      - ".github/workflows/vale-release.yml"
+      - "scripts/vale_release.py"
+      - "scripts/tests/test_vale_release.py"
   workflow_dispatch:
 
 # Publishing a style package does not publish the documentation site.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: vale-package-release
+  group: vale-package-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
-    if: github.ref == 'refs/heads/main'
+  validate:
     runs-on: ubuntu-24.04
     env:
       VALE_VERSION: 3.24.0
@@ -41,36 +47,39 @@ jobs:
         working-directory: vale/LanceDB
         run: vale test --coverage styles ../tests
 
-      - name: Build the release archive
-        id: package
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(jq -er '.version | select(type == "string")' vale/LanceDB/meta.json)"
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-            echo "Expected a stable major.minor.patch package version." >&2
-            exit 1
-          }
-          tag="vale-lancedb-v$version"
-          # Never replace an existing version, including a tag without a release.
-          status=0
-          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null || status=$?
-          case "$status" in
-            0) echo "$tag already exists. Choose a new version; nothing was published." >&2; exit 1 ;;
-            2) ;;
-            *) echo "Could not check existing tags; stopping." >&2; exit "$status" ;;
-          esac
-          git archive --format=zip --prefix=LanceDB/ \
-            --mtime="$(git show -s --format=%cI HEAD)" \
-            --output="$RUNNER_TEMP/LanceDB.zip" HEAD:vale/LanceDB
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Test release preparation
+        run: python3 -B -m unittest discover -s scripts/tests -p test_vale_release.py -v
 
-      - name: Publish the package
+      - name: Build and verify the package without publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/vale_release.py --output-dir "$RUNNER_TEMP/vale-release"
+
+  publish:
+    needs: validate
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # Recheck in the publishing job in case the release appeared during validation.
+      - name: Prepare the package
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -B scripts/vale_release.py --output-dir "$RUNNER_TEMP/vale-release"
+
+      - name: Publish a new version
+        if: steps.package.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.package.outputs.tag }}
         run: |
-          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/LanceDB.zip" \
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/vale-release/LanceDB.zip" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "$RELEASE_TAG" --latest=false \
             --notes "Shared LanceDB Vale rules. Source commit: $GITHUB_SHA. This release does not publish the documentation site."
