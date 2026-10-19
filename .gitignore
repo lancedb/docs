@@ -19,6 +19,9 @@ boost-example
 node_modules
 tests/rs/target
 
+# A local checkout of lance-format/lance-namespace; never commit it.
+/lance-namespace/
+
 # Generated docs-audit workflow state
 workflows/docs-audit/artifacts/**
 !workflows/docs-audit/artifacts/
