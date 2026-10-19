@@ -1,0 +1,129 @@
+# Project cases: each input is a Mintlify page, linted through the package's
+# .vale.ini exactly as a real page is. Run from vale/LanceDB; see ../README.md.
+
+- name: prose inside Mintlify components is linted
+  about: >-
+    Frontmatter strings, headings, indented Tab and Step children, a one-line
+    callout, an Accordion body, a table cell and a paragraph each carry one
+    violation. Component attributes are code to Vale, so the Tab and Step
+    titles are not linted.
+  format: mdx
+  input: |
+    ---
+    title: "Connect to LanceDB cloud"
+    description: "Open a table — then search it."
+    sidebarTitle: "Connect"
+    icon: "plug"
+    ---
+
+    import { PyConnect, TsConnect } from '/snippets/connection.mdx';
+
+    ## Then what {#then-what}
+
+    <Tabs>
+      <Tab title="Python — sync">
+        Install Lancedb with pip before you connect.
+      </Tab>
+    </Tabs>
+
+    <Steps>
+      <Step title="Open the the table">
+        Open the the table by name.
+      </Step>
+    </Steps>
+
+    <Note>
+      Indexes are optional—queries work without them.
+    </Note>
+
+    <Warning>Use LanceDB enterprise for shared tables.</Warning>
+
+    <Accordion title="Details">
+      Compaction is cheap – it rewrites only small fragments.
+    </Accordion>
+
+    | SDK | Status |
+    | --- | --- |
+    | Typescript | Supported |
+
+    This page is the concept; [SQL Reference](/sql) is the specification.
+  want: |
+    2:20:LanceDB.ProductNames:Use 'LanceDB Cloud' instead of 'LanceDB cloud'.
+    3:28:LanceDB.Dashes:Avoid '—' in prose. Use a comma, a colon, parentheses or two sentences.
+    10:4:LanceDB.VagueHeadings:'Then what' doesn't say what the section covers. Name the task or topic instead.
+    14:13:LanceDB.ProductNames:Use 'LanceDB' instead of 'Lancedb'.
+    20:10:Vale.Repetition:'the' is repeated!
+    25:23:LanceDB.Dashes:Avoid '—' in prose. Use a comma, a colon, parentheses or two sentences.
+    28:14:LanceDB.ProductNames:Use 'LanceDB Enterprise' instead of 'LanceDB enterprise'.
+    31:23:LanceDB.Dashes:Avoid '–' in prose. Use a comma, a colon, parentheses or two sentences.
+    36:3:LanceDB.ProductNames:Use 'TypeScript' instead of 'Typescript'.
+    38:1:LanceDB.VaguePhrases:'This page is the concept' talks about the writing, not the subject. State the point directly.
+
+- name: code, identifiers, URLs, attributes and drafts are not prose
+  about: >-
+    Every line holds a would-be violation that Vale must leave alone: import
+    and export statements, inline code, fenced code inside CodeGroup, an MDX
+    expression, link targets and bare URLs, JSX attributes, a draft comment,
+    a heading anchor and a numeric range. The last paragraph's single
+    violation shows the whole page was parsed and linted.
+  format: mdx
+  input: |
+    ---
+    title: "Search"
+    ---
+
+    import { HuggingFaceEmbeddings as Lancedb } from '/snippets/embedding.mdx';
+
+    export const note = "the the — Lancedb";
+
+    Call `Lancedb.connect()` and pass `--force -- extra`; the `Typescript` flag is literal.
+
+    <CodeGroup>
+    ```python Python icon="python"
+    db = lancedb.connect("db")  # the the — Lancedb
+    ```
+    </CodeGroup>
+
+    <CodeBlock filename="TypeScript" language="TypeScript" icon="square-js">
+    {TsConnect}
+    </CodeBlock>
+
+    See [the repository](https://github.com/lancedb/lancedb/tree/main/docs--web) or https://huggingface.co/Langchain/models.
+
+    <Card title="Langchain — guide" href="/integrations/ai/langchain" icon="github" />
+
+    {/* Draft for the Functions release. Lancedb functions — the the. */}
+
+    {/*
+    Draft for the Functions release.
+
+    Lancedb runs a function — the the result is a column.
+    */}
+
+    ## Search {#then-what}
+
+    Use 1–3 replicas.
+
+    Lancedb in this last paragraph is the only prose violation here.
+  want: |
+    37:1:LanceDB.ProductNames:Use 'LanceDB' instead of 'Lancedb'.
+
+- name: plain language works in prose but leaves code and attributes alone
+  format: mdx
+  input: |
+    <Note>
+      Utilize an index in order to search faster.
+    </Note>
+
+    Measure GPU utilization. Call `utilize()`.
+
+    <Card title="Utilize an index in order to search" />
+
+    {/* Utilize an index in order to search. */}
+
+    ```python
+    utilized = "in order to"
+    ```
+  want: |
+    2:3:LanceDB.PlainLanguage:Consider 'use' instead of 'Utilize'.
+    2:20:LanceDB.PlainLanguage:Consider 'to' instead of 'in order to'.

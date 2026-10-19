@@ -5,6 +5,7 @@ docs you may be used to writing in markdown -- the main difference is that Mintl
 instead of regular markdown files.
 
 It's worth going through the key sections in the Mintlify [docs](https://www.mintlify.com/docs) before you begin writing.
+For wording, names and punctuation, follow [STYLE.md](STYLE.md).
 To begin writing, create a new MDX file in the appropriate location and follow the steps below.
 
 ## 1. Create the MDX file
