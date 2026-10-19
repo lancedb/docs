@@ -1,0 +1,76 @@
+name: Release Vale package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "vale/LanceDB/meta.json"
+      - ".github/workflows/vale-release.yml"
+  workflow_dispatch:
+
+# Publishing a style package does not publish the documentation site.
+permissions:
+  contents: write
+
+concurrency:
+  group: vale-package-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    env:
+      VALE_VERSION: 3.24.0
+      VALE_SHA256: 867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Vale
+        run: |
+          archive="vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/vale-cli/vale/releases/download/v${VALE_VERSION}/$archive"
+          echo "${VALE_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" vale
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Test the package
+        working-directory: vale/LanceDB
+        run: vale test --coverage styles ../tests
+
+      - name: Build the release archive
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(jq -er '.version | select(type == "string")' vale/LanceDB/meta.json)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Expected a stable major.minor.patch package version." >&2
+            exit 1
+          }
+          tag="vale-lancedb-v$version"
+          # Never replace an existing version, including a tag without a release.
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null || status=$?
+          case "$status" in
+            0) echo "$tag already exists. Choose a new version; nothing was published." >&2; exit 1 ;;
+            2) ;;
+            *) echo "Could not check existing tags; stopping." >&2; exit "$status" ;;
+          esac
+          git archive --format=zip --prefix=LanceDB/ \
+            --mtime="$(git show -s --format=%cI HEAD)" \
+            --output="$RUNNER_TEMP/LanceDB.zip" HEAD:vale/LanceDB
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.package.outputs.tag }}
+        run: |
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP/LanceDB.zip" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$RELEASE_TAG" --latest=false \
+            --notes "Shared LanceDB Vale rules. Source commit: $GITHUB_SHA. This release does not publish the documentation site."

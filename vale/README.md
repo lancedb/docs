@@ -58,13 +58,26 @@ keeps finding, with a case that it catches and a case that it leaves alone.
 
 ## Release
 
-Consumers pin a release by URL, so a change reaches them only when their URL
-moves. After a change merges, bump `version` in `LanceDB/meta.json`, then build
-the archive from the merged commit and attach it to a release. Archiving a
-directory stamps its files with the current time, so set `--mtime` to the
-commit time to get the same archive every time:
+Consumers pin a package release by URL. To release updated rules, change
+`version` in `LanceDB/meta.json` in the same pull request as the package changes.
+Use a new stable `major.minor.patch` version for each release.
 
-```bash
-git archive --format=zip --prefix=LanceDB/ --mtime="$(git log -1 --format=%cI <commit>)" -o LanceDB.zip <commit>:vale/LanceDB
-gh release create vale-lancedb-v<version> LanceDB.zip --target <commit>
-```
+When that version change merges into `main`, the **Release Vale package**
+workflow tests the package, builds `LanceDB.zip` from that exact commit and
+publishes `vale-lancedb-v<version>`. The archive uses the commit timestamp so
+repeated builds from that commit produce identical bytes. No local ZIP build
+or personal access token is needed; the workflow uses GitHub's repository token.
+
+Adding or changing the release workflow also starts it on `main`. Its initial
+merge publishes the current `0.1.0` package if that tag does not already exist.
+The workflow can also be started from the Actions page on `main` to retry a
+failure before publication. It refuses to replace an existing tag or release;
+a run that already published successfully does not need retrying. If a failed
+run left a tag or release behind, inspect it before deciding how to recover.
+
+After publication, update the release URL in each consumer's `.vale.ini` and
+check its CI before merging. Consumer updates remain explicit; publishing a
+new package does not silently change another repository's rules.
+
+This workflow publishes only the Vale package. It does not publish staging or
+production documentation, deploy Gatekeeper, or update consumer repositories.
