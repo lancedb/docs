@@ -68,18 +68,17 @@ publishes `vale-lancedb-v<version>`. The archive uses the commit timestamp so
 repeated builds from that commit produce identical bytes. No local ZIP build
 or personal access token is needed; the workflow uses GitHub's repository token.
 
-Pull requests run the package tests and release-preparation tests on Ubuntu,
-then build and check the actual archive without publishing. Only a successful
-run on `main` can enter the separate publishing job with write permission.
+Pull requests run the existing Vale rule tests on Ubuntu, then build and check
+the archive without publishing. Only a successful run on `main` can enter the
+separate publishing job with write permission.
 
-Adding or changing the release workflow or its preparation script also starts
-it on `main`. The workflow can be started from the Actions page on `main` to
+Adding or changing the release workflow also starts it on `main`. The workflow can be started from the Actions page on `main` to
 retry a failure. Before publishing, it checks for the version's tag and release:
 
 - If neither exists, it publishes the new version.
-- If both exist, it downloads `LanceDB.zip` and compares all package entries,
-  contents and permissions. Matching packages skip publication successfully.
-  ZIP dates are ignored because unchanged rules can appear in later commits.
+- If both exist, it verifies that the tagged package source matches the current
+  package, rebuilds it using the original tag timestamp, and compares the ZIP
+  with the published download. An exact match skips publication successfully.
 - Different contents, a missing or incomplete asset, a draft release, or a tag
   without a release stop the run. Nothing is replaced or deleted. Inspect the
   failure; use a new version for changed rules.
