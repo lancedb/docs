@@ -90,11 +90,21 @@ editions/
 ```
 
 A record names the product and version, the release tag and commit, the
-Enterprise qualification tag, the LanceDB an Enterprise release bundles, and
-the commit of every root the assembler read, including this repository's own
-pages (Geneva, the dataset cards and the REST API specification) and the
-specification's upstream release. Older editions never inherit today's shared
-pages.
+Enterprise qualification tag, the LanceDB an Enterprise release bundles, the
+commit of every root the assembler read, and the specification's upstream
+release.
+
+An edition's sources are fixed when it is prepared:
+
+- **Product pages** come from the release commits: the OSS release, or the
+  Enterprise release and the LanceDB it bundles.
+- **Docs-owned content**, the Geneva pages, the dataset cards and the REST API
+  specification, comes from the docs input commit: the commit of this
+  repository's `main` that preparation read, which the record names with the
+  others. It is `main` as it was when the edition was prepared, not when the
+  product was released.
+- Later changes to `main`, or to a product's sources, never reach a saved
+  edition, so older editions never inherit today's pages.
 
 Saved editions are kept by default but are not immutable. A reviewed
 correction changes an edition's files at the same URL. The record keeps the
@@ -103,13 +113,22 @@ correction with the checksum of the edition it accepted; the saved edition
 must match the latest one. Git history holds the correction pull requests.
 Publication checksums describe the corrected candidate.
 
+A pull request may add editions, and add corrections at the end of a record.
+It may not remove an edition or a record, change a record's release, sources
+or prepared snapshot, or change an earlier correction. The Assemble workflow's
+test job checks this offline, on every pull request against its base commit
+and on every push to `main`, by comparing the records' parsed values.
+
 Preparation never overwrites a saved edition:
 
-- The same release prepared again from the same release commits changes
-  nothing, even after the edition has been corrected. A later commit of this
-  repository does not make it a different release.
-- Different commits for a saved release, such as a moved tag or another
-  Enterprise source, stop preparation for review.
+- The same release prepared again from the same release commits and
+  qualification tag changes nothing, even after the edition has been
+  corrected. A later commit of this repository's `main` does not make it a
+  different release.
+- Different inputs for a saved release, such as a moved tag, another
+  Enterprise source, or a qualification tag deleted and created again, stop
+  preparation for review. A recreated qualification tag is new qualification
+  evidence, not a duplicate.
 - A failed preparation leaves no edition and no record.
 
 ## Preparing a release
@@ -123,8 +142,15 @@ shared pages from that commit. A standalone OSS edition is not needed.
 
 **OSS.** Preparation takes the `lancedb/lancedb` release tag. The full
 navigation includes the Enterprise pages, so the Enterprise tag or commit
-they come from is named explicitly. Nothing reads the Enterprise repository's
-`main` or infers a compatibility relationship.
+they come from is named explicitly. Naming it pins the source; it does not
+decide that the source may be published with that OSS release, which is still
+open. Nothing reads the Enterprise repository's `main` or infers a
+compatibility relationship.
+
+**This repository.** The docs-owned pages and `assemble.yaml` are read from a
+commit of `main`, never from a branch: squash merges give a branch's commits
+new hashes, so only a commit of `main` stays recoverable. The assembler that
+runs must be that commit's.
 
 A missing tag, absent documentation, an unqualified or inconsistently tagged
 Enterprise release, or private-source files that may not be published stop
@@ -183,7 +209,8 @@ approved publication or change the preferred edition. Promotion reuses the
 staged artifact.
 
 Missing qualification, absent sources, ambiguous inputs or failed checks stop
-the workflow with a report. Duplicate events are harmless.
+the workflow with a report. A duplicate event, for a release already saved
+from the same commits and qualification tag, is harmless.
 
 Rolling back changes the preferred edition and keeps published folders.
 Restoring an earlier whole-site build would remove newer editions, so it needs
