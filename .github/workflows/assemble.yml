@@ -29,7 +29,8 @@ env:
   SOPHON_DOCS_ROOT: sophon/docs/web
 
 jobs:
-  # Forks run the guard tests without private-source credentials.
+  # Forks run the guard tests and the saved-edition check without
+  # private-source credentials.
   test:
     name: Test the assembler
     runs-on: ubuntu-latest
@@ -41,6 +42,26 @@ jobs:
 
       - name: Test the overlay, navigation and private-root guards
         run: make test-assemble
+
+      # A pull request is compared with the base commit its event names, and a
+      # push with the commit the branch pointed at before it. That commit is
+      # fetched by hash, so the comparison never depends on a remote-tracking
+      # branch or on what the shallow checkout happens to hold. A manual run
+      # has no base and checks each edition against its record only.
+      - name: Check that saved editions and their records are kept
+        env:
+          EVENT: ${{ github.event_name }}
+          # Not BASE itself: make would read it from the environment.
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
+            echo "No base commit for this $EVENT event; checking each edition against its record only."
+            make check-editions
+          else
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            make check-editions BASE="$BASE_SHA"
+          fi
 
   assemble:
     runs-on: ubuntu-latest

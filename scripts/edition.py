@@ -18,6 +18,9 @@ fresh content into one. See VERSIONING.md.
                                 and require the edition to match the checksum
                                 the record last accepted: the prepared one, or
                                 its latest correction's
+    check --base COMMIT         also require every edition and record on
+                                COMMIT to remain, each record as it was there
+                                but for corrections added at the end
 
 Each root is read from Git objects at its commit, never from a working tree,
 and only from its documentation folder: `docs/web` of lancedb/lancedb and
@@ -27,14 +30,16 @@ assemble.yaml and the assembler.
 A saved edition is never replaced. Preparing a release that already has one
 changes nothing when the release inputs match its record, even after the
 edition has been corrected, and stops when they differ. A preparation that
-fails leaves neither an edition nor a record behind.
+fails leaves neither an edition nor a record behind. Pull requests run
+`check --base` against their base commit, so a merged edition and its record
+stay as they are, apart from recorded corrections.
 
 Usage:
 
     python scripts/edition.py prepare oss VERSION --enterprise REF [--lancedb REPO] [--sophon REPO]
     python scripts/edition.py prepare enterprise VERSION [--bundled-lancedb COMMIT]
         [--lancedb REPO] [--sophon REPO]
-    python scripts/edition.py check
+    python scripts/edition.py check [--base COMMIT]
 """
 
 from __future__ import annotations
@@ -78,9 +83,10 @@ GIT_CONTROL = frozenset({".gitignore", ".gitattributes"})
 HEADER = """\
 # Release record, written by scripts/edition.py prepare. `release` and `sources`
 # say what the edition was built from, and `prepared` describes the snapshot as
-# first saved. Neither changes afterwards. A reviewed correction to the saved
-# edition adds an entry to `corrections` with the checksum of the corrected
-# edition; see "Saved editions" in README.md.
+# first saved. Once merged, neither changes; `edition.py check --base` refuses
+# a change to them. A reviewed correction to the saved edition adds an entry at
+# the end of `corrections` with the checksum of the corrected edition; see
+# "Saved editions" in README.md.
 """
 
 
@@ -679,8 +685,71 @@ def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def check(repo: Path = REPO_ROOT) -> tuple[list[str], list[str]]:
-    """Each edition's state, and every problem with records and editions."""
+def differences(was: object, now: object, path: str) -> list[str]:
+    """How two parsed values differ, field by field."""
+    if isinstance(was, dict) and isinstance(now, dict):
+        return [
+            change
+            for key in sorted(set(was) | set(now), key=str)
+            for change in differences(
+                was.get(key, MISSING), now.get(key, MISSING), f"{path}.{key}" if path else str(key)
+            )
+        ]
+    if type(was) is type(now) and was == now:
+        return []
+    return [f"{path} {'was removed' if now is MISSING else 'was added' if was is MISSING else 'changed'}"]
+
+
+def preserved(repo: Path, base: str) -> list[str]:
+    """What has happened since `base` to the editions and records it has.
+
+    Each of them remains. A record keeps every field it had there, except that
+    its corrections may gain entries at the end. Records are compared as
+    parsed values, so a change of formatting is not a change.
+    """
+    problems = []
+    listing = git(repo, "ls-tree", "-z", "--name-only", base, "--", "releases/").decode()
+    for rel in sorted(name for name in listing.split("\0") if name.endswith(".yaml")):
+        path = repo / rel
+        if not path.is_file():
+            problems.append(f"{rel} is on the base {base} but has been removed; a saved release keeps its record")
+            continue
+        try:
+            was = yaml.safe_load(git(repo, "show", f"{base}:{rel}"))
+            now = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError):
+            was = now = None
+        if not isinstance(was, dict) or not isinstance(now, dict):
+            # `check` reports a malformed record by itself, and one on the base
+            # can only be repaired by changing it.
+            continue
+        changes = differences(
+            {k: v for k, v in was.items() if k != "corrections"},
+            {k: v for k, v in now.items() if k != "corrections"},
+            "",
+        )
+        before, after = was.get("corrections"), now.get("corrections")
+        after = after if isinstance(after, list) else []
+        for index, entry in enumerate(before if isinstance(before, list) else []):
+            changes += differences(entry, after[index] if index < len(after) else MISSING, f"corrections[{index}]")
+        if changes:
+            problems.append(
+                f"{rel} differs from the base {base}: {', '.join(changes)}; a saved release's "
+                "record only gains corrections, at the end"
+            )
+    listing = git(repo, "ls-tree", "-z", "-d", "--name-only", base, "--",
+                  *(f"editions/{product}/" for product in PRODUCTS)).decode()
+    for rel in sorted(name for name in listing.split("\0") if name):
+        _editions, product, version = rel.split("/")
+        # A missing edition whose record remains is reported with the record.
+        if not (repo / rel).is_dir() and not record_path(repo, product, version).is_file():
+            problems.append(f"{rel} is on the base {base} but has been removed; a saved edition is never removed")
+    return problems
+
+
+def check(repo: Path = REPO_ROOT, base: str | None = None) -> tuple[list[str], list[str]]:
+    """Each edition's state, and every problem with records and editions; with
+    `base`, also every change since that commit to the ones it has."""
     lines, problems, paired = [], [], set()
     for path in sorted((repo / "releases").glob("*.yaml")):
         # The file name says which edition is this record's, even when the
@@ -705,6 +774,8 @@ def check(repo: Path = REPO_ROOT) -> tuple[list[str], list[str]]:
                 problems.append(f"{rel} is not a product folder")
         elif rel not in paired:
             problems.append(f"{rel} has no release record")
+    if base:
+        problems += preserved(repo, commit_of(repo, base, "--base"))
     return lines, problems
 
 
@@ -722,7 +793,10 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                       help="a lancedb/lancedb repository (default: ../lancedb)")
     prep.add_argument("--sophon", type=Path, default=REPO_ROOT.parent / "sophon",
                       help="a lancedb/sophon repository (default: ../sophon)")
-    commands.add_parser("check", help="check the saved editions against their records")
+    checking = commands.add_parser("check", help="check the saved editions against their records")
+    checking.add_argument("--base", metavar="COMMIT",
+                          help="also require the editions and records on COMMIT, such as a pull "
+                               "request's base, to be kept")
     return parser.parse_args(argv)
 
 
@@ -732,7 +806,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "prepare":
             print(prepare(args))
             return 0
-        lines, problems = check()
+        lines, problems = check(base=args.base)
     except (EditionError, candidate.CandidateError) as exc:
         print(f"edition: {exc}", file=sys.stderr)
         return 1

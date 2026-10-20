@@ -296,6 +296,12 @@ def add_correction(docs: Path, name: str, page: str, sha256: str) -> None:
     path.write_text(path.read_text().replace("corrections: []\n", "corrections:\n") + entry)
 
 
+def commit_all(docs: Path, message: str) -> str:
+    git(docs, "add", "-A")
+    git(docs, "commit", "-q", "-m", message)
+    return git(docs, "rev-parse", "HEAD")
+
+
 # --------------------------------------------------------------------------- #
 # preparing editions
 # --------------------------------------------------------------------------- #
@@ -549,19 +555,33 @@ def test_command_records_only_committed_build_inputs(docs, sources):
     assert result.returncode == 1
     assert "commit or stash the changes" in result.stderr
     assert not (docs / "editions/oss/0.99.0").exists()
+    git(docs, "checkout", "--", "scripts/assemble.py")
 
     result = run("check")
     assert (result.returncode, result.stdout) == (0, "oss 0.98.0: as prepared\n")
+    base = commit_all(docs, "oss 0.98.0")
+    assert run("check", "--base", base).returncode == 0
 
     (docs / "editions/oss/0.98.0/index.mdx").write_text("A correction\n")
     result = run("check")
     assert (result.returncode, result.stdout) == (1, "")
-    assert re.fullmatch(
+    reported = re.fullmatch(
         r"edition: editions/oss/0\.98\.0 has changed since it was prepared; its files now have "
         r"checksum ([0-9a-f]{64})\. For a reviewed correction, add an entry under `corrections` in "
         r"releases/oss-0\.98\.0\.yaml with `sha256: \1`\n",
         result.stderr,
-    )
+    )[1]
+
+    # The prepared checksum rewritten to match: only the base shows the change.
+    rewrite(docs, "oss-0.98.0", change("prepared.sha256", reported))
+    assert run("check").returncode == 0
+    result = run("check", "--base", base)
+    assert (result.returncode, result.stdout) == (1, "oss 0.98.0: as prepared\n")
+    assert result.stderr == f"edition: {kept(base, 'releases/oss-0.98.0.yaml', 'prepared.sha256 changed')}\n"
+
+    result = run("check", "--base", "1" * 40)
+    assert (result.returncode, result.stdout) == (1, "")
+    assert result.stderr.startswith(f"edition: --base: {'1' * 40} is not a commit in ")
 
 
 # --------------------------------------------------------------------------- #
@@ -622,6 +642,129 @@ def test_each_correction_records_the_snapshot_it_accepts(docs, sources):
     with pytest.raises(edition.EditionError, match="already saved; nothing changed, but .* has changed"):
         prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     assert state(docs) == before
+
+
+# --------------------------------------------------------------------------- #
+# merged editions and records are kept
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def base(docs, sources) -> str:
+    """Main after OSS 0.98.0 and Enterprise 8.1.0 were merged, and then a
+    correction to OSS 0.98.0: the base a pull request is checked against."""
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    prepare(docs, sources, "enterprise", "8.1.0")
+    commit_all(docs, "editions")
+    correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
+    return commit_all(docs, "a correction")
+
+
+KEPT = ["enterprise 8.1.0: as prepared", "oss 0.98.0: corrected (1 correction)"]
+
+
+def kept(base: str, rel: str, *changes: str) -> str:
+    """The problem `check --base` reports for a record changed since `base`."""
+    return (
+        f"{rel} differs from the base {base}: {', '.join(changes)}; a saved release's "
+        "record only gains corrections, at the end"
+    )
+
+
+def test_unchanged_editions_and_a_new_one_pass_against_the_base(docs, sources, base):
+    assert edition.check(docs, base=base) == (KEPT, [])
+
+    # A new edition, and a record written again with other formatting and no
+    # header comment.
+    prepare(docs, sources, "oss", "0.99.0", "--enterprise", "v8.2.0")
+    rewrite(docs, "enterprise-8.1.0", lambda rec: None)
+    assert edition.check(docs, base=base) == ([*KEPT, "oss 0.99.0: as prepared"], [])
+
+    # A new edition is checked against its own record, as always.
+    (docs / "editions/oss/0.99.0/index.mdx").write_text("Edited without a record\n")
+    lines, problems = edition.check(docs, base=base)
+    assert lines == KEPT
+    assert len(problems) == 1
+    assert problems[0].startswith("editions/oss/0.99.0 has changed since it was prepared")
+
+
+def test_prepared_rewritten_with_the_snapshot_fails_against_the_base(docs, base):
+    folder = docs / "editions/enterprise/8.1.0"
+    (folder / "index.mdx").write_text("Edited\n")
+    (folder / "guide.mdx").unlink()
+    files = saved(folder)
+    rewrite(docs, "enterprise-8.1.0", change("prepared", {"files": len(files), "sha256": checksum(files)}))
+
+    # The edition matches its record, so on its own the change passes.
+    assert edition.check(docs) == (KEPT, [])
+    assert edition.check(docs, base=base) == (KEPT, [
+        kept(base, "releases/enterprise-8.1.0.yaml", "prepared.files changed", "prepared.sha256 changed"),
+    ])
+
+
+def test_editing_or_removing_a_recorded_correction_fails_against_the_base(docs, base):
+    folder = docs / "editions/oss/0.98.0"
+    # A page deleted, and the existing correction's checksum rewritten to match.
+    (folder / "enterprise/security.mdx").unlink()
+
+    def rewritten(rec):
+        rec["corrections"][0]["sha256"] = checksum(saved(folder))
+
+    rewrite(docs, "oss-0.98.0", rewritten)
+    assert edition.check(docs) == (KEPT, [])
+    assert edition.check(docs, base=base) == (KEPT, [
+        kept(base, "releases/oss-0.98.0.yaml", "corrections[0].sha256 changed"),
+    ])
+
+    # The correction undone and its entry removed: the edition is as prepared.
+    git(docs, "reset", "-q", "--hard", base)
+    git(docs, "checkout", "HEAD~1", "--", "editions/oss/0.98.0/guide.mdx")
+    rewrite(docs, "oss-0.98.0", change("corrections", []))
+    lines = [KEPT[0], "oss 0.98.0: as prepared"]
+    assert edition.check(docs) == (lines, [])
+    assert edition.check(docs, base=base) == (lines, [
+        kept(base, "releases/oss-0.98.0.yaml", "corrections[0] was removed"),
+    ])
+
+
+def test_removing_or_replacing_a_saved_release_fails_against_the_base(docs, sources, base):
+    shutil.rmtree(docs / "editions/enterprise/8.1.0")
+    (docs / "releases/enterprise-8.1.0.yaml").unlink()
+    assert edition.check(docs) == ([KEPT[1]], [])
+    assert edition.check(docs, base=base) == ([KEPT[1]], [
+        f"releases/enterprise-8.1.0.yaml is on the base {base} but has been removed; a saved "
+        "release keeps its record",
+        f"editions/enterprise/8.1.0 is on the base {base} but has been removed; a saved edition "
+        "is never removed",
+    ])
+
+    # Only the edition removed: reported once, with its record.
+    git(docs, "reset", "-q", "--hard", base)
+    shutil.rmtree(docs / "editions/enterprise/8.1.0")
+    assert edition.check(docs, base=base) == ([KEPT[1]], [
+        "releases/enterprise-8.1.0.yaml: editions/enterprise/8.1.0 is missing",
+    ])
+
+    # Removed with its record, then prepared again from other inputs.
+    git(docs, "reset", "-q", "--hard", base)
+    shutil.rmtree(docs / "editions/oss/0.98.0")
+    (docs / "releases/oss-0.98.0.yaml").unlink()
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.2.0")
+    assert edition.check(docs) == ([KEPT[0], "oss 0.98.0: as prepared"], [])
+    problems = edition.check(docs, base=base)[1]
+    assert len(problems) == 1
+    assert problems[0].startswith(f"releases/oss-0.98.0.yaml differs from the base {base}: ")
+    for item in ("prepared.sha256 changed", "release.enterprise_pages.commit changed",
+                 "sources.enterprise.commit changed", "corrections[0] was removed"):
+        assert item in problems[0]
+
+
+def test_an_appended_correction_passes_against_the_base(docs, base):
+    rec = record(docs, "oss-0.98.0")
+    correct(docs, "oss-0.98.0", "index.mdx", "Corrected index\n")
+
+    assert edition.check(docs, base=base) == ([KEPT[0], "oss 0.98.0: corrected (2 corrections)"], [])
+    assert record(docs, "oss-0.98.0")["corrections"][0] == rec["corrections"][0]
 
 
 # --------------------------------------------------------------------------- #
