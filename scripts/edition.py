@@ -274,6 +274,11 @@ def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
             raise EditionError(
                 "--enterprise applies to OSS releases; an Enterprise release reads its own pages"
             )
+        if args.bundled_lancedb and not COMMIT_RE.fullmatch(args.bundled_lancedb):
+            raise EditionError(
+                f"--bundled-lancedb takes the full 40-character commit hash the release "
+                f"bundles, not {args.bundled_lancedb!r}"
+            )
         release_tag = f"v{version}"
         what = f"lancedb/sophon {release_tag}"
         enterprise = tag(sophon, release_tag, what)[1]

@@ -1,8 +1,8 @@
 """Tests for preparing saved editions from release records.
 
 Disposable repositories stand in for lancedb/lancedb, lancedb/sophon and this
-repository. Their versions are fixtures, not releases: OSS 0.95.0 to 0.99.0 and
-Enterprise 8.1.0 to 8.9.0, each built to exercise one case. The docs fixture
+repository. Their versions are fixtures, not releases: OSS 0.94.0 to 0.99.0 and
+Enterprise 8.1.0 to 8.10.0, each built to exercise one case. The docs fixture
 uses this repository's own assemble.yaml and .gitignore, and every edition is
 built by the real assembler.
 
@@ -173,6 +173,9 @@ def sources(tmp_path_factory) -> dict:
     c["bundled"] = snapshot(lancedb, oss_pages("the bundled revision"), "bundled by 8.1")
     c["ignored"] = snapshot(lancedb, {**oss_pages("0.95.0"), "docs/web/scratch/notes.mdx": b"x\n"}, "0.95")
     git(lancedb, "tag", "v0.95.0", c["ignored"])
+    control = {"docs/web/.gitattributes": b"* -text\n", "docs/web/static/.gitignore": b"*.svg\n"}
+    c["control"] = snapshot(lancedb, {**oss_pages("0.94.0"), **control}, "0.94")
+    git(lancedb, "tag", "v0.94.0", c["control"])
     c["0.98.0"] = snapshot(lancedb, oss_pages("0.98.0"), "0.98")
     annotated(lancedb, "v0.98.0", c["0.98.0"])
     c["0.99.0"] = snapshot(lancedb, oss_pages("0.99.0"), "0.99")
@@ -188,7 +191,9 @@ def sources(tmp_path_factory) -> dict:
     def release(version: str, files: dict, qualified: str | None = "self") -> str:
         commit = snapshot(sophon, files, version)
         annotated(sophon, f"v{version}", commit)
-        if qualified:
+        if qualified == "lightweight":
+            git(sophon, "tag", f"release-qualified/v{version}", commit)
+        elif qualified:
             annotated(sophon, f"release-qualified/v{version}", commit if qualified == "self" else qualified)
         e[version] = commit
         return commit
@@ -202,7 +207,7 @@ def sources(tmp_path_factory) -> dict:
     release("8.7.0", enterprise_pages("8.7", c["0.99.0"], **{"docs/web/.notes.mdx": INTERNAL}))
     release("8.8.0", enterprise_pages("8.8", c["0.99.0"], **{"docs/web/enterprise/ci.md": Symlink("../../ci.md")}))
     release("8.9.0", enterprise_pages("8.9", "1" * 40))
-    git(sophon, "tag", "v8.1.0-lightweight", e["8.1.0"])
+    release("8.10.0", enterprise_pages("8.10", c["0.99.0"]), qualified="lightweight")
     e["main"] = snapshot(sophon, enterprise_pages("unreleased main", c["main"]), "main moves on")
     return {"lancedb": lancedb, "sophon": sophon, "oss": c, "enterprise": e}
 
@@ -400,9 +405,12 @@ def test_enterprise_edition_reads_the_lancedb_it_bundles(docs, sources):
         (["oss", "0.98.0", "--enterprise", "main"], "not a branch"),
         (["oss", "0.98.0", "--enterprise", "v8.1.0", "--bundled-lancedb", "1" * 40], "Enterprise releases only"),
         (["oss", "0.95.0", "--enterprise", "v8.1.0"], ".gitignore would leave out"),
+        (["oss", "0.94.0", "--enterprise", "v8.1.0"],
+         r"would hold \['.gitattributes', 'static/.gitignore'\], which change how Git stores it"),
         (["enterprise", "8.1.0", "--enterprise", "v8.2.0"], "applies to OSS releases"),
         (["enterprise", "8.3.0"], "is not qualified"),
         (["enterprise", "8.4.0"], "but release-qualified/v8.4.0 qualifies"),
+        (["enterprise", "8.10.0"], "release-qualified/v8.10.0 is not an annotated tag"),
         (["enterprise", "8.5.0"], "has no docs/web"),
         (["enterprise", "8.6.0"], "records no bundled LanceDB"),
         (["enterprise", "8.1.0", "--bundled-lancedb", "1" * 40], "disagrees with lancedb/sophon v8.1.0"),
@@ -415,6 +423,26 @@ def test_preparation_stops_and_saves_nothing(docs, sources, argv, error):
     with pytest.raises(edition.EditionError, match=error):
         prepare(docs, sources, *argv)
 
+    assert state(docs) == {}
+
+
+def test_bundled_lancedb_is_named_in_full(docs, sources):
+    short = sources["oss"]["bundled"][:8]
+    with pytest.raises(edition.EditionError, match=f"takes the full 40-character commit hash .*, not '{short}'"):
+        prepare(docs, sources, "enterprise", "8.1.0", "--bundled-lancedb", short)
+    assert state(docs) == {}
+
+
+def test_a_root_without_recorded_provenance_stops_preparation(docs, sources):
+    config = yaml.safe_load((docs / "assemble.yaml").read_text())
+    config["roots"].append({"name": "notes", "path": "notes", "role": "reference"})
+    (docs / "assemble.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
+    commit_all(docs, "another root")
+    on_main(docs)
+
+    with pytest.raises(edition.EditionError, match=r"assemble.yaml has roots \['lancedb', 'enterprise', "
+                       r"'build', 'notes'\], but edition.py records the sources of"):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     assert state(docs) == {}
 
 
@@ -604,9 +632,13 @@ def test_check_pairs_records_and_requires_corrections_to_be_listed(docs, sources
 
     correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
     (docs / "editions/enterprise/8.1.0").mkdir(parents=True)
+    (docs / "editions/cloud").mkdir()
     lines, problems = edition.check(docs)
     assert lines == ["oss 0.98.0: corrected (1 correction)"]
-    assert problems == ["editions/enterprise/8.1.0 has no release record"]
+    assert problems == [
+        "editions/cloud is not a product folder",
+        "editions/enterprise/8.1.0 has no release record",
+    ]
 
 
 def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
@@ -670,8 +702,8 @@ def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
 
 
 def test_a_later_unrecorded_change_fails_after_a_recorded_correction(docs, sources):
-    """The independent review's case: a recorded correction to guide.mdx, then
-    an unrelated page deleted without updating the record."""
+    """A recorded correction to guide.mdx, then an unrelated page deleted
+    without updating the record."""
     prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     folder = docs / "editions/oss/0.98.0"
     (folder / "guide.mdx").write_text("Reviewed correction\n")
@@ -858,7 +890,8 @@ def rewrite(docs: Path, name: str, change) -> None:
 
 
 def test_records_without_their_pinned_sources_fail(docs, sources):
-    """The independent review's two cases, through `check`."""
+    """An OSS record without its docs source and with a malformed commit, and
+    an Enterprise record without its qualification and bundled LanceDB."""
     prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     prepare(docs, sources, "enterprise", "8.1.0")
 
