@@ -5,8 +5,8 @@ Home of the [LanceDB](https://lancedb.com/) documentation. Built using [Mintlify
 ## Development
 
 The published site is assembled from three roots, listed in `assemble.yaml`:
-the open-source pages in `lancedb/lancedb` and the Enterprise pages in
-`lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
+the open-source pages in `lancedb/lancedb`, the Enterprise documentation,
+both under `docs/web`, and this repository's `docs/`.
 
 This repository's `docs/` holds the pages it still owns: the Geneva pages, the
 dataset cards and the REST API reference. The four Geneva snippets
@@ -187,11 +187,11 @@ Publishing relies on settings outside this repository:
 - Mintlify's Git settings: repository `lancedb/docs`, branch `assembled`, and
   the content directory above. Mintlify serves the branch its settings name, so
   publishing to `assembled` reaches production only once that is the branch.
-- The LanceDB Docs Reader GitHub App installed on `lancedb/sophon` only, with
+- The LanceDB Docs Reader GitHub App installed on the Enterprise documentation repository only, with
   Contents: read and the required Metadata: read permission. Set its Client ID
   in the `SOPHON_DOCS_APP_CLIENT_ID` repository variable and its PEM private key
   in the `SOPHON_DOCS_APP_PRIVATE_KEY` repository secret. The Assemble and Docs
-  Check workflows generate a short-lived token scoped to Sophon with
+  Check workflows generate a short-lived token scoped to that repository with
   Contents: read. Checkout does not persist it, and the token is revoked when
   the job ends. Fork pull requests receive no App secret and cannot run the
   combined build; the assembler guard tests still run without credentials.
@@ -208,14 +208,15 @@ Each published documentation edition is saved in this repository: the site the
 assembler built from one product release's own sources, in
 `editions/<product>/<version>/`, with a release record in
 `releases/<product>-<version>.yaml` that names every source it was read from.
-New documentation is still written in `lancedb/lancedb` and `lancedb/sophon`.
+New documentation is still written in `lancedb/lancedb` and the Enterprise
+documentation repository.
 [VERSIONING.md](VERSIONING.md) describes the design. Composing the saved
 editions into the site, and publishing them, are later steps; for now the site
 is assembled and published as above.
 
 ### Preparing an edition
 
-Fetch the release tags into the lancedb and sophon checkouts, then run the
+Fetch the release tags into the LanceDB and Enterprise checkouts, then run the
 command from a checkout of this repository with no uncommitted changes to
 `assemble.yaml`, `scripts/` or `docs/`:
 
@@ -224,17 +225,17 @@ uv run --no-project --with pyyaml scripts/edition.py prepare enterprise 1.10.0 -
 uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterprise v1.10.0 --lancedb ../lancedb --sophon ../sophon
 ```
 
-- **Enterprise** reads sophon's tag `v1.10.0`, which must have a
+- **Enterprise** reads the Enterprise release tag `v1.10.0`, which must have a
   `release-qualified/v1.10.0` tag on the same commit. The shared pages come
   from the LanceDB commit that release bundles at `src/lancedb`, which may be
   one no OSS release tags: fetch it with `git -C ../lancedb fetch origin
   <commit>`. `--bundled-lancedb <commit>` stops preparation if the release
   bundles a different one.
 - **OSS** reads lancedb's tag `v0.41.0`. The Enterprise pages come from the
-  sophon tag or full commit hash named with `--enterprise`; a branch is not
+  Enterprise tag or full commit hash named with `--enterprise`; a branch is not
   accepted. Which Enterprise release to name is not settled yet; see
   [Open questions](VERSIONING.md#open-questions).
-- The lancedb and sophon roots are read from Git at their commits, never from a
+- The LanceDB and Enterprise roots are read from Git at their commits, never from a
   working tree, and only from `docs/web`. This repository's `docs/`,
   `assemble.yaml` and assembler come from HEAD. Only stable versions, such as
   `1.2.3`, have editions.
@@ -257,7 +258,8 @@ commit the edition and its record together:
 uv run --no-project --with pyyaml scripts/edition.py check
 ```
 
-A record looks like this, with shortened commits and checksums:
+A record looks like this, with a placeholder for the Enterprise repository
+and shortened commits and checksums:
 
 ```yaml
 format: 1
@@ -265,7 +267,7 @@ product: enterprise
 version: 1.10.0
 edition: editions/enterprise/1.10.0
 release:
-  repository: lancedb/sophon
+  repository: <enterprise-repository>
   tag: v1.10.0
   commit: 5a1f0c9e…
   qualification:
@@ -278,7 +280,7 @@ sources:
     path: docs/web
     commit: 7d0b4a12…
   enterprise:
-    repository: lancedb/sophon
+    repository: <enterprise-repository>
     path: docs/web
     commit: 5a1f0c9e…
   build:
@@ -309,23 +311,36 @@ such as an Enterprise record whose `sources.lancedb.commit` is not its
 A saved edition can be corrected after review, at the same URL:
 
 1. Edit the affected files in each edition that has the error, and in no other.
-2. In each edition's record, add an entry under `corrections`. Leave the rest
-   of the record as it is.
+2. Run `edition.py check`. It fails, because the edition no longer matches its
+   record, and prints the corrected edition's checksum:
+
+   ```text
+   edition: editions/enterprise/1.10.0 has changed since it was prepared; its files now have checksum 3f9c2a7e…. For a reviewed correction, add an entry under `corrections` in releases/enterprise-1.10.0.yaml with `sha256: 3f9c2a7e…`
+   ```
+
+3. In each edition's record, add an entry at the end of `corrections` with a
+   one-line summary, the files it changes, and that checksum; for the first
+   correction, replace `corrections: []`. Leave the rest of the record as it is.
 
    ```yaml
    corrections:
    - summary: Fix the default retry count in the merge-insert example.
      files: [tables/merge-insert.mdx]
+     sha256: 3f9c2a7e…
    ```
 
-3. Run the checks above. `edition.py check` fails when an edition differs from
-   its prepared snapshot without a correction listed. Check a corrected example
-   the way that example needs; a typo needs no test run.
-4. If the error is still in the current source, in `lancedb/lancedb`,
-   `lancedb/sophon` or `docs/` here, fix it there as well.
-5. Open one pull request that names every edition it corrects.
+4. Run the checks above. `edition.py check` now passes: each edition must match
+   the checksum its record last accepted, the prepared one or the latest
+   correction's. Any later change to the edition, including a deleted file,
+   fails again until it is recorded the same way, as a further entry. Check a
+   corrected example the way that example needs; a typo needs no test run.
+5. If the error is still in the current source, in `lancedb/lancedb`,
+   the Enterprise documentation repository or `docs/` here, fix it there as well.
+6. Open one pull request that names every edition it corrects. Reviewers decide
+   whether each correction is right; the checksum shows only that the record
+   describes the files.
 
-Preparing that release again later keeps the correction.
+Preparing that release again later keeps the edition and its corrections.
 
 ## Code snippets
 

@@ -13,6 +13,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -271,14 +272,28 @@ def state(docs: Path) -> dict[str, bytes | None]:
     return found
 
 
-def correct(docs: Path, name: str, page: str, text: str) -> None:
-    """A reviewed correction: edit the saved page and say so in the record."""
+def correct(docs: Path, name: str, page: str, text: str) -> str:
+    """A reviewed correction, as the README describes it: edit the saved page,
+    then record it."""
     product, version = name.split("-")
     (docs / "editions" / product / version / page).write_text(text)
+    return record_correction(docs, name, page)
+
+
+def record_correction(docs: Path, name: str, page: str) -> str:
+    """Add a correction entry with the checksum `check` reports for the edition."""
+    product, version = name.split("-")
+    _lines, problems = edition.check(docs)
+    reported = [p for p in problems if p.startswith(f"editions/{product}/{version} has changed")]
+    sha256 = re.search(r"`sha256: ([0-9a-f]{64})`", reported[0])[1]
+    add_correction(docs, name, page, sha256)
+    return sha256
+
+
+def add_correction(docs: Path, name: str, page: str, sha256: str) -> None:
     path = docs / "releases" / f"{name}.yaml"
-    path.write_text(path.read_text().replace(
-        "corrections: []", f"corrections:\n- summary: Fix {page}.\n  files: [{page}]"
-    ))
+    entry = f"- summary: Fix {page}.\n  files: [{page}]\n  sha256: {sha256}\n"
+    path.write_text(path.read_text().replace("corrections: []\n", "corrections:\n") + entry)
 
 
 # --------------------------------------------------------------------------- #
@@ -500,7 +515,7 @@ def test_check_pairs_records_and_requires_corrections_to_be_listed(docs, sources
 
     (docs / "editions/oss/0.98.0/guide.mdx").write_text("Edited without a record\n")
     lines, problems = edition.check(docs)
-    assert lines == [] and "lists no correction" in problems[0]
+    assert lines == [] and "has changed since it was prepared" in problems[0]
 
     correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
     (docs / "editions/enterprise/8.1.0").mkdir(parents=True)
@@ -537,6 +552,76 @@ def test_command_records_only_committed_build_inputs(docs, sources):
 
     result = run("check")
     assert (result.returncode, result.stdout) == (0, "oss 0.98.0: as prepared\n")
+
+    (docs / "editions/oss/0.98.0/index.mdx").write_text("A correction\n")
+    result = run("check")
+    assert (result.returncode, result.stdout) == (1, "")
+    assert re.fullmatch(
+        r"edition: editions/oss/0\.98\.0 has changed since it was prepared; its files now have "
+        r"checksum ([0-9a-f]{64})\. For a reviewed correction, add an entry under `corrections` in "
+        r"releases/oss-0\.98\.0\.yaml with `sha256: \1`\n",
+        result.stderr,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# corrections are bound to the edition's checksum
+# --------------------------------------------------------------------------- #
+
+
+def test_a_later_unrecorded_change_fails_after_a_recorded_correction(docs, sources):
+    """The independent review's case: a recorded correction to guide.mdx, then
+    an unrelated page deleted without updating the record."""
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    folder = docs / "editions/oss/0.98.0"
+    (folder / "guide.mdx").write_text("Reviewed correction\n")
+    add_correction(docs, "oss-0.98.0", "guide.mdx", checksum(saved(folder)))
+    assert edition.check(docs) == (["oss 0.98.0: corrected (1 correction)"], [])
+    (folder / "enterprise/security.mdx").unlink()
+
+    lines, problems = edition.check(docs)
+
+    assert lines == []
+    assert len(problems) == 1
+    assert problems[0].startswith(
+        "editions/oss/0.98.0 has changed since its latest recorded correction; its files now "
+        "have checksum "
+    )
+
+
+def test_each_correction_records_the_snapshot_it_accepts(docs, sources):
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    prepared = record(docs, "oss-0.98.0")["prepared"]
+    first = correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
+    assert edition.check(docs) == (["oss 0.98.0: corrected (1 correction)"], [])
+
+    # Later changes nobody recorded: an edit, then a deletion.
+    page = docs / "editions/oss/0.98.0/index.mdx"
+    page.write_text("Unreviewed edit\n")
+    assert "has changed since its latest recorded correction" in edition.check(docs)[1][0]
+    page.unlink()
+    assert "has changed since its latest recorded correction" in edition.check(docs)[1][0]
+
+    # Recording the deletion, once reviewed, as a second correction accepts it.
+    second = record_correction(docs, "oss-0.98.0", "index.mdx")
+    assert edition.check(docs) == (["oss 0.98.0: corrected (2 corrections)"], [])
+    rec = record(docs, "oss-0.98.0")
+    assert rec["prepared"] == prepared
+    assert [c["sha256"] for c in rec["corrections"]] == [first, second]
+    assert second == checksum(saved(docs / "editions/oss/0.98.0"))
+
+    # Preparing the release again keeps the edition and both corrections.
+    before = state(docs)
+    out = prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    assert out.endswith("editions/oss/0.98.0 is corrected (2 corrections); nothing changed")
+    assert state(docs) == before
+
+    # It stays a no-op when a change has not been recorded, and says so.
+    (docs / "editions/oss/0.98.0/guide.mdx").write_text("Another unreviewed edit\n")
+    before = state(docs)
+    with pytest.raises(edition.EditionError, match="already saved; nothing changed, but .* has changed"):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    assert state(docs) == before
 
 
 # --------------------------------------------------------------------------- #
@@ -597,7 +682,7 @@ def change(path: str, value=KeyError):
     return apply
 
 
-C = "2" * 40
+A, B, C = "a" * 64, "b" * 64, "2" * 40
 
 # One change each, and the one problem it must cause. {release}, {pages},
 # {bundled} and {prepared} stand for the record's own values.
@@ -633,12 +718,19 @@ MALFORMED = [
     ("oss-0.98.0", change("prepared.sha256", "0" * 63),
      f"prepared.sha256 is {'0' * 63!r}, not a SHA-256 checksum"),
     ("oss-0.98.0", change("corrections", {}), "corrections is {{}}, not a list"),
-    ("oss-0.98.0", change("corrections", [{"files": ["guide.mdx"]}]), "corrections[0].summary must be one line of text"),
-    ("oss-0.98.0", change("corrections", [{"summary": "One\nTwo"}]),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "files": ["guide.mdx"]}]),
+     "corrections[0].sha256 is missing, not the SHA-256 checksum of the corrected edition that "
+     "`check` reports"),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "sha256": "{prepared}"}]),
+     "corrections[0].sha256 is the checksum before it; a correction changes the edition"),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "sha256": A}, {"summary": "Again.", "sha256": A}]),
+     "corrections[1].sha256 is the checksum before it; a correction changes the edition"),
+    ("oss-0.98.0", change("corrections", [{"sha256": A}]), "corrections[0].summary must be one line of text"),
+    ("oss-0.98.0", change("corrections", [{"summary": "One\nTwo", "sha256": A}]),
      "corrections[0].summary must be one line of text"),
-    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "files": "guide.mdx"}]),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "files": "guide.mdx", "sha256": A}]),
      "corrections[0].files must be a list of the edition's paths"),
-    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "approved": True}]),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "sha256": A, "approved": True}]),
      "corrections[0].approved is not a field here"),
     ("enterprise-8.1.0", change("release.qualification"), "release.qualification is missing"),
     ("enterprise-8.1.0", change("release.qualification.tag", "release-qualified/v8.2.0"),
@@ -658,7 +750,8 @@ MALFORMED = [
 
 
 @pytest.mark.parametrize(
-    "name, mutate, problem", MALFORMED, ids=[f"{n}:{p[:60]}" for n, _m, p in MALFORMED]
+    "name, mutate, problem", MALFORMED,
+    ids=[f"{n}:{p.replace('{{}}', '{}')[:60]}" for n, _m, p in MALFORMED],
 )
 def test_a_malformed_record_names_the_field(records, tmp_path, name, mutate, problem):
     rec = copy.deepcopy(records[name])
@@ -669,6 +762,9 @@ def test_a_malformed_record_names_the_field(records, tmp_path, name, mutate, pro
         "prepared": rec["prepared"]["sha256"],
     }
     mutate(rec)
+    for entry in rec.get("corrections") if isinstance(rec.get("corrections"), list) else []:
+        if entry.get("sha256") == "{prepared}":
+            entry["sha256"] = values["prepared"]
     path = tmp_path / "releases" / f"{name}.yaml"
     path.parent.mkdir()
     path.write_text(yaml.safe_dump(rec))
@@ -683,8 +779,8 @@ def test_records_the_builder_writes_are_valid(records, tmp_path):
     and a record with two corrections."""
     corrected = copy.deepcopy(records["oss-0.98.0"])
     corrected["corrections"] = [
-        {"summary": "Fix the guide.", "files": ["guide.mdx"]},
-        {"summary": "Remove a page."},
+        {"summary": "Fix the guide.", "files": ["guide.mdx"], "sha256": A},
+        {"summary": "Remove a page.", "sha256": B},
     ]
     for name, rec in [*records.items(), ("oss-0.98.0", corrected)]:
         assert edition.record_problems(rec, f"{name}.yaml") == []

@@ -2,9 +2,9 @@
 
 Readers should find the documentation for the product version they use.
 Engineers keep writing documentation beside the product code, in
-`lancedb/lancedb` and `lancedb/sophon`. Release automation prepares each
-version's documentation, and people review it before it is merged and before
-it reaches production.
+`lancedb/lancedb` and the Enterprise documentation repository. Release
+automation prepares each version's documentation, and people review it before
+it is merged and before it reaches production.
 
 This is the design that work follows. It is built in four steps:
 
@@ -48,7 +48,7 @@ latest OSS edition: the LanceDB it bundles can be older.
 ```mermaid
 flowchart TD
     L["lancedb/lancedb<br/>Shared pages and examples"] --> B
-    S["lancedb/sophon<br/>Enterprise pages and bundled LanceDB"] --> B
+    S["Enterprise source<br/>Enterprise pages and bundled LanceDB"] --> B
     D["This repository<br/>Docs-owned pages"] --> B
     R["Release record<br/>Version and exact source commits"] --> B
     B["Edition builder<br/>Saves a new edition"] --> E
@@ -98,9 +98,10 @@ pages.
 
 Saved editions are kept by default but are not immutable. A reviewed
 correction changes an edition's files at the same URL. The record keeps the
-original sources and the checksum of the snapshot as prepared, lists each
-correction, and Git history holds the correction pull requests. Publication
-checksums describe the corrected candidate.
+original sources and the checksum of the snapshot as prepared, and lists each
+correction with the checksum of the edition it accepted; the saved edition
+must match the latest one. Git history holds the correction pull requests.
+Publication checksums describe the corrected candidate.
 
 Preparation never overwrites a saved edition:
 
@@ -116,14 +117,14 @@ Preparation never overwrites a saved edition:
 The manual command and later automatic discovery run the same preparation.
 Nobody assembles files by hand.
 
-**Enterprise.** Preparation takes the `lancedb/sophon` release tag, which must
+**Enterprise.** Preparation takes the Enterprise release tag, which must
 be qualified, reads the LanceDB commit that release bundles, and takes the
 shared pages from that commit. A standalone OSS edition is not needed.
 
 **OSS.** Preparation takes the `lancedb/lancedb` release tag. The full
-navigation includes the Enterprise pages, so the `lancedb/sophon` tag or commit
-they come from is named explicitly. Nothing reads Sophon's `main` or infers a
-compatibility relationship.
+navigation includes the Enterprise pages, so the Enterprise tag or commit
+they come from is named explicitly. Nothing reads the Enterprise repository's
+`main` or infers a compatibility relationship.
 
 A missing tag, absent documentation, an unqualified or inconsistently tagged
 Enterprise release, or private-source files that may not be published stop

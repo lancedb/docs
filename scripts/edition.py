@@ -14,9 +14,10 @@ fresh content into one. See VERSIONING.md.
     prepare enterprise VERSION  the lancedb/sophon tag vVERSION, which must be
                                 qualified, with the shared pages from the
                                 LanceDB commit that release bundles
-    check                       pair every record with its edition, and require
-                                an edition changed since it was prepared to
-                                list its corrections
+    check                       check every record, pair it with its edition,
+                                and require the edition to match the checksum
+                                the record last accepted: the prepared one, or
+                                its latest correction's
 
 Each root is read from Git objects at its commit, never from a working tree,
 and only from its documentation folder: `docs/web` of lancedb/lancedb and
@@ -78,7 +79,8 @@ HEADER = """\
 # Release record, written by scripts/edition.py prepare. `release` and `sources`
 # say what the edition was built from, and `prepared` describes the snapshot as
 # first saved. Neither changes afterwards. A reviewed correction to the saved
-# edition adds an entry to `corrections`; see VERSIONING.md.
+# edition adds an entry to `corrections` with the checksum of the corrected
+# edition; see "Saved editions" in README.md.
 """
 
 
@@ -443,18 +445,29 @@ def record_problems(record: object, filename: str) -> list[str]:
         check("prepared.sha256", checksum, "a SHA-256 checksum")
 
     corrections = check("corrections", lambda v: isinstance(v, list), "a list")
+    accepted = lookup("prepared.sha256")
     for index, entry in enumerate(corrections or []):
         where = f"corrections[{index}]"
         if not isinstance(entry, dict):
             problems.append(f"{where} is not a mapping")
+            accepted = None
             continue
-        for key in sorted(set(entry) - {"summary", "files"}, key=str):
+        for key in sorted(set(entry) - {"summary", "files", "sha256"}, key=str):
             problems.append(f"{where}.{key} is not a field here")
         if not line(entry.get("summary")):
             problems.append(f"{where}.summary must be one line of text")
         files = entry.get("files", [])
         if not isinstance(files, list) or not all(isinstance(f, str) and f for f in files):
             problems.append(f"{where}.files must be a list of the edition's paths")
+        sha256 = entry.get("sha256")
+        if not checksum(sha256):
+            problems.append(
+                f"{where}.sha256 is {'missing' if sha256 is None else repr(sha256)}, not the "
+                "SHA-256 checksum of the corrected edition that `check` reports"
+            )
+        elif sha256 == accepted:
+            problems.append(f"{where}.sha256 is the checksum before it; a correction changes the edition")
+        accepted = sha256
     return problems
 
 
@@ -483,16 +496,21 @@ def ignored_paths(repo: Path, listing: str, index: bool = False) -> set[str]:
 
 
 def snapshot_state(repo: Path, record: dict) -> str:
-    """Whether the saved edition is still the prepared snapshot."""
+    """Whether the saved edition is the snapshot its record last accepted:
+    the one prepared, or the one its latest correction recorded."""
     current = candidate.site_checksum(saved_hashes(repo, record["edition"]))
-    if current == record["prepared"]["sha256"]:
-        return "as prepared"
-    count = len(record["corrections"])
-    if not count:
+    corrections = record["corrections"]
+    accepted = corrections[-1]["sha256"] if corrections else record["prepared"]["sha256"]
+    if current != accepted:
+        since = "its latest recorded correction" if corrections else "it was prepared"
         raise EditionError(
-            f"{record['edition']} differs from its prepared snapshot, and "
-            f"releases/{record['product']}-{record['version']}.yaml lists no correction"
+            f"{record['edition']} has changed since {since}; its files now have checksum "
+            f"{current}. For a reviewed correction, add an entry under `corrections` in "
+            f"releases/{record['product']}-{record['version']}.yaml with `sha256: {current}`"
         )
+    if not corrections:
+        return "as prepared"
+    count = len(corrections)
     return f"corrected ({count} correction{'s' if count > 1 else ''})"
 
 
@@ -718,7 +736,8 @@ def main(argv: list[str] | None = None) -> int:
     except (EditionError, candidate.CandidateError) as exc:
         print(f"edition: {exc}", file=sys.stderr)
         return 1
-    print("\n".join(lines) or "no saved editions")
+    if lines or not problems:
+        print("\n".join(lines) or "no saved editions")
     for problem in problems:
         print(f"edition: {problem}", file=sys.stderr)
     return 1 if problems else 0

@@ -16,4 +16,4 @@ This is a documentation site for [LanceDB](https://docs.lancedb.com).
 ## Saved editions
 
 - `editions/` holds saved documentation editions and `releases/` their records. Create an edition only with `scripts/edition.py prepare`, and change one only as a reviewed correction listed in its record. See "Saved editions" in README.md.
-- Write new documentation in `lancedb/lancedb` or `lancedb/sophon`, not in a saved edition.
+- Write new documentation in `lancedb/lancedb` or the Enterprise documentation repository, not in a saved edition.

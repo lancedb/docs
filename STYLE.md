@@ -5,7 +5,7 @@ Be direct, approachable and technically precise. Give readers enough context
 to make a decision, then show them how to act on it.
 
 This guide covers prose on docs.lancedb.com: the pages in `lancedb/lancedb`
-`docs/web`, the public Enterprise pages in `lancedb/sophon` `docs/web`, and the
+`docs/web`, the public Enterprise pages under `docs/web`, and the
 Geneva, dataset and REST pages in this repository. [WRITING.md](WRITING.md)
 covers Mintlify mechanics.
 
