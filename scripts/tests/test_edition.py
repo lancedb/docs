@@ -213,8 +213,9 @@ def docs(tmp_path) -> Path:
 
 
 def docs_checkout(path: Path) -> Path:
-    """A lancedb/docs checkout: this repository's assemble.yaml and .gitignore,
-    and docs-owned pages, a navigation fragment and the OpenAPI spec."""
+    """A lancedb/docs checkout of main, fetched as origin/main: this
+    repository's assemble.yaml and .gitignore, and docs-owned pages, a
+    navigation fragment and the OpenAPI spec."""
     repo = new_repo(path)
     for name in ("assemble.yaml", ".gitignore"):
         shutil.copy(SCRIPTS.parent / name, repo / name)
@@ -228,7 +229,14 @@ def docs_checkout(path: Path) -> Path:
         (repo / rel).write_text(content)
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "docs")
+    on_main(repo)
     return repo
+
+
+def on_main(docs: Path) -> str:
+    """HEAD merged into main and fetched: origin/main points at it."""
+    git(docs, "update-ref", "refs/remotes/origin/main", "HEAD")
+    return git(docs, "rev-parse", "HEAD")
 
 
 def prepare(docs: Path, sources: dict, *argv: str, lancedb: Path | None = None) -> str:
@@ -340,7 +348,7 @@ def test_oss_edition_is_built_from_its_tag_and_named_enterprise_pages(docs, sour
     assert rec["sources"] == {
         "lancedb": {"repository": "lancedb/lancedb", "path": "docs/web", "commit": oss["0.98.0"]},
         "enterprise": {"repository": "lancedb/sophon", "path": "docs/web", "commit": ent["8.1.0"]},
-        "build": {"repository": "lancedb/docs", "path": "docs", "commit": git(docs, "rev-parse", "HEAD")},
+        "build": {"repository": "lancedb/docs", "path": "docs", "commit": git(docs, "rev-parse", "origin/main")},
         "openapi": {
             "repository": "lance-format/lance-namespace",
             "release": yaml.safe_load((docs / "assemble.yaml").read_text())["openapi"]["release"],
@@ -411,6 +419,76 @@ def test_preparation_stops_and_saves_nothing(docs, sources, argv, error):
 
 
 # --------------------------------------------------------------------------- #
+# the docs input commit
+# --------------------------------------------------------------------------- #
+
+
+def test_docs_inputs_come_from_main_not_from_the_branch(docs, sources):
+    main = git(docs, "rev-parse", "origin/main")
+    spec = yaml.safe_load((docs / "assemble.yaml").read_text())["openapi"]["release"]
+    # A pull request's branch changes a docs-owned page and assemble.yaml in a
+    # commit main does not have, and the page again without committing it.
+    git(docs, "switch", "-q", "-c", "editions")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, on a branch\n")
+    config = (docs / "assemble.yaml").read_text()
+    (docs / "assemble.yaml").write_text(config.replace(f"release: {spec}\n", "release: v9.9.9\n"))
+    commit_all(docs, "unmerged changes")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, uncommitted\n")
+
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    # The first edition is committed on the branch before a second is prepared.
+    git(docs, "add", "editions", "releases")
+    git(docs, "commit", "-q", "-m", "oss 0.98.0")
+    prepare(docs, sources, "enterprise", "8.1.0")
+
+    for name in ("oss-0.98.0", "enterprise-8.1.0"):
+        rec = record(docs, name)
+        assert rec["sources"]["build"]["commit"] == main
+        assert rec["sources"]["openapi"]["release"] == spec
+        assert (docs / rec["edition"] / "geneva/index.mdx").read_text() == "# Geneva\n"
+
+
+def test_an_earlier_commit_of_main_can_be_named(docs, sources):
+    earlier = git(docs, "rev-parse", "HEAD")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, later\n")
+    commit_all(docs, "a later page")
+    later = on_main(docs)
+
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0", "--docs", earlier)
+    prepare(docs, sources, "oss", "0.99.0", "--enterprise", "v8.2.0")
+
+    for name, commit, page in (("oss-0.98.0", earlier, "# Geneva\n"), ("oss-0.99.0", later, "# Geneva, later\n")):
+        rec = record(docs, name)
+        assert rec["sources"]["build"]["commit"] == commit
+        assert (docs / rec["edition"] / "geneva/index.mdx").read_text() == page
+
+
+def test_docs_inputs_off_main_or_unlike_the_running_scripts_are_refused(docs, sources):
+    git(docs, "switch", "-q", "-c", "editions")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, on a branch\n")
+    head = commit_all(docs, "an unmerged page")
+    oss = ["oss", "0.98.0", "--enterprise", "v8.1.0"]
+
+    with pytest.raises(edition.EditionError, match=f"--docs: HEAD is {head}, which origin/main does not contain"):
+        prepare(docs, sources, *oss, "--docs", "HEAD")
+
+    # The branch changes the assembler, committed and then not.
+    (docs / "scripts").mkdir()
+    (docs / "scripts/assemble.py").write_text("# a changed assembler\n")
+    commit_all(docs, "an unmerged assembler")
+    with pytest.raises(edition.EditionError, match="this checkout's scripts/ are not those of"):
+        prepare(docs, sources, *oss)
+    (docs / "scripts/assemble.py").write_text("# changed again\n")
+    with pytest.raises(edition.EditionError, match="commit or stash the changes to scripts/"):
+        prepare(docs, sources, *oss)
+
+    git(docs, "update-ref", "-d", "refs/remotes/origin/main")
+    with pytest.raises(edition.EditionError, match="origin/main is not a commit in .*; fetch it first"):
+        prepare(docs, sources, *oss)
+    assert state(docs) == {}
+
+
+# --------------------------------------------------------------------------- #
 # protecting saved editions
 # --------------------------------------------------------------------------- #
 
@@ -438,10 +516,11 @@ def test_duplicate_preparation_changes_nothing_even_after_a_correction(docs, sou
     assert "editions/oss/0.98.0 is as prepared; nothing changed" in out
 
     correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
-    # This repository moves on, and the same release is prepared again, its
-    # Enterprise pages named by commit this time.
+    # This repository's main moves on, and the same release is prepared
+    # again, its Enterprise pages named by commit this time.
     (docs / "docs/geneva/index.mdx").write_text("# Geneva, later\n")
     git(docs, "commit", "-q", "-am", "later")
+    on_main(docs)
     before = state(docs)
     out = prepare(docs, sources, "oss", "0.98.0", "--enterprise", sources["enterprise"]["8.1.0"])
 
@@ -530,13 +609,14 @@ def test_check_pairs_records_and_requires_corrections_to_be_listed(docs, sources
     assert problems == ["editions/enterprise/8.1.0 has no release record"]
 
 
-def test_command_records_only_committed_build_inputs(docs, sources):
+def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
     """End to end, as a person runs it: the scripts are part of the checkout."""
     (docs / "scripts").mkdir()
     for name in ("assemble.py", "candidate.py", "edition.py"):
         shutil.copy(SCRIPTS / name, docs / "scripts" / name)
     git(docs, "add", "-A")
     git(docs, "commit", "-q", "-m", "scripts")
+    main = on_main(docs)
 
     def run(*argv: str) -> subprocess.CompletedProcess:
         return subprocess.run(
@@ -547,13 +627,13 @@ def test_command_records_only_committed_build_inputs(docs, sources):
     repos = ["--lancedb", str(sources["lancedb"]), "--sophon", str(sources["sophon"])]
     result = run("prepare", "oss", "0.98.0", "--enterprise", "v8.1.0", *repos)
     assert result.returncode == 0, result.stderr
-    assert record(docs, "oss-0.98.0")["sources"]["build"]["commit"] == git(docs, "rev-parse", "HEAD")
+    assert record(docs, "oss-0.98.0")["sources"]["build"]["commit"] == main
 
     with (docs / "scripts/assemble.py").open("a") as script:
         script.write("# a local change\n")
     result = run("prepare", "oss", "0.99.0", "--enterprise", "v8.2.0", *repos)
     assert result.returncode == 1
-    assert "commit or stash the changes" in result.stderr
+    assert "commit or stash the changes to scripts/" in result.stderr
     assert not (docs / "editions/oss/0.99.0").exists()
     git(docs, "checkout", "--", "scripts/assemble.py")
 
@@ -751,12 +831,10 @@ def test_removing_or_replacing_a_saved_release_fails_against_the_base(docs, sour
     (docs / "releases/oss-0.98.0.yaml").unlink()
     prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.2.0")
     assert edition.check(docs) == ([KEPT[0], "oss 0.98.0: as prepared"], [])
-    problems = edition.check(docs, base=base)[1]
-    assert len(problems) == 1
-    assert problems[0].startswith(f"releases/oss-0.98.0.yaml differs from the base {base}: ")
-    for item in ("prepared.sha256 changed", "release.enterprise_pages.commit changed",
-                 "sources.enterprise.commit changed", "corrections[0] was removed"):
-        assert item in problems[0]
+    assert edition.check(docs, base=base)[1] == [kept(
+        base, "releases/oss-0.98.0.yaml", "prepared.sha256 changed", "release.enterprise_pages.commit changed",
+        "release.enterprise_pages.ref changed", "sources.enterprise.commit changed", "corrections[0] was removed",
+    )]
 
 
 def test_an_appended_correction_passes_against_the_base(docs, base):

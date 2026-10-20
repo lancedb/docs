@@ -24,8 +24,11 @@ fresh content into one. See VERSIONING.md.
 
 Each root is read from Git objects at its commit, never from a working tree,
 and only from its documentation folder: `docs/web` of lancedb/lancedb and
-lancedb/sophon, and `docs` of this repository at HEAD, which also supplies
-assemble.yaml and the assembler.
+lancedb/sophon, and `docs` of this repository at a commit of its main branch,
+origin/main or one named with --docs, which also supplies assemble.yaml. A
+branch's commits get new hashes when it is merged, so a record names only a
+commit of main. The assembler that runs is this checkout's scripts/, which
+must be that commit's.
 
 A saved edition is never replaced. Preparing a release that already has one
 changes nothing when the release inputs match its record, even after the
@@ -37,8 +40,9 @@ stay as they are, apart from recorded corrections.
 Usage:
 
     python scripts/edition.py prepare oss VERSION --enterprise REF [--lancedb REPO] [--sophon REPO]
+        [--docs REF]
     python scripts/edition.py prepare enterprise VERSION [--bundled-lancedb COMMIT]
-        [--lancedb REPO] [--sophon REPO]
+        [--lancedb REPO] [--sophon REPO] [--docs REF]
     python scripts/edition.py check [--base COMMIT]
 """
 
@@ -74,6 +78,9 @@ SOURCES = {
     "enterprise": ("lancedb/sophon", "docs/web"),
     "build": ("lancedb/docs", "docs"),
 }
+# This repository's main as fetched. Squash and rebase merges give a branch's
+# commits new hashes, so only a commit of main stays recoverable.
+DOCS_MAIN = "origin/main"
 # An Enterprise release bundles LanceDB as this gitlink, and a release that
 # passed qualification has an annotated tag of this name on its commit.
 BUNDLED_LANCEDB = "src/lancedb"
@@ -203,15 +210,39 @@ def source(name: str, commit: str) -> dict:
     return {"repository": repository, "path": folder, "commit": commit}
 
 
-def docs_commit(repo: Path) -> str:
-    """This repository's HEAD, which must hold everything the build reads."""
-    changed = text(repo, "status", "--porcelain", "--", "assemble.yaml", "scripts", SOURCES["build"][1])
+def is_ancestor(repo: Path, commit: str, of: str) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(repo), "merge-base", "--is-ancestor", commit, of], capture_output=True
+    )
+    if result.returncode not in (0, 1):
+        raise EditionError(f"git merge-base in {repo} failed: {result.stderr.decode(errors='replace').strip()}")
+    return result.returncode == 0
+
+
+def docs_commit(repo: Path, ref: str) -> str:
+    """The commit of this repository's main that the build reads `docs/` and
+    assemble.yaml from. The assembler is this checkout's own scripts/, so they
+    must be that commit's too."""
+    what = f"{SOURCES['build'][0]} --docs"
+    commit = commit_of(repo, ref, what)
+    if not is_ancestor(repo, commit, commit_of(repo, DOCS_MAIN, SOURCES["build"][0])):
+        raise EditionError(
+            f"{what}: {ref} is {commit}, which {DOCS_MAIN} does not contain; name a commit "
+            "of main, because merging gives a branch's commits new hashes"
+        )
+    changed = text(repo, "status", "--porcelain", "--", "scripts")
     if changed:
         raise EditionError(
-            "commit or stash the changes to assemble.yaml, scripts/ and docs/ first; "
-            "the record names this checkout's HEAD:\n" + changed
+            "commit or stash the changes to scripts/ first; they are the assembler that "
+            "builds the edition:\n" + changed
         )
-    return commit_of(repo, "HEAD", "lancedb/docs")
+    if text(repo, "ls-tree", "-d", "HEAD", "--", "scripts") != text(repo, "ls-tree", "-d", commit, "--", "scripts"):
+        raise EditionError(
+            f"this checkout's scripts/ are not those of {commit}, which the record would name; "
+            "check out a branch whose scripts/ match it, or name the commit of main they come "
+            "from with --docs"
+        )
+    return commit
 
 
 def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
@@ -282,7 +313,7 @@ def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
         "sources": {
             "lancedb": source("lancedb", shared),
             "enterprise": source("enterprise", enterprise),
-            "build": source("build", docs_commit(repo)),
+            "build": source("build", docs_commit(repo, args.docs)),
         },
     }
 
@@ -291,7 +322,8 @@ def identity(record: dict) -> dict:
     """What makes two preparations the same release: commits, not ref names.
 
     This repository's own commit is left out: re-running a release from a later
-    HEAD is still the same release, and its saved edition is kept as it is.
+    commit of main is still the same release, and its saved edition is kept as
+    it is.
     """
     release = record["release"]
     return {
@@ -641,7 +673,8 @@ def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
             source_repo = {"lancedb": args.lancedb, "enterprise": args.sophon}.get(name, repo)
             export(source_repo.resolve(), commit, folder, roots[name], f"{repository} {commit}")
         site = staging / "site"
-        raw = yaml.safe_load(git(repo, "show", "HEAD:assemble.yaml").decode())
+        build = requested["sources"]["build"]["commit"]
+        raw = yaml.safe_load(git(repo, "show", f"{build}:assemble.yaml").decode())
         config = assemble.load_config(build_config(raw, roots, site, staging / "assemble.yaml"))
         _count, warnings = assemble.assemble_site(config)
         for warning in warnings:
@@ -793,6 +826,9 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                       help="a lancedb/lancedb repository (default: ../lancedb)")
     prep.add_argument("--sophon", type=Path, default=REPO_ROOT.parent / "sophon",
                       help="a lancedb/sophon repository (default: ../sophon)")
+    prep.add_argument("--docs", metavar="REF", default=DOCS_MAIN,
+                      help="the commit of this repository's main to read docs/ and assemble.yaml "
+                           f"from (default: {DOCS_MAIN})")
     checking = commands.add_parser("check", help="check the saved editions against their records")
     checking.add_argument("--base", metavar="COMMIT",
                           help="also require the editions and records on COMMIT, such as a pull "
