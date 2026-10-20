@@ -1,0 +1,13 @@
+# LanceDB
+
+> Versioning prototype: every version on this site is a synthetic test fixture, not release documentation.
+
+## LanceDB OSS
+
+- [OSS 0.99.0-test (default)](/oss/v0-99-0-test/about-this-version.md): page index, sources and skill for this version
+- [OSS 0.98.0-test](/oss/v0-98-0-test/about-this-version.md): page index, sources and skill for this version
+
+## LanceDB Enterprise
+
+- [Enterprise 8.2.0-test (default)](/enterprise/v8-2-0-test/about-this-version.md): page index, sources and skill for this version
+- [Enterprise 8.1.0-test](/enterprise/v8-1-0-test/about-this-version.md): page index, sources and skill for this version

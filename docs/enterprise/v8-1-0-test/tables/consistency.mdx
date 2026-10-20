@@ -1,0 +1,108 @@
+---
+title: "Consistency"
+sidebarTitle: "Consistency"
+description: "Understand when readers see changes and choose the freshness your application needs."
+icon: "water"
+---
+
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Configure read freshness in OSS and Enterprise. OSS checks for table updates; Enterprise uses the connection setting to tighten its configured freshness bound.
+
+## Table snapshots and freshness {#consistency}
+
+Each table read uses one committed version of the data. **Freshness** describes
+whether that version includes recent writes. For example, after another
+application appends records, an already-open table handle can still read the
+version from before the append.
+
+For example, a dashboard may need the latest updates, while an experiment may
+need to keep reading a specific table version. Use read freshness settings for the dashboard and an explicit table version
+for the experiment.
+
+## Visibility of writes {#visibility}
+
+In **OSS**, a table handle sees its own committed writes. By default, it does
+not automatically check for changes made through other handles or processes.
+Use a read consistency interval or `checkout_latest()` to pick up those changes.
+
+In **Enterprise**, readers use the service's configured freshness policy.
+A connection can request fresher data. When a read must include a completed
+write, use a zero interval or call `checkout_latest()` after the write, with a
+client and server that support these freshness controls.
+
+## Configure read freshness {#configure-consistency-parameters}
+
+Set `read_consistency_interval` when connecting. This controls when reads
+pick up newer table versions; it does not change how writes commit.
+
+| Setting | OSS | Enterprise |
+| --- | --- | --- |
+| **Unset** | Keep the open table version until explicitly refreshed or changed by that handle. | Use the service's configured freshness policy. |
+| **Zero** | Check for the latest committed version on every read. | Request the latest committed version on every read. |
+| **Non-zero interval** | Check for updates on a read once the interval since the last check has elapsed. | Request data no older than the interval allows; the service may return fresher data. |
+
+`checkout_latest()` explicitly refreshes an OSS table handle. On Enterprise it
+asks subsequent reads on that handle to reflect data at least as recent as the
+refresh request. To read a fixed historical version instead, use
+[table versioning](/enterprise/v8-1-0-test/management/table#versioning).
+
+<Accordion title="Complete Python example: compare two readers">
+
+Install the Python SDK with `pip install lancedb`, then save this as
+`consistency.py` and run `python consistency.py`. It creates a temporary local
+database and removes it when finished. No Enterprise connection is needed.
+
+```python consistency.py icon="python"
+from datetime import timedelta
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-consistency-") as uri:
+    writer = lancedb.connect(uri)
+    table = writer.create_table("documents", [{"id": 1, "text": "first"}])
+
+    default_reader = lancedb.connect(uri).open_table("documents")
+    latest_reader = lancedb.connect(
+        uri, read_consistency_interval=timedelta(0)
+    ).open_table("documents")
+
+    table.add([{"id": 2, "text": "second"}])
+
+    default_count = default_reader.count_rows()
+    latest_count = latest_reader.count_rows()
+    print(f"Default reader: {default_count} rows")  # 1
+    print(f"Zero-interval reader: {latest_count} rows")  # 2
+
+    default_reader.checkout_latest()
+    refreshed_count = default_reader.count_rows()
+    print(f"After explicit refresh: {refreshed_count} rows")  # 2
+```
+
+The default reader sees one row until refreshed. The reader with a zero
+interval sees the new row on its next read.
+
+</Accordion>
+
+## Choose a freshness interval {#choosing}
+
+- **Reads that must include recent writes:** use a zero interval. Checking more
+  frequently can increase read latency and storage requests.
+- **Dashboards with an acceptable delay:** choose an interval within that delay
+  budget, then measure the effect on latency and cost.
+- **Reproducible experiments:** read an explicit table version and retain it for
+  as long as the experiment needs it.
+
+Choose the interval based on the delay your application can tolerate between
+a write completing and a reader seeing it.
+
+## Learn more {#next}
+
+- [Connect](/enterprise/v8-1-0-test/basics/connect): configure your client.
+- [Table versioning](/enterprise/v8-1-0-test/management/table#versioning): read and restore retained versions.
+- [Guarantees](/enterprise/v8-1-0-test/basics/guarantees): understand commit and failure boundaries.
+
+<span id="handle-bad-vectors" />
+
+For invalid vector handling during ingestion, see
+[Create a table](/enterprise/v8-1-0-test/ingestion/create-table#from-a-custom-schema).

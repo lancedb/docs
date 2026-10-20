@@ -1,0 +1,114 @@
+---
+title: "LlamaIndex"
+sidebarTitle: "LlamaIndex"
+
+---
+
+
+## Quickstart {#quickstart}
+
+LlamaIndex is a well-known framework for building LLM-powered agents over your data with LLMs and workflows.
+You can build your LlamaIndex pipeline and persist your metadata and embeddings in LanceDB via the `LanceDBVectorStore` class.
+
+First, install the LlamaIndex-LanceDB integration.
+
+<CodeBlock filename="bash" language="bash" icon="terminal">
+pip install llama-index-vector-stores-LanceDB
+</CodeBlock>
+
+Run the below script as an example.
+
+```python Python icon="python"
+import logging
+import sys
+import textwrap
+
+import openai
+
+# Uncomment to see debug logs
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+# logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+from llama_index.core import (
+    Document,
+    SimpleDirectoryReader,
+    StorageContext,
+    VectorStoreIndex,
+)
+from llama_index.vector_stores.lancedb import LanceDBVectorStore
+
+openai.api_key = "sk-..."
+
+documents = SimpleDirectoryReader("./data/your-data-dir/").load_data()
+print("Document ID:", documents[0].doc_id, "Document Hash:", documents[0].hash)
+
+## For LanceDB Enterprise :
+# vector_store = LanceDBVectorStore(
+#     uri="db://db_name", # your remote DB URI
+#     api_key="sk_..", # lancedb enterprise api key
+#     region="your-region" # the region you configured
+#     host_override="https://your-host.com" # if you have a custom host, otherwise omit this
+# )
+
+vector_store = LanceDBVectorStore(
+    uri="./lancedb", mode="overwrite", query_type="vector"
+)
+storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+index = VectorStoreIndex.from_documents(documents, storage_context=storage_context)
+lance_filter = "metadata.file_name = 'paul_graham_essay.txt' "
+retriever = index.as_retriever(vector_store_kwargs={"where": lance_filter})
+response = retriever.retrieve("What did the author do growing up?")
+```
+
+The vector store connector will open an existing LanceDB directory or create the directory if it does not exist.
+
+### Filtering {#filtering}
+For metadata filtering, you can use a Lance SQL-like string filter as demonstrated in the example above. Additionally, you can also filter using the `MetadataFilters` class from LlamaIndex:
+```python Python icon="python"
+from llama_index.core.vector_stores import (
+    FilterCondition,
+    FilterOperator,
+    MetadataFilter,
+    MetadataFilters,
+)
+
+query_filters = MetadataFilters(
+    filters=[
+        MetadataFilter(
+            key="creation_date", operator=FilterOperator.EQ, value="2024-05-23"
+        ),
+        MetadataFilter(key="file_size", value=75040, operator=FilterOperator.GT),
+    ],
+    condition=FilterCondition.AND,
+)
+```
+
+### Hybrid Search {#hybrid-search}
+For complete documentation, refer [here](/oss/v0-98-0-test/search/hybrid-search). This example uses the `colbert` reranker. Make sure to install necessary dependencies for the reranker you choose.
+```python Python icon="python"
+from lancedb.rerankers import ColbertReranker
+
+reranker = ColbertReranker()
+vector_store._add_reranker(reranker)
+
+query_engine = index.as_query_engine(
+    filters=query_filters,
+    vector_store_kwargs={
+        "query_type": "hybrid",
+    },
+)
+
+response = query_engine.query("How much did Viaweb charge per month?")
+```
+
+In the snippet above, you can change/specify `query_type` when creating the engine/retriever
+to use different search strategies, such as vector search or FTS.
+
+## API reference {#api-reference}
+
+<Card
+  title="LlamaIndex Vector Stores API reference"
+  href="https://developers.llamaindex.ai/python/framework-api-reference/storage/vector_store/lancedb/"
+>
+See the official LlamaIndex Vector Stores API reference for more details.
+</Card>

@@ -1,0 +1,58 @@
+---
+title: "Prototype build"
+description: "Identity of this composed versioning prototype site."
+noindex: true
+---
+
+Every version on this site is a synthetic test fixture for the documentation versioning prototype.
+
+Site SHA-256: `ad1a3c0afe5d03ed3540c2198b875a76c18a4775661c80d089720e0b8158776a`
+
+Catalog SHA-256: `405b08d3a019257afe484a3d8fc4e3f41d9b24c9d3efc8f45dec694002c39344`
+
+```json prototype-build.json
+{
+  "schema": "prototype-site-build-v0",
+  "synthetic": true,
+  "catalog_sequence": 4,
+  "catalog_sha256": "405b08d3a019257afe484a3d8fc4e3f41d9b24c9d3efc8f45dec694002c39344",
+  "sources": {
+    "lancedb": {
+      "repository": "lancedb/lancedb",
+      "commit": "4a03859b2a95f38dbef8fab962570de93d70eded"
+    },
+    "docs": {
+      "repository": "lancedb/docs",
+      "commit": "3d02aca7bdd1d816c17defe1d324f2161842580d"
+    },
+    "enterprise_public": {
+      "repository": "lancedb/docs",
+      "commit": "a7db277102b4817c7afc6c8650ff21e6e8f742e8"
+    }
+  },
+  "editions": {
+    "oss-0.99.0-test-r1": {
+      "prefix": "oss/v0-99-0-test",
+      "archive_sha256": "ab6a8c98524061a86012e086ba1388fbe190c1bb811c76d5083c568ae3653592",
+      "composed_sha256": "e1256ac8671539eb9bcb88a9101d1a3730893cfbfbb24d521cabdd1103e50163"
+    },
+    "oss-0.98.0-test-r2": {
+      "prefix": "oss/v0-98-0-test",
+      "archive_sha256": "fb4e3461b50d33513ce42084a362daa193d09af304eac8dd1f5be4551f61a243",
+      "composed_sha256": "9bca8ca9944c430241a5f30072f5c09743a3ca8f5d2accefae66a15068cb3969"
+    },
+    "ent-8.2.0-test-r1": {
+      "prefix": "enterprise/v8-2-0-test",
+      "archive_sha256": "5cbe0e46a07a746018be23f9af40888206b1fedea285419d9f34be174f102d7a",
+      "composed_sha256": "e71242b402a0f54380ca2f71b1a795917aee4e4c8d76b50b725e1cf2fc845446"
+    },
+    "ent-8.1.0-test-r1": {
+      "prefix": "enterprise/v8-1-0-test",
+      "archive_sha256": "f71f77f5ed04378862f63d5aa60d683aecdfb97ebc6e41952a6124c296d6e6f3",
+      "composed_sha256": "fe61e3ac5b8b49a2d2bb2b041bafcc332e4eca61605a6a1afd2ae91f3fd21604"
+    }
+  },
+  "site_files": 1250,
+  "site_sha256": "ad1a3c0afe5d03ed3540c2198b875a76c18a4775661c80d089720e0b8158776a"
+}
+```

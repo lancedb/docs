@@ -1,0 +1,4260 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "appearance": {
+    "strict": false
+  },
+  "theme": "mint",
+  "name": "LanceDB",
+  "colors": {
+    "primary": "#FF6B35",
+    "light": "#FF8A5C",
+    "dark": "#E55A2B"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "styling": {
+    "codeblocks": {
+      "theme": {
+        "light": "vitesse-light",
+        "dark": "catppuccin-mocha"
+      }
+    }
+  },
+  "favicon": "/static/favicon.ico",
+  "logo": {
+    "light": "/static/assets/logo/dark-lancedb-logo.svg",
+    "dark": "/static/assets/logo/light-lancedb-logo.svg",
+    "href": "https://lancedb.com"
+  },
+  "background": {
+    "color": {
+      "light": "#FAF5F0",
+      "dark": "#000000"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "https://www.lancedb.com/contact"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/lancedb",
+      "linkedin": "https://www.linkedin.com/company/lancedb",
+      "x": "https://x.com/lancedb",
+      "discord": "https://discord.gg/AUEWnJ7Txb"
+    },
+    "links": [
+      {
+        "items": [
+          {
+            "label": "Cookie settings",
+            "href": "#cookie-settings"
+          }
+        ]
+      }
+    ]
+  },
+  "banner": {
+    "content": "Versioning prototype: every version on this site is a synthetic test fixture, not release documentation.",
+    "dismissible": false
+  },
+  "navigation": {
+    "products": [
+      {
+        "product": "LanceDB OSS",
+        "description": "Open-source library and SDKs",
+        "icon": "database",
+        "versions": [
+          {
+            "version": "OSS 0.99.0-test",
+            "default": true,
+            "tag": "Latest",
+            "tabs": [
+              {
+                "tab": "Documentation",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "oss/v0-99-0-test/index",
+                      "oss/v0-99-0-test/basics/offerings",
+                      "oss/v0-99-0-test/basics/connect",
+                      "oss/v0-99-0-test/quickstart",
+                      "oss/v0-99-0-test/architecture",
+                      "oss/v0-99-0-test/basics/sdk",
+                      "oss/v0-99-0-test/basics/sql",
+                      "oss/v0-99-0-test/basics/agentic-skills",
+                      "oss/v0-99-0-test/about-this-version"
+                    ]
+                  },
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "oss/v0-99-0-test/basics/lance",
+                      "oss/v0-99-0-test/basics/catalog",
+                      "oss/v0-99-0-test/basics/lakehouse",
+                      "oss/v0-99-0-test/basics/query",
+                      "oss/v0-99-0-test/basics/jobs",
+                      "oss/v0-99-0-test/tables/consistency",
+                      "oss/v0-99-0-test/basics/guarantees",
+                      "oss/v0-99-0-test/basics/limits",
+                      "oss/v0-99-0-test/basics/naming"
+                    ]
+                  },
+                  {
+                    "group": "Data Ingestion",
+                    "pages": [
+                      "oss/v0-99-0-test/ingestion/index",
+                      "oss/v0-99-0-test/ingestion/create-table",
+                      "oss/v0-99-0-test/ingestion/insert",
+                      "oss/v0-99-0-test/ingestion/merge-insert",
+                      "oss/v0-99-0-test/ingestion/update",
+                      "oss/v0-99-0-test/ingestion/delete"
+                    ]
+                  },
+                  {
+                    "group": "Semantic Search",
+                    "pages": [
+                      "oss/v0-99-0-test/search/index",
+                      "oss/v0-99-0-test/search/vector-search",
+                      "oss/v0-99-0-test/search/full-text-search",
+                      "oss/v0-99-0-test/search/hybrid-search",
+                      "oss/v0-99-0-test/search/filtering",
+                      "oss/v0-99-0-test/reranking/index",
+                      "oss/v0-99-0-test/search/explain"
+                    ]
+                  },
+                  {
+                    "group": "Data Curation",
+                    "pages": [
+                      "oss/v0-99-0-test/curation/index",
+                      "oss/v0-99-0-test/curation/aggregate",
+                      "oss/v0-99-0-test/curation/sampling",
+                      "oss/v0-99-0-test/curation/join",
+                      "oss/v0-99-0-test/curation/windowing"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "oss/v0-99-0-test/feature-engineering/index",
+                      "oss/v0-99-0-test/feature-engineering/data-evolution",
+                      "oss/v0-99-0-test/feature-engineering/add-computed-column",
+                      "oss/v0-99-0-test/feature-engineering/refresh-column",
+                      "oss/v0-99-0-test/feature-engineering/materialized-views"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering (Geneva)",
+                    "pages": [
+                      "oss/v0-99-0-test/geneva/index",
+                      "oss/v0-99-0-test/geneva/overview/index",
+                      "oss/v0-99-0-test/geneva/getting-started",
+                      {
+                        "group": "Transforms",
+                        "pages": [
+                          "oss/v0-99-0-test/geneva/udfs/index",
+                          "oss/v0-99-0-test/geneva/udfs/udfs",
+                          "oss/v0-99-0-test/geneva/udfs/scalar-udtfs",
+                          "oss/v0-99-0-test/geneva/udfs/batch-udtfs",
+                          "oss/v0-99-0-test/geneva/udfs/error_handling",
+                          "oss/v0-99-0-test/geneva/udfs/profiling-memory",
+                          "oss/v0-99-0-test/geneva/udfs/blobs"
+                        ]
+                      },
+                      {
+                        "group": "Built-in Transforms",
+                        "pages": [
+                          "oss/v0-99-0-test/geneva/udfs/providers/index",
+                          "oss/v0-99-0-test/geneva/udfs/providers/openai",
+                          "oss/v0-99-0-test/geneva/udfs/providers/gemini",
+                          "oss/v0-99-0-test/geneva/udfs/providers/sentence-transformers"
+                        ]
+                      },
+                      {
+                        "group": "Running Jobs",
+                        "pages": [
+                          "oss/v0-99-0-test/geneva/jobs/index",
+                          "oss/v0-99-0-test/geneva/jobs/backfilling",
+                          "oss/v0-99-0-test/geneva/jobs/bulk-load-columns",
+                          "oss/v0-99-0-test/geneva/jobs/materialized-views",
+                          "oss/v0-99-0-test/geneva/jobs/advanced-job-configuration",
+                          "oss/v0-99-0-test/geneva/jobs/lifecycle",
+                          "oss/v0-99-0-test/geneva/jobs/conflicts",
+                          "oss/v0-99-0-test/geneva/jobs/performance",
+                          "oss/v0-99-0-test/geneva/jobs/job_metrics",
+                          "oss/v0-99-0-test/geneva/jobs/console",
+                          "oss/v0-99-0-test/geneva/jobs/troubleshooting",
+                          "oss/v0-99-0-test/geneva/jobs/contexts"
+                        ]
+                      },
+                      {
+                        "group": "Deployment",
+                        "pages": [
+                          "oss/v0-99-0-test/geneva/deployment/helm",
+                          "oss/v0-99-0-test/geneva/jobs/startup",
+                          "oss/v0-99-0-test/geneva/deployment/dependency-verification",
+                          "oss/v0-99-0-test/geneva/udfs/advanced-configuration",
+                          "oss/v0-99-0-test/geneva/deployment/index",
+                          "oss/v0-99-0-test/geneva/deployment/troubleshooting"
+                        ]
+                      },
+                      "oss/v0-99-0-test/geneva/end-to-end",
+                      "oss/v0-99-0-test/geneva/reference"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "oss/v0-99-0-test/training/why-lancedb",
+                      "oss/v0-99-0-test/training/data-loading",
+                      "oss/v0-99-0-test/training/torch"
+                    ]
+                  },
+                  {
+                    "group": "Management",
+                    "pages": [
+                      "oss/v0-99-0-test/management/index",
+                      "oss/v0-99-0-test/management/database",
+                      "oss/v0-99-0-test/management/namespace",
+                      "oss/v0-99-0-test/management/table",
+                      "oss/v0-99-0-test/tables/branching",
+                      "oss/v0-99-0-test/management/materialized-view",
+                      "oss/v0-99-0-test/management/view"
+                    ]
+                  },
+                  {
+                    "group": "Maintenance",
+                    "pages": [
+                      "oss/v0-99-0-test/indexing/index",
+                      "oss/v0-99-0-test/indexing/vector-index",
+                      "oss/v0-99-0-test/indexing/fts-index",
+                      "oss/v0-99-0-test/indexing/scalar-index",
+                      "oss/v0-99-0-test/indexing/reindexing",
+                      "oss/v0-99-0-test/maintenance/compaction",
+                      "oss/v0-99-0-test/maintenance/cleanup",
+                      "oss/v0-99-0-test/maintenance/background-jobs"
+                    ]
+                  },
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "oss/v0-99-0-test/enterprise/index",
+                      "oss/v0-99-0-test/enterprise/architecture",
+                      "oss/v0-99-0-test/enterprise/deployment/index",
+                      "oss/v0-99-0-test/deployment/storage",
+                      "oss/v0-99-0-test/deployment/monitoring",
+                      "oss/v0-99-0-test/enterprise/deployment/azure",
+                      "oss/v0-99-0-test/enterprise/benchmarks",
+                      "oss/v0-99-0-test/deployment/support"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "oss/v0-99-0-test/enterprise/authentication",
+                      "oss/v0-99-0-test/governance/authorization",
+                      "oss/v0-99-0-test/enterprise/security"
+                    ]
+                  },
+                  {
+                    "group": "SQL Reference",
+                    "pages": [
+                      "oss/v0-99-0-test/sql/index",
+                      "oss/v0-99-0-test/sql/data-types",
+                      {
+                        "group": "DDL",
+                        "pages": [
+                          "oss/v0-99-0-test/sql/ddl/namespace",
+                          "oss/v0-99-0-test/sql/ddl/table",
+                          "oss/v0-99-0-test/sql/ddl/view",
+                          "oss/v0-99-0-test/sql/ddl/materialized-view",
+                          "oss/v0-99-0-test/sql/ddl/index",
+                          "oss/v0-99-0-test/sql/ddl/job"
+                        ],
+                        "icon": "sitemap"
+                      },
+                      {
+                        "group": "DML",
+                        "pages": [
+                          "oss/v0-99-0-test/sql/dml/insert",
+                          "oss/v0-99-0-test/sql/dml/update",
+                          "oss/v0-99-0-test/sql/dml/delete",
+                          "oss/v0-99-0-test/sql/dml/copy",
+                          "oss/v0-99-0-test/sql/dml/refresh"
+                        ],
+                        "icon": "database"
+                      },
+                      {
+                        "group": "DQL",
+                        "pages": [
+                          "oss/v0-99-0-test/sql/dql/select",
+                          "oss/v0-99-0-test/sql/dql/subqueries",
+                          "oss/v0-99-0-test/sql/dql/join",
+                          "oss/v0-99-0-test/sql/dql/aggregation",
+                          "oss/v0-99-0-test/sql/dql/window",
+                          "oss/v0-99-0-test/sql/dql/sampling",
+                          "oss/v0-99-0-test/sql/dql/fts",
+                          "oss/v0-99-0-test/sql/dql/explain"
+                        ],
+                        "icon": "filter"
+                      },
+                      {
+                        "group": "Expressions",
+                        "pages": [
+                          "oss/v0-99-0-test/sql/operators",
+                          "oss/v0-99-0-test/sql/functions",
+                          "oss/v0-99-0-test/sql/scalar-functions",
+                          "oss/v0-99-0-test/sql/prepared-statements"
+                        ],
+                        "icon": "code"
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Versioning probe",
+                    "pages": [
+                      "oss/v0-99-0-test/versioning-probe/probe",
+                      "oss/v0-99-0-test/versioning-probe/linked",
+                      "oss/v0-99-0-test/versioning-probe/new-in-0-99"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Integrations",
+                "pages": [
+                  "oss/v0-99-0-test/integrations/index",
+                  {
+                    "group": "Embedding Registry",
+                    "pages": [
+                      "oss/v0-99-0-test/embedding/index",
+                      "oss/v0-99-0-test/embedding/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Embedding Providers",
+                    "pages": [
+                      "oss/v0-99-0-test/integrations/embedding/huggingface",
+                      "oss/v0-99-0-test/integrations/embedding/aws",
+                      "oss/v0-99-0-test/integrations/embedding/cohere",
+                      "oss/v0-99-0-test/integrations/embedding/colpali",
+                      "oss/v0-99-0-test/integrations/embedding/gemini",
+                      "oss/v0-99-0-test/integrations/embedding/ibm",
+                      "oss/v0-99-0-test/integrations/embedding/imagebind",
+                      "oss/v0-99-0-test/integrations/embedding/instructor",
+                      "oss/v0-99-0-test/integrations/embedding/jina",
+                      "oss/v0-99-0-test/integrations/embedding/ollama",
+                      "oss/v0-99-0-test/integrations/embedding/openai",
+                      "oss/v0-99-0-test/integrations/embedding/openclip",
+                      "oss/v0-99-0-test/integrations/embedding/sentence-transformers",
+                      "oss/v0-99-0-test/integrations/embedding/voyageai",
+                      "oss/v0-99-0-test/integrations/embedding/superlinked"
+                    ]
+                  },
+                  {
+                    "group": "Rerankers",
+                    "pages": [
+                      "oss/v0-99-0-test/integrations/reranking/answerdotai",
+                      "oss/v0-99-0-test/integrations/reranking/cohere",
+                      "oss/v0-99-0-test/integrations/reranking/colbert",
+                      "oss/v0-99-0-test/integrations/reranking/jina",
+                      "oss/v0-99-0-test/integrations/reranking/openai",
+                      "oss/v0-99-0-test/integrations/reranking/voyageai",
+                      "oss/v0-99-0-test/integrations/reranking/watsonx"
+                    ]
+                  },
+                  {
+                    "group": "Data Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "oss/v0-99-0-test/integrations/data/pydantic",
+                      "oss/v0-99-0-test/integrations/data/duckdb",
+                      "oss/v0-99-0-test/integrations/data/pandas_and_pyarrow",
+                      "oss/v0-99-0-test/integrations/data/polars_arrow",
+                      "oss/v0-99-0-test/integrations/data/dlt",
+                      "oss/v0-99-0-test/integrations/data/voxel51"
+                    ]
+                  },
+                  {
+                    "group": "AI Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "oss/v0-99-0-test/integrations/ai/agno",
+                      "oss/v0-99-0-test/integrations/ai/hermes-agent",
+                      "oss/v0-99-0-test/integrations/ai/huggingface",
+                      "oss/v0-99-0-test/integrations/ai/langchain",
+                      "oss/v0-99-0-test/integrations/ai/llamaIndex",
+                      "oss/v0-99-0-test/integrations/ai/genkit",
+                      "oss/v0-99-0-test/integrations/ai/kiln",
+                      "oss/v0-99-0-test/integrations/ai/prompttools",
+                      "oss/v0-99-0-test/integrations/ai/synthetic-data-kit"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Tutorials",
+                "pages": [
+                  "oss/v0-99-0-test/tutorials/index",
+                  {
+                    "group": "Search",
+                    "pages": [
+                      "oss/v0-99-0-test/tutorials/search/hybrid-search-beir",
+                      "oss/v0-99-0-test/tutorials/search/multivector-xtr",
+                      "oss/v0-99-0-test/tutorials/search/multivector-needle-in-a-haystack",
+                      "oss/v0-99-0-test/tutorials/search/video-search",
+                      "oss/v0-99-0-test/tutorials/search/vector-arithmetic",
+                      "oss/v0-99-0-test/tutorials/search/ner-search",
+                      "oss/v0-99-0-test/tutorials/search/reddit-summarizer"
+                    ]
+                  },
+                  {
+                    "group": "RAG",
+                    "pages": [
+                      "oss/v0-99-0-test/tutorials/agents/contextual-rag",
+                      "oss/v0-99-0-test/tutorials/agents/nvidia-rag-blueprint/index",
+                      "oss/v0-99-0-test/tutorials/agents/time-travel-rag/index",
+                      "oss/v0-99-0-test/tutorials/agents/multimodal-agent/index",
+                      "oss/v0-99-0-test/tutorials/agents/matryoshka-embeddings",
+                      "oss/v0-99-0-test/tutorials/agents/hyde",
+                      "oss/v0-99-0-test/tutorials/agents/late-chunking",
+                      "oss/v0-99-0-test/tutorials/agents/agentic-rag"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "oss/v0-99-0-test/tutorials/feature-engineering/feature-engineering-101",
+                      "oss/v0-99-0-test/tutorials/feature-engineering/materialized-views",
+                      "oss/v0-99-0-test/agent-branch-experiments"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "oss/v0-99-0-test/training/object-detection",
+                      "oss/v0-99-0-test/training/vlm-finetuning",
+                      "oss/v0-99-0-test/integrations/stable-worldmodel"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Demos",
+                "pages": [
+                  "oss/v0-99-0-test/demos/index",
+                  "oss/v0-99-0-test/demos/semantic-art",
+                  "oss/v0-99-0-test/demos/wikipedia-search",
+                  "oss/v0-99-0-test/demos/video-search",
+                  "oss/v0-99-0-test/demos/fineweb-edu-search",
+                  "oss/v0-99-0-test/demos/robot-data-curation"
+                ]
+              },
+              {
+                "tab": "Datasets",
+                "pages": [
+                  "oss/v0-99-0-test/datasets/index",
+                  {
+                    "group": "Robotics",
+                    "pages": [
+                      "oss/v0-99-0-test/integrations/lerobotdataset",
+                      "oss/v0-99-0-test/datasets/lerobot-pusht",
+                      "oss/v0-99-0-test/datasets/lerobot-xvla-soft-fold"
+                    ]
+                  },
+                  {
+                    "group": "Image Classification",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/mnist",
+                      "oss/v0-99-0-test/datasets/cifar10",
+                      "oss/v0-99-0-test/datasets/fashion-mnist",
+                      "oss/v0-99-0-test/datasets/food101",
+                      "oss/v0-99-0-test/datasets/oxford-pets",
+                      "oss/v0-99-0-test/datasets/stanford-cars",
+                      "oss/v0-99-0-test/datasets/imagenet-1k-val",
+                      "oss/v0-99-0-test/datasets/eurosat"
+                    ]
+                  },
+                  {
+                    "group": "OCR & Handwriting",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/handwriting-ocr"
+                    ]
+                  },
+                  {
+                    "group": "Object Detection & Segmentation",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/coco-detection-2017",
+                      "oss/v0-99-0-test/datasets/pascal-voc-2012-segmentation",
+                      "oss/v0-99-0-test/datasets/ade20k",
+                      "oss/v0-99-0-test/datasets/kitti-2d-detection"
+                    ]
+                  },
+                  {
+                    "group": "Image Retrieval",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/coco-captions-2017",
+                      "oss/v0-99-0-test/datasets/flickr30k",
+                      "oss/v0-99-0-test/datasets/laion-1m"
+                    ]
+                  },
+                  {
+                    "group": "Visual Question Answering",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/chartqa",
+                      "oss/v0-99-0-test/datasets/docvqa",
+                      "oss/v0-99-0-test/datasets/textvqa",
+                      "oss/v0-99-0-test/datasets/vqav2",
+                      "oss/v0-99-0-test/datasets/gqa-testdev-balanced"
+                    ]
+                  },
+                  {
+                    "group": "Text QA",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/squad-v2",
+                      "oss/v0-99-0-test/datasets/trivia-qa",
+                      "oss/v0-99-0-test/datasets/hotpotqa-distractor",
+                      "oss/v0-99-0-test/datasets/natural-questions-val",
+                      "oss/v0-99-0-test/datasets/ms-marco-v2"
+                    ]
+                  },
+                  {
+                    "group": "Text Corpora",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/fineweb-edu"
+                    ]
+                  },
+                  {
+                    "group": "Speech",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/librispeech-clean"
+                    ]
+                  },
+                  {
+                    "group": "Video",
+                    "pages": [
+                      "oss/v0-99-0-test/datasets/openvid"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "OSS 0.98.0-test",
+            "tabs": [
+              {
+                "tab": "Documentation",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "oss/v0-98-0-test/index",
+                      "oss/v0-98-0-test/basics/offerings",
+                      "oss/v0-98-0-test/basics/connect",
+                      "oss/v0-98-0-test/quickstart",
+                      "oss/v0-98-0-test/architecture",
+                      "oss/v0-98-0-test/basics/sdk",
+                      "oss/v0-98-0-test/basics/sql",
+                      "oss/v0-98-0-test/basics/agentic-skills",
+                      "oss/v0-98-0-test/about-this-version"
+                    ]
+                  },
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "oss/v0-98-0-test/basics/lance",
+                      "oss/v0-98-0-test/basics/catalog",
+                      "oss/v0-98-0-test/basics/lakehouse",
+                      "oss/v0-98-0-test/basics/query",
+                      "oss/v0-98-0-test/basics/jobs",
+                      "oss/v0-98-0-test/tables/consistency",
+                      "oss/v0-98-0-test/basics/guarantees",
+                      "oss/v0-98-0-test/basics/limits",
+                      "oss/v0-98-0-test/basics/naming"
+                    ]
+                  },
+                  {
+                    "group": "Data Ingestion",
+                    "pages": [
+                      "oss/v0-98-0-test/ingestion/index",
+                      "oss/v0-98-0-test/ingestion/create-table",
+                      "oss/v0-98-0-test/ingestion/insert",
+                      "oss/v0-98-0-test/ingestion/merge-insert",
+                      "oss/v0-98-0-test/ingestion/update",
+                      "oss/v0-98-0-test/ingestion/delete"
+                    ]
+                  },
+                  {
+                    "group": "Semantic Search",
+                    "pages": [
+                      "oss/v0-98-0-test/search/index",
+                      "oss/v0-98-0-test/search/vector-search",
+                      "oss/v0-98-0-test/search/full-text-search",
+                      "oss/v0-98-0-test/search/hybrid-search",
+                      "oss/v0-98-0-test/search/filtering",
+                      "oss/v0-98-0-test/reranking/index",
+                      "oss/v0-98-0-test/search/explain"
+                    ]
+                  },
+                  {
+                    "group": "Data Curation",
+                    "pages": [
+                      "oss/v0-98-0-test/curation/index",
+                      "oss/v0-98-0-test/curation/aggregate",
+                      "oss/v0-98-0-test/curation/sampling",
+                      "oss/v0-98-0-test/curation/join",
+                      "oss/v0-98-0-test/curation/windowing"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "oss/v0-98-0-test/feature-engineering/index",
+                      "oss/v0-98-0-test/feature-engineering/data-evolution",
+                      "oss/v0-98-0-test/feature-engineering/add-computed-column",
+                      "oss/v0-98-0-test/feature-engineering/refresh-column",
+                      "oss/v0-98-0-test/feature-engineering/materialized-views"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering (Geneva)",
+                    "pages": [
+                      "oss/v0-98-0-test/geneva/index",
+                      "oss/v0-98-0-test/geneva/overview/index",
+                      "oss/v0-98-0-test/geneva/getting-started",
+                      {
+                        "group": "Transforms",
+                        "pages": [
+                          "oss/v0-98-0-test/geneva/udfs/index",
+                          "oss/v0-98-0-test/geneva/udfs/udfs",
+                          "oss/v0-98-0-test/geneva/udfs/scalar-udtfs",
+                          "oss/v0-98-0-test/geneva/udfs/batch-udtfs",
+                          "oss/v0-98-0-test/geneva/udfs/error_handling",
+                          "oss/v0-98-0-test/geneva/udfs/profiling-memory",
+                          "oss/v0-98-0-test/geneva/udfs/blobs"
+                        ]
+                      },
+                      {
+                        "group": "Built-in Transforms",
+                        "pages": [
+                          "oss/v0-98-0-test/geneva/udfs/providers/index",
+                          "oss/v0-98-0-test/geneva/udfs/providers/openai",
+                          "oss/v0-98-0-test/geneva/udfs/providers/gemini",
+                          "oss/v0-98-0-test/geneva/udfs/providers/sentence-transformers"
+                        ]
+                      },
+                      {
+                        "group": "Running Jobs",
+                        "pages": [
+                          "oss/v0-98-0-test/geneva/jobs/index",
+                          "oss/v0-98-0-test/geneva/jobs/backfilling",
+                          "oss/v0-98-0-test/geneva/jobs/bulk-load-columns",
+                          "oss/v0-98-0-test/geneva/jobs/materialized-views",
+                          "oss/v0-98-0-test/geneva/jobs/advanced-job-configuration",
+                          "oss/v0-98-0-test/geneva/jobs/lifecycle",
+                          "oss/v0-98-0-test/geneva/jobs/conflicts",
+                          "oss/v0-98-0-test/geneva/jobs/performance",
+                          "oss/v0-98-0-test/geneva/jobs/job_metrics",
+                          "oss/v0-98-0-test/geneva/jobs/console",
+                          "oss/v0-98-0-test/geneva/jobs/troubleshooting",
+                          "oss/v0-98-0-test/geneva/jobs/contexts"
+                        ]
+                      },
+                      {
+                        "group": "Deployment",
+                        "pages": [
+                          "oss/v0-98-0-test/geneva/deployment/helm",
+                          "oss/v0-98-0-test/geneva/jobs/startup",
+                          "oss/v0-98-0-test/geneva/deployment/dependency-verification",
+                          "oss/v0-98-0-test/geneva/udfs/advanced-configuration",
+                          "oss/v0-98-0-test/geneva/deployment/index",
+                          "oss/v0-98-0-test/geneva/deployment/troubleshooting"
+                        ]
+                      },
+                      "oss/v0-98-0-test/geneva/end-to-end",
+                      "oss/v0-98-0-test/geneva/reference"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "oss/v0-98-0-test/training/why-lancedb",
+                      "oss/v0-98-0-test/training/data-loading",
+                      "oss/v0-98-0-test/training/torch"
+                    ]
+                  },
+                  {
+                    "group": "Management",
+                    "pages": [
+                      "oss/v0-98-0-test/management/index",
+                      "oss/v0-98-0-test/management/database",
+                      "oss/v0-98-0-test/management/namespace",
+                      "oss/v0-98-0-test/management/table",
+                      "oss/v0-98-0-test/tables/branching",
+                      "oss/v0-98-0-test/management/materialized-view",
+                      "oss/v0-98-0-test/management/view"
+                    ]
+                  },
+                  {
+                    "group": "Maintenance",
+                    "pages": [
+                      "oss/v0-98-0-test/indexing/index",
+                      "oss/v0-98-0-test/indexing/vector-index",
+                      "oss/v0-98-0-test/indexing/fts-index",
+                      "oss/v0-98-0-test/indexing/scalar-index",
+                      "oss/v0-98-0-test/indexing/reindexing",
+                      "oss/v0-98-0-test/maintenance/compaction",
+                      "oss/v0-98-0-test/maintenance/cleanup",
+                      "oss/v0-98-0-test/maintenance/background-jobs"
+                    ]
+                  },
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "oss/v0-98-0-test/enterprise/index",
+                      "oss/v0-98-0-test/enterprise/architecture",
+                      "oss/v0-98-0-test/enterprise/deployment/index",
+                      "oss/v0-98-0-test/deployment/storage",
+                      "oss/v0-98-0-test/deployment/monitoring",
+                      "oss/v0-98-0-test/enterprise/deployment/azure",
+                      "oss/v0-98-0-test/enterprise/benchmarks",
+                      "oss/v0-98-0-test/deployment/support"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "oss/v0-98-0-test/enterprise/authentication",
+                      "oss/v0-98-0-test/governance/authorization",
+                      "oss/v0-98-0-test/enterprise/security"
+                    ]
+                  },
+                  {
+                    "group": "SQL Reference",
+                    "pages": [
+                      "oss/v0-98-0-test/sql/index",
+                      "oss/v0-98-0-test/sql/data-types",
+                      {
+                        "group": "DDL",
+                        "pages": [
+                          "oss/v0-98-0-test/sql/ddl/namespace",
+                          "oss/v0-98-0-test/sql/ddl/table",
+                          "oss/v0-98-0-test/sql/ddl/view",
+                          "oss/v0-98-0-test/sql/ddl/materialized-view",
+                          "oss/v0-98-0-test/sql/ddl/index",
+                          "oss/v0-98-0-test/sql/ddl/job"
+                        ],
+                        "icon": "sitemap"
+                      },
+                      {
+                        "group": "DML",
+                        "pages": [
+                          "oss/v0-98-0-test/sql/dml/insert",
+                          "oss/v0-98-0-test/sql/dml/update",
+                          "oss/v0-98-0-test/sql/dml/delete",
+                          "oss/v0-98-0-test/sql/dml/copy",
+                          "oss/v0-98-0-test/sql/dml/refresh"
+                        ],
+                        "icon": "database"
+                      },
+                      {
+                        "group": "DQL",
+                        "pages": [
+                          "oss/v0-98-0-test/sql/dql/select",
+                          "oss/v0-98-0-test/sql/dql/subqueries",
+                          "oss/v0-98-0-test/sql/dql/join",
+                          "oss/v0-98-0-test/sql/dql/aggregation",
+                          "oss/v0-98-0-test/sql/dql/window",
+                          "oss/v0-98-0-test/sql/dql/sampling",
+                          "oss/v0-98-0-test/sql/dql/fts",
+                          "oss/v0-98-0-test/sql/dql/explain"
+                        ],
+                        "icon": "filter"
+                      },
+                      {
+                        "group": "Expressions",
+                        "pages": [
+                          "oss/v0-98-0-test/sql/operators",
+                          "oss/v0-98-0-test/sql/functions",
+                          "oss/v0-98-0-test/sql/scalar-functions",
+                          "oss/v0-98-0-test/sql/prepared-statements"
+                        ],
+                        "icon": "code"
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Versioning probe",
+                    "pages": [
+                      "oss/v0-98-0-test/versioning-probe/probe",
+                      "oss/v0-98-0-test/versioning-probe/linked"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Integrations",
+                "pages": [
+                  "oss/v0-98-0-test/integrations/index",
+                  {
+                    "group": "Embedding Registry",
+                    "pages": [
+                      "oss/v0-98-0-test/embedding/index",
+                      "oss/v0-98-0-test/embedding/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Embedding Providers",
+                    "pages": [
+                      "oss/v0-98-0-test/integrations/embedding/huggingface",
+                      "oss/v0-98-0-test/integrations/embedding/aws",
+                      "oss/v0-98-0-test/integrations/embedding/cohere",
+                      "oss/v0-98-0-test/integrations/embedding/colpali",
+                      "oss/v0-98-0-test/integrations/embedding/gemini",
+                      "oss/v0-98-0-test/integrations/embedding/ibm",
+                      "oss/v0-98-0-test/integrations/embedding/imagebind",
+                      "oss/v0-98-0-test/integrations/embedding/instructor",
+                      "oss/v0-98-0-test/integrations/embedding/jina",
+                      "oss/v0-98-0-test/integrations/embedding/ollama",
+                      "oss/v0-98-0-test/integrations/embedding/openai",
+                      "oss/v0-98-0-test/integrations/embedding/openclip",
+                      "oss/v0-98-0-test/integrations/embedding/sentence-transformers",
+                      "oss/v0-98-0-test/integrations/embedding/voyageai",
+                      "oss/v0-98-0-test/integrations/embedding/superlinked"
+                    ]
+                  },
+                  {
+                    "group": "Rerankers",
+                    "pages": [
+                      "oss/v0-98-0-test/integrations/reranking/answerdotai",
+                      "oss/v0-98-0-test/integrations/reranking/cohere",
+                      "oss/v0-98-0-test/integrations/reranking/colbert",
+                      "oss/v0-98-0-test/integrations/reranking/jina",
+                      "oss/v0-98-0-test/integrations/reranking/openai",
+                      "oss/v0-98-0-test/integrations/reranking/voyageai",
+                      "oss/v0-98-0-test/integrations/reranking/watsonx"
+                    ]
+                  },
+                  {
+                    "group": "Data Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "oss/v0-98-0-test/integrations/data/pydantic",
+                      "oss/v0-98-0-test/integrations/data/duckdb",
+                      "oss/v0-98-0-test/integrations/data/pandas_and_pyarrow",
+                      "oss/v0-98-0-test/integrations/data/polars_arrow",
+                      "oss/v0-98-0-test/integrations/data/dlt",
+                      "oss/v0-98-0-test/integrations/data/voxel51"
+                    ]
+                  },
+                  {
+                    "group": "AI Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "oss/v0-98-0-test/integrations/ai/agno",
+                      "oss/v0-98-0-test/integrations/ai/hermes-agent",
+                      "oss/v0-98-0-test/integrations/ai/huggingface",
+                      "oss/v0-98-0-test/integrations/ai/langchain",
+                      "oss/v0-98-0-test/integrations/ai/llamaIndex",
+                      "oss/v0-98-0-test/integrations/ai/genkit",
+                      "oss/v0-98-0-test/integrations/ai/kiln",
+                      "oss/v0-98-0-test/integrations/ai/prompttools",
+                      "oss/v0-98-0-test/integrations/ai/synthetic-data-kit"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Tutorials",
+                "pages": [
+                  "oss/v0-98-0-test/tutorials/index",
+                  {
+                    "group": "Search",
+                    "pages": [
+                      "oss/v0-98-0-test/tutorials/search/hybrid-search-beir",
+                      "oss/v0-98-0-test/tutorials/search/multivector-xtr",
+                      "oss/v0-98-0-test/tutorials/search/multivector-needle-in-a-haystack",
+                      "oss/v0-98-0-test/tutorials/search/video-search",
+                      "oss/v0-98-0-test/tutorials/search/vector-arithmetic",
+                      "oss/v0-98-0-test/tutorials/search/ner-search",
+                      "oss/v0-98-0-test/tutorials/search/reddit-summarizer"
+                    ]
+                  },
+                  {
+                    "group": "RAG",
+                    "pages": [
+                      "oss/v0-98-0-test/tutorials/agents/contextual-rag",
+                      "oss/v0-98-0-test/tutorials/agents/nvidia-rag-blueprint/index",
+                      "oss/v0-98-0-test/tutorials/agents/time-travel-rag/index",
+                      "oss/v0-98-0-test/tutorials/agents/multimodal-agent/index",
+                      "oss/v0-98-0-test/tutorials/agents/matryoshka-embeddings",
+                      "oss/v0-98-0-test/tutorials/agents/hyde",
+                      "oss/v0-98-0-test/tutorials/agents/late-chunking",
+                      "oss/v0-98-0-test/tutorials/agents/agentic-rag"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "oss/v0-98-0-test/tutorials/feature-engineering/feature-engineering-101",
+                      "oss/v0-98-0-test/tutorials/feature-engineering/materialized-views",
+                      "oss/v0-98-0-test/agent-branch-experiments"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "oss/v0-98-0-test/training/object-detection",
+                      "oss/v0-98-0-test/training/vlm-finetuning",
+                      "oss/v0-98-0-test/integrations/stable-worldmodel"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Demos",
+                "pages": [
+                  "oss/v0-98-0-test/demos/index",
+                  "oss/v0-98-0-test/demos/semantic-art",
+                  "oss/v0-98-0-test/demos/wikipedia-search",
+                  "oss/v0-98-0-test/demos/video-search",
+                  "oss/v0-98-0-test/demos/fineweb-edu-search",
+                  "oss/v0-98-0-test/demos/robot-data-curation"
+                ]
+              },
+              {
+                "tab": "Datasets",
+                "pages": [
+                  "oss/v0-98-0-test/datasets/index",
+                  {
+                    "group": "Robotics",
+                    "pages": [
+                      "oss/v0-98-0-test/integrations/lerobotdataset",
+                      "oss/v0-98-0-test/datasets/lerobot-pusht",
+                      "oss/v0-98-0-test/datasets/lerobot-xvla-soft-fold"
+                    ]
+                  },
+                  {
+                    "group": "Image Classification",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/mnist",
+                      "oss/v0-98-0-test/datasets/cifar10",
+                      "oss/v0-98-0-test/datasets/fashion-mnist",
+                      "oss/v0-98-0-test/datasets/food101",
+                      "oss/v0-98-0-test/datasets/oxford-pets",
+                      "oss/v0-98-0-test/datasets/stanford-cars",
+                      "oss/v0-98-0-test/datasets/imagenet-1k-val",
+                      "oss/v0-98-0-test/datasets/eurosat"
+                    ]
+                  },
+                  {
+                    "group": "OCR & Handwriting",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/handwriting-ocr"
+                    ]
+                  },
+                  {
+                    "group": "Object Detection & Segmentation",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/coco-detection-2017",
+                      "oss/v0-98-0-test/datasets/pascal-voc-2012-segmentation",
+                      "oss/v0-98-0-test/datasets/ade20k",
+                      "oss/v0-98-0-test/datasets/kitti-2d-detection"
+                    ]
+                  },
+                  {
+                    "group": "Image Retrieval",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/coco-captions-2017",
+                      "oss/v0-98-0-test/datasets/flickr30k",
+                      "oss/v0-98-0-test/datasets/laion-1m"
+                    ]
+                  },
+                  {
+                    "group": "Visual Question Answering",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/chartqa",
+                      "oss/v0-98-0-test/datasets/docvqa",
+                      "oss/v0-98-0-test/datasets/textvqa",
+                      "oss/v0-98-0-test/datasets/vqav2",
+                      "oss/v0-98-0-test/datasets/gqa-testdev-balanced"
+                    ]
+                  },
+                  {
+                    "group": "Text QA",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/squad-v2",
+                      "oss/v0-98-0-test/datasets/trivia-qa",
+                      "oss/v0-98-0-test/datasets/hotpotqa-distractor",
+                      "oss/v0-98-0-test/datasets/natural-questions-val",
+                      "oss/v0-98-0-test/datasets/ms-marco-v2"
+                    ]
+                  },
+                  {
+                    "group": "Text Corpora",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/fineweb-edu"
+                    ]
+                  },
+                  {
+                    "group": "Speech",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/librispeech-clean"
+                    ]
+                  },
+                  {
+                    "group": "Video",
+                    "pages": [
+                      "oss/v0-98-0-test/datasets/openvid"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "product": "LanceDB Enterprise",
+        "description": "Managed and BYOC service",
+        "icon": "server",
+        "versions": [
+          {
+            "version": "Enterprise 8.2.0-test",
+            "default": true,
+            "tag": "Latest",
+            "tabs": [
+              {
+                "tab": "Documentation",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "enterprise/v8-2-0-test/index",
+                      "enterprise/v8-2-0-test/basics/offerings",
+                      "enterprise/v8-2-0-test/basics/connect",
+                      "enterprise/v8-2-0-test/quickstart",
+                      "enterprise/v8-2-0-test/architecture",
+                      "enterprise/v8-2-0-test/basics/sdk",
+                      "enterprise/v8-2-0-test/basics/sql",
+                      "enterprise/v8-2-0-test/basics/agentic-skills",
+                      "enterprise/v8-2-0-test/about-this-version"
+                    ]
+                  },
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "enterprise/v8-2-0-test/basics/lance",
+                      "enterprise/v8-2-0-test/basics/catalog",
+                      "enterprise/v8-2-0-test/basics/lakehouse",
+                      "enterprise/v8-2-0-test/basics/query",
+                      "enterprise/v8-2-0-test/basics/jobs",
+                      "enterprise/v8-2-0-test/tables/consistency",
+                      "enterprise/v8-2-0-test/basics/guarantees",
+                      "enterprise/v8-2-0-test/basics/limits",
+                      "enterprise/v8-2-0-test/basics/naming"
+                    ]
+                  },
+                  {
+                    "group": "Data Ingestion",
+                    "pages": [
+                      "enterprise/v8-2-0-test/ingestion/index",
+                      "enterprise/v8-2-0-test/ingestion/create-table",
+                      "enterprise/v8-2-0-test/ingestion/insert",
+                      "enterprise/v8-2-0-test/ingestion/merge-insert",
+                      "enterprise/v8-2-0-test/ingestion/update",
+                      "enterprise/v8-2-0-test/ingestion/delete"
+                    ]
+                  },
+                  {
+                    "group": "Semantic Search",
+                    "pages": [
+                      "enterprise/v8-2-0-test/search/index",
+                      "enterprise/v8-2-0-test/search/vector-search",
+                      "enterprise/v8-2-0-test/search/full-text-search",
+                      "enterprise/v8-2-0-test/search/hybrid-search",
+                      "enterprise/v8-2-0-test/search/filtering",
+                      "enterprise/v8-2-0-test/reranking/index",
+                      "enterprise/v8-2-0-test/search/explain"
+                    ]
+                  },
+                  {
+                    "group": "Data Curation",
+                    "pages": [
+                      "enterprise/v8-2-0-test/curation/index",
+                      "enterprise/v8-2-0-test/curation/aggregate",
+                      "enterprise/v8-2-0-test/curation/sampling",
+                      "enterprise/v8-2-0-test/curation/join",
+                      "enterprise/v8-2-0-test/curation/windowing"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "enterprise/v8-2-0-test/feature-engineering/index",
+                      "enterprise/v8-2-0-test/feature-engineering/data-evolution",
+                      "enterprise/v8-2-0-test/feature-engineering/add-computed-column",
+                      "enterprise/v8-2-0-test/feature-engineering/refresh-column",
+                      "enterprise/v8-2-0-test/feature-engineering/materialized-views"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering (Geneva)",
+                    "pages": [
+                      "enterprise/v8-2-0-test/geneva/index",
+                      "enterprise/v8-2-0-test/geneva/overview/index",
+                      "enterprise/v8-2-0-test/geneva/getting-started",
+                      {
+                        "group": "Transforms",
+                        "pages": [
+                          "enterprise/v8-2-0-test/geneva/udfs/index",
+                          "enterprise/v8-2-0-test/geneva/udfs/udfs",
+                          "enterprise/v8-2-0-test/geneva/udfs/scalar-udtfs",
+                          "enterprise/v8-2-0-test/geneva/udfs/batch-udtfs",
+                          "enterprise/v8-2-0-test/geneva/udfs/error_handling",
+                          "enterprise/v8-2-0-test/geneva/udfs/profiling-memory",
+                          "enterprise/v8-2-0-test/geneva/udfs/blobs"
+                        ]
+                      },
+                      {
+                        "group": "Built-in Transforms",
+                        "pages": [
+                          "enterprise/v8-2-0-test/geneva/udfs/providers/index",
+                          "enterprise/v8-2-0-test/geneva/udfs/providers/openai",
+                          "enterprise/v8-2-0-test/geneva/udfs/providers/gemini",
+                          "enterprise/v8-2-0-test/geneva/udfs/providers/sentence-transformers"
+                        ]
+                      },
+                      {
+                        "group": "Running Jobs",
+                        "pages": [
+                          "enterprise/v8-2-0-test/geneva/jobs/index",
+                          "enterprise/v8-2-0-test/geneva/jobs/backfilling",
+                          "enterprise/v8-2-0-test/geneva/jobs/bulk-load-columns",
+                          "enterprise/v8-2-0-test/geneva/jobs/materialized-views",
+                          "enterprise/v8-2-0-test/geneva/jobs/advanced-job-configuration",
+                          "enterprise/v8-2-0-test/geneva/jobs/lifecycle",
+                          "enterprise/v8-2-0-test/geneva/jobs/conflicts",
+                          "enterprise/v8-2-0-test/geneva/jobs/performance",
+                          "enterprise/v8-2-0-test/geneva/jobs/job_metrics",
+                          "enterprise/v8-2-0-test/geneva/jobs/console",
+                          "enterprise/v8-2-0-test/geneva/jobs/troubleshooting",
+                          "enterprise/v8-2-0-test/geneva/jobs/contexts"
+                        ]
+                      },
+                      {
+                        "group": "Deployment",
+                        "pages": [
+                          "enterprise/v8-2-0-test/geneva/deployment/helm",
+                          "enterprise/v8-2-0-test/geneva/jobs/startup",
+                          "enterprise/v8-2-0-test/geneva/deployment/dependency-verification",
+                          "enterprise/v8-2-0-test/geneva/udfs/advanced-configuration",
+                          "enterprise/v8-2-0-test/geneva/deployment/index",
+                          "enterprise/v8-2-0-test/geneva/deployment/troubleshooting"
+                        ]
+                      },
+                      "enterprise/v8-2-0-test/geneva/end-to-end",
+                      "enterprise/v8-2-0-test/geneva/reference"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "enterprise/v8-2-0-test/training/why-lancedb",
+                      "enterprise/v8-2-0-test/training/data-loading",
+                      "enterprise/v8-2-0-test/training/torch"
+                    ]
+                  },
+                  {
+                    "group": "Management",
+                    "pages": [
+                      "enterprise/v8-2-0-test/management/index",
+                      "enterprise/v8-2-0-test/management/database",
+                      "enterprise/v8-2-0-test/management/namespace",
+                      "enterprise/v8-2-0-test/management/table",
+                      "enterprise/v8-2-0-test/tables/branching",
+                      "enterprise/v8-2-0-test/management/materialized-view",
+                      "enterprise/v8-2-0-test/management/view"
+                    ]
+                  },
+                  {
+                    "group": "Maintenance",
+                    "pages": [
+                      "enterprise/v8-2-0-test/indexing/index",
+                      "enterprise/v8-2-0-test/indexing/vector-index",
+                      "enterprise/v8-2-0-test/indexing/fts-index",
+                      "enterprise/v8-2-0-test/indexing/scalar-index",
+                      "enterprise/v8-2-0-test/indexing/reindexing",
+                      "enterprise/v8-2-0-test/maintenance/compaction",
+                      "enterprise/v8-2-0-test/maintenance/cleanup",
+                      "enterprise/v8-2-0-test/maintenance/background-jobs"
+                    ]
+                  },
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "enterprise/v8-2-0-test/enterprise/index",
+                      "enterprise/v8-2-0-test/enterprise/architecture",
+                      "enterprise/v8-2-0-test/enterprise/deployment/index",
+                      "enterprise/v8-2-0-test/deployment/storage",
+                      "enterprise/v8-2-0-test/deployment/monitoring",
+                      "enterprise/v8-2-0-test/enterprise/deployment/azure",
+                      "enterprise/v8-2-0-test/enterprise/benchmarks",
+                      "enterprise/v8-2-0-test/deployment/support"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "enterprise/v8-2-0-test/enterprise/authentication",
+                      "enterprise/v8-2-0-test/governance/authorization",
+                      "enterprise/v8-2-0-test/enterprise/security"
+                    ]
+                  },
+                  {
+                    "group": "SQL Reference",
+                    "pages": [
+                      "enterprise/v8-2-0-test/sql/index",
+                      "enterprise/v8-2-0-test/sql/data-types",
+                      {
+                        "group": "DDL",
+                        "pages": [
+                          "enterprise/v8-2-0-test/sql/ddl/namespace",
+                          "enterprise/v8-2-0-test/sql/ddl/table",
+                          "enterprise/v8-2-0-test/sql/ddl/view",
+                          "enterprise/v8-2-0-test/sql/ddl/materialized-view",
+                          "enterprise/v8-2-0-test/sql/ddl/index",
+                          "enterprise/v8-2-0-test/sql/ddl/job"
+                        ],
+                        "icon": "sitemap"
+                      },
+                      {
+                        "group": "DML",
+                        "pages": [
+                          "enterprise/v8-2-0-test/sql/dml/insert",
+                          "enterprise/v8-2-0-test/sql/dml/update",
+                          "enterprise/v8-2-0-test/sql/dml/delete",
+                          "enterprise/v8-2-0-test/sql/dml/copy",
+                          "enterprise/v8-2-0-test/sql/dml/refresh"
+                        ],
+                        "icon": "database"
+                      },
+                      {
+                        "group": "DQL",
+                        "pages": [
+                          "enterprise/v8-2-0-test/sql/dql/select",
+                          "enterprise/v8-2-0-test/sql/dql/subqueries",
+                          "enterprise/v8-2-0-test/sql/dql/join",
+                          "enterprise/v8-2-0-test/sql/dql/aggregation",
+                          "enterprise/v8-2-0-test/sql/dql/window",
+                          "enterprise/v8-2-0-test/sql/dql/sampling",
+                          "enterprise/v8-2-0-test/sql/dql/fts",
+                          "enterprise/v8-2-0-test/sql/dql/explain"
+                        ],
+                        "icon": "filter"
+                      },
+                      {
+                        "group": "Expressions",
+                        "pages": [
+                          "enterprise/v8-2-0-test/sql/operators",
+                          "enterprise/v8-2-0-test/sql/functions",
+                          "enterprise/v8-2-0-test/sql/scalar-functions",
+                          "enterprise/v8-2-0-test/sql/prepared-statements"
+                        ],
+                        "icon": "code"
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Versioning probe",
+                    "pages": [
+                      "enterprise/v8-2-0-test/versioning-probe/probe",
+                      "enterprise/v8-2-0-test/versioning-probe/linked",
+                      "enterprise/v8-2-0-test/versioning-probe/new-in-0-99"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Integrations",
+                "pages": [
+                  "enterprise/v8-2-0-test/integrations/index",
+                  {
+                    "group": "Embedding Registry",
+                    "pages": [
+                      "enterprise/v8-2-0-test/embedding/index",
+                      "enterprise/v8-2-0-test/embedding/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Embedding Providers",
+                    "pages": [
+                      "enterprise/v8-2-0-test/integrations/embedding/huggingface",
+                      "enterprise/v8-2-0-test/integrations/embedding/aws",
+                      "enterprise/v8-2-0-test/integrations/embedding/cohere",
+                      "enterprise/v8-2-0-test/integrations/embedding/colpali",
+                      "enterprise/v8-2-0-test/integrations/embedding/gemini",
+                      "enterprise/v8-2-0-test/integrations/embedding/ibm",
+                      "enterprise/v8-2-0-test/integrations/embedding/imagebind",
+                      "enterprise/v8-2-0-test/integrations/embedding/instructor",
+                      "enterprise/v8-2-0-test/integrations/embedding/jina",
+                      "enterprise/v8-2-0-test/integrations/embedding/ollama",
+                      "enterprise/v8-2-0-test/integrations/embedding/openai",
+                      "enterprise/v8-2-0-test/integrations/embedding/openclip",
+                      "enterprise/v8-2-0-test/integrations/embedding/sentence-transformers",
+                      "enterprise/v8-2-0-test/integrations/embedding/voyageai",
+                      "enterprise/v8-2-0-test/integrations/embedding/superlinked"
+                    ]
+                  },
+                  {
+                    "group": "Rerankers",
+                    "pages": [
+                      "enterprise/v8-2-0-test/integrations/reranking/answerdotai",
+                      "enterprise/v8-2-0-test/integrations/reranking/cohere",
+                      "enterprise/v8-2-0-test/integrations/reranking/colbert",
+                      "enterprise/v8-2-0-test/integrations/reranking/jina",
+                      "enterprise/v8-2-0-test/integrations/reranking/openai",
+                      "enterprise/v8-2-0-test/integrations/reranking/voyageai",
+                      "enterprise/v8-2-0-test/integrations/reranking/watsonx"
+                    ]
+                  },
+                  {
+                    "group": "Data Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "enterprise/v8-2-0-test/integrations/data/pydantic",
+                      "enterprise/v8-2-0-test/integrations/data/duckdb",
+                      "enterprise/v8-2-0-test/integrations/data/pandas_and_pyarrow",
+                      "enterprise/v8-2-0-test/integrations/data/polars_arrow",
+                      "enterprise/v8-2-0-test/integrations/data/dlt",
+                      "enterprise/v8-2-0-test/integrations/data/voxel51"
+                    ]
+                  },
+                  {
+                    "group": "AI Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "enterprise/v8-2-0-test/integrations/ai/agno",
+                      "enterprise/v8-2-0-test/integrations/ai/hermes-agent",
+                      "enterprise/v8-2-0-test/integrations/ai/huggingface",
+                      "enterprise/v8-2-0-test/integrations/ai/langchain",
+                      "enterprise/v8-2-0-test/integrations/ai/llamaIndex",
+                      "enterprise/v8-2-0-test/integrations/ai/genkit",
+                      "enterprise/v8-2-0-test/integrations/ai/kiln",
+                      "enterprise/v8-2-0-test/integrations/ai/prompttools",
+                      "enterprise/v8-2-0-test/integrations/ai/synthetic-data-kit"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Tutorials",
+                "pages": [
+                  "enterprise/v8-2-0-test/tutorials/index",
+                  {
+                    "group": "Search",
+                    "pages": [
+                      "enterprise/v8-2-0-test/tutorials/search/hybrid-search-beir",
+                      "enterprise/v8-2-0-test/tutorials/search/multivector-xtr",
+                      "enterprise/v8-2-0-test/tutorials/search/multivector-needle-in-a-haystack",
+                      "enterprise/v8-2-0-test/tutorials/search/video-search",
+                      "enterprise/v8-2-0-test/tutorials/search/vector-arithmetic",
+                      "enterprise/v8-2-0-test/tutorials/search/ner-search",
+                      "enterprise/v8-2-0-test/tutorials/search/reddit-summarizer"
+                    ]
+                  },
+                  {
+                    "group": "RAG",
+                    "pages": [
+                      "enterprise/v8-2-0-test/tutorials/agents/contextual-rag",
+                      "enterprise/v8-2-0-test/tutorials/agents/nvidia-rag-blueprint/index",
+                      "enterprise/v8-2-0-test/tutorials/agents/time-travel-rag/index",
+                      "enterprise/v8-2-0-test/tutorials/agents/multimodal-agent/index",
+                      "enterprise/v8-2-0-test/tutorials/agents/matryoshka-embeddings",
+                      "enterprise/v8-2-0-test/tutorials/agents/hyde",
+                      "enterprise/v8-2-0-test/tutorials/agents/late-chunking",
+                      "enterprise/v8-2-0-test/tutorials/agents/agentic-rag"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "enterprise/v8-2-0-test/tutorials/feature-engineering/feature-engineering-101",
+                      "enterprise/v8-2-0-test/tutorials/feature-engineering/materialized-views",
+                      "enterprise/v8-2-0-test/agent-branch-experiments"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "enterprise/v8-2-0-test/training/object-detection",
+                      "enterprise/v8-2-0-test/training/vlm-finetuning",
+                      "enterprise/v8-2-0-test/integrations/stable-worldmodel"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Demos",
+                "pages": [
+                  "enterprise/v8-2-0-test/demos/index",
+                  "enterprise/v8-2-0-test/demos/semantic-art",
+                  "enterprise/v8-2-0-test/demos/wikipedia-search",
+                  "enterprise/v8-2-0-test/demos/video-search",
+                  "enterprise/v8-2-0-test/demos/fineweb-edu-search",
+                  "enterprise/v8-2-0-test/demos/robot-data-curation"
+                ]
+              },
+              {
+                "tab": "Datasets",
+                "pages": [
+                  "enterprise/v8-2-0-test/datasets/index",
+                  {
+                    "group": "Robotics",
+                    "pages": [
+                      "enterprise/v8-2-0-test/integrations/lerobotdataset",
+                      "enterprise/v8-2-0-test/datasets/lerobot-pusht",
+                      "enterprise/v8-2-0-test/datasets/lerobot-xvla-soft-fold"
+                    ]
+                  },
+                  {
+                    "group": "Image Classification",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/mnist",
+                      "enterprise/v8-2-0-test/datasets/cifar10",
+                      "enterprise/v8-2-0-test/datasets/fashion-mnist",
+                      "enterprise/v8-2-0-test/datasets/food101",
+                      "enterprise/v8-2-0-test/datasets/oxford-pets",
+                      "enterprise/v8-2-0-test/datasets/stanford-cars",
+                      "enterprise/v8-2-0-test/datasets/imagenet-1k-val",
+                      "enterprise/v8-2-0-test/datasets/eurosat"
+                    ]
+                  },
+                  {
+                    "group": "OCR & Handwriting",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/handwriting-ocr"
+                    ]
+                  },
+                  {
+                    "group": "Object Detection & Segmentation",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/coco-detection-2017",
+                      "enterprise/v8-2-0-test/datasets/pascal-voc-2012-segmentation",
+                      "enterprise/v8-2-0-test/datasets/ade20k",
+                      "enterprise/v8-2-0-test/datasets/kitti-2d-detection"
+                    ]
+                  },
+                  {
+                    "group": "Image Retrieval",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/coco-captions-2017",
+                      "enterprise/v8-2-0-test/datasets/flickr30k",
+                      "enterprise/v8-2-0-test/datasets/laion-1m"
+                    ]
+                  },
+                  {
+                    "group": "Visual Question Answering",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/chartqa",
+                      "enterprise/v8-2-0-test/datasets/docvqa",
+                      "enterprise/v8-2-0-test/datasets/textvqa",
+                      "enterprise/v8-2-0-test/datasets/vqav2",
+                      "enterprise/v8-2-0-test/datasets/gqa-testdev-balanced"
+                    ]
+                  },
+                  {
+                    "group": "Text QA",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/squad-v2",
+                      "enterprise/v8-2-0-test/datasets/trivia-qa",
+                      "enterprise/v8-2-0-test/datasets/hotpotqa-distractor",
+                      "enterprise/v8-2-0-test/datasets/natural-questions-val",
+                      "enterprise/v8-2-0-test/datasets/ms-marco-v2"
+                    ]
+                  },
+                  {
+                    "group": "Text Corpora",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/fineweb-edu"
+                    ]
+                  },
+                  {
+                    "group": "Speech",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/librispeech-clean"
+                    ]
+                  },
+                  {
+                    "group": "Video",
+                    "pages": [
+                      "enterprise/v8-2-0-test/datasets/openvid"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "Enterprise 8.1.0-test",
+            "tabs": [
+              {
+                "tab": "Documentation",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "enterprise/v8-1-0-test/index",
+                      "enterprise/v8-1-0-test/basics/offerings",
+                      "enterprise/v8-1-0-test/basics/connect",
+                      "enterprise/v8-1-0-test/quickstart",
+                      "enterprise/v8-1-0-test/architecture",
+                      "enterprise/v8-1-0-test/basics/sdk",
+                      "enterprise/v8-1-0-test/basics/sql",
+                      "enterprise/v8-1-0-test/basics/agentic-skills",
+                      "enterprise/v8-1-0-test/about-this-version"
+                    ]
+                  },
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "enterprise/v8-1-0-test/basics/lance",
+                      "enterprise/v8-1-0-test/basics/catalog",
+                      "enterprise/v8-1-0-test/basics/lakehouse",
+                      "enterprise/v8-1-0-test/basics/query",
+                      "enterprise/v8-1-0-test/basics/jobs",
+                      "enterprise/v8-1-0-test/tables/consistency",
+                      "enterprise/v8-1-0-test/basics/guarantees",
+                      "enterprise/v8-1-0-test/basics/limits",
+                      "enterprise/v8-1-0-test/basics/naming"
+                    ]
+                  },
+                  {
+                    "group": "Data Ingestion",
+                    "pages": [
+                      "enterprise/v8-1-0-test/ingestion/index",
+                      "enterprise/v8-1-0-test/ingestion/create-table",
+                      "enterprise/v8-1-0-test/ingestion/insert",
+                      "enterprise/v8-1-0-test/ingestion/merge-insert",
+                      "enterprise/v8-1-0-test/ingestion/update",
+                      "enterprise/v8-1-0-test/ingestion/delete"
+                    ]
+                  },
+                  {
+                    "group": "Semantic Search",
+                    "pages": [
+                      "enterprise/v8-1-0-test/search/index",
+                      "enterprise/v8-1-0-test/search/vector-search",
+                      "enterprise/v8-1-0-test/search/full-text-search",
+                      "enterprise/v8-1-0-test/search/hybrid-search",
+                      "enterprise/v8-1-0-test/search/filtering",
+                      "enterprise/v8-1-0-test/reranking/index",
+                      "enterprise/v8-1-0-test/search/explain"
+                    ]
+                  },
+                  {
+                    "group": "Data Curation",
+                    "pages": [
+                      "enterprise/v8-1-0-test/curation/index",
+                      "enterprise/v8-1-0-test/curation/aggregate",
+                      "enterprise/v8-1-0-test/curation/sampling",
+                      "enterprise/v8-1-0-test/curation/join",
+                      "enterprise/v8-1-0-test/curation/windowing"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "enterprise/v8-1-0-test/feature-engineering/index",
+                      "enterprise/v8-1-0-test/feature-engineering/data-evolution",
+                      "enterprise/v8-1-0-test/feature-engineering/add-computed-column",
+                      "enterprise/v8-1-0-test/feature-engineering/refresh-column",
+                      "enterprise/v8-1-0-test/feature-engineering/materialized-views"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering (Geneva)",
+                    "pages": [
+                      "enterprise/v8-1-0-test/geneva/index",
+                      "enterprise/v8-1-0-test/geneva/overview/index",
+                      "enterprise/v8-1-0-test/geneva/getting-started",
+                      {
+                        "group": "Transforms",
+                        "pages": [
+                          "enterprise/v8-1-0-test/geneva/udfs/index",
+                          "enterprise/v8-1-0-test/geneva/udfs/udfs",
+                          "enterprise/v8-1-0-test/geneva/udfs/scalar-udtfs",
+                          "enterprise/v8-1-0-test/geneva/udfs/batch-udtfs",
+                          "enterprise/v8-1-0-test/geneva/udfs/error_handling",
+                          "enterprise/v8-1-0-test/geneva/udfs/profiling-memory",
+                          "enterprise/v8-1-0-test/geneva/udfs/blobs"
+                        ]
+                      },
+                      {
+                        "group": "Built-in Transforms",
+                        "pages": [
+                          "enterprise/v8-1-0-test/geneva/udfs/providers/index",
+                          "enterprise/v8-1-0-test/geneva/udfs/providers/openai",
+                          "enterprise/v8-1-0-test/geneva/udfs/providers/gemini",
+                          "enterprise/v8-1-0-test/geneva/udfs/providers/sentence-transformers"
+                        ]
+                      },
+                      {
+                        "group": "Running Jobs",
+                        "pages": [
+                          "enterprise/v8-1-0-test/geneva/jobs/index",
+                          "enterprise/v8-1-0-test/geneva/jobs/backfilling",
+                          "enterprise/v8-1-0-test/geneva/jobs/bulk-load-columns",
+                          "enterprise/v8-1-0-test/geneva/jobs/materialized-views",
+                          "enterprise/v8-1-0-test/geneva/jobs/advanced-job-configuration",
+                          "enterprise/v8-1-0-test/geneva/jobs/lifecycle",
+                          "enterprise/v8-1-0-test/geneva/jobs/conflicts",
+                          "enterprise/v8-1-0-test/geneva/jobs/performance",
+                          "enterprise/v8-1-0-test/geneva/jobs/job_metrics",
+                          "enterprise/v8-1-0-test/geneva/jobs/console",
+                          "enterprise/v8-1-0-test/geneva/jobs/troubleshooting",
+                          "enterprise/v8-1-0-test/geneva/jobs/contexts"
+                        ]
+                      },
+                      {
+                        "group": "Deployment",
+                        "pages": [
+                          "enterprise/v8-1-0-test/geneva/deployment/helm",
+                          "enterprise/v8-1-0-test/geneva/jobs/startup",
+                          "enterprise/v8-1-0-test/geneva/deployment/dependency-verification",
+                          "enterprise/v8-1-0-test/geneva/udfs/advanced-configuration",
+                          "enterprise/v8-1-0-test/geneva/deployment/index",
+                          "enterprise/v8-1-0-test/geneva/deployment/troubleshooting"
+                        ]
+                      },
+                      "enterprise/v8-1-0-test/geneva/end-to-end",
+                      "enterprise/v8-1-0-test/geneva/reference"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "enterprise/v8-1-0-test/training/why-lancedb",
+                      "enterprise/v8-1-0-test/training/data-loading",
+                      "enterprise/v8-1-0-test/training/torch"
+                    ]
+                  },
+                  {
+                    "group": "Management",
+                    "pages": [
+                      "enterprise/v8-1-0-test/management/index",
+                      "enterprise/v8-1-0-test/management/database",
+                      "enterprise/v8-1-0-test/management/namespace",
+                      "enterprise/v8-1-0-test/management/table",
+                      "enterprise/v8-1-0-test/tables/branching",
+                      "enterprise/v8-1-0-test/management/materialized-view",
+                      "enterprise/v8-1-0-test/management/view"
+                    ]
+                  },
+                  {
+                    "group": "Maintenance",
+                    "pages": [
+                      "enterprise/v8-1-0-test/indexing/index",
+                      "enterprise/v8-1-0-test/indexing/vector-index",
+                      "enterprise/v8-1-0-test/indexing/fts-index",
+                      "enterprise/v8-1-0-test/indexing/scalar-index",
+                      "enterprise/v8-1-0-test/indexing/reindexing",
+                      "enterprise/v8-1-0-test/maintenance/compaction",
+                      "enterprise/v8-1-0-test/maintenance/cleanup",
+                      "enterprise/v8-1-0-test/maintenance/background-jobs"
+                    ]
+                  },
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "enterprise/v8-1-0-test/enterprise/index",
+                      "enterprise/v8-1-0-test/enterprise/architecture",
+                      "enterprise/v8-1-0-test/enterprise/deployment/index",
+                      "enterprise/v8-1-0-test/deployment/storage",
+                      "enterprise/v8-1-0-test/deployment/monitoring",
+                      "enterprise/v8-1-0-test/enterprise/deployment/azure",
+                      "enterprise/v8-1-0-test/enterprise/benchmarks",
+                      "enterprise/v8-1-0-test/deployment/support"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "enterprise/v8-1-0-test/enterprise/authentication",
+                      "enterprise/v8-1-0-test/governance/authorization",
+                      "enterprise/v8-1-0-test/enterprise/security"
+                    ]
+                  },
+                  {
+                    "group": "SQL Reference",
+                    "pages": [
+                      "enterprise/v8-1-0-test/sql/index",
+                      "enterprise/v8-1-0-test/sql/data-types",
+                      {
+                        "group": "DDL",
+                        "pages": [
+                          "enterprise/v8-1-0-test/sql/ddl/namespace",
+                          "enterprise/v8-1-0-test/sql/ddl/table",
+                          "enterprise/v8-1-0-test/sql/ddl/view",
+                          "enterprise/v8-1-0-test/sql/ddl/materialized-view",
+                          "enterprise/v8-1-0-test/sql/ddl/index",
+                          "enterprise/v8-1-0-test/sql/ddl/job"
+                        ],
+                        "icon": "sitemap"
+                      },
+                      {
+                        "group": "DML",
+                        "pages": [
+                          "enterprise/v8-1-0-test/sql/dml/insert",
+                          "enterprise/v8-1-0-test/sql/dml/update",
+                          "enterprise/v8-1-0-test/sql/dml/delete",
+                          "enterprise/v8-1-0-test/sql/dml/copy",
+                          "enterprise/v8-1-0-test/sql/dml/refresh"
+                        ],
+                        "icon": "database"
+                      },
+                      {
+                        "group": "DQL",
+                        "pages": [
+                          "enterprise/v8-1-0-test/sql/dql/select",
+                          "enterprise/v8-1-0-test/sql/dql/subqueries",
+                          "enterprise/v8-1-0-test/sql/dql/join",
+                          "enterprise/v8-1-0-test/sql/dql/aggregation",
+                          "enterprise/v8-1-0-test/sql/dql/window",
+                          "enterprise/v8-1-0-test/sql/dql/sampling",
+                          "enterprise/v8-1-0-test/sql/dql/fts",
+                          "enterprise/v8-1-0-test/sql/dql/explain"
+                        ],
+                        "icon": "filter"
+                      },
+                      {
+                        "group": "Expressions",
+                        "pages": [
+                          "enterprise/v8-1-0-test/sql/operators",
+                          "enterprise/v8-1-0-test/sql/functions",
+                          "enterprise/v8-1-0-test/sql/scalar-functions",
+                          "enterprise/v8-1-0-test/sql/prepared-statements"
+                        ],
+                        "icon": "code"
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Versioning probe",
+                    "pages": [
+                      "enterprise/v8-1-0-test/versioning-probe/probe",
+                      "enterprise/v8-1-0-test/versioning-probe/linked"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Integrations",
+                "pages": [
+                  "enterprise/v8-1-0-test/integrations/index",
+                  {
+                    "group": "Embedding Registry",
+                    "pages": [
+                      "enterprise/v8-1-0-test/embedding/index",
+                      "enterprise/v8-1-0-test/embedding/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Embedding Providers",
+                    "pages": [
+                      "enterprise/v8-1-0-test/integrations/embedding/huggingface",
+                      "enterprise/v8-1-0-test/integrations/embedding/aws",
+                      "enterprise/v8-1-0-test/integrations/embedding/cohere",
+                      "enterprise/v8-1-0-test/integrations/embedding/colpali",
+                      "enterprise/v8-1-0-test/integrations/embedding/gemini",
+                      "enterprise/v8-1-0-test/integrations/embedding/ibm",
+                      "enterprise/v8-1-0-test/integrations/embedding/imagebind",
+                      "enterprise/v8-1-0-test/integrations/embedding/instructor",
+                      "enterprise/v8-1-0-test/integrations/embedding/jina",
+                      "enterprise/v8-1-0-test/integrations/embedding/ollama",
+                      "enterprise/v8-1-0-test/integrations/embedding/openai",
+                      "enterprise/v8-1-0-test/integrations/embedding/openclip",
+                      "enterprise/v8-1-0-test/integrations/embedding/sentence-transformers",
+                      "enterprise/v8-1-0-test/integrations/embedding/voyageai",
+                      "enterprise/v8-1-0-test/integrations/embedding/superlinked"
+                    ]
+                  },
+                  {
+                    "group": "Rerankers",
+                    "pages": [
+                      "enterprise/v8-1-0-test/integrations/reranking/answerdotai",
+                      "enterprise/v8-1-0-test/integrations/reranking/cohere",
+                      "enterprise/v8-1-0-test/integrations/reranking/colbert",
+                      "enterprise/v8-1-0-test/integrations/reranking/jina",
+                      "enterprise/v8-1-0-test/integrations/reranking/openai",
+                      "enterprise/v8-1-0-test/integrations/reranking/voyageai",
+                      "enterprise/v8-1-0-test/integrations/reranking/watsonx"
+                    ]
+                  },
+                  {
+                    "group": "Data Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "enterprise/v8-1-0-test/integrations/data/pydantic",
+                      "enterprise/v8-1-0-test/integrations/data/duckdb",
+                      "enterprise/v8-1-0-test/integrations/data/pandas_and_pyarrow",
+                      "enterprise/v8-1-0-test/integrations/data/polars_arrow",
+                      "enterprise/v8-1-0-test/integrations/data/dlt",
+                      "enterprise/v8-1-0-test/integrations/data/voxel51"
+                    ]
+                  },
+                  {
+                    "group": "AI Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "enterprise/v8-1-0-test/integrations/ai/agno",
+                      "enterprise/v8-1-0-test/integrations/ai/hermes-agent",
+                      "enterprise/v8-1-0-test/integrations/ai/huggingface",
+                      "enterprise/v8-1-0-test/integrations/ai/langchain",
+                      "enterprise/v8-1-0-test/integrations/ai/llamaIndex",
+                      "enterprise/v8-1-0-test/integrations/ai/genkit",
+                      "enterprise/v8-1-0-test/integrations/ai/kiln",
+                      "enterprise/v8-1-0-test/integrations/ai/prompttools",
+                      "enterprise/v8-1-0-test/integrations/ai/synthetic-data-kit"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Tutorials",
+                "pages": [
+                  "enterprise/v8-1-0-test/tutorials/index",
+                  {
+                    "group": "Search",
+                    "pages": [
+                      "enterprise/v8-1-0-test/tutorials/search/hybrid-search-beir",
+                      "enterprise/v8-1-0-test/tutorials/search/multivector-xtr",
+                      "enterprise/v8-1-0-test/tutorials/search/multivector-needle-in-a-haystack",
+                      "enterprise/v8-1-0-test/tutorials/search/video-search",
+                      "enterprise/v8-1-0-test/tutorials/search/vector-arithmetic",
+                      "enterprise/v8-1-0-test/tutorials/search/ner-search",
+                      "enterprise/v8-1-0-test/tutorials/search/reddit-summarizer"
+                    ]
+                  },
+                  {
+                    "group": "RAG",
+                    "pages": [
+                      "enterprise/v8-1-0-test/tutorials/agents/contextual-rag",
+                      "enterprise/v8-1-0-test/tutorials/agents/nvidia-rag-blueprint/index",
+                      "enterprise/v8-1-0-test/tutorials/agents/time-travel-rag/index",
+                      "enterprise/v8-1-0-test/tutorials/agents/multimodal-agent/index",
+                      "enterprise/v8-1-0-test/tutorials/agents/matryoshka-embeddings",
+                      "enterprise/v8-1-0-test/tutorials/agents/hyde",
+                      "enterprise/v8-1-0-test/tutorials/agents/late-chunking",
+                      "enterprise/v8-1-0-test/tutorials/agents/agentic-rag"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "enterprise/v8-1-0-test/tutorials/feature-engineering/feature-engineering-101",
+                      "enterprise/v8-1-0-test/tutorials/feature-engineering/materialized-views",
+                      "enterprise/v8-1-0-test/agent-branch-experiments"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "enterprise/v8-1-0-test/training/object-detection",
+                      "enterprise/v8-1-0-test/training/vlm-finetuning",
+                      "enterprise/v8-1-0-test/integrations/stable-worldmodel"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Demos",
+                "pages": [
+                  "enterprise/v8-1-0-test/demos/index",
+                  "enterprise/v8-1-0-test/demos/semantic-art",
+                  "enterprise/v8-1-0-test/demos/wikipedia-search",
+                  "enterprise/v8-1-0-test/demos/video-search",
+                  "enterprise/v8-1-0-test/demos/fineweb-edu-search",
+                  "enterprise/v8-1-0-test/demos/robot-data-curation"
+                ]
+              },
+              {
+                "tab": "Datasets",
+                "pages": [
+                  "enterprise/v8-1-0-test/datasets/index",
+                  {
+                    "group": "Robotics",
+                    "pages": [
+                      "enterprise/v8-1-0-test/integrations/lerobotdataset",
+                      "enterprise/v8-1-0-test/datasets/lerobot-pusht",
+                      "enterprise/v8-1-0-test/datasets/lerobot-xvla-soft-fold"
+                    ]
+                  },
+                  {
+                    "group": "Image Classification",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/mnist",
+                      "enterprise/v8-1-0-test/datasets/cifar10",
+                      "enterprise/v8-1-0-test/datasets/fashion-mnist",
+                      "enterprise/v8-1-0-test/datasets/food101",
+                      "enterprise/v8-1-0-test/datasets/oxford-pets",
+                      "enterprise/v8-1-0-test/datasets/stanford-cars",
+                      "enterprise/v8-1-0-test/datasets/imagenet-1k-val",
+                      "enterprise/v8-1-0-test/datasets/eurosat"
+                    ]
+                  },
+                  {
+                    "group": "OCR & Handwriting",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/handwriting-ocr"
+                    ]
+                  },
+                  {
+                    "group": "Object Detection & Segmentation",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/coco-detection-2017",
+                      "enterprise/v8-1-0-test/datasets/pascal-voc-2012-segmentation",
+                      "enterprise/v8-1-0-test/datasets/ade20k",
+                      "enterprise/v8-1-0-test/datasets/kitti-2d-detection"
+                    ]
+                  },
+                  {
+                    "group": "Image Retrieval",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/coco-captions-2017",
+                      "enterprise/v8-1-0-test/datasets/flickr30k",
+                      "enterprise/v8-1-0-test/datasets/laion-1m"
+                    ]
+                  },
+                  {
+                    "group": "Visual Question Answering",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/chartqa",
+                      "enterprise/v8-1-0-test/datasets/docvqa",
+                      "enterprise/v8-1-0-test/datasets/textvqa",
+                      "enterprise/v8-1-0-test/datasets/vqav2",
+                      "enterprise/v8-1-0-test/datasets/gqa-testdev-balanced"
+                    ]
+                  },
+                  {
+                    "group": "Text QA",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/squad-v2",
+                      "enterprise/v8-1-0-test/datasets/trivia-qa",
+                      "enterprise/v8-1-0-test/datasets/hotpotqa-distractor",
+                      "enterprise/v8-1-0-test/datasets/natural-questions-val",
+                      "enterprise/v8-1-0-test/datasets/ms-marco-v2"
+                    ]
+                  },
+                  {
+                    "group": "Text Corpora",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/fineweb-edu"
+                    ]
+                  },
+                  {
+                    "group": "Speech",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/librispeech-clean"
+                    ]
+                  },
+                  {
+                    "group": "Video",
+                    "pages": [
+                      "enterprise/v8-1-0-test/datasets/openvid"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "redirects": [
+    {
+      "source": "/oss/v0-99-0-test/tables/update",
+      "destination": "/oss/v0-99-0-test/ingestion/update"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/fts-examples",
+      "destination": "/oss/v0-99-0-test/search/full-text-search"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/optimize-queries",
+      "destination": "/oss/v0-99-0-test/search/explain"
+    },
+    {
+      "source": "/oss/v0-99-0-test/lance",
+      "destination": "/oss/v0-99-0-test/basics/lance"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tables-and-namespaces",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/oss/v0-99-0-test/catalog",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/oss/v0-99-0-test/catalog/database",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/oss/v0-99-0-test/api-reference",
+      "destination": "/oss/v0-99-0-test/basics/apis"
+    },
+    {
+      "source": "/oss/v0-99-0-test/feature-engineering/computed-columns",
+      "destination": "/oss/v0-99-0-test/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tables/create",
+      "destination": "/oss/v0-99-0-test/ingestion"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tables/multimodal",
+      "destination": "/oss/v0-99-0-test/management/table#multimodal"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/select",
+      "destination": "/oss/v0-99-0-test/sql/select"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tutorials/search",
+      "destination": "/oss/v0-99-0-test/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tutorials/agents",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tutorials/feature-engineering",
+      "destination": "/oss/v0-99-0-test/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tables",
+      "destination": "/oss/v0-99-0-test/management/table"
+    },
+    {
+      "source": "/oss/v0-99-0-test/namespaces",
+      "destination": "/oss/v0-99-0-test/management/namespace"
+    },
+    {
+      "source": "/oss/v0-99-0-test/namespaces/usage",
+      "destination": "/oss/v0-99-0-test/management/namespace"
+    },
+    {
+      "source": "/oss/v0-99-0-test/basics/data-types",
+      "destination": "/oss/v0-99-0-test/sql/data-types"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tables/schema",
+      "destination": "/oss/v0-99-0-test/management/table#schema"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tables/versioning",
+      "destination": "/oss/v0-99-0-test/management/table#versioning"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/multivector-search",
+      "destination": "/oss/v0-99-0-test/search/vector-search"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/explain-analyze",
+      "destination": "/oss/v0-99-0-test/search/explain"
+    },
+    {
+      "source": "/oss/v0-99-0-test/indexing/quantization",
+      "destination": "/oss/v0-99-0-test/indexing/vector-index"
+    },
+    {
+      "source": "/oss/v0-99-0-test/performance",
+      "destination": "/oss/v0-99-0-test/search#performance"
+    },
+    {
+      "source": "/oss/v0-99-0-test/reranking/:slug*",
+      "destination": "/oss/v0-99-0-test/reranking"
+    },
+    {
+      "source": "/oss/v0-99-0-test/training",
+      "destination": "/oss/v0-99-0-test/training/data-loading"
+    },
+    {
+      "source": "/oss/v0-99-0-test/training/lerobot",
+      "destination": "/oss/v0-99-0-test/integrations/lerobotdataset"
+    },
+    {
+      "source": "/oss/v0-99-0-test/build-with-ai-agents",
+      "destination": "/oss/v0-99-0-test/basics/agentic-skills"
+    },
+    {
+      "source": "/oss/v0-99-0-test/core/update",
+      "destination": "/oss/v0-99-0-test/ingestion/update"
+    },
+    {
+      "source": "/oss/v0-99-0-test/storage",
+      "destination": "/oss/v0-99-0-test/deployment/storage"
+    },
+    {
+      "source": "/oss/v0-99-0-test/storage/configuration",
+      "destination": "/oss/v0-99-0-test/deployment/storage"
+    },
+    {
+      "source": "/oss/v0-99-0-test/storage/monitoring",
+      "destination": "/oss/v0-99-0-test/deployment/monitoring"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/sql",
+      "destination": "/oss/v0-99-0-test/sql"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/sql/index",
+      "destination": "/oss/v0-99-0-test/sql"
+    },
+    {
+      "source": "/oss/v0-99-0-test/search/sql/fts-sql",
+      "destination": "/oss/v0-99-0-test/sql/dql/fts"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/select",
+      "destination": "/oss/v0-99-0-test/sql/dql/select"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/subqueries",
+      "destination": "/oss/v0-99-0-test/sql/dql/subqueries"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/join",
+      "destination": "/oss/v0-99-0-test/sql/dql/join"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/aggregation",
+      "destination": "/oss/v0-99-0-test/sql/dql/aggregation"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/window",
+      "destination": "/oss/v0-99-0-test/sql/dql/window"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/sampling",
+      "destination": "/oss/v0-99-0-test/sql/dql/sampling"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/explain",
+      "destination": "/oss/v0-99-0-test/sql/dql/explain"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/ddl",
+      "destination": "/oss/v0-99-0-test/sql/ddl/table"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/dml",
+      "destination": "/oss/v0-99-0-test/sql/dml/insert"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/refresh",
+      "destination": "/oss/v0-99-0-test/sql/dml/refresh"
+    },
+    {
+      "source": "/oss/v0-99-0-test/sql/show",
+      "destination": "/oss/v0-99-0-test/sql/ddl/job"
+    },
+    {
+      "source": "/oss/v0-99-0-test/faq",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-99-0-test/faq/faq-oss",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-99-0-test/faq/faq-enterprise",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-99-0-test/troubleshooting",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-99-0-test/basics/apis",
+      "destination": "/oss/v0-99-0-test/basics/sdk"
+    },
+    {
+      "source": "/oss/v0-99-0-test/hybrid-search",
+      "destination": "/oss/v0-99-0-test/search/hybrid-search"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/reranking/rrf",
+      "destination": "/oss/v0-99-0-test/reranking/rrf"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/reranking/linear_combination",
+      "destination": "/oss/v0-99-0-test/reranking/linear_combination"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/reranking/mrr",
+      "destination": "/oss/v0-99-0-test/reranking/mrr"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/reranking/cross_encoder",
+      "destination": "/oss/v0-99-0-test/reranking/cross_encoder"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/platforms/:slug*",
+      "destination": "/oss/v0-99-0-test/integrations/data/:slug*"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/frameworks/:slug*",
+      "destination": "/oss/v0-99-0-test/integrations/ai/:slug*"
+    },
+    {
+      "source": "/oss/v0-99-0-test/integrations/data/phidata",
+      "destination": "/oss/v0-99-0-test/integrations/ai/agno"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tutorials/rag/:slug*",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/:slug*"
+    },
+    {
+      "source": "/oss/v0-99-0-test/tutorials/vector-search/:slug*",
+      "destination": "/oss/v0-99-0-test/tutorials/search/:slug*"
+    },
+    {
+      "source": "/oss/v0-99-0-test/geneva/udfs/built-in",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/providers"
+    },
+    {
+      "source": "/oss/v0-99-0-test/enterprise/performance",
+      "destination": "/oss/v0-99-0-test/enterprise/benchmarks"
+    },
+    {
+      "source": "/oss/v0-99-0-test/enterprise/quickstart",
+      "destination": "/oss/v0-99-0-test/quickstart"
+    },
+    {
+      "source": "/oss/v0-99-0-test/huggingface/overview",
+      "destination": "/oss/v0-99-0-test/integrations/ai/huggingface"
+    },
+    {
+      "source": "/oss/v0-99-0-test/huggingface/datasets",
+      "destination": "/oss/v0-99-0-test/datasets"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables/update",
+      "destination": "/oss/v0-98-0-test/ingestion/update"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/fts-examples",
+      "destination": "/oss/v0-98-0-test/search/full-text-search"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/optimize-queries",
+      "destination": "/oss/v0-98-0-test/search/explain"
+    },
+    {
+      "source": "/oss/v0-98-0-test/lance",
+      "destination": "/oss/v0-98-0-test/basics/lance"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables-and-namespaces",
+      "destination": "/oss/v0-98-0-test/basics/catalog"
+    },
+    {
+      "source": "/oss/v0-98-0-test/catalog",
+      "destination": "/oss/v0-98-0-test/basics/catalog"
+    },
+    {
+      "source": "/oss/v0-98-0-test/catalog/database",
+      "destination": "/oss/v0-98-0-test/basics/catalog"
+    },
+    {
+      "source": "/oss/v0-98-0-test/api-reference",
+      "destination": "/oss/v0-98-0-test/basics/apis"
+    },
+    {
+      "source": "/oss/v0-98-0-test/feature-engineering/computed-columns",
+      "destination": "/oss/v0-98-0-test/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables/create",
+      "destination": "/oss/v0-98-0-test/ingestion"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables/multimodal",
+      "destination": "/oss/v0-98-0-test/management/table#multimodal"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/select",
+      "destination": "/oss/v0-98-0-test/sql/select"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tutorials/search",
+      "destination": "/oss/v0-98-0-test/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tutorials/agents",
+      "destination": "/oss/v0-98-0-test/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tutorials/feature-engineering",
+      "destination": "/oss/v0-98-0-test/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables",
+      "destination": "/oss/v0-98-0-test/management/table"
+    },
+    {
+      "source": "/oss/v0-98-0-test/namespaces",
+      "destination": "/oss/v0-98-0-test/management/namespace"
+    },
+    {
+      "source": "/oss/v0-98-0-test/namespaces/usage",
+      "destination": "/oss/v0-98-0-test/management/namespace"
+    },
+    {
+      "source": "/oss/v0-98-0-test/basics/data-types",
+      "destination": "/oss/v0-98-0-test/sql/data-types"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables/schema",
+      "destination": "/oss/v0-98-0-test/management/table#schema"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tables/versioning",
+      "destination": "/oss/v0-98-0-test/management/table#versioning"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/multivector-search",
+      "destination": "/oss/v0-98-0-test/search/vector-search"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/explain-analyze",
+      "destination": "/oss/v0-98-0-test/search/explain"
+    },
+    {
+      "source": "/oss/v0-98-0-test/indexing/quantization",
+      "destination": "/oss/v0-98-0-test/indexing/vector-index"
+    },
+    {
+      "source": "/oss/v0-98-0-test/performance",
+      "destination": "/oss/v0-98-0-test/search#performance"
+    },
+    {
+      "source": "/oss/v0-98-0-test/reranking/:slug*",
+      "destination": "/oss/v0-98-0-test/reranking"
+    },
+    {
+      "source": "/oss/v0-98-0-test/training",
+      "destination": "/oss/v0-98-0-test/training/data-loading"
+    },
+    {
+      "source": "/oss/v0-98-0-test/training/lerobot",
+      "destination": "/oss/v0-98-0-test/integrations/lerobotdataset"
+    },
+    {
+      "source": "/oss/v0-98-0-test/build-with-ai-agents",
+      "destination": "/oss/v0-98-0-test/basics/agentic-skills"
+    },
+    {
+      "source": "/oss/v0-98-0-test/core/update",
+      "destination": "/oss/v0-98-0-test/ingestion/update"
+    },
+    {
+      "source": "/oss/v0-98-0-test/storage",
+      "destination": "/oss/v0-98-0-test/deployment/storage"
+    },
+    {
+      "source": "/oss/v0-98-0-test/storage/configuration",
+      "destination": "/oss/v0-98-0-test/deployment/storage"
+    },
+    {
+      "source": "/oss/v0-98-0-test/storage/monitoring",
+      "destination": "/oss/v0-98-0-test/deployment/monitoring"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/sql",
+      "destination": "/oss/v0-98-0-test/sql"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/sql/index",
+      "destination": "/oss/v0-98-0-test/sql"
+    },
+    {
+      "source": "/oss/v0-98-0-test/search/sql/fts-sql",
+      "destination": "/oss/v0-98-0-test/sql/dql/fts"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/select",
+      "destination": "/oss/v0-98-0-test/sql/dql/select"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/subqueries",
+      "destination": "/oss/v0-98-0-test/sql/dql/subqueries"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/join",
+      "destination": "/oss/v0-98-0-test/sql/dql/join"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/aggregation",
+      "destination": "/oss/v0-98-0-test/sql/dql/aggregation"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/window",
+      "destination": "/oss/v0-98-0-test/sql/dql/window"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/sampling",
+      "destination": "/oss/v0-98-0-test/sql/dql/sampling"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/explain",
+      "destination": "/oss/v0-98-0-test/sql/dql/explain"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/ddl",
+      "destination": "/oss/v0-98-0-test/sql/ddl/table"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/dml",
+      "destination": "/oss/v0-98-0-test/sql/dml/insert"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/refresh",
+      "destination": "/oss/v0-98-0-test/sql/dml/refresh"
+    },
+    {
+      "source": "/oss/v0-98-0-test/sql/show",
+      "destination": "/oss/v0-98-0-test/sql/ddl/job"
+    },
+    {
+      "source": "/oss/v0-98-0-test/faq",
+      "destination": "/oss/v0-98-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-98-0-test/faq/faq-oss",
+      "destination": "/oss/v0-98-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-98-0-test/faq/faq-enterprise",
+      "destination": "/oss/v0-98-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-98-0-test/troubleshooting",
+      "destination": "/oss/v0-98-0-test/deployment/support"
+    },
+    {
+      "source": "/oss/v0-98-0-test/basics/apis",
+      "destination": "/oss/v0-98-0-test/basics/sdk"
+    },
+    {
+      "source": "/oss/v0-98-0-test/hybrid-search",
+      "destination": "/oss/v0-98-0-test/search/hybrid-search"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/reranking/rrf",
+      "destination": "/oss/v0-98-0-test/reranking/rrf"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/reranking/linear_combination",
+      "destination": "/oss/v0-98-0-test/reranking/linear_combination"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/reranking/mrr",
+      "destination": "/oss/v0-98-0-test/reranking/mrr"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/reranking/cross_encoder",
+      "destination": "/oss/v0-98-0-test/reranking/cross_encoder"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/platforms/:slug*",
+      "destination": "/oss/v0-98-0-test/integrations/data/:slug*"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/frameworks/:slug*",
+      "destination": "/oss/v0-98-0-test/integrations/ai/:slug*"
+    },
+    {
+      "source": "/oss/v0-98-0-test/integrations/data/phidata",
+      "destination": "/oss/v0-98-0-test/integrations/ai/agno"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tutorials/rag/:slug*",
+      "destination": "/oss/v0-98-0-test/tutorials/agents/:slug*"
+    },
+    {
+      "source": "/oss/v0-98-0-test/tutorials/vector-search/:slug*",
+      "destination": "/oss/v0-98-0-test/tutorials/search/:slug*"
+    },
+    {
+      "source": "/oss/v0-98-0-test/geneva/udfs/built-in",
+      "destination": "/oss/v0-98-0-test/geneva/udfs/providers"
+    },
+    {
+      "source": "/oss/v0-98-0-test/enterprise/performance",
+      "destination": "/oss/v0-98-0-test/enterprise/benchmarks"
+    },
+    {
+      "source": "/oss/v0-98-0-test/enterprise/quickstart",
+      "destination": "/oss/v0-98-0-test/quickstart"
+    },
+    {
+      "source": "/oss/v0-98-0-test/huggingface/overview",
+      "destination": "/oss/v0-98-0-test/integrations/ai/huggingface"
+    },
+    {
+      "source": "/oss/v0-98-0-test/huggingface/datasets",
+      "destination": "/oss/v0-98-0-test/datasets"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables/update",
+      "destination": "/enterprise/v8-2-0-test/ingestion/update"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/fts-examples",
+      "destination": "/enterprise/v8-2-0-test/search/full-text-search"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/optimize-queries",
+      "destination": "/enterprise/v8-2-0-test/search/explain"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/lance",
+      "destination": "/enterprise/v8-2-0-test/basics/lance"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables-and-namespaces",
+      "destination": "/enterprise/v8-2-0-test/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/catalog",
+      "destination": "/enterprise/v8-2-0-test/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/catalog/database",
+      "destination": "/enterprise/v8-2-0-test/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/api-reference",
+      "destination": "/enterprise/v8-2-0-test/basics/apis"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/feature-engineering/computed-columns",
+      "destination": "/enterprise/v8-2-0-test/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables/create",
+      "destination": "/enterprise/v8-2-0-test/ingestion"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables/multimodal",
+      "destination": "/enterprise/v8-2-0-test/management/table#multimodal"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/select",
+      "destination": "/enterprise/v8-2-0-test/sql/select"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tutorials/search",
+      "destination": "/enterprise/v8-2-0-test/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tutorials/agents",
+      "destination": "/enterprise/v8-2-0-test/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tutorials/feature-engineering",
+      "destination": "/enterprise/v8-2-0-test/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables",
+      "destination": "/enterprise/v8-2-0-test/management/table"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/namespaces",
+      "destination": "/enterprise/v8-2-0-test/management/namespace"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/namespaces/usage",
+      "destination": "/enterprise/v8-2-0-test/management/namespace"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/basics/data-types",
+      "destination": "/enterprise/v8-2-0-test/sql/data-types"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables/schema",
+      "destination": "/enterprise/v8-2-0-test/management/table#schema"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tables/versioning",
+      "destination": "/enterprise/v8-2-0-test/management/table#versioning"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/multivector-search",
+      "destination": "/enterprise/v8-2-0-test/search/vector-search"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/explain-analyze",
+      "destination": "/enterprise/v8-2-0-test/search/explain"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/indexing/quantization",
+      "destination": "/enterprise/v8-2-0-test/indexing/vector-index"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/performance",
+      "destination": "/enterprise/v8-2-0-test/search#performance"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/reranking/:slug*",
+      "destination": "/enterprise/v8-2-0-test/reranking"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/training",
+      "destination": "/enterprise/v8-2-0-test/training/data-loading"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/training/lerobot",
+      "destination": "/enterprise/v8-2-0-test/integrations/lerobotdataset"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/build-with-ai-agents",
+      "destination": "/enterprise/v8-2-0-test/basics/agentic-skills"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/core/update",
+      "destination": "/enterprise/v8-2-0-test/ingestion/update"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/storage",
+      "destination": "/enterprise/v8-2-0-test/deployment/storage"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/storage/configuration",
+      "destination": "/enterprise/v8-2-0-test/deployment/storage"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/storage/monitoring",
+      "destination": "/enterprise/v8-2-0-test/deployment/monitoring"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/sql",
+      "destination": "/enterprise/v8-2-0-test/sql"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/sql/index",
+      "destination": "/enterprise/v8-2-0-test/sql"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/search/sql/fts-sql",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/fts"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/select",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/select"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/subqueries",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/subqueries"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/join",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/join"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/aggregation",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/aggregation"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/window",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/window"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/sampling",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/sampling"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/explain",
+      "destination": "/enterprise/v8-2-0-test/sql/dql/explain"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/ddl",
+      "destination": "/enterprise/v8-2-0-test/sql/ddl/table"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/dml",
+      "destination": "/enterprise/v8-2-0-test/sql/dml/insert"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/refresh",
+      "destination": "/enterprise/v8-2-0-test/sql/dml/refresh"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/sql/show",
+      "destination": "/enterprise/v8-2-0-test/sql/ddl/job"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/faq",
+      "destination": "/enterprise/v8-2-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/faq/faq-oss",
+      "destination": "/enterprise/v8-2-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/faq/faq-enterprise",
+      "destination": "/enterprise/v8-2-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/troubleshooting",
+      "destination": "/enterprise/v8-2-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/basics/apis",
+      "destination": "/enterprise/v8-2-0-test/basics/sdk"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/hybrid-search",
+      "destination": "/enterprise/v8-2-0-test/search/hybrid-search"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/reranking/rrf",
+      "destination": "/enterprise/v8-2-0-test/reranking/rrf"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/reranking/linear_combination",
+      "destination": "/enterprise/v8-2-0-test/reranking/linear_combination"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/reranking/mrr",
+      "destination": "/enterprise/v8-2-0-test/reranking/mrr"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/reranking/cross_encoder",
+      "destination": "/enterprise/v8-2-0-test/reranking/cross_encoder"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/platforms/:slug*",
+      "destination": "/enterprise/v8-2-0-test/integrations/data/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/frameworks/:slug*",
+      "destination": "/enterprise/v8-2-0-test/integrations/ai/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/integrations/data/phidata",
+      "destination": "/enterprise/v8-2-0-test/integrations/ai/agno"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tutorials/rag/:slug*",
+      "destination": "/enterprise/v8-2-0-test/tutorials/agents/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/tutorials/vector-search/:slug*",
+      "destination": "/enterprise/v8-2-0-test/tutorials/search/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/geneva/udfs/built-in",
+      "destination": "/enterprise/v8-2-0-test/geneva/udfs/providers"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/enterprise/performance",
+      "destination": "/enterprise/v8-2-0-test/enterprise/benchmarks"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/enterprise/quickstart",
+      "destination": "/enterprise/v8-2-0-test/quickstart"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/huggingface/overview",
+      "destination": "/enterprise/v8-2-0-test/integrations/ai/huggingface"
+    },
+    {
+      "source": "/enterprise/v8-2-0-test/huggingface/datasets",
+      "destination": "/enterprise/v8-2-0-test/datasets"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables/update",
+      "destination": "/enterprise/v8-1-0-test/ingestion/update"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/fts-examples",
+      "destination": "/enterprise/v8-1-0-test/search/full-text-search"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/optimize-queries",
+      "destination": "/enterprise/v8-1-0-test/search/explain"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/lance",
+      "destination": "/enterprise/v8-1-0-test/basics/lance"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables-and-namespaces",
+      "destination": "/enterprise/v8-1-0-test/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/catalog",
+      "destination": "/enterprise/v8-1-0-test/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/catalog/database",
+      "destination": "/enterprise/v8-1-0-test/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/api-reference",
+      "destination": "/enterprise/v8-1-0-test/basics/apis"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/feature-engineering/computed-columns",
+      "destination": "/enterprise/v8-1-0-test/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables/create",
+      "destination": "/enterprise/v8-1-0-test/ingestion"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables/multimodal",
+      "destination": "/enterprise/v8-1-0-test/management/table#multimodal"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/select",
+      "destination": "/enterprise/v8-1-0-test/sql/select"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tutorials/search",
+      "destination": "/enterprise/v8-1-0-test/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tutorials/agents",
+      "destination": "/enterprise/v8-1-0-test/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tutorials/feature-engineering",
+      "destination": "/enterprise/v8-1-0-test/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables",
+      "destination": "/enterprise/v8-1-0-test/management/table"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/namespaces",
+      "destination": "/enterprise/v8-1-0-test/management/namespace"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/namespaces/usage",
+      "destination": "/enterprise/v8-1-0-test/management/namespace"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/basics/data-types",
+      "destination": "/enterprise/v8-1-0-test/sql/data-types"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables/schema",
+      "destination": "/enterprise/v8-1-0-test/management/table#schema"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tables/versioning",
+      "destination": "/enterprise/v8-1-0-test/management/table#versioning"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/multivector-search",
+      "destination": "/enterprise/v8-1-0-test/search/vector-search"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/explain-analyze",
+      "destination": "/enterprise/v8-1-0-test/search/explain"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/indexing/quantization",
+      "destination": "/enterprise/v8-1-0-test/indexing/vector-index"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/performance",
+      "destination": "/enterprise/v8-1-0-test/search#performance"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/reranking/:slug*",
+      "destination": "/enterprise/v8-1-0-test/reranking"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/training",
+      "destination": "/enterprise/v8-1-0-test/training/data-loading"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/training/lerobot",
+      "destination": "/enterprise/v8-1-0-test/integrations/lerobotdataset"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/build-with-ai-agents",
+      "destination": "/enterprise/v8-1-0-test/basics/agentic-skills"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/core/update",
+      "destination": "/enterprise/v8-1-0-test/ingestion/update"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/storage",
+      "destination": "/enterprise/v8-1-0-test/deployment/storage"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/storage/configuration",
+      "destination": "/enterprise/v8-1-0-test/deployment/storage"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/storage/monitoring",
+      "destination": "/enterprise/v8-1-0-test/deployment/monitoring"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/sql",
+      "destination": "/enterprise/v8-1-0-test/sql"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/sql/index",
+      "destination": "/enterprise/v8-1-0-test/sql"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/search/sql/fts-sql",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/fts"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/select",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/select"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/subqueries",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/subqueries"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/join",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/join"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/aggregation",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/aggregation"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/window",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/window"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/sampling",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/sampling"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/explain",
+      "destination": "/enterprise/v8-1-0-test/sql/dql/explain"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/ddl",
+      "destination": "/enterprise/v8-1-0-test/sql/ddl/table"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/dml",
+      "destination": "/enterprise/v8-1-0-test/sql/dml/insert"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/refresh",
+      "destination": "/enterprise/v8-1-0-test/sql/dml/refresh"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/sql/show",
+      "destination": "/enterprise/v8-1-0-test/sql/ddl/job"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/faq",
+      "destination": "/enterprise/v8-1-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/faq/faq-oss",
+      "destination": "/enterprise/v8-1-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/faq/faq-enterprise",
+      "destination": "/enterprise/v8-1-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/troubleshooting",
+      "destination": "/enterprise/v8-1-0-test/deployment/support"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/basics/apis",
+      "destination": "/enterprise/v8-1-0-test/basics/sdk"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/hybrid-search",
+      "destination": "/enterprise/v8-1-0-test/search/hybrid-search"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/reranking/rrf",
+      "destination": "/enterprise/v8-1-0-test/reranking/rrf"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/reranking/linear_combination",
+      "destination": "/enterprise/v8-1-0-test/reranking/linear_combination"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/reranking/mrr",
+      "destination": "/enterprise/v8-1-0-test/reranking/mrr"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/reranking/cross_encoder",
+      "destination": "/enterprise/v8-1-0-test/reranking/cross_encoder"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/platforms/:slug*",
+      "destination": "/enterprise/v8-1-0-test/integrations/data/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/frameworks/:slug*",
+      "destination": "/enterprise/v8-1-0-test/integrations/ai/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/integrations/data/phidata",
+      "destination": "/enterprise/v8-1-0-test/integrations/ai/agno"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tutorials/rag/:slug*",
+      "destination": "/enterprise/v8-1-0-test/tutorials/agents/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/tutorials/vector-search/:slug*",
+      "destination": "/enterprise/v8-1-0-test/tutorials/search/:slug*"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/geneva/udfs/built-in",
+      "destination": "/enterprise/v8-1-0-test/geneva/udfs/providers"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/enterprise/performance",
+      "destination": "/enterprise/v8-1-0-test/enterprise/benchmarks"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/enterprise/quickstart",
+      "destination": "/enterprise/v8-1-0-test/quickstart"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/huggingface/overview",
+      "destination": "/enterprise/v8-1-0-test/integrations/ai/huggingface"
+    },
+    {
+      "source": "/enterprise/v8-1-0-test/huggingface/datasets",
+      "destination": "/enterprise/v8-1-0-test/datasets"
+    },
+    {
+      "source": "/oss/latest/:slug*",
+      "destination": "/oss/v0-99-0-test/:slug*"
+    },
+    {
+      "source": "/enterprise/latest/:slug*",
+      "destination": "/enterprise/v8-2-0-test/:slug*"
+    },
+    {
+      "source": "/agent-branch-experiments",
+      "destination": "/oss/v0-99-0-test/agent-branch-experiments"
+    },
+    {
+      "source": "/api-reference/rest/index",
+      "destination": "/oss/v0-99-0-test/api-reference/rest/index"
+    },
+    {
+      "source": "/architecture",
+      "destination": "/oss/v0-99-0-test/architecture"
+    },
+    {
+      "source": "/basics/agentic-skills",
+      "destination": "/oss/v0-99-0-test/basics/agentic-skills"
+    },
+    {
+      "source": "/basics/catalog",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/basics/connect",
+      "destination": "/oss/v0-99-0-test/basics/connect"
+    },
+    {
+      "source": "/basics/guarantees",
+      "destination": "/oss/v0-99-0-test/basics/guarantees"
+    },
+    {
+      "source": "/basics/jobs",
+      "destination": "/oss/v0-99-0-test/basics/jobs"
+    },
+    {
+      "source": "/basics/lakehouse",
+      "destination": "/oss/v0-99-0-test/basics/lakehouse"
+    },
+    {
+      "source": "/basics/lance",
+      "destination": "/oss/v0-99-0-test/basics/lance"
+    },
+    {
+      "source": "/basics/limits",
+      "destination": "/oss/v0-99-0-test/basics/limits"
+    },
+    {
+      "source": "/basics/naming",
+      "destination": "/oss/v0-99-0-test/basics/naming"
+    },
+    {
+      "source": "/basics/offerings",
+      "destination": "/oss/v0-99-0-test/basics/offerings"
+    },
+    {
+      "source": "/basics/query",
+      "destination": "/oss/v0-99-0-test/basics/query"
+    },
+    {
+      "source": "/basics/sdk",
+      "destination": "/oss/v0-99-0-test/basics/sdk"
+    },
+    {
+      "source": "/basics/sql",
+      "destination": "/oss/v0-99-0-test/basics/sql"
+    },
+    {
+      "source": "/curation/aggregate",
+      "destination": "/oss/v0-99-0-test/curation/aggregate"
+    },
+    {
+      "source": "/curation/index",
+      "destination": "/oss/v0-99-0-test/curation/index"
+    },
+    {
+      "source": "/curation/join",
+      "destination": "/oss/v0-99-0-test/curation/join"
+    },
+    {
+      "source": "/curation/sampling",
+      "destination": "/oss/v0-99-0-test/curation/sampling"
+    },
+    {
+      "source": "/curation/windowing",
+      "destination": "/oss/v0-99-0-test/curation/windowing"
+    },
+    {
+      "source": "/datasets/ade20k",
+      "destination": "/oss/v0-99-0-test/datasets/ade20k"
+    },
+    {
+      "source": "/datasets/chartqa",
+      "destination": "/oss/v0-99-0-test/datasets/chartqa"
+    },
+    {
+      "source": "/datasets/cifar10",
+      "destination": "/oss/v0-99-0-test/datasets/cifar10"
+    },
+    {
+      "source": "/datasets/coco-captions-2017",
+      "destination": "/oss/v0-99-0-test/datasets/coco-captions-2017"
+    },
+    {
+      "source": "/datasets/coco-detection-2017",
+      "destination": "/oss/v0-99-0-test/datasets/coco-detection-2017"
+    },
+    {
+      "source": "/datasets/docvqa",
+      "destination": "/oss/v0-99-0-test/datasets/docvqa"
+    },
+    {
+      "source": "/datasets/eurosat",
+      "destination": "/oss/v0-99-0-test/datasets/eurosat"
+    },
+    {
+      "source": "/datasets/fashion-mnist",
+      "destination": "/oss/v0-99-0-test/datasets/fashion-mnist"
+    },
+    {
+      "source": "/datasets/fineweb-edu",
+      "destination": "/oss/v0-99-0-test/datasets/fineweb-edu"
+    },
+    {
+      "source": "/datasets/flickr30k",
+      "destination": "/oss/v0-99-0-test/datasets/flickr30k"
+    },
+    {
+      "source": "/datasets/food101",
+      "destination": "/oss/v0-99-0-test/datasets/food101"
+    },
+    {
+      "source": "/datasets/gqa-testdev-balanced",
+      "destination": "/oss/v0-99-0-test/datasets/gqa-testdev-balanced"
+    },
+    {
+      "source": "/datasets/handwriting-ocr",
+      "destination": "/oss/v0-99-0-test/datasets/handwriting-ocr"
+    },
+    {
+      "source": "/datasets/hotpotqa-distractor",
+      "destination": "/oss/v0-99-0-test/datasets/hotpotqa-distractor"
+    },
+    {
+      "source": "/datasets/imagenet-1k-val",
+      "destination": "/oss/v0-99-0-test/datasets/imagenet-1k-val"
+    },
+    {
+      "source": "/datasets/index",
+      "destination": "/oss/v0-99-0-test/datasets/index"
+    },
+    {
+      "source": "/datasets/kitti-2d-detection",
+      "destination": "/oss/v0-99-0-test/datasets/kitti-2d-detection"
+    },
+    {
+      "source": "/datasets/laion-1m",
+      "destination": "/oss/v0-99-0-test/datasets/laion-1m"
+    },
+    {
+      "source": "/datasets/lerobot-pusht",
+      "destination": "/oss/v0-99-0-test/datasets/lerobot-pusht"
+    },
+    {
+      "source": "/datasets/lerobot-xvla-soft-fold",
+      "destination": "/oss/v0-99-0-test/datasets/lerobot-xvla-soft-fold"
+    },
+    {
+      "source": "/datasets/librispeech-clean",
+      "destination": "/oss/v0-99-0-test/datasets/librispeech-clean"
+    },
+    {
+      "source": "/datasets/mnist",
+      "destination": "/oss/v0-99-0-test/datasets/mnist"
+    },
+    {
+      "source": "/datasets/ms-marco-v2",
+      "destination": "/oss/v0-99-0-test/datasets/ms-marco-v2"
+    },
+    {
+      "source": "/datasets/natural-questions-val",
+      "destination": "/oss/v0-99-0-test/datasets/natural-questions-val"
+    },
+    {
+      "source": "/datasets/openvid",
+      "destination": "/oss/v0-99-0-test/datasets/openvid"
+    },
+    {
+      "source": "/datasets/oxford-pets",
+      "destination": "/oss/v0-99-0-test/datasets/oxford-pets"
+    },
+    {
+      "source": "/datasets/pascal-voc-2012-segmentation",
+      "destination": "/oss/v0-99-0-test/datasets/pascal-voc-2012-segmentation"
+    },
+    {
+      "source": "/datasets/squad-v2",
+      "destination": "/oss/v0-99-0-test/datasets/squad-v2"
+    },
+    {
+      "source": "/datasets/stanford-cars",
+      "destination": "/oss/v0-99-0-test/datasets/stanford-cars"
+    },
+    {
+      "source": "/datasets/textvqa",
+      "destination": "/oss/v0-99-0-test/datasets/textvqa"
+    },
+    {
+      "source": "/datasets/trivia-qa",
+      "destination": "/oss/v0-99-0-test/datasets/trivia-qa"
+    },
+    {
+      "source": "/datasets/vqav2",
+      "destination": "/oss/v0-99-0-test/datasets/vqav2"
+    },
+    {
+      "source": "/demos/fineweb-edu-search",
+      "destination": "/oss/v0-99-0-test/demos/fineweb-edu-search"
+    },
+    {
+      "source": "/demos/index",
+      "destination": "/oss/v0-99-0-test/demos/index"
+    },
+    {
+      "source": "/demos/robot-data-curation",
+      "destination": "/oss/v0-99-0-test/demos/robot-data-curation"
+    },
+    {
+      "source": "/demos/semantic-art",
+      "destination": "/oss/v0-99-0-test/demos/semantic-art"
+    },
+    {
+      "source": "/demos/video-search",
+      "destination": "/oss/v0-99-0-test/demos/video-search"
+    },
+    {
+      "source": "/demos/wikipedia-search",
+      "destination": "/oss/v0-99-0-test/demos/wikipedia-search"
+    },
+    {
+      "source": "/deployment/monitoring",
+      "destination": "/oss/v0-99-0-test/deployment/monitoring"
+    },
+    {
+      "source": "/deployment/storage",
+      "destination": "/oss/v0-99-0-test/deployment/storage"
+    },
+    {
+      "source": "/deployment/support",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/embedding/index",
+      "destination": "/oss/v0-99-0-test/embedding/index"
+    },
+    {
+      "source": "/embedding/quickstart",
+      "destination": "/oss/v0-99-0-test/embedding/quickstart"
+    },
+    {
+      "source": "/enterprise/architecture",
+      "destination": "/enterprise/v8-2-0-test/enterprise/architecture"
+    },
+    {
+      "source": "/enterprise/authentication",
+      "destination": "/enterprise/v8-2-0-test/enterprise/authentication"
+    },
+    {
+      "source": "/enterprise/benchmarks",
+      "destination": "/enterprise/v8-2-0-test/enterprise/benchmarks"
+    },
+    {
+      "source": "/enterprise/deployment/azure",
+      "destination": "/enterprise/v8-2-0-test/enterprise/deployment/azure"
+    },
+    {
+      "source": "/enterprise/deployment/index",
+      "destination": "/enterprise/v8-2-0-test/enterprise/deployment/index"
+    },
+    {
+      "source": "/enterprise/index",
+      "destination": "/enterprise/v8-2-0-test/enterprise/index"
+    },
+    {
+      "source": "/enterprise/security",
+      "destination": "/enterprise/v8-2-0-test/enterprise/security"
+    },
+    {
+      "source": "/feature-engineering/add-computed-column",
+      "destination": "/oss/v0-99-0-test/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/feature-engineering/data-evolution",
+      "destination": "/oss/v0-99-0-test/feature-engineering/data-evolution"
+    },
+    {
+      "source": "/feature-engineering/index",
+      "destination": "/oss/v0-99-0-test/feature-engineering/index"
+    },
+    {
+      "source": "/feature-engineering/materialized-views",
+      "destination": "/oss/v0-99-0-test/feature-engineering/materialized-views"
+    },
+    {
+      "source": "/feature-engineering/refresh-column",
+      "destination": "/oss/v0-99-0-test/feature-engineering/refresh-column"
+    },
+    {
+      "source": "/geneva/deployment/dependency-verification",
+      "destination": "/oss/v0-99-0-test/geneva/deployment/dependency-verification"
+    },
+    {
+      "source": "/geneva/deployment/helm",
+      "destination": "/oss/v0-99-0-test/geneva/deployment/helm"
+    },
+    {
+      "source": "/geneva/deployment/index",
+      "destination": "/oss/v0-99-0-test/geneva/deployment/index"
+    },
+    {
+      "source": "/geneva/deployment/troubleshooting",
+      "destination": "/oss/v0-99-0-test/geneva/deployment/troubleshooting"
+    },
+    {
+      "source": "/geneva/end-to-end",
+      "destination": "/oss/v0-99-0-test/geneva/end-to-end"
+    },
+    {
+      "source": "/geneva/getting-started",
+      "destination": "/oss/v0-99-0-test/geneva/getting-started"
+    },
+    {
+      "source": "/geneva/index",
+      "destination": "/oss/v0-99-0-test/geneva/index"
+    },
+    {
+      "source": "/geneva/jobs/advanced-job-configuration",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/advanced-job-configuration"
+    },
+    {
+      "source": "/geneva/jobs/backfilling",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/backfilling"
+    },
+    {
+      "source": "/geneva/jobs/bulk-load-columns",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/bulk-load-columns"
+    },
+    {
+      "source": "/geneva/jobs/conflicts",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/conflicts"
+    },
+    {
+      "source": "/geneva/jobs/console",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/console"
+    },
+    {
+      "source": "/geneva/jobs/contexts",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/contexts"
+    },
+    {
+      "source": "/geneva/jobs/index",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/index"
+    },
+    {
+      "source": "/geneva/jobs/job_metrics",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/job_metrics"
+    },
+    {
+      "source": "/geneva/jobs/lifecycle",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/lifecycle"
+    },
+    {
+      "source": "/geneva/jobs/materialized-views",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/materialized-views"
+    },
+    {
+      "source": "/geneva/jobs/performance",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/performance"
+    },
+    {
+      "source": "/geneva/jobs/startup",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/startup"
+    },
+    {
+      "source": "/geneva/jobs/troubleshooting",
+      "destination": "/oss/v0-99-0-test/geneva/jobs/troubleshooting"
+    },
+    {
+      "source": "/geneva/overview/index",
+      "destination": "/oss/v0-99-0-test/geneva/overview/index"
+    },
+    {
+      "source": "/geneva/reference",
+      "destination": "/oss/v0-99-0-test/geneva/reference"
+    },
+    {
+      "source": "/geneva/udfs/advanced-configuration",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/advanced-configuration"
+    },
+    {
+      "source": "/geneva/udfs/batch-udtfs",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/batch-udtfs"
+    },
+    {
+      "source": "/geneva/udfs/blobs",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/blobs"
+    },
+    {
+      "source": "/geneva/udfs/error_handling",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/error_handling"
+    },
+    {
+      "source": "/geneva/udfs/index",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/index"
+    },
+    {
+      "source": "/geneva/udfs/profiling-memory",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/profiling-memory"
+    },
+    {
+      "source": "/geneva/udfs/providers/gemini",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/providers/gemini"
+    },
+    {
+      "source": "/geneva/udfs/providers/index",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/providers/index"
+    },
+    {
+      "source": "/geneva/udfs/providers/openai",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/providers/openai"
+    },
+    {
+      "source": "/geneva/udfs/providers/sentence-transformers",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/providers/sentence-transformers"
+    },
+    {
+      "source": "/geneva/udfs/scalar-udtfs",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/scalar-udtfs"
+    },
+    {
+      "source": "/geneva/udfs/udfs",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/udfs"
+    },
+    {
+      "source": "/governance/authorization",
+      "destination": "/oss/v0-99-0-test/governance/authorization"
+    },
+    {
+      "source": "/indexing/fts-index",
+      "destination": "/oss/v0-99-0-test/indexing/fts-index"
+    },
+    {
+      "source": "/indexing/index",
+      "destination": "/oss/v0-99-0-test/indexing/index"
+    },
+    {
+      "source": "/indexing/reindexing",
+      "destination": "/oss/v0-99-0-test/indexing/reindexing"
+    },
+    {
+      "source": "/indexing/scalar-index",
+      "destination": "/oss/v0-99-0-test/indexing/scalar-index"
+    },
+    {
+      "source": "/indexing/vector-index",
+      "destination": "/oss/v0-99-0-test/indexing/vector-index"
+    },
+    {
+      "source": "/ingestion/create-table",
+      "destination": "/oss/v0-99-0-test/ingestion/create-table"
+    },
+    {
+      "source": "/ingestion/delete",
+      "destination": "/oss/v0-99-0-test/ingestion/delete"
+    },
+    {
+      "source": "/ingestion/index",
+      "destination": "/oss/v0-99-0-test/ingestion/index"
+    },
+    {
+      "source": "/ingestion/insert",
+      "destination": "/oss/v0-99-0-test/ingestion/insert"
+    },
+    {
+      "source": "/ingestion/merge-insert",
+      "destination": "/oss/v0-99-0-test/ingestion/merge-insert"
+    },
+    {
+      "source": "/ingestion/update",
+      "destination": "/oss/v0-99-0-test/ingestion/update"
+    },
+    {
+      "source": "/integrations/ai/agno",
+      "destination": "/oss/v0-99-0-test/integrations/ai/agno"
+    },
+    {
+      "source": "/integrations/ai/genkit",
+      "destination": "/oss/v0-99-0-test/integrations/ai/genkit"
+    },
+    {
+      "source": "/integrations/ai/hermes-agent",
+      "destination": "/oss/v0-99-0-test/integrations/ai/hermes-agent"
+    },
+    {
+      "source": "/integrations/ai/huggingface",
+      "destination": "/oss/v0-99-0-test/integrations/ai/huggingface"
+    },
+    {
+      "source": "/integrations/ai/kiln",
+      "destination": "/oss/v0-99-0-test/integrations/ai/kiln"
+    },
+    {
+      "source": "/integrations/ai/langchain",
+      "destination": "/oss/v0-99-0-test/integrations/ai/langchain"
+    },
+    {
+      "source": "/integrations/ai/llamaIndex",
+      "destination": "/oss/v0-99-0-test/integrations/ai/llamaIndex"
+    },
+    {
+      "source": "/integrations/ai/prompttools",
+      "destination": "/oss/v0-99-0-test/integrations/ai/prompttools"
+    },
+    {
+      "source": "/integrations/ai/synthetic-data-kit",
+      "destination": "/oss/v0-99-0-test/integrations/ai/synthetic-data-kit"
+    },
+    {
+      "source": "/integrations/data/dlt",
+      "destination": "/oss/v0-99-0-test/integrations/data/dlt"
+    },
+    {
+      "source": "/integrations/data/duckdb",
+      "destination": "/oss/v0-99-0-test/integrations/data/duckdb"
+    },
+    {
+      "source": "/integrations/data/pandas_and_pyarrow",
+      "destination": "/oss/v0-99-0-test/integrations/data/pandas_and_pyarrow"
+    },
+    {
+      "source": "/integrations/data/polars_arrow",
+      "destination": "/oss/v0-99-0-test/integrations/data/polars_arrow"
+    },
+    {
+      "source": "/integrations/data/pydantic",
+      "destination": "/oss/v0-99-0-test/integrations/data/pydantic"
+    },
+    {
+      "source": "/integrations/data/voxel51",
+      "destination": "/oss/v0-99-0-test/integrations/data/voxel51"
+    },
+    {
+      "source": "/integrations/embedding/aws",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/aws"
+    },
+    {
+      "source": "/integrations/embedding/cohere",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/cohere"
+    },
+    {
+      "source": "/integrations/embedding/colpali",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/colpali"
+    },
+    {
+      "source": "/integrations/embedding/gemini",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/gemini"
+    },
+    {
+      "source": "/integrations/embedding/huggingface",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/huggingface"
+    },
+    {
+      "source": "/integrations/embedding/ibm",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/ibm"
+    },
+    {
+      "source": "/integrations/embedding/imagebind",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/imagebind"
+    },
+    {
+      "source": "/integrations/embedding/instructor",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/instructor"
+    },
+    {
+      "source": "/integrations/embedding/jina",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/jina"
+    },
+    {
+      "source": "/integrations/embedding/ollama",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/ollama"
+    },
+    {
+      "source": "/integrations/embedding/openai",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/openai"
+    },
+    {
+      "source": "/integrations/embedding/openclip",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/openclip"
+    },
+    {
+      "source": "/integrations/embedding/sentence-transformers",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/sentence-transformers"
+    },
+    {
+      "source": "/integrations/embedding/superlinked",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/superlinked"
+    },
+    {
+      "source": "/integrations/embedding/voyageai",
+      "destination": "/oss/v0-99-0-test/integrations/embedding/voyageai"
+    },
+    {
+      "source": "/integrations/index",
+      "destination": "/oss/v0-99-0-test/integrations/index"
+    },
+    {
+      "source": "/integrations/lerobotdataset",
+      "destination": "/oss/v0-99-0-test/integrations/lerobotdataset"
+    },
+    {
+      "source": "/integrations/reranking/answerdotai",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/answerdotai"
+    },
+    {
+      "source": "/integrations/reranking/cohere",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/cohere"
+    },
+    {
+      "source": "/integrations/reranking/colbert",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/colbert"
+    },
+    {
+      "source": "/integrations/reranking/jina",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/jina"
+    },
+    {
+      "source": "/integrations/reranking/openai",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/openai"
+    },
+    {
+      "source": "/integrations/reranking/voyageai",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/voyageai"
+    },
+    {
+      "source": "/integrations/reranking/watsonx",
+      "destination": "/oss/v0-99-0-test/integrations/reranking/watsonx"
+    },
+    {
+      "source": "/integrations/stable-worldmodel",
+      "destination": "/oss/v0-99-0-test/integrations/stable-worldmodel"
+    },
+    {
+      "source": "/maintenance/background-jobs",
+      "destination": "/oss/v0-99-0-test/maintenance/background-jobs"
+    },
+    {
+      "source": "/maintenance/cleanup",
+      "destination": "/oss/v0-99-0-test/maintenance/cleanup"
+    },
+    {
+      "source": "/maintenance/compaction",
+      "destination": "/oss/v0-99-0-test/maintenance/compaction"
+    },
+    {
+      "source": "/management/database",
+      "destination": "/oss/v0-99-0-test/management/database"
+    },
+    {
+      "source": "/management/index",
+      "destination": "/oss/v0-99-0-test/management/index"
+    },
+    {
+      "source": "/management/materialized-view",
+      "destination": "/oss/v0-99-0-test/management/materialized-view"
+    },
+    {
+      "source": "/management/namespace",
+      "destination": "/oss/v0-99-0-test/management/namespace"
+    },
+    {
+      "source": "/management/table",
+      "destination": "/oss/v0-99-0-test/management/table"
+    },
+    {
+      "source": "/management/view",
+      "destination": "/oss/v0-99-0-test/management/view"
+    },
+    {
+      "source": "/quickstart",
+      "destination": "/oss/v0-99-0-test/quickstart"
+    },
+    {
+      "source": "/reranking/index",
+      "destination": "/oss/v0-99-0-test/reranking/index"
+    },
+    {
+      "source": "/search/explain",
+      "destination": "/oss/v0-99-0-test/search/explain"
+    },
+    {
+      "source": "/search/filtering",
+      "destination": "/oss/v0-99-0-test/search/filtering"
+    },
+    {
+      "source": "/search/full-text-search",
+      "destination": "/oss/v0-99-0-test/search/full-text-search"
+    },
+    {
+      "source": "/search/hybrid-search",
+      "destination": "/oss/v0-99-0-test/search/hybrid-search"
+    },
+    {
+      "source": "/search/index",
+      "destination": "/oss/v0-99-0-test/search/index"
+    },
+    {
+      "source": "/search/vector-search",
+      "destination": "/oss/v0-99-0-test/search/vector-search"
+    },
+    {
+      "source": "/sql/data-types",
+      "destination": "/oss/v0-99-0-test/sql/data-types"
+    },
+    {
+      "source": "/sql/ddl/index",
+      "destination": "/oss/v0-99-0-test/sql/ddl/index"
+    },
+    {
+      "source": "/sql/ddl/job",
+      "destination": "/oss/v0-99-0-test/sql/ddl/job"
+    },
+    {
+      "source": "/sql/ddl/materialized-view",
+      "destination": "/oss/v0-99-0-test/sql/ddl/materialized-view"
+    },
+    {
+      "source": "/sql/ddl/namespace",
+      "destination": "/oss/v0-99-0-test/sql/ddl/namespace"
+    },
+    {
+      "source": "/sql/ddl/table",
+      "destination": "/oss/v0-99-0-test/sql/ddl/table"
+    },
+    {
+      "source": "/sql/ddl/view",
+      "destination": "/oss/v0-99-0-test/sql/ddl/view"
+    },
+    {
+      "source": "/sql/dml/copy",
+      "destination": "/oss/v0-99-0-test/sql/dml/copy"
+    },
+    {
+      "source": "/sql/dml/delete",
+      "destination": "/oss/v0-99-0-test/sql/dml/delete"
+    },
+    {
+      "source": "/sql/dml/insert",
+      "destination": "/oss/v0-99-0-test/sql/dml/insert"
+    },
+    {
+      "source": "/sql/dml/refresh",
+      "destination": "/oss/v0-99-0-test/sql/dml/refresh"
+    },
+    {
+      "source": "/sql/dml/update",
+      "destination": "/oss/v0-99-0-test/sql/dml/update"
+    },
+    {
+      "source": "/sql/dql/aggregation",
+      "destination": "/oss/v0-99-0-test/sql/dql/aggregation"
+    },
+    {
+      "source": "/sql/dql/explain",
+      "destination": "/oss/v0-99-0-test/sql/dql/explain"
+    },
+    {
+      "source": "/sql/dql/fts",
+      "destination": "/oss/v0-99-0-test/sql/dql/fts"
+    },
+    {
+      "source": "/sql/dql/join",
+      "destination": "/oss/v0-99-0-test/sql/dql/join"
+    },
+    {
+      "source": "/sql/dql/sampling",
+      "destination": "/oss/v0-99-0-test/sql/dql/sampling"
+    },
+    {
+      "source": "/sql/dql/select",
+      "destination": "/oss/v0-99-0-test/sql/dql/select"
+    },
+    {
+      "source": "/sql/dql/subqueries",
+      "destination": "/oss/v0-99-0-test/sql/dql/subqueries"
+    },
+    {
+      "source": "/sql/dql/window",
+      "destination": "/oss/v0-99-0-test/sql/dql/window"
+    },
+    {
+      "source": "/sql/functions",
+      "destination": "/oss/v0-99-0-test/sql/functions"
+    },
+    {
+      "source": "/sql/index",
+      "destination": "/oss/v0-99-0-test/sql/index"
+    },
+    {
+      "source": "/sql/operators",
+      "destination": "/oss/v0-99-0-test/sql/operators"
+    },
+    {
+      "source": "/sql/prepared-statements",
+      "destination": "/oss/v0-99-0-test/sql/prepared-statements"
+    },
+    {
+      "source": "/sql/scalar-functions",
+      "destination": "/oss/v0-99-0-test/sql/scalar-functions"
+    },
+    {
+      "source": "/tables/branching",
+      "destination": "/oss/v0-99-0-test/tables/branching"
+    },
+    {
+      "source": "/tables/consistency",
+      "destination": "/oss/v0-99-0-test/tables/consistency"
+    },
+    {
+      "source": "/training/data-loading",
+      "destination": "/oss/v0-99-0-test/training/data-loading"
+    },
+    {
+      "source": "/training/object-detection",
+      "destination": "/oss/v0-99-0-test/training/object-detection"
+    },
+    {
+      "source": "/training/torch",
+      "destination": "/oss/v0-99-0-test/training/torch"
+    },
+    {
+      "source": "/training/vlm-finetuning",
+      "destination": "/oss/v0-99-0-test/training/vlm-finetuning"
+    },
+    {
+      "source": "/training/why-lancedb",
+      "destination": "/oss/v0-99-0-test/training/why-lancedb"
+    },
+    {
+      "source": "/tutorials/agents/agentic-rag",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/agentic-rag"
+    },
+    {
+      "source": "/tutorials/agents/contextual-rag",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/tutorials/agents/hyde",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/hyde"
+    },
+    {
+      "source": "/tutorials/agents/late-chunking",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/late-chunking"
+    },
+    {
+      "source": "/tutorials/agents/matryoshka-embeddings",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/matryoshka-embeddings"
+    },
+    {
+      "source": "/tutorials/agents/multimodal-agent/index",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/multimodal-agent/index"
+    },
+    {
+      "source": "/tutorials/agents/nvidia-rag-blueprint/index",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/nvidia-rag-blueprint/index"
+    },
+    {
+      "source": "/tutorials/agents/time-travel-rag/index",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/time-travel-rag/index"
+    },
+    {
+      "source": "/tutorials/feature-engineering/feature-engineering-101",
+      "destination": "/oss/v0-99-0-test/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/tutorials/feature-engineering/materialized-views",
+      "destination": "/oss/v0-99-0-test/tutorials/feature-engineering/materialized-views"
+    },
+    {
+      "source": "/tutorials/index",
+      "destination": "/oss/v0-99-0-test/tutorials/index"
+    },
+    {
+      "source": "/tutorials/search/hybrid-search-beir",
+      "destination": "/oss/v0-99-0-test/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/tutorials/search/multivector-needle-in-a-haystack",
+      "destination": "/oss/v0-99-0-test/tutorials/search/multivector-needle-in-a-haystack"
+    },
+    {
+      "source": "/tutorials/search/multivector-xtr",
+      "destination": "/oss/v0-99-0-test/tutorials/search/multivector-xtr"
+    },
+    {
+      "source": "/tutorials/search/ner-search",
+      "destination": "/oss/v0-99-0-test/tutorials/search/ner-search"
+    },
+    {
+      "source": "/tutorials/search/reddit-summarizer",
+      "destination": "/oss/v0-99-0-test/tutorials/search/reddit-summarizer"
+    },
+    {
+      "source": "/tutorials/search/vector-arithmetic",
+      "destination": "/oss/v0-99-0-test/tutorials/search/vector-arithmetic"
+    },
+    {
+      "source": "/tutorials/search/video-search",
+      "destination": "/oss/v0-99-0-test/tutorials/search/video-search"
+    },
+    {
+      "source": "/versioning-probe/linked",
+      "destination": "/oss/v0-99-0-test/versioning-probe/linked"
+    },
+    {
+      "source": "/versioning-probe/new-in-0-99",
+      "destination": "/oss/v0-99-0-test/versioning-probe/new-in-0-99"
+    },
+    {
+      "source": "/versioning-probe/probe",
+      "destination": "/oss/v0-99-0-test/versioning-probe/probe"
+    },
+    {
+      "source": "/tables/update",
+      "destination": "/oss/v0-99-0-test/ingestion/update"
+    },
+    {
+      "source": "/search/fts-examples",
+      "destination": "/oss/v0-99-0-test/search/full-text-search"
+    },
+    {
+      "source": "/search/optimize-queries",
+      "destination": "/oss/v0-99-0-test/search/explain"
+    },
+    {
+      "source": "/lance",
+      "destination": "/oss/v0-99-0-test/basics/lance"
+    },
+    {
+      "source": "/tables-and-namespaces",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/catalog",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/catalog/database",
+      "destination": "/oss/v0-99-0-test/basics/catalog"
+    },
+    {
+      "source": "/api-reference",
+      "destination": "/oss/v0-99-0-test/basics/apis"
+    },
+    {
+      "source": "/feature-engineering/computed-columns",
+      "destination": "/oss/v0-99-0-test/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/tables/create",
+      "destination": "/oss/v0-99-0-test/ingestion"
+    },
+    {
+      "source": "/tables/multimodal",
+      "destination": "/oss/v0-99-0-test/management/table#multimodal"
+    },
+    {
+      "source": "/search/select",
+      "destination": "/oss/v0-99-0-test/sql/select"
+    },
+    {
+      "source": "/tutorials/search",
+      "destination": "/oss/v0-99-0-test/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/tutorials/agents",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/tutorials/feature-engineering",
+      "destination": "/oss/v0-99-0-test/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/tables",
+      "destination": "/oss/v0-99-0-test/management/table"
+    },
+    {
+      "source": "/namespaces",
+      "destination": "/oss/v0-99-0-test/management/namespace"
+    },
+    {
+      "source": "/namespaces/usage",
+      "destination": "/oss/v0-99-0-test/management/namespace"
+    },
+    {
+      "source": "/basics/data-types",
+      "destination": "/oss/v0-99-0-test/sql/data-types"
+    },
+    {
+      "source": "/tables/schema",
+      "destination": "/oss/v0-99-0-test/management/table#schema"
+    },
+    {
+      "source": "/tables/versioning",
+      "destination": "/oss/v0-99-0-test/management/table#versioning"
+    },
+    {
+      "source": "/search/multivector-search",
+      "destination": "/oss/v0-99-0-test/search/vector-search"
+    },
+    {
+      "source": "/search/explain-analyze",
+      "destination": "/oss/v0-99-0-test/search/explain"
+    },
+    {
+      "source": "/indexing/quantization",
+      "destination": "/oss/v0-99-0-test/indexing/vector-index"
+    },
+    {
+      "source": "/performance",
+      "destination": "/oss/v0-99-0-test/search#performance"
+    },
+    {
+      "source": "/reranking/:slug*",
+      "destination": "/oss/v0-99-0-test/reranking"
+    },
+    {
+      "source": "/training",
+      "destination": "/oss/v0-99-0-test/training/data-loading"
+    },
+    {
+      "source": "/training/lerobot",
+      "destination": "/oss/v0-99-0-test/integrations/lerobotdataset"
+    },
+    {
+      "source": "/build-with-ai-agents",
+      "destination": "/oss/v0-99-0-test/basics/agentic-skills"
+    },
+    {
+      "source": "/core/update",
+      "destination": "/oss/v0-99-0-test/ingestion/update"
+    },
+    {
+      "source": "/storage",
+      "destination": "/oss/v0-99-0-test/deployment/storage"
+    },
+    {
+      "source": "/storage/configuration",
+      "destination": "/oss/v0-99-0-test/deployment/storage"
+    },
+    {
+      "source": "/storage/monitoring",
+      "destination": "/oss/v0-99-0-test/deployment/monitoring"
+    },
+    {
+      "source": "/search/sql",
+      "destination": "/oss/v0-99-0-test/sql"
+    },
+    {
+      "source": "/search/sql/index",
+      "destination": "/oss/v0-99-0-test/sql"
+    },
+    {
+      "source": "/search/sql/fts-sql",
+      "destination": "/oss/v0-99-0-test/sql/dql/fts"
+    },
+    {
+      "source": "/sql/select",
+      "destination": "/oss/v0-99-0-test/sql/dql/select"
+    },
+    {
+      "source": "/sql/subqueries",
+      "destination": "/oss/v0-99-0-test/sql/dql/subqueries"
+    },
+    {
+      "source": "/sql/join",
+      "destination": "/oss/v0-99-0-test/sql/dql/join"
+    },
+    {
+      "source": "/sql/aggregation",
+      "destination": "/oss/v0-99-0-test/sql/dql/aggregation"
+    },
+    {
+      "source": "/sql/window",
+      "destination": "/oss/v0-99-0-test/sql/dql/window"
+    },
+    {
+      "source": "/sql/sampling",
+      "destination": "/oss/v0-99-0-test/sql/dql/sampling"
+    },
+    {
+      "source": "/sql/explain",
+      "destination": "/oss/v0-99-0-test/sql/dql/explain"
+    },
+    {
+      "source": "/sql/ddl",
+      "destination": "/oss/v0-99-0-test/sql/ddl/table"
+    },
+    {
+      "source": "/sql/dml",
+      "destination": "/oss/v0-99-0-test/sql/dml/insert"
+    },
+    {
+      "source": "/sql/refresh",
+      "destination": "/oss/v0-99-0-test/sql/dml/refresh"
+    },
+    {
+      "source": "/sql/show",
+      "destination": "/oss/v0-99-0-test/sql/ddl/job"
+    },
+    {
+      "source": "/faq",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/faq/faq-oss",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/faq/faq-enterprise",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/troubleshooting",
+      "destination": "/oss/v0-99-0-test/deployment/support"
+    },
+    {
+      "source": "/basics/apis",
+      "destination": "/oss/v0-99-0-test/basics/sdk"
+    },
+    {
+      "source": "/hybrid-search",
+      "destination": "/oss/v0-99-0-test/search/hybrid-search"
+    },
+    {
+      "source": "/integrations/reranking/rrf",
+      "destination": "/oss/v0-99-0-test/reranking/rrf"
+    },
+    {
+      "source": "/integrations/reranking/linear_combination",
+      "destination": "/oss/v0-99-0-test/reranking/linear_combination"
+    },
+    {
+      "source": "/integrations/reranking/mrr",
+      "destination": "/oss/v0-99-0-test/reranking/mrr"
+    },
+    {
+      "source": "/integrations/reranking/cross_encoder",
+      "destination": "/oss/v0-99-0-test/reranking/cross_encoder"
+    },
+    {
+      "source": "/integrations/platforms/:slug*",
+      "destination": "/oss/v0-99-0-test/integrations/data/:slug*"
+    },
+    {
+      "source": "/integrations/frameworks/:slug*",
+      "destination": "/oss/v0-99-0-test/integrations/ai/:slug*"
+    },
+    {
+      "source": "/integrations/data/phidata",
+      "destination": "/oss/v0-99-0-test/integrations/ai/agno"
+    },
+    {
+      "source": "/tutorials/rag/:slug*",
+      "destination": "/oss/v0-99-0-test/tutorials/agents/:slug*"
+    },
+    {
+      "source": "/tutorials/vector-search/:slug*",
+      "destination": "/oss/v0-99-0-test/tutorials/search/:slug*"
+    },
+    {
+      "source": "/geneva/udfs/built-in",
+      "destination": "/oss/v0-99-0-test/geneva/udfs/providers"
+    },
+    {
+      "source": "/enterprise/performance",
+      "destination": "/enterprise/v8-2-0-test/enterprise/benchmarks"
+    },
+    {
+      "source": "/enterprise/quickstart",
+      "destination": "/oss/v0-99-0-test/quickstart"
+    },
+    {
+      "source": "/huggingface/overview",
+      "destination": "/oss/v0-99-0-test/integrations/ai/huggingface"
+    },
+    {
+      "source": "/huggingface/datasets",
+      "destination": "/oss/v0-99-0-test/datasets"
+    }
+  ]
+}

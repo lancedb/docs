@@ -1,0 +1,894 @@
+---
+title: Quickstart
+sidebarTitle: "Quickstart"
+description: "Install LanceDB, create a table, and run your first vector search."
+icon: rocket
+---
+
+This quickstart uses a local database and works without an account or API key.
+
+Follow the steps below, or jump to the [complete examples](#code) to copy a runnable program.
+
+## 1\. Install LanceDB {#1-install-lancedb}
+
+Choose your language. Python uses Polars to display the search results. TypeScript needs Node.js 22.18 or later to run the `.mts` example directly.
+
+<CodeGroup>
+```bash Python (pip) icon="python"
+pip install lancedb polars
+```
+
+```bash Python (uv) icon="python"
+uv venv
+uv pip install lancedb polars
+```
+
+```bash TypeScript icon="square-js"
+npm install @lancedb/lancedb
+```
+
+```bash Rust icon="rust"
+cargo init --name lancedb_quickstart
+cargo add lancedb@0.31.0 --features polars,remote
+cargo add tokio --features macros,rt-multi-thread
+```
+</CodeGroup>
+
+Run the Rust commands in a new, empty directory. The `polars` feature provides DataFrame output; `remote` also lets this example connect to Enterprise.
+
+<Accordion title="Python pre-release builds and older CPUs">
+### Python pre-release builds {#python-pre-release-builds}
+
+To pick up the latest features and bug fixes
+before the next stable release, install a pre-release from LanceDB's Fury index.
+
+<CodeGroup>
+```bash Python (pip) icon="terminal"
+pip install --pre --extra-index-url https://pypi.fury.io/lancedb/ lancedb
+```
+
+```bash Python (uv) icon="terminal"
+uv venv
+uv pip install --prerelease allow --index https://pypi.fury.io/lancedb/ lancedb
+
+# To add to pyproject.toml, use:
+uv add --prerelease allow --index https://pypi.fury.io/lancedb/ lancedb
+```
+</CodeGroup>
+
+<Note>
+Pre-release builds receive the same level of testing as stable releases, but their availability is not guaranteed
+for more than 6 months after release. For real-world workloads, we recommend you use the latest stable release
+as far as possible.
+</Note>
+
+### Older x86_64 CPUs {#older-x86-cpus}
+The default `lancedb` wheel targets `x86-64-haswell` (AVX2 + FMA + F16C). On older x86_64 CPUs without AVX2
+(Intel Sandy Bridge, Ivy Bridge, Westmere; AMD Bulldozer, Piledriver, Steamroller), `import lancedb` crashes
+with `Illegal instruction`.
+
+Install `lancedb-compat` instead. It exposes the same API (`import lancedb` still works), is built at the
+`x86-64-v2` baseline, and uses runtime SIMD dispatch to still use AVX2, FMA, or AVX-512 when available:
+
+```bash Python (pip) icon="terminal"
+pip install lancedb-compat
+```
+
+The two packages share the same `lancedb/` namespace and conflict at install time, so pick one. To switch,
+uninstall the other first (`pip uninstall lancedb && pip install lancedb-compat`).
+
+
+</Accordion>
+
+## 2\. Connect to a database {#2-connect-to-a-lancedb-database}
+
+### Use a local directory {#connect-via-local-directory-path}
+
+LanceDB creates an `ex_lancedb` directory to store your tables. No server is needed.
+
+<CodeGroup>
+    ```python Python icon="python"
+    import lancedb
+
+    uri = "ex_lancedb"
+    db = lancedb.connect(uri)
+    ```
+    ```typescript TypeScript icon="square-js"
+    import * as lancedb from "@lancedb/lancedb";
+
+    const db = await lancedb.connect("ex_lancedb");
+    ```
+    ```rust Rust icon="rust"
+    use lancedb::connect;
+
+    let db = connect("ex_lancedb").execute().await?;
+    ```
+</CodeGroup>
+
+The [complete examples](#code) include the imports and entry points for each language. For Python's async API, see [Connecting to a database](/oss/v0-98-0-test/basics/connect).
+
+<Accordion title="Connect to LanceDB Enterprise instead">
+### Connect to LanceDB Enterprise {#connect-to-lancedb-enterprise}
+
+Use the database URI, API key, and endpoint provided by your administrator or the LanceDB team. Replace the placeholders below with those details. Use the deployment's region if provided; otherwise keep `us-east-1`.
+
+<CodeGroup>
+    ```python Python icon="python"
+    import lancedb
+
+    db = lancedb.connect(
+        uri="db://your-database",
+        api_key="your-api-key",
+        region="us-east-1",
+        host_override="https://your-endpoint",
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    import * as lancedb from "@lancedb/lancedb";
+
+    const db = await lancedb.connect("db://your-database", {
+      apiKey: "your-api-key",
+      region: "us-east-1",
+      hostOverride: "https://your-endpoint",
+    });
+    ```
+    ```rust Rust icon="rust"
+    use lancedb::connect;
+
+    let db = connect("db://your-database")
+        .api_key("your-api-key")
+        .region("us-east-1")
+        .host_override("https://your-endpoint")
+        .execute()
+        .await?;
+    ```
+</CodeGroup>
+
+<Note>
+In application code, load credentials from environment variables or a secrets manager. See [connection settings](/oss/v0-98-0-test/basics/connect#enterprise) for an example.
+</Note>
+
+Need a deployment? [Contact the LanceDB team](https://www.lancedb.com/contact). For differences between local and server execution, see [Moving to LanceDB Enterprise](/oss/v0-98-0-test/basics/sdk#moving-to-enterprise).
+</Accordion>
+
+<Accordion title="Connect directly to object storage instead">
+### Connect via object storage URIs {#connect-via-object-storage-uris}
+
+Use an `s3://`, `gs://`, or `az://` URI in place of the local path. See [Configuring storage](/oss/v0-98-0-test/deployment/storage) for credentials and provider-specific options.
+</Accordion>
+
+## 3\. Create a table and add data {#3-create-a-new-table}
+
+Each row describes a character and stores a vector alongside their name, description, and stats.
+
+<Info>
+These vectors are made up for this example. In your application, use an embedding model to generate vectors from your data.
+</Info>
+
+<Accordion title="Character records">
+<CodeGroup>
+    ```python Python icon="python"
+    data = [
+        {
+            "id": "1",
+            "name": "King Arthur",
+            "role": "King",
+            "description": "Leader of Camelot and wielder of Excalibur.",
+            "stats": {"strength": 4, "magic": 1, "leadership": 5, "wisdom": 4},
+            "vector": [0.7, 0.1, 0.9, 0.7],
+        },
+        {
+            "id": "2",
+            "name": "Merlin",
+            "role": "Wizard",
+            "description": "Advisor and prophet with deep magical knowledge.",
+            "stats": {"strength": 2, "magic": 5, "leadership": 4, "wisdom": 5},
+            "vector": [0.2, 0.9, 0.4, 0.9],
+        },
+        {
+            "id": "3",
+            "name": "Sir Lancelot",
+            "role": "Knight",
+            "description": "Legendary knight known for courage and combat skill.",
+            "stats": {"strength": 5, "magic": 1, "leadership": 3, "wisdom": 3},
+            "vector": [0.9, 0.1, 0.5, 0.4],
+        },
+    ]
+    ```
+    ```typescript TypeScript icon="square-js"
+    const data = [
+      {
+        id: "1",
+        name: "King Arthur",
+        role: "King",
+        description: "Leader of Camelot and wielder of Excalibur.",
+        stats: { strength: 4, magic: 1, leadership: 5, wisdom: 4 },
+        vector: [0.7, 0.1, 0.9, 0.7],
+      },
+      {
+        id: "2",
+        name: "Merlin",
+        role: "Wizard",
+        description: "Advisor and prophet with deep magical knowledge.",
+        stats: { strength: 2, magic: 5, leadership: 4, wisdom: 5 },
+        vector: [0.2, 0.9, 0.4, 0.9],
+      },
+      {
+        id: "3",
+        name: "Sir Lancelot",
+        role: "Knight",
+        description: "Legendary knight known for courage and combat skill.",
+        stats: { strength: 5, magic: 1, leadership: 3, wisdom: 3 },
+        vector: [0.9, 0.1, 0.5, 0.4],
+      },
+    ];
+    ```
+    ```rust Rust icon="rust"
+    use std::sync::Arc;
+
+    use lancedb::arrow::arrow_array::types::Float32Type;
+    use lancedb::arrow::arrow_array::{
+        FixedSizeListArray, Int8Array, LargeStringArray, RecordBatch, RecordBatchIterator,
+        RecordBatchReader, StructArray,
+    };
+    use lancedb::arrow::arrow_schema::{DataType, Field, FieldRef, Fields, Schema};
+
+    // Define structs representing the data schema
+    #[derive(Debug, Clone)]
+    struct Stats {
+        strength: i8,
+        magic: i8,
+        leadership: i8,
+        wisdom: i8,
+    }
+
+    #[derive(Debug, Clone)]
+    struct Character {
+        id: String,
+        name: String,
+        role: String,
+        description: String,
+        stats: Stats,
+        vector: [f32; 4],
+    }
+
+    fn characters_schema() -> Arc<Schema> {
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::LargeUtf8, false),
+            Field::new("name", DataType::LargeUtf8, false),
+            Field::new("role", DataType::LargeUtf8, false),
+            Field::new("description", DataType::LargeUtf8, false),
+            Field::new(
+                "stats",
+                DataType::Struct(Fields::from(vec![
+                    Arc::new(Field::new("strength", DataType::Int8, false)),
+                    Arc::new(Field::new("magic", DataType::Int8, false)),
+                    Arc::new(Field::new("leadership", DataType::Int8, false)),
+                    Arc::new(Field::new("wisdom", DataType::Int8, false)),
+                ])),
+                false,
+            ),
+            Field::new(
+                "vector",
+                DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 4),
+                false,
+            ),
+        ]))
+    }
+
+    fn characters_to_reader(
+        schema: Arc<Schema>,
+        rows: &[Character],
+    ) -> Box<dyn RecordBatchReader + Send> {
+        let ids = LargeStringArray::from_iter_values(rows.iter().map(|row| row.id.as_str()));
+        let names = LargeStringArray::from_iter_values(rows.iter().map(|row| row.name.as_str()));
+        let roles = LargeStringArray::from_iter_values(rows.iter().map(|row| row.role.as_str()));
+        let descriptions =
+            LargeStringArray::from_iter_values(rows.iter().map(|row| row.description.as_str()));
+
+        let strength = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.strength));
+        let magic = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.magic));
+        let leadership = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.leadership));
+        let wisdom = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.wisdom));
+        let stats_fields: Vec<FieldRef> = vec![
+            Arc::new(Field::new("strength", DataType::Int8, false)),
+            Arc::new(Field::new("magic", DataType::Int8, false)),
+            Arc::new(Field::new("leadership", DataType::Int8, false)),
+            Arc::new(Field::new("wisdom", DataType::Int8, false)),
+        ];
+        let stats = StructArray::new(
+            stats_fields.into(),
+            vec![
+                Arc::new(strength),
+                Arc::new(magic),
+                Arc::new(leadership),
+                Arc::new(wisdom),
+            ],
+            None,
+        );
+
+        let vectors = FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+            rows.iter()
+                .map(|row| Some(row.vector.iter().copied().map(Some).collect::<Vec<_>>())),
+            4,
+        );
+
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(ids),
+                Arc::new(names),
+                Arc::new(roles),
+                Arc::new(descriptions),
+                Arc::new(stats),
+                Arc::new(vectors),
+            ],
+        )
+        .unwrap();
+
+        Box::new(RecordBatchIterator::new(
+            vec![Ok(batch)].into_iter(),
+            schema,
+        ))
+    }
+    let data = vec![
+        Character {
+            id: "1".to_string(),
+            name: "King Arthur".to_string(),
+            role: "King".to_string(),
+            description: "Leader of Camelot and wielder of Excalibur.".to_string(),
+            stats: Stats {
+                strength: 4,
+                magic: 1,
+                leadership: 5,
+                wisdom: 4,
+            },
+            vector: [0.7, 0.1, 0.9, 0.7],
+        },
+        Character {
+            id: "2".to_string(),
+            name: "Merlin".to_string(),
+            role: "Wizard".to_string(),
+            description: "Advisor and prophet with deep magical knowledge.".to_string(),
+            stats: Stats {
+                strength: 2,
+                magic: 5,
+                leadership: 4,
+                wisdom: 5,
+            },
+            vector: [0.2, 0.9, 0.4, 0.9],
+        },
+        Character {
+            id: "3".to_string(),
+            name: "Sir Lancelot".to_string(),
+            role: "Knight".to_string(),
+            description: "Legendary knight known for courage and combat skill.".to_string(),
+            stats: Stats {
+                strength: 5,
+                magic: 1,
+                leadership: 3,
+                wisdom: 3,
+            },
+            vector: [0.9, 0.1, 0.5, 0.4],
+        },
+    ];
+    ```
+</CodeGroup>
+</Accordion>
+
+Create a `characters` table from those records:
+
+<CodeGroup>
+    ```python Python icon="python"
+    table = db.create_table("characters", data=data, mode="overwrite")
+    ```
+    ```typescript TypeScript icon="square-js"
+    const table = await db.createTable("characters", data, { mode: "overwrite" });
+    ```
+    ```rust Rust icon="rust"
+    use lancedb::database::CreateTableMode;
+
+    let schema = characters_schema();
+    let table = db
+        .create_table("characters", characters_to_reader(schema.clone(), &data))
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+This example uses overwrite mode so you can run it again. It replaces any existing `characters` table in the database you connect to.
+
+Add one more character:
+
+<CodeGroup>
+    ```python Python icon="python"
+    table.add(
+        [
+            {
+                "id": "4",
+                "name": "Morgana",
+                "role": "Sorceress",
+                "description": "Powerful sorceress of Avalon.",
+                "stats": {"strength": 2, "magic": 5, "leadership": 4, "wisdom": 4},
+                "vector": [0.3, 0.9, 0.6, 0.8],
+            }
+        ]
+    )
+    ```
+    ```typescript TypeScript icon="square-js"
+    await table.add([
+      {
+        id: "4",
+        name: "Morgana",
+        role: "Sorceress",
+        description: "Powerful sorceress of Avalon.",
+        stats: { strength: 2, magic: 5, leadership: 4, wisdom: 4 },
+        vector: [0.3, 0.9, 0.6, 0.8],
+      },
+    ]);
+    ```
+    ```rust Rust icon="rust"
+    let more_data = vec![Character {
+        id: "4".to_string(),
+        name: "Morgana".to_string(),
+        role: "Sorceress".to_string(),
+        description: "Powerful sorceress of Avalon.".to_string(),
+        stats: Stats {
+            strength: 2,
+            magic: 5,
+            leadership: 4,
+            wisdom: 4,
+        },
+        vector: [0.3, 0.9, 0.6, 0.8],
+    }];
+    table
+        .add(characters_to_reader(schema.clone(), &more_data))
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+## 4\. Search the table {#4-semantic-search}
+
+Find the two vectors closest to the query vector. This example uses a fixed vector; it does not call an embedding model.
+
+<CodeGroup>
+    ```python Python icon="python"
+    # Search for examples similar to a "wise magical advisor"
+    query_vector = [0.2, 0.8, 0.4, 0.9]
+
+    # Ensure you run `pip install polars` beforehand
+    result = (
+        table.search(query_vector)
+        .select(["name", "role", "description", "_distance"])
+        .limit(2)
+        .to_polars()
+    )
+    print(result)
+    ```
+    ```typescript TypeScript icon="square-js"
+    // Search for examples similar to a "wise magical advisor"
+    const queryVector = [0.2, 0.8, 0.4, 0.9];
+
+    const result = await table
+      .search(queryVector)
+      .select(["name", "role", "description", "_distance"])
+      .limit(2)
+      .toArray();
+    console.table(result);
+    ```
+    ```rust Rust icon="rust"
+    use lancedb::arrow::IntoPolars;
+    use lancedb::query::{ExecutableQuery, QueryBase, Select};
+
+    // Search for examples similar to a "wise magical advisor"
+    let query_vector = [0.2, 0.8, 0.4, 0.9];
+
+    let result = table
+        .query()
+        .nearest_to(&query_vector)
+        .unwrap()
+        .select(Select::Columns(vec![
+            "name".to_string(),
+            "role".to_string(),
+            "description".to_string(),
+            "_distance".to_string(),
+        ]))
+        .limit(2)
+        .execute()
+        .await
+        .unwrap()
+        .into_polars()
+        .await
+        .unwrap();
+    println!("{result:?}");
+    ```
+</CodeGroup>
+
+Merlin and Morgana come back first. Python and Rust display a Polars DataFrame; TypeScript displays an array of results. The `_distance` column measures how far each result is from your query vector, with smaller values indicating a closer match.
+
+## Complete examples {#code}
+
+Each example below creates the local database, adds four characters, and prints the two closest matches. Use the dependencies from step 1.
+
+<Accordion title="Python: quickstart.py">
+Save this as `quickstart.py` and run `python quickstart.py`. If you installed with uv, run `uv run quickstart.py`.
+
+<CodeGroup>
+    ```python quickstart.py icon="python"
+    import lancedb
+
+    uri = "ex_lancedb"
+    db = lancedb.connect(uri)
+    data = [
+        {
+            "id": "1",
+            "name": "King Arthur",
+            "role": "King",
+            "description": "Leader of Camelot and wielder of Excalibur.",
+            "stats": {"strength": 4, "magic": 1, "leadership": 5, "wisdom": 4},
+            "vector": [0.7, 0.1, 0.9, 0.7],
+        },
+        {
+            "id": "2",
+            "name": "Merlin",
+            "role": "Wizard",
+            "description": "Advisor and prophet with deep magical knowledge.",
+            "stats": {"strength": 2, "magic": 5, "leadership": 4, "wisdom": 5},
+            "vector": [0.2, 0.9, 0.4, 0.9],
+        },
+        {
+            "id": "3",
+            "name": "Sir Lancelot",
+            "role": "Knight",
+            "description": "Legendary knight known for courage and combat skill.",
+            "stats": {"strength": 5, "magic": 1, "leadership": 3, "wisdom": 3},
+            "vector": [0.9, 0.1, 0.5, 0.4],
+        },
+    ]
+    table = db.create_table("characters", data=data, mode="overwrite")
+    table.add(
+        [
+            {
+                "id": "4",
+                "name": "Morgana",
+                "role": "Sorceress",
+                "description": "Powerful sorceress of Avalon.",
+                "stats": {"strength": 2, "magic": 5, "leadership": 4, "wisdom": 4},
+                "vector": [0.3, 0.9, 0.6, 0.8],
+            }
+        ]
+    )
+    # Search for examples similar to a "wise magical advisor"
+    query_vector = [0.2, 0.8, 0.4, 0.9]
+
+    # Ensure you run `pip install polars` beforehand
+    result = (
+        table.search(query_vector)
+        .select(["name", "role", "description", "_distance"])
+        .limit(2)
+        .to_polars()
+    )
+    print(result)
+    ```
+</CodeGroup>
+</Accordion>
+
+<Accordion title="TypeScript: quickstart.mts">
+Save this as `quickstart.mts` and run `node quickstart.mts` from the directory where you installed LanceDB.
+
+<CodeGroup>
+    ```typescript quickstart.mts icon="square-js"
+    import * as lancedb from "@lancedb/lancedb";
+
+    const db = await lancedb.connect("ex_lancedb");
+    const data = [
+      {
+        id: "1",
+        name: "King Arthur",
+        role: "King",
+        description: "Leader of Camelot and wielder of Excalibur.",
+        stats: { strength: 4, magic: 1, leadership: 5, wisdom: 4 },
+        vector: [0.7, 0.1, 0.9, 0.7],
+      },
+      {
+        id: "2",
+        name: "Merlin",
+        role: "Wizard",
+        description: "Advisor and prophet with deep magical knowledge.",
+        stats: { strength: 2, magic: 5, leadership: 4, wisdom: 5 },
+        vector: [0.2, 0.9, 0.4, 0.9],
+      },
+      {
+        id: "3",
+        name: "Sir Lancelot",
+        role: "Knight",
+        description: "Legendary knight known for courage and combat skill.",
+        stats: { strength: 5, magic: 1, leadership: 3, wisdom: 3 },
+        vector: [0.9, 0.1, 0.5, 0.4],
+      },
+    ];
+    const table = await db.createTable("characters", data, { mode: "overwrite" });
+    await table.add([
+      {
+        id: "4",
+        name: "Morgana",
+        role: "Sorceress",
+        description: "Powerful sorceress of Avalon.",
+        stats: { strength: 2, magic: 5, leadership: 4, wisdom: 4 },
+        vector: [0.3, 0.9, 0.6, 0.8],
+      },
+    ]);
+    // Search for examples similar to a "wise magical advisor"
+    const queryVector = [0.2, 0.8, 0.4, 0.9];
+
+    const result = await table
+      .search(queryVector)
+      .select(["name", "role", "description", "_distance"])
+      .limit(2)
+      .toArray();
+    console.table(result);
+    ```
+</CodeGroup>
+</Accordion>
+
+<Accordion title="Rust: src/main.rs">
+Replace `src/main.rs` with this program, then run `cargo run` from your project directory. The schema and Arrow conversion helpers are included.
+
+<CodeGroup>
+    ```rust src/main.rs icon="rust"
+    use lancedb::connect;
+
+    use std::sync::Arc;
+
+    use lancedb::arrow::arrow_array::types::Float32Type;
+    use lancedb::arrow::arrow_array::{
+        FixedSizeListArray, Int8Array, LargeStringArray, RecordBatch, RecordBatchIterator,
+        RecordBatchReader, StructArray,
+    };
+    use lancedb::arrow::arrow_schema::{DataType, Field, FieldRef, Fields, Schema};
+
+    // Define structs representing the data schema
+    #[derive(Debug, Clone)]
+    struct Stats {
+        strength: i8,
+        magic: i8,
+        leadership: i8,
+        wisdom: i8,
+    }
+
+    #[derive(Debug, Clone)]
+    struct Character {
+        id: String,
+        name: String,
+        role: String,
+        description: String,
+        stats: Stats,
+        vector: [f32; 4],
+    }
+
+    fn characters_schema() -> Arc<Schema> {
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::LargeUtf8, false),
+            Field::new("name", DataType::LargeUtf8, false),
+            Field::new("role", DataType::LargeUtf8, false),
+            Field::new("description", DataType::LargeUtf8, false),
+            Field::new(
+                "stats",
+                DataType::Struct(Fields::from(vec![
+                    Arc::new(Field::new("strength", DataType::Int8, false)),
+                    Arc::new(Field::new("magic", DataType::Int8, false)),
+                    Arc::new(Field::new("leadership", DataType::Int8, false)),
+                    Arc::new(Field::new("wisdom", DataType::Int8, false)),
+                ])),
+                false,
+            ),
+            Field::new(
+                "vector",
+                DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 4),
+                false,
+            ),
+        ]))
+    }
+
+    fn characters_to_reader(
+        schema: Arc<Schema>,
+        rows: &[Character],
+    ) -> Box<dyn RecordBatchReader + Send> {
+        let ids = LargeStringArray::from_iter_values(rows.iter().map(|row| row.id.as_str()));
+        let names = LargeStringArray::from_iter_values(rows.iter().map(|row| row.name.as_str()));
+        let roles = LargeStringArray::from_iter_values(rows.iter().map(|row| row.role.as_str()));
+        let descriptions =
+            LargeStringArray::from_iter_values(rows.iter().map(|row| row.description.as_str()));
+
+        let strength = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.strength));
+        let magic = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.magic));
+        let leadership = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.leadership));
+        let wisdom = Int8Array::from_iter_values(rows.iter().map(|row| row.stats.wisdom));
+        let stats_fields: Vec<FieldRef> = vec![
+            Arc::new(Field::new("strength", DataType::Int8, false)),
+            Arc::new(Field::new("magic", DataType::Int8, false)),
+            Arc::new(Field::new("leadership", DataType::Int8, false)),
+            Arc::new(Field::new("wisdom", DataType::Int8, false)),
+        ];
+        let stats = StructArray::new(
+            stats_fields.into(),
+            vec![
+                Arc::new(strength),
+                Arc::new(magic),
+                Arc::new(leadership),
+                Arc::new(wisdom),
+            ],
+            None,
+        );
+
+        let vectors = FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+            rows.iter()
+                .map(|row| Some(row.vector.iter().copied().map(Some).collect::<Vec<_>>())),
+            4,
+        );
+
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(ids),
+                Arc::new(names),
+                Arc::new(roles),
+                Arc::new(descriptions),
+                Arc::new(stats),
+                Arc::new(vectors),
+            ],
+        )
+        .unwrap();
+
+        Box::new(RecordBatchIterator::new(
+            vec![Ok(batch)].into_iter(),
+            schema,
+        ))
+    }
+
+    #[tokio::main]
+    async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let db = connect("ex_lancedb").execute().await?;
+    let data = vec![
+        Character {
+            id: "1".to_string(),
+            name: "King Arthur".to_string(),
+            role: "King".to_string(),
+            description: "Leader of Camelot and wielder of Excalibur.".to_string(),
+            stats: Stats {
+                strength: 4,
+                magic: 1,
+                leadership: 5,
+                wisdom: 4,
+            },
+            vector: [0.7, 0.1, 0.9, 0.7],
+        },
+        Character {
+            id: "2".to_string(),
+            name: "Merlin".to_string(),
+            role: "Wizard".to_string(),
+            description: "Advisor and prophet with deep magical knowledge.".to_string(),
+            stats: Stats {
+                strength: 2,
+                magic: 5,
+                leadership: 4,
+                wisdom: 5,
+            },
+            vector: [0.2, 0.9, 0.4, 0.9],
+        },
+        Character {
+            id: "3".to_string(),
+            name: "Sir Lancelot".to_string(),
+            role: "Knight".to_string(),
+            description: "Legendary knight known for courage and combat skill.".to_string(),
+            stats: Stats {
+                strength: 5,
+                magic: 1,
+                leadership: 3,
+                wisdom: 3,
+            },
+            vector: [0.9, 0.1, 0.5, 0.4],
+        },
+    ];
+    use lancedb::database::CreateTableMode;
+
+    let schema = characters_schema();
+    let table = db
+        .create_table("characters", characters_to_reader(schema.clone(), &data))
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    let more_data = vec![Character {
+        id: "4".to_string(),
+        name: "Morgana".to_string(),
+        role: "Sorceress".to_string(),
+        description: "Powerful sorceress of Avalon.".to_string(),
+        stats: Stats {
+            strength: 2,
+            magic: 5,
+            leadership: 4,
+            wisdom: 4,
+        },
+        vector: [0.3, 0.9, 0.6, 0.8],
+    }];
+    table
+        .add(characters_to_reader(schema.clone(), &more_data))
+        .execute()
+        .await
+        .unwrap();
+    use lancedb::arrow::IntoPolars;
+    use lancedb::query::{ExecutableQuery, QueryBase, Select};
+
+    // Search for examples similar to a "wise magical advisor"
+    let query_vector = [0.2, 0.8, 0.4, 0.9];
+
+    let result = table
+        .query()
+        .nearest_to(&query_vector)
+        .unwrap()
+        .select(Select::Columns(vec![
+            "name".to_string(),
+            "role".to_string(),
+            "description".to_string(),
+            "_distance".to_string(),
+        ]))
+        .limit(2)
+        .execute()
+        .await
+        .unwrap()
+        .into_polars()
+        .await
+        .unwrap();
+    println!("{result:?}");
+
+    Ok(())
+    }
+    ```
+</CodeGroup>
+</Accordion>
+
+## Next steps {#next-steps}
+
+You've created a table, added rows, and searched it. Continue with the guides below.
+
+### Filter results {#5-curation}
+
+Combine vector search with metadata filters, such as `stats.magic >= 4`. See [SQL filtering](/oss/v0-98-0-test/search/filtering).
+
+### Extend your table {#extensions}
+
+#### Add a derived feature {#6-add-a-derived-feature}
+
+Add columns calculated from existing fields. See [Adding columns](/oss/v0-98-0-test/management/table#schema-add-new-columns).
+
+#### Computed columns {#computed-columns}
+
+Declare a column and choose when to fill or refresh it. See [Computed columns](/oss/v0-98-0-test/feature-engineering/add-computed-column).
+
+#### Store multimodal data {#7-store-multimodal-data}
+
+Store images, audio, and other binary data alongside vectors and metadata. See [Multimodal data types](/oss/v0-98-0-test/management/table#multimodal).
+
+#### Train on your data {#8-train}
+
+Read table data into PyTorch for training. See [Data loading](/oss/v0-98-0-test/training/data-loading).
+
+<Columns cols={2}>
+<Card title="Basic table operations" icon="table" href="/oss/v0-98-0-test/management/table">
+Create, update, and manage your tables.
+</Card>
+<Card title="Build a RAG app" icon="search" href="/oss/v0-98-0-test/tutorials/agents/contextual-rag">
+Use retrieved context in a language model application.
+</Card>
+<Card title="Indexing" icon="layer-group" href="/oss/v0-98-0-test/indexing/">
+Speed up queries on larger datasets.
+</Card>
+<Card title="Embedding models" icon="vector-square" href="/oss/v0-98-0-test/embedding/">
+Generate vectors from your own data.
+</Card>
+</Columns>

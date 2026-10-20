@@ -1,0 +1,1027 @@
+---
+title: "Creating a table"
+sidebarTitle: "Create Table"
+description: "Create a table from records or a schema and choose input formats."
+icon: table
+keywords: ["create table", "ingest", "arrow", "pandas", "polars", "pydantic", "schema"]
+---
+
+
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Create and open tables in OSS and Enterprise.
+
+Create a table from existing records, or define an empty table before data
+arrives. Define a schema to specify column types, allow or disallow missing
+values, and set the size of your vectors.
+
+## Create a table with data {#create-a-table-with-data}
+
+The Python input examples below are complete programs. Install `lancedb` and
+any additional libraries imported by the example, save one as a Python file,
+and run it. Each uses its own temporary local database.
+
+The TypeScript and Rust blocks illustrate the corresponding input formats.
+For a complete connection-to-result program in either language, expand
+[the write workflow](#complete-example). Table names follow the
+[naming rules](/oss/v0-99-0-test/basics/naming).
+
+### From list of objects {#from-list-of-objects}
+
+You can provide a list of objects to create a table. The Python and TypeScript SDKs
+support lists/arrays of records. The Rust example converts structs to Arrow batches.
+In Python, pass a list or other batch-like object; a single bare `dict` or single
+`LanceModel` is rejected.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        data = [
+            {"vector": [1.1, 1.2], "lat": 45.5, "long": -122.7},
+            {"vector": [0.2, 1.8], "lat": 40.1, "long": -74.1},
+        ]
+        db.create_table("test_table", data, mode="overwrite")
+        tbl = db["test_table"]
+        tbl.head()
+
+        print("Rows:", tbl.count_rows())
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    type Location = {
+      vector: number[];
+      lat: number;
+      long: number;
+    };
+
+    const data: Location[] = [
+      { vector: [1.1, 1.2], lat: 45.5, long: -122.7 },
+      { vector: [0.2, 1.8], lat: 40.1, long: -74.1 },
+    ];
+    const table = await db.createTable("test_table", data, {
+      mode: "overwrite",
+    });
+    ```
+
+    ```rust Rust icon="rust"
+    struct Location {
+        vector: [f32; 2],
+        lat: f32,
+        long: f32,
+    }
+
+    let data = vec![
+        Location {
+            vector: [1.1, 1.2],
+            lat: 45.5,
+            long: -122.7,
+        },
+        Location {
+            vector: [0.2, 1.8],
+            lat: 40.1,
+            long: -74.1,
+        },
+    ];
+
+    let schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 2),
+            false,
+        ),
+        Field::new("lat", DataType::Float32, false),
+        Field::new("long", DataType::Float32, false),
+    ]));
+
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    data.iter()
+                        .map(|row| Some(row.vector.iter().copied().map(Some).collect::<Vec<_>>())),
+                    2,
+                ),
+            ),
+            Arc::new(Float32Array::from_iter_values(
+                data.iter().map(|row| row.lat),
+            )),
+            Arc::new(Float32Array::from_iter_values(
+                data.iter().map(|row| row.long),
+            )),
+        ],
+    )
+    .unwrap();
+    let reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(batch)].into_iter(), schema.clone()));
+    let table = db
+        .create_table("test_table", reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+### If the table already exists {#handle-existing-tables}
+
+By default, creating a table fails if its name is already in use. Choose whether
+to open that table or overwrite it.
+
+#### Open the existing table
+
+Use `exist_ok=True` in Python or `existOk: true` in TypeScript to return the
+existing table without changing its contents. This is useful for setup code
+that may run more than once. Any data supplied to the create call is ignored
+when the table already exists.
+
+Inspect the returned table's schema if your code depends on specific columns
+or types. Opening an existing table does not change its schema to match the
+data supplied in the create call.
+
+#### Overwrite the table
+
+Use `mode="overwrite"` in Python or `mode: "overwrite"` in TypeScript to replace
+the existing table with the supplied data and schema. Choose this only when
+you intend to replace its previous contents.
+
+The following Python program demonstrates both choices:
+
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        data = [{"vector": [1.1, 1.2], "lat": 45.5, "long": -122.7}]
+        db.create_table("conflict_table", data)
+        # Idempotent open: reuse the existing table if it exists.
+        # The provided data is ignored; the schema is validated against the
+        # existing table and a mismatch raises an error.
+        tbl = db.create_table("conflict_table", data, exist_ok=True)
+
+        # Overwrite: replace the contents with the provided data.
+        tbl = db.create_table("conflict_table", data, mode="overwrite")
+        print("Rows:", tbl.count_rows())
+    ```
+
+
+
+
+<Note>
+`exist_ok` / `existOk` does not append the provided data to an existing table. Use
+[`table.add()`](/oss/v0-99-0-test/ingestion/insert) for that. If you need to ensure a table exists *and*
+contains specific rows, choose an explicit [merge policy](/oss/v0-99-0-test/ingestion/merge-insert). Creating an empty table
+and repeatedly appending the same batch does not deduplicate it.
+</Note>
+
+### From a custom schema {#from-a-custom-schema}
+
+You can define a custom Arrow schema for the table. This is useful when you want to have more control over the column types and metadata.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        import pyarrow as pa
+
+        custom_schema = pa.schema(
+            [
+                pa.field("vector", pa.list_(pa.float32(), 4)),
+                pa.field("lat", pa.float32()),
+                pa.field("long", pa.float32()),
+            ]
+        )
+
+        data = [
+            {"vector": [1.1, 1.2, 1.3, 1.4], "lat": 45.5, "long": -122.7},
+            {"vector": [0.2, 1.8, 0.4, 3.6], "lat": 40.1, "long": -74.1},
+        ]
+        tbl = db.create_table(
+            "my_table_custom_schema", data, schema=custom_schema, mode="overwrite"
+        )
+
+        print("Rows:", tbl.count_rows())
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const customSchema = new arrow.Schema([
+      new arrow.Field(
+        "vector",
+        new arrow.FixedSizeList(
+          4,
+          new arrow.Field("item", new arrow.Float32(), true),
+        ),
+      ),
+      new arrow.Field("lat", new arrow.Float32()),
+      new arrow.Field("long", new arrow.Float32()),
+    ]);
+
+    const customSchemaData = lancedb.makeArrowTable(
+      [
+        { vector: [1.1, 1.2, 1.3, 1.4], lat: 45.5, long: -122.7 },
+        { vector: [0.2, 1.8, 0.4, 3.6], lat: 40.1, long: -74.1 },
+      ],
+      { schema: customSchema },
+    );
+    const customSchemaTable = await db.createTable(
+      "my_table_custom_schema",
+      customSchemaData,
+      { mode: "overwrite" },
+    );
+    ```
+
+    ```rust Rust icon="rust"
+    let custom_schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 4),
+            false,
+        ),
+        Field::new("lat", DataType::Float32, false),
+        Field::new("long", DataType::Float32, false),
+    ]));
+
+    let custom_batch = RecordBatch::try_new(
+        custom_schema.clone(),
+        vec![
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![
+                        Some(vec![Some(1.1), Some(1.2), Some(1.3), Some(1.4)]),
+                        Some(vec![Some(0.2), Some(1.8), Some(0.4), Some(3.6)]),
+                    ],
+                    4,
+                ),
+            ),
+            Arc::new(Float32Array::from(vec![45.5, 40.1])),
+            Arc::new(Float32Array::from(vec![-122.7, -74.1])),
+        ],
+    )
+    .unwrap();
+    let custom_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(custom_batch)].into_iter(), custom_schema.clone()));
+    let custom_table = db
+        .create_table("my_table_custom_schema", custom_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+An explicit schema also determines which columns accept missing values (`null`). If later writes omit a
+non-nullable column, or provide actual nulls for it, ingestion fails; nullable columns can be
+omitted or written with null values. Without an explicit schema, Python infers list-like vector
+values as fixed-size `float32` vector fields from the observed dimension.
+
+For Python ingest, malformed vector values fail by default. If you expect occasional wrong-length,
+null, or NaN vectors, choose an `on_bad_vectors` policy: `"drop"` removes those rows, `"fill"` writes
+`fill_value`, and `"null"` writes nulls.
+
+### From an Arrow Table {#from-an-arrow-table}
+You can also create LanceDB tables directly from Arrow tables.
+Rust uses an Arrow `RecordBatchReader` for the same Arrow-native ingest flow.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        import numpy as np
+        import pyarrow as pa
+
+        dim = 16
+        total = 2
+        schema = pa.schema(
+            [
+                pa.field("vector", pa.list_(pa.float16(), dim)),
+                pa.field("text", pa.string()),
+            ]
+        )
+        data = pa.Table.from_arrays(
+            [
+                pa.array(
+                    [np.random.randn(dim).astype(np.float16) for _ in range(total)],
+                    pa.list_(pa.float16(), dim),
+                ),
+                pa.array(["foo", "bar"]),
+            ],
+            ["vector", "text"],
+        )
+        tbl = db.create_table("f16_tbl", data, schema=schema, mode="overwrite")
+
+        print("Rows:", tbl.count_rows())
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const arrowSchema = new arrow.Schema([
+      new arrow.Field(
+        "vector",
+        new arrow.FixedSizeList(
+          16,
+          new arrow.Field("item", new arrow.Float32(), true),
+        ),
+      ),
+      new arrow.Field("text", new arrow.Utf8()),
+    ]);
+    const arrowData = lancedb.makeArrowTable(
+      [
+        { vector: Array(16).fill(0.1), text: "foo" },
+        { vector: Array(16).fill(0.2), text: "bar" },
+      ],
+      { schema: arrowSchema },
+    );
+    const arrowTable = await db.createTable("f32_tbl", arrowData, {
+      mode: "overwrite",
+    });
+    ```
+
+    ```rust Rust icon="rust"
+    let arrow_schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 16),
+            false,
+        ),
+        Field::new("text", DataType::Utf8, false),
+    ]));
+
+    let arrow_batch = RecordBatch::try_new(
+        arrow_schema.clone(),
+        vec![
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![Some(vec![Some(0.1); 16]), Some(vec![Some(0.2); 16])],
+                    16,
+                ),
+            ),
+            Arc::new(StringArray::from(vec!["foo", "bar"])),
+        ],
+    )
+    .unwrap();
+    let arrow_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(arrow_batch)].into_iter(), arrow_schema.clone()));
+    let arrow_table = db
+        .create_table("arrow_table_example", arrow_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+
+### From a Pandas DataFrame {#from-a-pandas-dataframe}
+<Badge color="green">Python Only</Badge>
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        import pandas as pd
+
+        data = pd.DataFrame(
+            {
+                "vector": [[1.1, 1.2, 1.3, 1.4], [0.2, 1.8, 0.4, 3.6]],
+                "lat": [45.5, 40.1],
+                "long": [-122.7, -74.1],
+            }
+        )
+        db.create_table("my_table_pandas", data, mode="overwrite")
+        db["my_table_pandas"].head()
+    ```
+</CodeGroup>
+
+<Note title="Note">
+Data is converted to Arrow before being written to disk. For maximum control over how data is saved, either provide the PyArrow schema to convert to or else provide a PyArrow Table directly.
+</Note>
+
+<Note title="Vector Column Type">
+The **`vector`** column needs to be a [Vector](/oss/v0-99-0-test/integrations/data/pydantic#vector-field) (defined as [pyarrow.FixedSizeList](https://arrow.apache.org/docs/python/generated/pyarrow.list_.html)) type.
+</Note>
+
+### From a Polars DataFrame {#from-a-polars-dataframe}
+<Badge color="green">Python Only</Badge>
+
+Pass a Polars DataFrame as input. Install `polars` for this example; the
+conversion preserves the table structure through Arrow.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        import polars as pl
+
+        data = pl.DataFrame(
+            {
+                "vector": [[3.1, 4.1], [5.9, 26.5]],
+                "item": ["foo", "bar"],
+                "price": [10.0, 20.0],
+            }
+        )
+        tbl = db.create_table("my_table_pl", data, mode="overwrite")
+
+        print("Rows:", tbl.count_rows())
+    ```
+</CodeGroup>
+
+### From Pydantic Models {#from-pydantic-models}
+<Badge color="green">Python Only</Badge>
+
+When you create an empty table without data, you must specify the table schema.
+LanceDB supports creating tables by specifying a PyArrow schema or a specialized
+Pydantic model called `LanceModel`.
+
+For example, the following Content model specifies a table with 5 columns:
+`movie_id`, `vector`, `genres`, `title`, and `imdb_id`. When you create a table, you can
+pass the class as the value of the `schema` parameter to `create_table`.
+The `vector` column is a `Vector` type, which is a specialized Pydantic type that
+can be configured with the vector dimensions. It is also important to note that
+LanceDB only understands subclasses of `lancedb.pydantic.LanceModel`
+(which itself derives from `pydantic.BaseModel`).
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        from lancedb.pydantic import LanceModel, Vector
+
+        class Content(LanceModel):
+            movie_id: int
+            vector: Vector(128)
+            genres: str
+            title: str
+            imdb_id: int
+
+            @property
+            def imdb_url(self) -> str:
+                return f"https://www.imdb.com/title/tt{self.imdb_id}"
+
+        tbl = db.create_table("movielens_small", schema=Content, mode="overwrite")
+
+        print("Rows:", tbl.count_rows())
+    ```
+</CodeGroup>
+
+#### Nested schemas {#nested-schemas}
+
+Sometimes your data model may contain nested objects. For example, you may want to store the document string and the document source name as a nested Document object:
+
+<CodeGroup>
+    ```python Python icon="python"
+    from pydantic import BaseModel
+
+    class Document(BaseModel):
+        content: str
+        source: str
+    ```
+</CodeGroup>
+
+This can be used as the type of a LanceDB table column:
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        from lancedb.pydantic import LanceModel, Vector
+        from pydantic import BaseModel
+
+        class Document(BaseModel):
+            content: str
+            source: str
+
+        class NestedSchema(LanceModel):
+            id: str
+            vector: Vector(1536)
+            document: Document
+
+        tbl = db.create_table("nested_table", schema=NestedSchema, mode="overwrite")
+
+        print("Rows:", tbl.count_rows())
+    ```
+</CodeGroup>
+
+This creates a struct column called "document" that has two subfields
+called "content" and "source":
+
+```bash
+In [28]: tbl.schema
+Out[28]:
+id: string not null
+vector: fixed_size_list<item: float>[1536] not null
+    child 0, item: float
+document: struct<content: string not null, source: string not null> not null
+    child 0, content: string not null
+    child 1, source: string not null
+```
+
+#### Validators {#validators}
+
+Because `LanceModel` inherits from Pydantic's `BaseModel`, you can combine them with Pydantic's
+[field validators](https://docs.pydantic.dev/latest/concepts/validators). The example
+below shows how to add a validator to ensure that only valid timezone-aware datetime objects are used
+for a `created_at` field.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from lancedb.pydantic import LanceModel
+    from pydantic import Field, ValidationError, ValidationInfo, field_validator
+
+    tzname = "America/New_York"
+    tz = ZoneInfo(tzname)
+
+    class TestModel(LanceModel):
+        dt_with_tz: datetime = Field(json_schema_extra={"tz": tzname})
+
+        @field_validator("dt_with_tz")
+        @classmethod
+        def tz_must_match(cls, dt: datetime) -> datetime:
+            assert dt.tzinfo == tz
+            return dt
+
+    ok = TestModel(dt_with_tz=datetime.now(tz))
+
+    try:
+        TestModel(dt_with_tz=datetime.now(ZoneInfo("Asia/Shanghai")))
+        assert 0 == 1, "this should raise ValidationError"
+    except ValidationError:
+        print("A ValidationError was raised.")
+        pass
+    ```
+</CodeGroup>
+
+The example catches a `ValidationError` for the timestamp with a different
+timezone. A validator runs when the Pydantic model is constructed; declaring a
+model as the table schema does not make every later write run that validator.
+
+<Note>
+Datasets too large to pass to `create_table` at once are covered separately;
+see [Insert data](/oss/v0-99-0-test/ingestion/insert#large-datasets) for batches, file-backed
+input and write parallelism.
+</Note>
+
+## Create empty table {#create-empty-table}
+You can create an empty table for scenarios where you want to add data to the table later.
+An example would be when you want to collect data from a stream/external file and then add it to a table in
+batches.
+
+An empty table can be initialized via an Arrow schema.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        import pyarrow as pa
+
+        schema = pa.schema(
+            [
+                pa.field("vector", pa.list_(pa.float32(), 2)),
+                pa.field("item", pa.string()),
+                pa.field("price", pa.float32()),
+            ]
+        )
+        tbl = db.create_table("test_empty_table", schema=schema, mode="overwrite")
+
+        print("Rows:", tbl.count_rows())
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const emptySchema = new arrow.Schema([
+      new arrow.Field(
+        "vector",
+        new arrow.FixedSizeList(
+          2,
+          new arrow.Field("item", new arrow.Float32(), true),
+        ),
+      ),
+      new arrow.Field("item", new arrow.Utf8()),
+      new arrow.Field("price", new arrow.Float32()),
+    ]);
+    const emptyTable = await db.createEmptyTable(
+      "test_empty_table",
+      emptySchema,
+      {
+        mode: "overwrite",
+      },
+    );
+    ```
+
+    ```rust Rust icon="rust"
+    let empty_schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 2),
+            false,
+        ),
+        Field::new("item", DataType::Utf8, false),
+        Field::new("price", DataType::Float32, false),
+    ]));
+    let empty_table = db
+        .create_empty_table("test_empty_table", empty_schema)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+Alternatively, define the schema with `LanceModel`, a Pydantic model class
+provided by `lancedb.pydantic`. Its `Vector` type declares a fixed vector dimension.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        from lancedb.pydantic import LanceModel, Vector
+
+        class Item(LanceModel):
+            vector: Vector(2)
+            item: str
+            price: float
+
+        tbl = db.create_table(
+            "test_empty_table_new", schema=Item.to_arrow_schema(), mode="overwrite"
+        )
+
+        print("Rows:", tbl.count_rows())
+    ```
+</CodeGroup>
+
+Once the empty table has been created, you can append to it or modify its contents,
+as explained in [Ingesting data](/oss/v0-99-0-test/ingestion).
+
+## Open an existing table {#open-an-existing-table}
+
+You can open an existing table by specifying the name of the table to the `open_table` / `openTable` method.
+If you forget the name of your table, you can always get a listing of all table names.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        # Create a table first
+        data = [{"vector": [1.1, 1.2], "lat": 45.5, "long": -122.7}]
+        db.create_table("test_table", data, mode="overwrite")
+
+        # List table names
+        print(db.list_tables().tables)
+
+        # Open existing table
+        tbl = db.open_table("test_table")
+
+        print("Rows:", tbl.count_rows())
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const openTableData = [{ vector: [1.1, 1.2], lat: 45.5, long: -122.7 }];
+    await db.createTable("test_table_open", openTableData, {
+      mode: "overwrite",
+    });
+
+    console.log(await db.tableNames());
+
+    const openedTable = await db.openTable("test_table_open");
+    ```
+
+    ```rust Rust icon="rust"
+    let open_schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 2),
+            false,
+        ),
+        Field::new("lat", DataType::Float32, false),
+        Field::new("long", DataType::Float32, false),
+    ]));
+    let open_batch = RecordBatch::try_new(
+        open_schema.clone(),
+        vec![
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![Some(vec![Some(1.1), Some(1.2)])],
+                    2,
+                ),
+            ),
+            Arc::new(Float32Array::from(vec![45.5])),
+            Arc::new(Float32Array::from(vec![-122.7])),
+        ],
+    )
+    .unwrap();
+    let open_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(open_batch)].into_iter(), open_schema.clone()));
+    db.create_table("test_table", open_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    println!("{:?}", db.table_names().execute().await.unwrap());
+
+    let opened_table = db.open_table("test_table").execute().await.unwrap();
+    ```
+</CodeGroup>
+
+## Drop a table {#drop-a-table}
+
+Use the `drop_table()` method on the database to remove a table.
+
+<CodeGroup>
+    ```python Python icon="python"
+    from tempfile import TemporaryDirectory
+
+    import lancedb
+
+    with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+        db = lancedb.connect(uri)
+        # Create a table first
+        data = [{"vector": [1.1, 1.2], "lat": 45.5}]
+        db.create_table("my_table", data, mode="overwrite")
+
+        # Drop the table
+        db.drop_table("my_table")
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    await db.createTable("my_table", [{ vector: [1.1, 1.2], lat: 45.5 }], {
+      mode: "overwrite",
+    });
+
+    await db.dropTable("my_table");
+    ```
+
+    ```rust Rust icon="rust"
+    let drop_schema = Arc::new(Schema::new(vec![
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 2),
+            false,
+        ),
+        Field::new("lat", DataType::Float32, false),
+    ]));
+    let drop_batch = RecordBatch::try_new(
+        drop_schema.clone(),
+        vec![
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![Some(vec![Some(1.1), Some(1.2)])],
+                    2,
+                ),
+            ),
+            Arc::new(Float32Array::from(vec![45.5])),
+        ],
+    )
+    .unwrap();
+    let drop_reader: Box<dyn RecordBatchReader + Send> =
+        Box::new(RecordBatchIterator::new(vec![Ok(drop_batch)].into_iter(), drop_schema.clone()));
+    db.create_table("my_table", drop_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+
+    db.drop_table("my_table", &[]).await.unwrap();
+    ```
+</CodeGroup>
+
+Dropping a table removes the table object. Deleting rows keeps the table and
+changes its contents; retained versions and cleanup are described in
+[Cleanup](/oss/v0-99-0-test/maintenance/cleanup).
+On a local database, dropping a table that does not exist raises an error; in
+Python, pass `ignore_missing=True` to suppress it. A deployment may report
+success instead, depending on how it stores its catalog, so do not rely on the
+error to tell you a table was missing. Python's deployment connection does not
+take `ignore_missing`.
+
+<span id="verify"></span>
+
+## Complete write workflow {#complete-example}
+
+<Accordion title="Complete examples: create, append, update, upsert and delete">
+
+Each program creates a temporary local database, performs the five operations,
+prints the result, and removes its temporary data when finished.
+
+- **Python:** install `lancedb`, save the code as `ingestion.py`, and run
+  `python ingestion.py`.
+- **TypeScript:** install `@lancedb/lancedb`, save the code as `ingestion.mts`,
+  and run `node ingestion.mts` with Node.js 22.18 or later.
+- **Rust:** download the [complete Rust project](/oss/v0-99-0-test/static/code/ingestion-rust.zip),
+  extract it, and run `cargo run --locked`. It includes `src/main.rs`, the Cargo
+  manifest and a lockfile for the example's dependencies. The code is shown below.
+
+<CodeGroup>
+```python ingestion.py icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    table = db.create_table(
+        "users",
+        [
+            {"id": 1, "name": "Alice", "login_count": 10},
+            {"id": 2, "name": "Bob", "login_count": 20},
+        ],
+    )
+    table.add([{"id": 3, "name": "Charlie", "login_count": 5}])
+    table.update(where="id = 2", values={"name": "Bobby"})
+    table.update(where="id = 2", values_sql={"login_count": "login_count + 1"})
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(
+            [
+                {"id": 3, "name": "Charlie", "login_count": 6},
+                {"id": 4, "name": "Dana", "login_count": 1},
+            ]
+        )
+    )
+    print("Rows selected for deletion:", table.search().where("id = 4").to_list())
+    table.delete("id = 4")
+    rows = sorted(table.search().to_list(), key=lambda row: row["id"])
+    print(rows)
+```
+```typescript ingestion.mts icon="square-js"
+const lancedb = await import("@lancedb/lancedb");
+const { mkdtemp, rm } = await import("node:fs/promises");
+const { tmpdir } = await import("node:os");
+const { join } = await import("node:path");
+
+const uri = await mkdtemp(join(tmpdir(), "lancedb-ingestion-"));
+try {
+  const db = await lancedb.connect(uri);
+  const table = await db.createTable("users", [
+    { id: 1, name: "Alice", login_count: 10 },
+    { id: 2, name: "Bob", login_count: 20 },
+  ]);
+  await table.add([{ id: 3, name: "Charlie", login_count: 5 }]);
+  await table.update({ where: "id = 2", values: { name: "Bobby" } });
+  await table.update({
+    where: "id = 2",
+    valuesSql: { login_count: "login_count + 1" },
+  });
+  await table
+    .mergeInsert("id")
+    .whenMatchedUpdateAll()
+    .whenNotMatchedInsertAll()
+    .execute([
+      { id: 3, name: "Charlie", login_count: 6 },
+      { id: 4, name: "Dana", login_count: 1 },
+    ]);
+  console.log(
+    "Rows selected for deletion:",
+    await table.query().where("id = 4").toArray(),
+  );
+  await table.delete("id = 4");
+  const rows = (await table.query().toArray()).sort((a, b) => a.id - b.id);
+  console.log(rows);
+} finally {
+  await rm(uri, { recursive: true, force: true });
+}
+```
+```rust src/main.rs icon="rust"
+use std::sync::Arc;
+
+use arrow_array::{Int64Array, RecordBatch, RecordBatchIterator, RecordBatchReader, StringArray};
+use arrow_schema::{DataType, Field, Schema};
+use futures::TryStreamExt;
+use lancedb::query::{ExecutableQuery, QueryBase};
+
+fn make_users_reader(rows: &[(i64, &str, i64)]) -> Box<dyn RecordBatchReader + Send> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("login_count", DataType::Int64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.0))),
+            Arc::new(StringArray::from_iter_values(rows.iter().map(|r| r.1))),
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.2))),
+        ],
+    )
+    .unwrap();
+    Box::new(RecordBatchIterator::new(
+        vec![Ok(batch)].into_iter(),
+        schema,
+    ))
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempfile::tempdir()?;
+    let db = lancedb::connect(directory.path().to_str().unwrap())
+        .execute()
+        .await?;
+    let table = db
+        .create_table(
+            "users",
+            make_users_reader(&[(1, "Alice", 10), (2, "Bob", 20)]),
+        )
+        .execute()
+        .await?;
+    table
+        .add(make_users_reader(&[(3, "Charlie", 5)]))
+        .execute()
+        .await?;
+    table
+        .update()
+        .only_if("id = 2")
+        .column("name", "'Bobby'")
+        .execute()
+        .await?;
+    table
+        .update()
+        .only_if("id = 2")
+        .column("login_count", "login_count + 1")
+        .execute()
+        .await?;
+    let mut merge = table.merge_insert(&["id"]);
+    merge
+        .when_matched_update_all(None)
+        .when_not_matched_insert_all();
+    merge
+        .execute(make_users_reader(&[(3, "Charlie", 6), (4, "Dana", 1)]))
+        .await?;
+    let selected: Vec<RecordBatch> = table
+        .query()
+        .only_if("id = 4")
+        .execute()
+        .await?
+        .try_collect()
+        .await?;
+    println!("Rows selected for deletion: {selected:?}");
+    table.delete("id = 4").await?;
+    let rows: Vec<RecordBatch> = table.query().execute().await?.try_collect().await?;
+    println!("Remaining rows: {rows:?}");
+    assert_eq!(table.count_rows(None).await?, 3);
+    assert_eq!(
+        table
+            .count_rows(Some(
+                "id = 2 AND name = 'Bobby' AND login_count = 21".into()
+            ))
+            .await?,
+        1
+    );
+    assert_eq!(
+        table
+            .count_rows(Some("id = 3 AND login_count = 6".into()))
+            .await?,
+        1
+    );
+    Ok(())
+}
+```
+</CodeGroup>
+
+After the operations, Alice has 10 logins, Bobby has 21, and Charlie has 6.
+Dana is selected for deletion and is absent from the final result.
+
+</Accordion>

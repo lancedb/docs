@@ -1,0 +1,268 @@
+---
+title: "About this version"
+description: "Identity and sources of the LanceDB Enterprise 8.1.0-test documentation edition, a synthetic test fixture."
+icon: circle-info
+---
+
+<Warning>
+This version is a synthetic test fixture for the documentation versioning prototype. It is not release documentation, and no release has been qualified for it.
+</Warning>
+
+| | |
+| --- | --- |
+| Product | LanceDB Enterprise |
+| Version | 8.1.0-test |
+| Documentation edition | `ent-8.1.0-test` |
+| Client documentation | OSS source revision 0.98.0-test, pinned in this edition |
+| Qualification | Not qualified: synthetic test fixture |
+| Shared pages from | lancedb `docs/web` at `4a03859b2a95` with synthetic fixtures |
+| Enterprise pages from | the six public Enterprise pages of staging candidate `e24d1b70`, which came from Sophon `docs/web` with synthetic fixtures |
+| Built with | the assembler in lancedb/docs at `3d02aca7bdd1` |
+| Corrections | None |
+
+## Switching versions {#switching-versions}
+
+Choose a product and a version from the menus at the top of the page. Each version has the complete sidebar. Switching versions keeps you on the same page when the other version has it, and otherwise opens that version's first page.
+
+## For agents {#for-agents}
+
+- This version's skill, on the hosted site: `/.well-known/agent-skills/lancedb-enterprise-v8-1-0-test/SKILL.md`
+- Every version: [`/llms.txt`](/llms.txt)
+
+<Visibility for="agents">
+
+## Pages in LanceDB Enterprise 8.1.0-test {#pages-in-this-version}
+
+- [LanceDB](/enterprise/v8-1-0-test/index.md): Multimodal lakehouse for AI.
+- [LanceDB OSS or Enterprise?](/enterprise/v8-1-0-test/basics/offerings.md): Start with an embedded library, or use the LanceDB Enterprise multimodal lakehouse for shared AI workloads.
+- [Connect to LanceDB](/enterprise/v8-1-0-test/basics/connect.md): Use the embedded LanceDB OSS library with tables in a local directory or object storage, or connect to LanceDB Enterprise.
+- [Quickstart](/enterprise/v8-1-0-test/quickstart.md): Install LanceDB, create a table, and run your first vector search.
+- [Architecture](/enterprise/v8-1-0-test/architecture.md): How LanceDB Enterprise separates query serving, background work, and storage, and how it compares with embedded LanceDB OSS.
+- [SDKs](/enterprise/v8-1-0-test/basics/sdk.md): Choose a LanceDB SDK and find the API reference for your language.
+- [SQL](/enterprise/v8-1-0-test/basics/sql.md): Query LanceDB Enterprise with SQL from Python or an Arrow Flight SQL client.
+- [Agentic skills](/enterprise/v8-1-0-test/basics/agentic-skills.md): Give a coding agent a current, maintained reference for the LanceDB APIs.
+- [Lance format](/enterprise/v8-1-0-test/basics/lance.md): The open format for multimodal data behind LanceDB.
+- [Lance Catalog](/enterprise/v8-1-0-test/basics/catalog.md): Organize, find and control access to your data in LanceDB.
+- [LanceDB Lakehouse](/enterprise/v8-1-0-test/basics/lakehouse.md): Bring multimodal data, search and feature engineering together for AI workloads.
+- [Queries](/enterprise/v8-1-0-test/basics/query.md): Choose how to query your data and read the results.
+- [Jobs](/enterprise/v8-1-0-test/basics/jobs.md): Track background work from submission to completion.
+- [Consistency](/enterprise/v8-1-0-test/tables/consistency.md): Understand when readers see changes and choose the freshness your application needs.
+- [Guarantees](/enterprise/v8-1-0-test/basics/guarantees.md): Understand table commits, concurrent writes and the boundaries of recovery.
+- [Limits](/enterprise/v8-1-0-test/basics/limits.md): Find fixed constraints, configurable bounds and what happens when you reach them.
+- [Naming rules](/enterprise/v8-1-0-test/basics/naming.md): Choose portable names for your data objects and namespace paths.
+- [Ingesting data](/enterprise/v8-1-0-test/ingestion/index.md): Choose how to create a table, append records or change existing data.
+- [Creating a table](/enterprise/v8-1-0-test/ingestion/create-table.md): Create a table from records or a schema and choose input formats.
+- [Insert data](/enterprise/v8-1-0-test/ingestion/insert.md): Append records, load file-backed data or batches, and verify ingestion.
+- [Merge insert](/enterprise/v8-1-0-test/ingestion/merge-insert.md): Match incoming records by key and choose which rows to update, insert or remove.
+- [Update rows](/enterprise/v8-1-0-test/ingestion/update.md): Select existing rows, change values or expressions, and verify the changes.
+- [Delete rows](/enterprise/v8-1-0-test/ingestion/delete.md): Select and delete records, verify the remaining rows, and understand storage retention.
+- [Search](/enterprise/v8-1-0-test/search/index.md): Choose vector, full-text or hybrid search and return the records your application needs.
+- [Vector Search](/enterprise/v8-1-0-test/search/vector-search.md): Search by vector similarity, choose a distance metric and tune your queries.
+- [Full-Text Search (FTS)](/enterprise/v8-1-0-test/search/full-text-search.md): Find records by words, phrases or partial matches using a full-text index.
+- [Hybrid Search](/enterprise/v8-1-0-test/search/hybrid-search.md): Combine vector similarity and keyword matches in a single ranked result set.
+- [Metadata Filtering in LanceDB](/enterprise/v8-1-0-test/search/filtering.md): Use predicates to select rows and control when filters apply to search.
+- [Reranking Search Results](/enterprise/v8-1-0-test/reranking/index.md): Choose a reranker, apply it to search candidates and evaluate relevance and latency.
+- [Explain a query plan](/enterprise/v8-1-0-test/search/explain.md): Inspect query execution, identify expensive work and compare changes.
+- [Data curation](/enterprise/v8-1-0-test/curation/index.md): Prepare datasets for search, evaluation and training by profiling, selecting and combining records.
+- [Profiling a dataset](/enterprise/v8-1-0-test/curation/aggregate.md): Measure coverage, missing values and class balance before selecting a dataset.
+- [SQL sampling](/enterprise/v8-1-0-test/curation/sampling.md): Choose a sample for exploration or evaluation and preserve the selected records when reproducibility matters.
+- [Joining datasets](/enterprise/v8-1-0-test/curation/join.md): Combine records with labels or metadata, and check for missing or duplicate matches.
+- [Ranking and deduplication](/enterprise/v8-1-0-test/curation/windowing.md): Choose records with explicit ranking rules and deterministic tie handling.
+- [Feature engineering](/enterprise/v8-1-0-test/feature-engineering/index.md): Derive columns and tables from data already in the lakehouse, without moving it somewhere else to compute.
+- [Data evolution](/enterprise/v8-1-0-test/feature-engineering/data-evolution.md): Derive new columns from data already in the table, without rewriting what is already there.
+- [Add a computed column](/enterprise/v8-1-0-test/feature-engineering/add-computed-column.md): Declare a column from a SQL expression. Nothing is evaluated until you refresh it.
+- [Refresh a column](/enterprise/v8-1-0-test/feature-engineering/refresh-column.md): Populate a computed column and update it when its inputs change.
+- [Refresh a materialized view](/enterprise/v8-1-0-test/feature-engineering/materialized-views.md): Create a materialized view and refresh it when the source data changes.
+- [Multimodal Feature Engineering with Geneva](/enterprise/v8-1-0-test/geneva/index.md): Learn how to do multimodal feature engineering in LanceDB Enterprise to transform raw data into meaningful features for AI models.
+- [What is Feature Engineering?](/enterprise/v8-1-0-test/geneva/overview/index.md): Learn how to transform raw data into meaningful features for AI models using LanceDB's feature engineering capabilities. Scale your feature engineering workflows with distributed processing and UDFs.
+- [Getting Started](/enterprise/v8-1-0-test/geneva/getting-started.md): Connect to LanceDB Enterprise, define a UDF, and run a distributed backfill — from a notebook or a script.
+- [Understanding Transforms](/enterprise/v8-1-0-test/geneva/udfs/index.md): Understand the three types of user-defined functions in Geneva — UDFs, chunkers (scalar UDTFs), and batch UDTFs — and when to use each.
+- [User-Defined Functions (UDFs)](/enterprise/v8-1-0-test/geneva/udfs/udfs.md): Define 1:1 transforms that add computed columns to your tables — embeddings, enrichment, scoring, and more.
+- [Chunkers (Scalar UDTFs)](/enterprise/v8-1-0-test/geneva/udfs/scalar-udtfs.md): Use chunkers (scalar UDTFs) for 1:N row expansion — split videos into clips, chunk documents, or tile images with automatic parent column inheritance and incremental refresh.
+- [Batch User-Defined Table Functions (UDTFs)](/enterprise/v8-1-0-test/geneva/udfs/batch-udtfs.md): Use batch UDTFs for N:M transformations like deduplication, clustering, and aggregation across entire tables or partitions.
+- [Error Handling in Geneva UDFs](/enterprise/v8-1-0-test/geneva/udfs/error_handling.md): Learn how configure retry, skip, and fail behaviors for UDFs.
+- [Profiling Stateful UDF Memory](/enterprise/v8-1-0-test/geneva/udfs/profiling-memory.md): Find memory leaks and runaway peak usage in stateful UDFs with memray, before they cause worker OOMs in production.
+- [Blob Types in Geneva UDFs](/enterprise/v8-1-0-test/geneva/udfs/blobs.md): Learn how to work with Lance Blobs in Geneva UDFs for handling large binary objects efficiently with lazy reading capabilities.
+- [Built-in LLM and Embedding UDFs](/enterprise/v8-1-0-test/geneva/udfs/providers/index.md)
+- [OpenAI](/enterprise/v8-1-0-test/geneva/udfs/providers/openai.md)
+- [Gemini](/enterprise/v8-1-0-test/geneva/udfs/providers/gemini.md)
+- [Sentence Transformers](/enterprise/v8-1-0-test/geneva/udfs/providers/sentence-transformers.md)
+- [Geneva Jobs](/enterprise/v8-1-0-test/geneva/jobs/index.md): Learn about Geneva's job execution framework for distributed feature engineering workflows.
+- [Backfilling](/enterprise/v8-1-0-test/geneva/jobs/backfilling.md): Learn how to trigger backfill operations to populate column values in your LanceDB table using Geneva's distributed framework.
+- [Bulk Loading & Updating Columns](/enterprise/v8-1-0-test/geneva/jobs/bulk-load-columns.md): Load or update column data from external sources (Parquet, Lance, IPC) into your LanceDB table using a primary-key join.
+- [Materialized Views with UDFs](/enterprise/v8-1-0-test/geneva/jobs/materialized-views.md): Learn how to use Geneva's materialized view feature to declaratively manage batch updates of expensive operations using UDFs.
+- [Advanced Job Configuration](/enterprise/v8-1-0-test/geneva/jobs/advanced-job-configuration.md): Pin the dependency manifest a transform's distributed job runs with using @udf, @chunker, and @udtf.
+- [Job Lifecycle](/enterprise/v8-1-0-test/geneva/jobs/lifecycle.md): Understanding how Geneva jobs work, their lifecycle states, and how to monitor and manage them.
+- [Backfill Conflicts](/enterprise/v8-1-0-test/geneva/jobs/conflicts.md): Learn how Geneva handles conflicts during backfill operations and what to do when they occur.
+- [Distributed Job Performance and Cluster Sizing](/enterprise/v8-1-0-test/geneva/jobs/performance.md): Learn how to tune Geneva distributed job performance by scaling compute resources and balancing write bandwidth.
+- [Job Metrics (Diagnostics)](/enterprise/v8-1-0-test/geneva/jobs/job_metrics.md): Use Geneva Job Metrics to monitor and troubleshoot jobs in real time.
+- [Geneva Console](/enterprise/v8-1-0-test/geneva/jobs/console.md)
+- [Troubleshooting Geneva Jobs](/enterprise/v8-1-0-test/geneva/jobs/troubleshooting.md): Diagnose and fix common issues when running Geneva backfills, materialized views, and other distributed jobs.
+- [Advanced Execution Contexts](/enterprise/v8-1-0-test/geneva/jobs/contexts.md): Configure the distributed execution backend — clusters and dependency manifests — for Geneva jobs on object-storage and local-filesystem connections.
+- [Deploy Geneva using Helm](/enterprise/v8-1-0-test/geneva/deployment/helm.md): Learn how to deploy Geneva on Kubernetes using the Geneva Helm Chart
+- [Job and Session Startup Optimizations](/enterprise/v8-1-0-test/geneva/jobs/startup.md): Learn how to optimize Geneva job and session startup times for faster interactive development and production workflows.
+- [Dependency Verification](/enterprise/v8-1-0-test/geneva/deployment/dependency-verification.md): Diagnose and resolve package version mismatches between local and distributed worker environments.
+- [Advanced Configuration](/enterprise/v8-1-0-test/geneva/udfs/advanced-configuration.md): Learn about environment variables for configuring Geneva behavior.
+- [Manual Deployment on Kubernetes](/enterprise/v8-1-0-test/geneva/deployment/index.md): Learn how to deploy Geneva on Kubernetes using KubeRay for distributed feature engineering workflows on GKE and EKS.
+- [Troubleshooting Geneva Deployments](/enterprise/v8-1-0-test/geneva/deployment/troubleshooting.md): Learn how to diagnose and resolve common issues with Geneva deployments, including version compatibility, permissions, and serialization errors.
+- [End-to-End Example](/enterprise/v8-1-0-test/geneva/end-to-end.md): A complete Geneva example on LanceDB Enterprise — create a table, backfill computed columns, and build a materialized view with embeddings.
+- [Geneva Python SDK](/enterprise/v8-1-0-test/geneva/reference.md): LanceDB Feature Engineering Python SDK Reference
+- [Why LanceDB for Training](/enterprise/v8-1-0-test/training/why-lancedb.md): Use LanceDB as the multimodal data layer for model training, fine-tuning, curation, and feature engineering workflows.
+- [Loading Data for Model Training](/enterprise/v8-1-0-test/training/data-loading.md): Stream, shuffle, transform, and resume model training data with LanceDB.
+- [PyTorch Integration](/enterprise/v8-1-0-test/training/torch.md): Learn how to use LanceDB with PyTorch for training and inference.
+- [Management](/enterprise/v8-1-0-test/management/index.md): Create, list, and drop the objects in a catalog, from Python, TypeScript, or SQL.
+- [Database](/enterprise/v8-1-0-test/management/database.md): Connect to LanceDB and configure storage, credentials and read consistency.
+- [Namespaces](/enterprise/v8-1-0-test/management/namespace.md): Grouping tables into a hierarchy, and addressing them through it.
+- [Tables](/enterprise/v8-1-0-test/management/table.md): The object most operations act on: creating, opening, renaming, cloning and dropping one.
+- [Branches](/enterprise/v8-1-0-test/tables/branching.md): Fork isolated, writable lines of table history in LanceDB. Run experiments, backfills, and index rebuilds without disturbing production reads on main.
+- [Materialized view](/enterprise/v8-1-0-test/management/materialized-view.md): Create, open, list and drop a table whose contents are defined by a query.
+- [Views](/enterprise/v8-1-0-test/management/view.md): A saved query, evaluated when read. The non-materialized counterpart to a materialized view.
+- [Indexing Data](/enterprise/v8-1-0-test/indexing/index.md): Optimize search performance with LanceDB using vector indexes, full-text search, scalar indexes, and more.
+- [Vector Indexes](/enterprise/v8-1-0-test/indexing/vector-index.md): Build and manage LanceDB vector indexes.
+- [Full-Text Search (FTS) Index](/enterprise/v8-1-0-test/indexing/fts-index.md): Create and tune BM25-based full-text search indexes in LanceDB.
+- [Scalar Indexes](/enterprise/v8-1-0-test/indexing/scalar-index.md): Learn how to use scalar indexes in LanceDB for efficient metadata filtering and query optimization.
+- [Building and repairing indexes](/enterprise/v8-1-0-test/indexing/reindexing.md): Learn how to keep your indexes up-to-date in LanceDB using incremental indexing, including best practices for adding new records without full reindexing.
+- [Compaction and cleanup](/enterprise/v8-1-0-test/maintenance/compaction.md): Merge small files, prune old versions, and fold new rows into existing indexes.
+- [Cleanup](/enterprise/v8-1-0-test/maintenance/cleanup.md): Pruning old versions and the files only they referenced.
+- [Background jobs](/enterprise/v8-1-0-test/maintenance/background-jobs.md): Understand the Enterprise background jobs that maintain tables, indexes and caches.
+- [LanceDB Enterprise](/enterprise/v8-1-0-test/enterprise/index.md): Features and benefits of LanceDB Enterprise.
+- [Architecture](/enterprise/v8-1-0-test/enterprise/architecture.md): Learn how LanceDB Enterprise separates control, compute, and storage to serve remote tables at scale.
+- [Deployment guide](/enterprise/v8-1-0-test/enterprise/deployment/index.md): Learn how to deploy LanceDB Enterprise in production environments.
+- [Embedded storage configuration](/enterprise/v8-1-0-test/deployment/storage.md): Choose and configure local disk or object storage for tables accessed by the embedded LanceDB OSS library.
+- [Monitor LanceDB with OpenTelemetry](/enterprise/v8-1-0-test/deployment/monitoring.md): Export LanceDB object store request counts, bytes, latency, errors, and throttles to any OpenTelemetry backend.
+- [Azure deployment guide](/enterprise/v8-1-0-test/enterprise/deployment/azure.md): Learn how to deploy LanceDB Enterprise on Azure with AKS, Private Link, and Blob Storage.
+- [Benchmarks](/enterprise/v8-1-0-test/enterprise/benchmarks.md): Representative latency and scalability benchmarks for LanceDB Enterprise.
+- [Support](/enterprise/v8-1-0-test/deployment/support.md): Where to get help: community Discord for OSS, dedicated support for Enterprise.
+- [Authentication](/enterprise/v8-1-0-test/enterprise/authentication.md): Authentication modes for LanceDB Enterprise: API keys and OAuth credentials.
+- [Authorization](/enterprise/v8-1-0-test/governance/authorization.md): Who may do what: privileges granted on catalog objects to principals, groups, roles, and API keys.
+- [Compliance](/enterprise/v8-1-0-test/enterprise/security.md): Learn about LanceDB Enterprise security features and best practices.
+- [SQL reference](/enterprise/v8-1-0-test/sql/index.md): SQL statements, expressions and data types supported by LanceDB Enterprise.
+- [SQL data types](/enterprise/v8-1-0-test/sql/data-types.md): How Lance columns appear to SQL, including the types SQL has no name for.
+- [Namespace](/enterprise/v8-1-0-test/sql/ddl/namespace.md): CREATE SCHEMA and DROP SCHEMA: the SQL spelling of namespace DDL.
+- [Table](/enterprise/v8-1-0-test/sql/ddl/table.md): CREATE, DESCRIBE, ALTER, CLONE and DROP TABLE.
+- [View](/enterprise/v8-1-0-test/sql/ddl/view.md): CREATE VIEW and DROP VIEW: a saved query, evaluated when read.
+- [Materialized View](/enterprise/v8-1-0-test/sql/ddl/materialized-view.md): CREATE MATERIALIZED VIEW and SHOW MATERIALIZED VIEWS; refreshing is a REFRESH statement.
+- [Index](/enterprise/v8-1-0-test/sql/ddl/index.md): CREATE INDEX and DROP INDEX: one column, with the algorithm chosen by USING.
+- [Job](/enterprise/v8-1-0-test/sql/ddl/job.md): SHOW JOBS, SHOW ERRORS, and controlling a running job with PAUSE, RESUME and CANCEL.
+- [Insert](/enterprise/v8-1-0-test/sql/dml/insert.md): INSERT INTO, including INSERT ... SELECT to move rows server-side.
+- [Update](/enterprise/v8-1-0-test/sql/dml/update.md): UPDATE ... SET ... WHERE, and why it does not recompute derived columns.
+- [Delete](/enterprise/v8-1-0-test/sql/dml/delete.md): DELETE FROM ... WHERE: rows are marked, not erased.
+- [Copy](/enterprise/v8-1-0-test/sql/dml/copy.md): COPY ... TO: writing a query result to object storage as files.
+- [REFRESH](/enterprise/v8-1-0-test/sql/dml/refresh.md): Filling computed columns and bringing materialized views up to date.
+- [SELECT](/enterprise/v8-1-0-test/sql/dql/select.md): Projection, filtering, ordering, and composing queries out of other queries.
+- [Subqueries](/enterprise/v8-1-0-test/sql/dql/subqueries.md): Queries inside queries: scalar, IN, EXISTS, correlated, and derived tables.
+- [Joins](/enterprise/v8-1-0-test/sql/dql/join.md): Combining rows from more than one table, including across namespaces.
+- [Aggregation](/enterprise/v8-1-0-test/sql/dql/aggregation.md): GROUP BY, HAVING, and the aggregate function set.
+- [Window functions](/enterprise/v8-1-0-test/sql/dql/window.md): Compute over a set of rows related to the current one, without collapsing them.
+- [Random sampling](/enterprise/v8-1-0-test/sql/dql/sampling.md): TABLESAMPLE: draw a random subset of a table, by rows or by fragments.
+- [Full-Text Search](/enterprise/v8-1-0-test/sql/dql/fts.md): The fts() table function: match, fuzzy, phrase, boolean, boost and multi-match queries from SQL.
+- [Explain](/enterprise/v8-1-0-test/sql/dql/explain.md): EXPLAIN, EXPLAIN ANALYZE and EXPLAIN VERBOSE: reading and measuring a plan from SQL.
+- [Operators and literals](/enterprise/v8-1-0-test/sql/operators.md): Comparison, logical and arithmetic operators, literals, and precedence.
+- [Functions](/enterprise/v8-1-0-test/sql/functions.md): Where to find each kind of function, and the dialect version they come from.
+- [Scalar functions](/enterprise/v8-1-0-test/sql/scalar-functions.md): The per-row function set: math, string, regex, date/time, array, struct, and what Lance adds.
+- [Prepared statements](/enterprise/v8-1-0-test/sql/prepared-statements.md): What a deployment does when a Flight SQL client prepares a statement or binds parameter values.
+- [Versioning probe](/enterprise/v8-1-0-test/versioning-probe/probe.md): Synthetic test page for the documentation versioning prototype. It is not product documentation.
+- [Versioning probe target](/enterprise/v8-1-0-test/versioning-probe/linked.md): Synthetic target page for relative links in the documentation versioning prototype.
+- [Integrations](/enterprise/v8-1-0-test/integrations/index.md): Connect LanceDB with popular AI providers, frameworks, and data platforms
+- [Managing Embeddings](/enterprise/v8-1-0-test/embedding/index.md): Use the embedding API in LanceDB: registry, functions, schemas, and multi-language SDK support.
+- [Embeddings: Quickstart](/enterprise/v8-1-0-test/embedding/quickstart.md): Quickstart guide for generating and working with embeddings.
+- [Hugging Face](/enterprise/v8-1-0-test/integrations/embedding/huggingface.md)
+- [AWS Bedrock](/enterprise/v8-1-0-test/integrations/embedding/aws.md)
+- [Cohere](/enterprise/v8-1-0-test/integrations/embedding/cohere.md)
+- [ColPali](/enterprise/v8-1-0-test/integrations/embedding/colpali.md)
+- [Gemini](/enterprise/v8-1-0-test/integrations/embedding/gemini.md)
+- [IBM watsonx](/enterprise/v8-1-0-test/integrations/embedding/ibm.md)
+- [ImageBind](/enterprise/v8-1-0-test/integrations/embedding/imagebind.md)
+- [Instructor](/enterprise/v8-1-0-test/integrations/embedding/instructor.md)
+- [Jina](/enterprise/v8-1-0-test/integrations/embedding/jina.md)
+- [Ollama](/enterprise/v8-1-0-test/integrations/embedding/ollama.md)
+- [OpenAI](/enterprise/v8-1-0-test/integrations/embedding/openai.md)
+- [OpenCLIP](/enterprise/v8-1-0-test/integrations/embedding/openclip.md)
+- [Sentence Transformers](/enterprise/v8-1-0-test/integrations/embedding/sentence-transformers.md)
+- [Voyage AI](/enterprise/v8-1-0-test/integrations/embedding/voyageai.md)
+- [Superlinked](/enterprise/v8-1-0-test/integrations/embedding/superlinked.md)
+- [Answer.AI Rerankers](/enterprise/v8-1-0-test/integrations/reranking/answerdotai.md): Use AnswerDotAI's lightweight reranking library with LanceDB. Features unified API for common reranking models, configurable model selection, and comprehensive scoring options.
+- [Cohere Reranker](/enterprise/v8-1-0-test/integrations/reranking/cohere.md): Integrate Cohere's powerful reranking API with LanceDB for enhanced search results. Supports English and multilingual models with configurable scoring options for vector, FTS, and hybrid search.
+- [ColBERT Reranker](/enterprise/v8-1-0-test/integrations/reranking/colbert.md): Enhance search results with ColBERT's contextual reranking in LanceDB. Features efficient model deployment, device optimization, and flexible scoring options for vector, FTS, and hybrid search.
+- [Jina Reranker](/enterprise/v8-1-0-test/integrations/reranking/jina.md): Integrate Jina's multilingual reranking API with LanceDB for improved search results. Features model selection, API key management, and flexible scoring options for all search types.
+- [OpenAI Reranker (Experimental)](/enterprise/v8-1-0-test/integrations/reranking/openai.md): Explore experimental search reranking using OpenAI's GPT models in LanceDB. Features configurable model selection, API key management, and comprehensive scoring options for all search types.
+- [Voyage AI Reranker](/enterprise/v8-1-0-test/integrations/reranking/voyageai.md): Integrate Voyage AI's cutting-edge reranking models with LanceDB. Features model selection, API key management, and comprehensive scoring options for all search types.
+- [Watsonx Reranker](/enterprise/v8-1-0-test/integrations/reranking/watsonx.md): Rerank LanceDB search results with the IBM watsonx.ai text rerank API. Supports vector, FTS, and hybrid search with configurable models, projects, and spaces.
+- [Pydantic](/enterprise/v8-1-0-test/integrations/data/pydantic.md)
+- [DuckDB](/enterprise/v8-1-0-test/integrations/data/duckdb.md): Learn how to use the DuckDB-Lance extension to query Lance tables with SQL.
+- [Pandas and PyArrow](/enterprise/v8-1-0-test/integrations/data/pandas_and_pyarrow.md)
+- [Polars](/enterprise/v8-1-0-test/integrations/data/polars_arrow.md)
+- [dlt](/enterprise/v8-1-0-test/integrations/data/dlt.md)
+- [Voxel51](/enterprise/v8-1-0-test/integrations/data/voxel51.md)
+- [Agno](/enterprise/v8-1-0-test/integrations/ai/agno.md): Build a search assistant using the Agno agent framework with LanceDB as the knowledge backend.
+- [Hermes Agent](/enterprise/v8-1-0-test/integrations/ai/hermes-agent.md): Use LanceDB as a persistent, semantic memory backend for Hermes Agent. Get durable recall across sessions with vector and hybrid search.
+- [Hugging Face Hub](/enterprise/v8-1-0-test/integrations/ai/huggingface.md): Use LanceDB directly on Lance datasets hosted on the Hugging Face Hub for multimodal search and retrieval.
+- [LangChain](/enterprise/v8-1-0-test/integrations/ai/langchain.md)
+- [LlamaIndex](/enterprise/v8-1-0-test/integrations/ai/llamaIndex.md)
+- [GenKit](/enterprise/v8-1-0-test/integrations/ai/genkit.md)
+- [Kiln AI](/enterprise/v8-1-0-test/integrations/ai/kiln.md)
+- [PromptTools](/enterprise/v8-1-0-test/integrations/ai/prompttools.md)
+- [Meta Llama Synthetic Data Kit](/enterprise/v8-1-0-test/integrations/ai/synthetic-data-kit.md): Use Meta Llama's Synthetic Data Kit with LanceDB to generate high-quality synthetic datasets for LLM fine-tuning and training.
+- [Tutorials](/enterprise/v8-1-0-test/tutorials/index.md): Worked examples of building with LanceDB, grouped by what they build.
+- [Hybrid search and reranking on BEIR](/enterprise/v8-1-0-test/tutorials/search/hybrid-search-beir.md): Combine semantic and keyword search on the BEIR benchmark, then rerank the results.
+- [Multi-vector search with XTR](/enterprise/v8-1-0-test/tutorials/search/multivector-xtr.md): Represent a document with many vectors, and speed retrieval with ConteXtualized Token Retrieval.
+- [Finding the Needle in a Haystack: Comparing Multi-vector Search Strategies](/enterprise/v8-1-0-test/tutorials/search/multivector-needle-in-a-haystack.md): Tutorial on token-level retrieval with LanceDB multivector search.
+- [Semantic search across videos](/enterprise/v8-1-0-test/tutorials/search/video-search.md): Embed video with V-JEPA and search it by similarity.
+- [Semantic result merging](/enterprise/v8-1-0-test/tutorials/search/vector-arithmetic.md): Add and subtract embeddings to steer a query toward or away from a concept.
+- [NER-powered vector search](/enterprise/v8-1-0-test/tutorials/search/ner-search.md): Extract named entities and embed them to sharpen retrieval.
+- [Reddit concept summarizer](/enterprise/v8-1-0-test/tutorials/search/reddit-summarizer.md): An end-to-end pipeline from Reddit text to embeddings to summarization and search.
+- [Contextual RAG](/enterprise/v8-1-0-test/tutorials/agents/contextual-rag.md): Prepend LLM-generated context to each chunk before embedding it.
+- [NVIDIA RAG Blueprint with LanceDB](/enterprise/v8-1-0-test/tutorials/agents/nvidia-rag-blueprint/index.md): Use LanceDB as the retrieval layer for NVIDIA RAG Blueprint with a Docker-first, retrieval-only reference integration.
+- [Time-Travel RAG with versioned data](/enterprise/v8-1-0-test/tutorials/agents/time-travel-rag/index.md): Build a RAG example that retrieves documents from a selected table version.
+- [Multimodal Agent](/enterprise/v8-1-0-test/tutorials/agents/multimodal-agent/index.md): Build an AI agent that understands both text and images to help users find recipes using LanceDB and PydanticAI
+- [Matryoshka embeddings](/enterprise/v8-1-0-test/tutorials/agents/matryoshka-embeddings.md): Nested, variable-size embeddings with LanceDB and LlamaIndex.
+- [HyDE: hypothetical document embeddings](/enterprise/v8-1-0-test/tutorials/agents/hyde.md): Generate a hypothetical answer, then retrieve documents similar to it.
+- [Late chunking](/enterprise/v8-1-0-test/tutorials/agents/late-chunking.md): Retrieve whole documents first, chunk them afterwards.
+- [Agentic RAG](/enterprise/v8-1-0-test/tutorials/agents/agentic-rag.md): Several agents collaborating to retrieve and answer.
+- [Feature engineering 101](/enterprise/v8-1-0-test/tutorials/feature-engineering/feature-engineering-101.md): Add derived feature columns to an existing table.
+- [Materialized views](/enterprise/v8-1-0-test/tutorials/feature-engineering/materialized-views.md): Persist query results as physical tables and keep them current.
+- [Run experiments on branches](/enterprise/v8-1-0-test/agent-branch-experiments.md): Use LanceDB branches to isolate agent-driven experiments from main, evaluate them on a fixed test set, and promote only the winner.
+- [Object Detection for AV Perception](/enterprise/v8-1-0-test/training/object-detection.md): End-to-end fine-tuning of a Faster R-CNN object detector on curated dashcam slices, using LanceDB as the data backbone from raw frames to checkpoints.
+- [Fine-tuning a VLM on TextVQA](/enterprise/v8-1-0-test/training/vlm-finetuning.md): End-to-end fine-tuning of Qwen2.5-VL on a curated TextVQA slice, using LanceDB and Geneva to materialize expensive vision-language features once and train from cached columns.
+- [Stable World Model](/enterprise/v8-1-0-test/integrations/stable-worldmodel.md): Use Stable World Model with LanceDB-backed datasets for reproducible world model research, fast data loading, and compact storage.
+- [Demo application gallery](/enterprise/v8-1-0-test/demos/index.md): End-to-end applications built with LanceDB.
+- [Semantic.art](/enterprise/v8-1-0-test/demos/semantic-art.md): Multimodal art discovery through feelings, phrases, and images.
+- [Wikipedia 41M hybrid search](/enterprise/v8-1-0-test/demos/wikipedia-search.md): Hybrid full-text and vector search across 41M+ Wikipedia entries.
+- [Video search](/enterprise/v8-1-0-test/demos/video-search.md): Search a video library with natural language queries.
+- [Large scale vector search (1.5B)](/enterprise/v8-1-0-test/demos/fineweb-edu-search.md): Semantic search over 1.5B+ FineWeb EDU embeddings.
+- [Robot data curation (DROID)](/enterprise/v8-1-0-test/demos/robot-data-curation.md): Search, score, and select robotics training examples from DROID.
+- [Datasets](/enterprise/v8-1-0-test/datasets/index.md): Browse Lance-format datasets ready to query directly from the Hugging Face Hub.
+- [LeRobotDataset](/enterprise/v8-1-0-test/integrations/lerobotdataset.md): Train LeRobot policies straight from object storage, and curate, search and visualize robotics datasets as Lance tables.
+- [LeRobot PushT](/enterprise/v8-1-0-test/datasets/lerobot-pusht.md): A Lance-formatted version of lerobot/pusht — the canonical PushT benchmark from the Diffusion Policy paper — packaged using the same three-table layout as lance-format/lerobot-xvla-soft-fold so consumers can flip between datasets without changing…
+- [LeRobot X-VLA Soft-Fold](/enterprise/v8-1-0-test/datasets/lerobot-xvla-soft-fold.md): A Lance-formatted version of lerobot/xvla-soft-fold — a multi-camera robotics dataset from the X-VLA project — packaged as three Lance tables for efficient frame-level training, episode-level trajectory loading, and direct access to the original…
+- [MNIST](/enterprise/v8-1-0-test/datasets/mnist.md): A Lance-formatted version of the classic MNIST handwritten-digit dataset covering 70,000 28×28 grayscale digits across ten balanced classes. Each row carries inline PNG bytes, the digit label, the human-readable class name, and a cosine-normalized…
+- [CIFAR-10](/enterprise/v8-1-0-test/datasets/cifar10.md): A Lance-formatted version of CIFAR-10 covering 60,000 32×32 RGB images across ten balanced object classes. Each row carries inline PNG bytes, the integer label, the human-readable class name, and a cosine-normalized CLIP image embedding, all backed…
+- [Fashion-MNIST](/enterprise/v8-1-0-test/datasets/fashion-mnist.md): A Lance-formatted version of Fashion-MNIST covering 70,000 28×28 grayscale clothing images across ten balanced apparel classes. Each row carries inline PNG bytes, the integer label, the human-readable class name, and a cosine-normalized CLIP image…
+- [Food-101](/enterprise/v8-1-0-test/datasets/food101.md): A Lance-formatted version of Food-101, the fine-grained dish-classification benchmark of 101,000 photos spread evenly across 101 dish classes, sourced from ethz/food101. Each row carries the inline JPEG bytes, the integer label, the human-readable…
+- [Oxford-IIIT Pet](/enterprise/v8-1-0-test/datasets/oxford-pets.md): A Lance-formatted version of the Oxford-IIIT Pet dataset — 7,390 cat and dog photos across 37 breeds — sourced from pcuenq/oxford-pets. Each row carries the inline JPEG bytes, the breed name, a species flag distinguishing cats from dogs, and a…
+- [Stanford Cars](/enterprise/v8-1-0-test/datasets/stanford-cars.md): A Lance-formatted version of the Stanford Cars fine-grained benchmark — 8,144 photographs across 196 make/model/year classes — sourced from Multimodal-Fatima/StanfordCars_train. Each row carries the inline JPEG bytes, the integer class id, a…
+- [ImageNet-1k Validation](/enterprise/v8-1-0-test/datasets/imagenet-1k-val.md): A Lance-formatted version of the canonical 50,000-image ImageNet-1k (ILSVRC2012) validation split, sourced from benjamin-paine/imagenet-1k. Each row is one image with its integer class id, a string class name, and a cosine-normalized OpenCLIP image…
+- [EuroSAT](/enterprise/v8-1-0-test/datasets/eurosat.md): A Lance-formatted version of EuroSAT, the canonical Sentinel-2 RGB land-cover benchmark, sourced from blanchon/EuroSAT_RGB. Each row is a single 64×64 RGB tile with its integer class id, the human-readable class name, and a cosine-normalized…
+- [Handwriting OCR](/enterprise/v8-1-0-test/datasets/handwriting-ocr.md): This Lance-formatted version of the Doctor's Handwritten Prescription BD dataset contains 4,680 cropped PNG images of handwritten medicine names from Bangladesh. Each row keeps the original image bytes with the medicine and generic-name labels…
+- [COCO 2017 Detection](/enterprise/v8-1-0-test/datasets/coco-detection-2017.md): A Lance-formatted version of the COCO 2017 object detection benchmark, sourced from detection-datasets/coco. Each row is one image with its inline JPEG bytes, the full per-image list of bounding boxes, COCO 80-class category ids and names…
+- [Pascal VOC 2012 Segmentation](/enterprise/v8-1-0-test/datasets/pascal-voc-2012-segmentation.md): A Lance-formatted version of the Pascal VOC 2012 semantic segmentation split, sourced from nateraw/pascal-voc-2012. Each row pairs an inline JPEG image with the per-pixel PNG segmentation mask and a cosine-normalized OpenCLIP ViT-B-32 image…
+- [ADE20K](/enterprise/v8-1-0-test/datasets/ade20k.md): A Lance-formatted version of the full ADE20K scene parsing benchmark, sourced from 1aurent/ADE20K. Each row is one scene image with its inline JPEG bytes, a per-pixel semantic segmentation map encoded as PNG bytes, an optional instance map, scene…
+- [KITTI 2D Detection](/enterprise/v8-1-0-test/datasets/kitti-2d-detection.md): A Lance-formatted version of the KITTI 2D Object Detection benchmark, sourced from nateraw/kitti so no manual signup or download from cvlibs.net is required. Each row is a single driving frame with inline JPEG bytes, the full set of 2D and 3D…
+- [COCO Captions 2017](/enterprise/v8-1-0-test/datasets/coco-captions-2017.md): A Lance-formatted version of the COCO Captions 2017 corpus, redistributed via lmms-lab/COCO-Caption2017. Each row is one image with 5–7 human-written captions, a cosine-normalized CLIP image embedding, and a cosine-normalized CLIP text embedding of…
+- [Flickr30k](/enterprise/v8-1-0-test/datasets/flickr30k.md): A Lance-formatted version of Flickr30k, redistributed via lmms-lab/flickr30k. Each row is one image with 5 human-written captions, a cosine-normalized CLIP image embedding, and a cosine-normalized CLIP text embedding of the canonical caption — all…
+- [LAION-1M](/enterprise/v8-1-0-test/datasets/laion-1m.md): A Lance-formatted slice of the LAION image-text corpus (~1M rows) with inline JPEG bytes, CLIP image embeddings (img_emb), full metadata, and a pre-built ANN index — all available directly from the Hub at…
+- [ChartQA](/enterprise/v8-1-0-test/datasets/chartqa.md): A Lance-formatted version of ChartQA, a benchmark for question answering over scientific and business charts that demands a mix of logical and visual reasoning, redistributed via lmms-lab/ChartQA. Each row carries the chart image as inline JPEG…
+- [DocVQA](/enterprise/v8-1-0-test/datasets/docvqa.md): A Lance-formatted version of DocVQA, a benchmark for visual question answering over document images such as industry and government scans, multi-page reports, forms, and receipts, redistributed via lmms-lab/DocVQA (DocVQA config). Each row carries…
+- [TextVQA](/enterprise/v8-1-0-test/datasets/textvqa.md): A Lance-formatted version of TextVQA — visual question answering where the question requires reading text in the image (street signs, product labels, screen captures) — sourced from lmms-lab/textvqa. Each row carries the image bytes, the question…
+- [VQAv2](/enterprise/v8-1-0-test/datasets/vqav2.md): A Lance-formatted version of VQAv2 — open-ended visual question answering on COCO images — sourced from lmms-lab/VQAv2. Each row is one (image, question, 10 annotator answers) triple with paired CLIP image and question embeddings drawn from the…
+- [GQA testdev-balanced](/enterprise/v8-1-0-test/datasets/gqa-testdev-balanced.md): A Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined against the matching 398 images — sourced from lmms-lab/GQA. The original redistribution ships instructions and images as separate…
+- [SQuAD v2](/enterprise/v8-1-0-test/datasets/squad-v2.md): A Lance-formatted version of SQuAD v2 — the Stanford Question Answering Dataset with both answerable and deliberately unanswerable questions over Wikipedia passages — with MiniLM question embeddings stored inline and ready for retrieval at…
+- [TriviaQA](/enterprise/v8-1-0-test/datasets/trivia-qa.md): A Lance-formatted version of TriviaQA (rc.nocontext config) — a large reading-comprehension dataset of trivia questions paired with a canonical answer, accepted aliases, and entity-type metadata — with MiniLM question embeddings stored inline and…
+- [HotpotQA distractor](/enterprise/v8-1-0-test/datasets/hotpotqa-distractor.md): A Lance-formatted version of HotpotQA using the distractor config — multi-hop reading-comprehension questions where each answer requires combining facts from two Wikipedia paragraphs, with 10 candidate paragraphs per question (gold + 8…
+- [Natural Questions Validation](/enterprise/v8-1-0-test/datasets/natural-questions-val.md): A Lance-formatted version of the Natural Questions validation split — 7,830 real Google search queries paired with the full Wikipedia article a human used to answer them, plus 1–5 annotator labels per question. MiniLM question embeddings are stored…
+- [MS MARCO v2.1](/enterprise/v8-1-0-test/datasets/ms-marco-v2.md): A Lance-formatted version of MS MARCO v2.1 — Microsoft's machine-reading-comprehension benchmark built from anonymized Bing query logs. Each row is one user query, the up-to-10 candidate passages Bing retrieved for it with relevance flags, and the…
+- [FineWeb-Edu](/enterprise/v8-1-0-test/datasets/fineweb-edu.md): A Lance-formatted version of FineWeb-Edu — over 1.5 billion educational web passages with cleaned text, source metadata, language detection signals, and 384-dim text embeddings — available directly from the Hub at…
+- [LibriSpeech clean](/enterprise/v8-1-0-test/datasets/librispeech-clean.md): A Lance-formatted version of the LibriSpeech ASR clean configuration, sourced from openslr/librispeech_asr. Each row is one utterance with inline FLAC audio bytes, the reference transcript, a sentence-transformers embedding of that transcript, and…
+- [OpenVid-1M](/enterprise/v8-1-0-test/datasets/openvid.md): A Lance-formatted version of the OpenVid-1M corpus — 937,957 high-quality clips with inline MP4 bytes, 1024-dim video embeddings, captions, and rich per-clip quality signals — available directly from the Hub at…
+
+</Visibility>
