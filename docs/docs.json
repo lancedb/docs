@@ -66,12 +66,12 @@
   "navigation": {
     "products": [
       {
-        "product": "LanceDB OSS",
+        "product": "OSS",
         "description": "Open-source library and SDKs",
         "icon": "database",
         "versions": [
           {
-            "version": "OSS 0.99.0-test",
+            "version": "0.99",
             "default": true,
             "tag": "Latest",
             "tabs": [
@@ -547,7 +547,7 @@
             ]
           },
           {
-            "version": "OSS 0.98.0-test",
+            "version": "0.98",
             "tabs": [
               {
                 "tab": "Documentation",
@@ -1022,12 +1022,12 @@
         ]
       },
       {
-        "product": "LanceDB Enterprise",
+        "product": "Enterprise",
         "description": "Managed and BYOC service",
         "icon": "server",
         "versions": [
           {
-            "version": "Enterprise 8.2.0-test",
+            "version": "8.2",
             "default": true,
             "tag": "Latest",
             "tabs": [
@@ -1503,7 +1503,7 @@
             ]
           },
           {
-            "version": "Enterprise 8.1.0-test",
+            "version": "8.1",
             "tabs": [
               {
                 "tab": "Documentation",
