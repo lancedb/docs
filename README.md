@@ -202,6 +202,128 @@ set. It cannot see whether the environment requires reviewers and admits only
 `main`, or whether the ruleset refuses every other writer: verify those
 separately before the first production publication.
 
+## Saved editions
+
+Each published documentation edition is saved in this repository: the site the
+assembler built from one product release's own sources, in
+`editions/<product>/<version>/`, with a release record in
+`releases/<product>-<version>.yaml` that names every source it was read from.
+New documentation is still written in `lancedb/lancedb` and `lancedb/sophon`.
+[VERSIONING.md](VERSIONING.md) describes the design. Composing the saved
+editions into the site, and publishing them, are later steps; for now the site
+is assembled and published as above.
+
+### Preparing an edition
+
+Fetch the release tags into the lancedb and sophon checkouts, then run the
+command from a checkout of this repository with no uncommitted changes to
+`assemble.yaml`, `scripts/` or `docs/`:
+
+```bash
+uv run --no-project --with pyyaml scripts/edition.py prepare enterprise 1.10.0 --lancedb ../lancedb --sophon ../sophon
+uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterprise v1.10.0 --lancedb ../lancedb --sophon ../sophon
+```
+
+- **Enterprise** reads sophon's tag `v1.10.0`, which must have a
+  `release-qualified/v1.10.0` tag on the same commit. The shared pages come
+  from the LanceDB commit that release bundles at `src/lancedb`, which may be
+  one no OSS release tags: fetch it with `git -C ../lancedb fetch origin
+  <commit>`. `--bundled-lancedb <commit>` stops preparation if the release
+  bundles a different one.
+- **OSS** reads lancedb's tag `v0.41.0`. The Enterprise pages come from the
+  sophon tag or full commit hash named with `--enterprise`; a branch is not
+  accepted. Which Enterprise release to name is not settled yet; see
+  [Open questions](VERSIONING.md#open-questions).
+- The lancedb and sophon roots are read from Git at their commits, never from a
+  working tree, and only from `docs/web`. This repository's `docs/`,
+  `assemble.yaml` and assembler come from HEAD. Only stable versions, such as
+  `1.2.3`, have editions.
+
+Preparation saves nothing, and says why, when a tag or commit is missing, a
+release has no `docs/web`, an Enterprise release is not qualified or bundles
+another LanceDB, a root holds a symlink, the Enterprise root holds a hidden
+file, the assembler stops, or `.gitignore` would leave out one of the
+edition's files.
+
+Preparing a saved release again changes nothing when its release commits match
+the record, even after the edition has been corrected, and stops when they
+differ. It never replaces a saved edition.
+
+Check the new edition as a site, check every edition against its record, and
+commit the edition and its record together:
+
+```bash
+(cd editions/enterprise/1.10.0 && mint validate && mint broken-links --check-anchors --check-redirects)
+uv run --no-project --with pyyaml scripts/edition.py check
+```
+
+A record looks like this, with shortened commits and checksums:
+
+```yaml
+format: 1
+product: enterprise
+version: 1.10.0
+edition: editions/enterprise/1.10.0
+release:
+  repository: lancedb/sophon
+  tag: v1.10.0
+  commit: 5a1f0c9e…
+  qualification:
+    tag: release-qualified/v1.10.0
+    object: 9c3e27d4…
+  bundled_lancedb: 7d0b4a12…
+sources:
+  lancedb:
+    repository: lancedb/lancedb
+    path: docs/web
+    commit: 7d0b4a12…
+  enterprise:
+    repository: lancedb/sophon
+    path: docs/web
+    commit: 5a1f0c9e…
+  build:
+    repository: lancedb/docs
+    path: docs
+    commit: e2c4b8f0…
+  openapi:
+    repository: lance-format/lance-namespace
+    release: v0.12.0
+    path: docs/src/spec.yaml
+    sha256: 41ab93c7…
+prepared:
+  files: 312
+  sha256: b07d5e61…
+corrections: []
+```
+
+`release` and `sources` say what the edition was built from, and `prepared` is
+the snapshot as first saved; neither changes afterwards. An OSS record has
+`enterprise_pages`, the `--enterprise` ref and its commit, in place of
+`qualification` and `bundled_lancedb`.
+
+### Correcting a saved edition
+
+A saved edition can be corrected after review, at the same URL:
+
+1. Edit the affected files in each edition that has the error, and in no other.
+2. In each edition's record, add an entry under `corrections`. Leave the rest
+   of the record as it is.
+
+   ```yaml
+   corrections:
+   - summary: Fix the default retry count in the merge-insert example.
+     files: [tables/merge-insert.mdx]
+   ```
+
+3. Run the checks above. `edition.py check` fails when an edition differs from
+   its prepared snapshot without a correction listed. Check a corrected example
+   the way that example needs; a typo needs no test run.
+4. If the error is still in the current source, in `lancedb/lancedb`,
+   `lancedb/sophon` or `docs/` here, fix it there as well.
+5. Open one pull request that names every edition it corrects.
+
+Preparing that release again later keeps the correction.
+
 ## Code snippets
 
 The code examples on the open-source pages are tested programs in
