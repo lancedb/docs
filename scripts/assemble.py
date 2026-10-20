@@ -1016,6 +1016,22 @@ def emit(
     return written + 1
 
 
+def assemble_site(config: Config) -> tuple[int, list[str]]:
+    """Run every stage on `config` and write its output.
+
+    Returns the number of files written and the warnings. `main` and the
+    edition builder (`edition.py`) both assemble through here, so a saved
+    edition is built exactly the way the site is.
+    """
+    resolved = resolve(config)
+    docs_json, nav_raw = assemble_nav(resolved)
+    warnings = validate(config, resolved, docs_json)
+    merge(resolved)
+    inline_examples(resolved)
+    annotate(resolved, docs_json)
+    return emit(config, resolved, docs_json, nav_raw), warnings
+
+
 def revision(path: Path) -> str:
     """The commit a root was read from, so every build names its inputs.
 
@@ -1133,13 +1149,7 @@ def main() -> int:
             print(f"openapi spec {'updated from' if changed else 'already matches'} {tag}")
             return 0
 
-        resolved = resolve(config)
-        docs_json, nav_raw = assemble_nav(resolved)
-        warnings = validate(config, resolved, docs_json)
-        merge(resolved)
-        inline_examples(resolved)
-        annotate(resolved, docs_json)
-        count = emit(config, resolved, docs_json, nav_raw)
+        count, warnings = assemble_site(config)
     except AssembleError as exc:
         print(f"assemble: {exc}", file=sys.stderr)
         return 1
