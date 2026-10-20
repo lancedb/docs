@@ -357,6 +357,11 @@ names, and for a push to `main`, the commit `main` pointed at before. It
 fetches that commit by hash. A manual run of the workflow has no base, and
 checks each edition against its record only.
 
+This keeps saved editions only while the check must pass before a pull request
+merges, which is a repository rule set up separately. The check on a push to
+`main` reports a violation in that push but cannot undo it, and a later push
+does not find it, because its base already includes the change.
+
 ### Correcting a saved edition
 
 A saved edition can be corrected after review, at the same URL:

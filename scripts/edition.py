@@ -34,9 +34,9 @@ this checkout's scripts/, which must be that commit's.
 A saved edition is never replaced. Preparing a release that already has one
 changes nothing when the release inputs match its record, even after the
 edition has been corrected, and stops when they differ. A preparation that
-fails leaves neither an edition nor a record behind. Pull requests run
-`check --base` against their base commit, so a merged edition and its record
-stay as they are, apart from recorded corrections.
+fails leaves neither an edition nor a record behind. `check --base`, run on a
+pull request against its base commit and required before it merges, keeps a
+merged edition and its record as they are, apart from recorded corrections.
 
 Usage:
 
