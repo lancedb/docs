@@ -48,7 +48,8 @@ SOURCES = {
 }
 # Pin docs inputs to canonical main; squash merges can discard branch commits.
 DOCS_REMOTE = "origin"
-DOCS_MAIN = f"{DOCS_REMOTE}/main"
+# Fully qualified: a local branch or tag named origin/main would win the shorthand.
+DOCS_MAIN = f"refs/remotes/{DOCS_REMOTE}/main"
 DOCS_URLS = re.compile(
     r"(?:https://github\.com/|ssh://git@github\.com/|git@github\.com:)lancedb/docs(?:\.git)?", re.IGNORECASE
 )
@@ -201,17 +202,17 @@ def docs_main(repo: Path) -> str:
             "or SSH"
         )
     try:
-        git(repo, "fetch", "--quiet", "--no-tags", DOCS_REMOTE, f"+refs/heads/main:refs/remotes/{DOCS_MAIN}")
+        git(repo, "fetch", "--quiet", "--no-tags", DOCS_REMOTE, f"+refs/heads/main:{DOCS_MAIN}")
     except EditionError as exc:
         raise EditionError(f"could not fetch {SOURCES['build'][0]} main: {exc}") from None
     return commit_of(repo, DOCS_MAIN, SOURCES["build"][0])
 
 
-def docs_commit(repo: Path, ref: str) -> str:
+def docs_commit(repo: Path, ref: str | None) -> str:
     """Select docs inputs from main and require this checkout's scripts to match."""
     what = f"{SOURCES['build'][0]} --docs"
     main = docs_main(repo)
-    commit = commit_of(repo, ref, what)
+    commit = main if ref is None else commit_of(repo, ref, what)
     if not is_ancestor(repo, commit, main):
         raise EditionError(
             f"{what}: {ref} is {commit}, which {SOURCES['build'][0]} main ({main}) does not "
@@ -796,9 +797,9 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
                       help="a lancedb/lancedb repository (default: ../lancedb)")
     prep.add_argument("--sophon", type=Path, default=REPO_ROOT.parent / "sophon",
                       help="a lancedb/sophon repository (default: ../sophon)")
-    prep.add_argument("--docs", metavar="REF", default=DOCS_MAIN,
+    prep.add_argument("--docs", metavar="REF",
                       help="the commit of lancedb/docs main to read docs/ and assemble.yaml from "
-                           f"(default: {DOCS_MAIN}, as fetched from origin when preparing)")
+                           "(default: main as fetched from origin when preparing)")
     checking = commands.add_parser("check", help="check the saved editions against their records")
     checking.add_argument("--base", metavar="COMMIT",
                           help="also require the editions and records on COMMIT, such as a pull "

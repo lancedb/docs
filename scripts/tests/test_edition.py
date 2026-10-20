@@ -589,6 +589,56 @@ def test_a_main_not_fetched_from_lancedb_docs_is_not_trusted(docs, sources):
     assert git(docs, "rev-parse", "origin/main") == main
 
 
+def shadowed_main(docs: Path, kind: str) -> tuple[str, str]:
+    """A local branch or tag named origin/main on an unmerged commit, which the
+    shorthand origin/main resolves to before the remote-tracking ref."""
+    main = git(docs, "rev-parse", "refs/remotes/origin/main")
+    git(docs, "switch", "-q", "-c", "editions")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, unmerged\n")
+    unmerged = commit_all(docs, "an unmerged page")
+    git(docs, kind, "origin/main", unmerged)
+    assert git(docs, "rev-parse", "origin/main") == unmerged
+    return main, unmerged
+
+
+@pytest.mark.parametrize("kind", ["branch", "tag"])
+def test_a_local_ref_named_origin_main_is_not_canonical_main(docs, sources, kind):
+    main, _unmerged = shadowed_main(docs, kind)
+
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+
+    rec = record(docs, "oss-0.98.0")
+    assert rec["sources"]["build"]["commit"] == main
+    assert (docs / rec["edition"] / "geneva/index.mdx").read_text() == "# Geneva\n"
+
+
+def test_main_is_fetched_where_it_is_read_when_origin_tracks_another_branch(docs, sources):
+    """Git updates no tracking ref from the configured refspec here, so the
+    fetch itself must write refs/remotes/origin/main."""
+    main = git(docs, "rev-parse", "refs/remotes/origin/main")
+    git(docs, "config", "remote.origin.fetch", "+refs/heads/other:refs/remotes/origin/other")
+    git(docs, "switch", "-q", "-c", "editions")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, unmerged\n")
+    git(docs, "update-ref", "refs/remotes/origin/main", commit_all(docs, "an unmerged page"))
+
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+
+    rec = record(docs, "oss-0.98.0")
+    assert rec["sources"]["build"]["commit"] == main
+    assert (docs / rec["edition"] / "geneva/index.mdx").read_text() == "# Geneva\n"
+
+
+@pytest.mark.parametrize("kind", ["branch", "tag"])
+def test_naming_an_unmerged_commit_is_refused_despite_a_local_origin_main(docs, sources, kind):
+    main, unmerged = shadowed_main(docs, kind)
+
+    for ref in (unmerged, "origin/main"):
+        with pytest.raises(edition.EditionError,
+                           match=rf"--docs: {ref} is {unmerged}, which lancedb/docs main \({main}\) does not contain"):
+            prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0", "--docs", ref)
+    assert state(docs) == {}
+
+
 # protecting saved editions
 
 
