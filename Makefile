@@ -32,9 +32,7 @@ assemble:
 test-assemble:
 	@$(ASSEMBLE_RUN) --with pytest pytest scripts/tests -q
 
-# Check every saved edition against its release record. With BASE set to a
-# commit, also check that the editions and records on it are kept. See "Saved
-# editions" in README.md.
+# Set BASE to enforce preservation of editions already merged.
 check-editions:
 	@$(ASSEMBLE_RUN) scripts/edition.py check $(if $(BASE),--base $(BASE))
 

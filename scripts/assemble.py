@@ -1017,12 +1017,7 @@ def emit(
 
 
 def assemble_site(config: Config) -> tuple[int, list[str]]:
-    """Run every stage on `config` and write its output.
-
-    Returns the number of files written and the warnings. `main` and the
-    edition builder (`edition.py`) both assemble through here, so a saved
-    edition is built exactly the way the site is.
-    """
+    """Build live sites and saved editions identically; return file count and warnings."""
     resolved = resolve(config)
     docs_json, nav_raw = assemble_nav(resolved)
     warnings = validate(config, resolved, docs_json)

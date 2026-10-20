@@ -29,8 +29,7 @@ env:
   SOPHON_DOCS_ROOT: sophon/docs/web
 
 jobs:
-  # Forks run the guard tests and the saved-edition check without
-  # private-source credentials.
+  # Fork-safe checks need no private-source credentials.
   test:
     name: Test the assembler
     runs-on: ubuntu-latest
@@ -43,11 +42,7 @@ jobs:
       - name: Test the overlay, navigation and private-root guards
         run: make test-assemble
 
-      # A pull request is compared with the base commit its event names, and a
-      # push with the commit the branch pointed at before it. That commit is
-      # fetched by hash, so the comparison never depends on a remote-tracking
-      # branch or on what the shallow checkout happens to hold. A manual run
-      # has no base and checks each edition against its record only.
+      # Fetch the event's base SHA so shallow clones and moving branches do not affect preservation checks.
       - name: Check that saved editions and their records are kept
         env:
           EVENT: ${{ github.event_name }}

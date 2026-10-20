@@ -28,9 +28,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import edition  # noqa: E402
 
-# Bare repositories named lancedb-docs.git stand in for lancedb/docs, whose
-# real URLs preparation requires of origin. Tests accept both; one test checks
-# the real ones alone.
+# Allow local stand-ins without adding a production URL-check bypass.
 LANCEDB_DOCS_URLS = edition.DOCS_URLS
 TEST_DOCS_URLS = re.compile(rf"{LANCEDB_DOCS_URLS.pattern}|/.+/lancedb-docs\.git", re.IGNORECASE)
 
@@ -134,9 +132,7 @@ def new_repo(path: Path) -> Path:
 
 
 def oss_pages(label: str) -> dict:
-    """lancedb's docs/web as of `label`: navigation, a page with an example and a
-    draft section, a draft page, an asset, and the Enterprise placeholder the
-    current assembler needs."""
+    """Minimal docs/web fixture, including the required Enterprise placeholder."""
     web = "docs/web/"
     guide = (
         "---\ntitle: Guide\n---\n\n"
@@ -229,10 +225,7 @@ def docs(tmp_path) -> Path:
 
 
 def docs_checkout(path: Path) -> Path:
-    """A checkout of lancedb/docs main, whose origin is a bare repository that
-    stands in for lancedb/docs: this repository's assemble.yaml and
-    .gitignore, and docs-owned pages, a navigation fragment and the OpenAPI
-    spec."""
+    """Docs checkout with a local bare origin standing in for canonical main."""
     repo = new_repo(path)
     for name in ("assemble.yaml", ".gitignore"):
         shutil.copy(SCRIPTS.parent / name, repo / name)
@@ -254,8 +247,7 @@ def docs_checkout(path: Path) -> Path:
 
 
 def on_main(docs: Path) -> str:
-    """HEAD merged into lancedb/docs main: pushed to the repository standing in
-    for it, where preparation fetches main from."""
+    """Make HEAD available through the canonical-main stand-in."""
     git(docs, "push", "-q", "--force", "origin", "HEAD:refs/heads/main")
     return git(docs, "rev-parse", "HEAD")
 
@@ -302,8 +294,7 @@ def state(docs: Path) -> dict[str, bytes | None]:
 
 
 def correct(docs: Path, name: str, page: str, text: str) -> str:
-    """A reviewed correction, as the README describes it: edit the saved page,
-    then record it."""
+    """Apply the README's edit-and-record correction workflow."""
     product, version = name.split("-")
     (docs / "editions" / product / version / page).write_text(text)
     return record_correction(docs, name, page)
@@ -331,9 +322,7 @@ def commit_all(docs: Path, message: str) -> str:
     return git(docs, "rev-parse", "HEAD")
 
 
-# --------------------------------------------------------------------------- #
 # preparing editions
-# --------------------------------------------------------------------------- #
 
 
 def test_oss_edition_is_built_from_its_tag_and_named_enterprise_pages(docs, sources):
@@ -346,8 +335,6 @@ def test_oss_edition_is_built_from_its_tag_and_named_enterprise_pages(docs, sour
         "static/assets/marker.svg",
     ]
     guide = files["guide.mdx"].decode()
-    # The tag's own page, with its example written in, its draft section and
-    # draft page kept for Mint, and its asset byte for byte.
     assert "Shared guide as of 0.98.0." in guide
     assert "unreleased main" not in guide and "Uncommitted" not in guide
     assert "```python Python icon=\"python\"\nprint('0.98.0')\n```" in guide
@@ -388,8 +375,7 @@ def test_enterprise_edition_reads_the_lancedb_it_bundles(docs, sources):
     prepare(docs, sources, "enterprise", "8.1.0", "--bundled-lancedb", bundled)
 
     files = saved(docs / "editions/enterprise/8.1.0")
-    # The shared pages are the bundled revision's, which no OSS release tags,
-    # and no OSS edition is needed for them.
+    # The bundled revision has no OSS release tag or saved edition.
     assert "Shared guide as of the bundled revision." in files["guide.mdx"].decode()
     assert files["enterprise/security.mdx"] == b"Enterprise security for 8.1\n"
     assert not (docs / "editions/oss").exists()
@@ -462,9 +448,7 @@ def test_a_root_without_recorded_provenance_stops_preparation(docs, sources):
     assert state(docs) == {}
 
 
-# --------------------------------------------------------------------------- #
 # the docs input commit
-# --------------------------------------------------------------------------- #
 
 
 def test_docs_inputs_come_from_main_not_from_the_branch(docs, sources):
@@ -480,7 +464,6 @@ def test_docs_inputs_come_from_main_not_from_the_branch(docs, sources):
     (docs / "docs/geneva/index.mdx").write_text("# Geneva, uncommitted\n")
 
     prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
-    # The first edition is committed on the branch before a second is prepared.
     git(docs, "add", "editions", "releases")
     git(docs, "commit", "-q", "-m", "oss 0.98.0")
     prepare(docs, sources, "enterprise", "8.1.0")
@@ -518,7 +501,6 @@ def test_docs_inputs_off_main_or_unlike_the_running_scripts_are_refused(docs, so
                        match=rf"--docs: HEAD is {head}, which lancedb/docs main \({main}\) does not contain"):
         prepare(docs, sources, *oss, "--docs", "HEAD")
 
-    # The branch changes the assembler, committed and then not.
     (docs / "scripts").mkdir()
     (docs / "scripts/assemble.py").write_text("# a changed assembler\n")
     commit_all(docs, "an unmerged assembler")
@@ -575,7 +557,6 @@ def test_a_fork_origin_is_refused_before_anything_is_fetched_or_saved(docs, sour
         prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     with pytest.raises(edition.EditionError, match=refused):
         prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0", "--docs", "upstream/main")
-    # Every URL of origin must be lancedb/docs's.
     git(docs, "remote", "set-url", "origin", git(docs, "remote", "get-url", "upstream"))
     git(docs, "remote", "set-url", "--add", "origin", str(fork))
     with pytest.raises(edition.EditionError, match=refused):
@@ -608,9 +589,7 @@ def test_a_main_not_fetched_from_lancedb_docs_is_not_trusted(docs, sources):
     assert git(docs, "rev-parse", "origin/main") == main
 
 
-# --------------------------------------------------------------------------- #
 # protecting saved editions
-# --------------------------------------------------------------------------- #
 
 
 def test_conflicting_inputs_for_a_saved_release_stop(docs, sources, tmp_path):
@@ -620,7 +599,6 @@ def test_conflicting_inputs_for_a_saved_release_stop(docs, sources, tmp_path):
     with pytest.raises(edition.EditionError, match="enterprise_pages recorded .*, requested"):
         prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.2.0")
 
-    # The release tag moved after the edition was saved.
     retagged = tmp_path / "retagged"
     git(tmp_path, "clone", "-q", str(sources["lancedb"]), str(retagged))
     git(retagged, "tag", "-f", "-a", "-m", "moved", "v0.98.0", sources["oss"]["0.99.0"])
@@ -636,8 +614,7 @@ def test_duplicate_preparation_changes_nothing_even_after_a_correction(docs, sou
     assert "editions/oss/0.98.0 is as prepared; nothing changed" in out
 
     correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
-    # This repository's main moves on, and the same release is prepared
-    # again, its Enterprise pages named by commit this time.
+    # A commit reference and a tag naming it are the same release input.
     (docs / "docs/geneva/index.mdx").write_text("# Geneva, later\n")
     git(docs, "commit", "-q", "-am", "later")
     on_main(docs)
@@ -704,9 +681,7 @@ def test_an_edition_or_a_record_without_its_pair_is_refused(docs, sources):
     assert not (docs / "editions/oss/0.98.0").exists()
 
 
-# --------------------------------------------------------------------------- #
 # checking saved editions
-# --------------------------------------------------------------------------- #
 
 
 def test_check_pairs_records_and_requires_corrections_to_be_listed(docs, sources):
@@ -742,8 +717,7 @@ def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
     git(docs, "commit", "-q", "-m", "scripts")
     main = on_main(docs)
 
-    # The checkout's own edition.py, given the test's lancedb/docs URLs: the
-    # real ones refuse the local repository standing in for it.
+    # Run the checkout's CLI with the local canonical-main stand-in.
     runner = (
         "import re, sys; sys.path.insert(0, 'scripts'); import edition; "
         "edition.DOCS_URLS = re.compile(sys.argv[1], re.IGNORECASE); raise SystemExit(edition.main(sys.argv[2:]))"
@@ -795,9 +769,7 @@ def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
     assert result.stderr.startswith(f"edition: --base: {'1' * 40} is not a commit in ")
 
 
-# --------------------------------------------------------------------------- #
 # corrections are bound to the edition's checksum
-# --------------------------------------------------------------------------- #
 
 
 def test_a_later_unrecorded_change_fails_after_a_recorded_correction(docs, sources):
@@ -826,14 +798,12 @@ def test_each_correction_records_the_snapshot_it_accepts(docs, sources):
     first = correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
     assert edition.check(docs) == (["oss 0.98.0: corrected (1 correction)"], [])
 
-    # Later changes nobody recorded: an edit, then a deletion.
     page = docs / "editions/oss/0.98.0/index.mdx"
     page.write_text("Unreviewed edit\n")
     assert "has changed since its latest recorded correction" in edition.check(docs)[1][0]
     page.unlink()
     assert "has changed since its latest recorded correction" in edition.check(docs)[1][0]
 
-    # Recording the deletion, once reviewed, as a second correction accepts it.
     second = record_correction(docs, "oss-0.98.0", "index.mdx")
     assert edition.check(docs) == (["oss 0.98.0: corrected (2 corrections)"], [])
     rec = record(docs, "oss-0.98.0")
@@ -841,13 +811,11 @@ def test_each_correction_records_the_snapshot_it_accepts(docs, sources):
     assert [c["sha256"] for c in rec["corrections"]] == [first, second]
     assert second == checksum(saved(docs / "editions/oss/0.98.0"))
 
-    # Preparing the release again keeps the edition and both corrections.
     before = state(docs)
     out = prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     assert out.endswith("editions/oss/0.98.0 is corrected (2 corrections); nothing changed")
     assert state(docs) == before
 
-    # It stays a no-op when a change has not been recorded, and says so.
     (docs / "editions/oss/0.98.0/guide.mdx").write_text("Another unreviewed edit\n")
     before = state(docs)
     with pytest.raises(edition.EditionError, match="already saved; nothing changed, but .* has changed"):
@@ -855,9 +823,7 @@ def test_each_correction_records_the_snapshot_it_accepts(docs, sources):
     assert state(docs) == before
 
 
-# --------------------------------------------------------------------------- #
 # merged editions and records are kept
-# --------------------------------------------------------------------------- #
 
 
 @pytest.fixture
@@ -891,7 +857,6 @@ def test_unchanged_editions_and_a_new_one_pass_against_the_base(docs, sources, b
     rewrite(docs, "enterprise-8.1.0", lambda rec: None)
     assert edition.check(docs, base=base) == ([*KEPT, "oss 0.99.0: as prepared"], [])
 
-    # A new edition is checked against its own record, as always.
     (docs / "editions/oss/0.99.0/index.mdx").write_text("Edited without a record\n")
     lines, problems = edition.check(docs, base=base)
     assert lines == KEPT
@@ -949,7 +914,6 @@ def test_removing_or_replacing_a_saved_release_fails_against_the_base(docs, sour
         "is never removed",
     ])
 
-    # Only the edition removed: reported once, with its record.
     git(docs, "reset", "-q", "--hard", base)
     shutil.rmtree(docs / "editions/enterprise/8.1.0")
     assert edition.check(docs, base=base) == ([KEPT[1]], [
@@ -976,9 +940,7 @@ def test_an_appended_correction_passes_against_the_base(docs, base):
     assert record(docs, "oss-0.98.0")["corrections"][0] == rec["corrections"][0]
 
 
-# --------------------------------------------------------------------------- #
 # release records keep their provenance
-# --------------------------------------------------------------------------- #
 
 
 def rewrite(docs: Path, name: str, change) -> None:
@@ -1025,7 +987,6 @@ def records(tmp_path_factory, sources) -> dict[str, dict]:
 
 
 def change(path: str, value=KeyError):
-    """Set the field at a dotted path, or delete it."""
     def apply(rec):
         *parents, key = path.split(".")
         for parent in parents:

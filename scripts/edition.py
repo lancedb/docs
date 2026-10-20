@@ -2,41 +2,10 @@
 Prepare a saved documentation edition from one product release, and check the
 saved editions.
 
-An edition is the site the assembler builds from one release's own sources,
-saved under `editions/<product>/<version>/`. Its release record,
-`releases/<product>-<version>.yaml`, names the release and the commit every
-root was read from. Later builds compose the saved editions; nothing fetches
-fresh content into one. See VERSIONING.md.
-
-    prepare oss VERSION         the lancedb/lancedb tag vVERSION, with the
-                                Enterprise pages from a lancedb/sophon tag or
-                                commit named explicitly with --enterprise
-    prepare enterprise VERSION  the lancedb/sophon tag vVERSION, which must be
-                                qualified, with the shared pages from the
-                                LanceDB commit that release bundles
-    check                       check every record, pair it with its edition,
-                                and require the edition to match the checksum
-                                the record last accepted: the prepared one, or
-                                its latest correction's
-    check --base COMMIT         also require every edition and record on
-                                COMMIT to remain, each record as it was there
-                                but for corrections added at the end
-
-Each root is read from Git objects at its commit, never from a working tree,
-and only from its documentation folder: `docs/web` of lancedb/lancedb and
-lancedb/sophon, and `docs` of this repository at a commit of lancedb/docs
-main, which also supplies assemble.yaml. Preparation fetches that main from
-origin, which must be lancedb/docs rather than a fork, and reads its head or
-an earlier commit named with --docs. A branch's commits get new hashes when it
-is merged, so a record names only a commit of main. The assembler that runs is
-this checkout's scripts/, which must be that commit's.
-
-A saved edition is never replaced. Preparing a release that already has one
-changes nothing when the release inputs match its record, even after the
-edition has been corrected, and stops when they differ. A preparation that
-fails leaves neither an edition nor a record behind. `check --base`, run on a
-pull request against its base commit and required before it merges, keeps a
-merged edition and its record as they are, apart from recorded corrections.
+Product sources come from their release commits. Docs-owned content and
+assemble.yaml come from canonical lancedb/docs main, with matching scripts/.
+Preparation never replaces an existing edition. Preservation across merges
+requires `check --base` to pass before merging. See VERSIONING.md.
 
 Usage:
 
@@ -71,25 +40,19 @@ PRODUCTS = ("oss", "enterprise")
 # Editions are of stable releases. Prereleases need a policy first.
 VERSION_RE = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 COMMIT_RE = candidate.COMMIT_RE
-# Where each root in assemble.yaml is read from: repository and folder. A root
-# added there without a source here stops preparation, so nothing reaches an
-# edition without its provenance in the record.
+# Every assemble.yaml root needs provenance here.
 SOURCES = {
     "lancedb": ("lancedb/lancedb", "docs/web"),
     "enterprise": ("lancedb/sophon", "docs/web"),
     "build": ("lancedb/docs", "docs"),
 }
-# This repository's main, which preparation fetches from origin. Squash and
-# rebase merges give a branch's commits new hashes, so only a commit of main
-# stays recoverable, and a fork's main can hold commits lancedb/docs never
-# has, so origin must be lancedb/docs itself, over HTTPS or SSH.
+# Pin docs inputs to canonical main; squash merges can discard branch commits.
 DOCS_REMOTE = "origin"
 DOCS_MAIN = f"{DOCS_REMOTE}/main"
 DOCS_URLS = re.compile(
     r"(?:https://github\.com/|ssh://git@github\.com/|git@github\.com:)lancedb/docs(?:\.git)?", re.IGNORECASE
 )
-# An Enterprise release bundles LanceDB as this gitlink, and a release that
-# passed qualification has an annotated tag of this name on its commit.
+# Qualification requires an annotated tag on the release commit.
 BUNDLED_LANCEDB = "src/lancedb"
 QUALIFIED_TAG = "release-qualified/v{version}"
 # Files that would change how Git stores the edition's own files.
@@ -108,9 +71,7 @@ class EditionError(Exception):
     """Inputs or state that must stop preparation before anything is saved."""
 
 
-# --------------------------------------------------------------------------- #
 # git
-# --------------------------------------------------------------------------- #
 
 
 def git(repo: Path, *args: str, data: bytes | None = None) -> bytes:
@@ -207,9 +168,7 @@ def export(repo: Path, commit: str, folder: str, dest: Path, what: str) -> None:
         offset = header_end + 1 + size + 1
 
 
-# --------------------------------------------------------------------------- #
 # release inputs
-# --------------------------------------------------------------------------- #
 
 
 def source(name: str, commit: str) -> dict:
@@ -227,11 +186,7 @@ def is_ancestor(repo: Path, commit: str, of: str) -> bool:
 
 
 def docs_main(repo: Path) -> str:
-    """lancedb/docs main, fetched now from origin, which must be lancedb/docs.
-
-    An existing remote-tracking branch is not trusted: it may have been fetched
-    from a fork, or before origin was changed. Only what this fetch brings is.
-    """
+    """Fetch canonical main; an existing tracking ref may come from a fork."""
     result = subprocess.run(
         ["git", "-C", str(repo), "remote", "get-url", "--all", DOCS_REMOTE], capture_output=True
     )
@@ -253,9 +208,7 @@ def docs_main(repo: Path) -> str:
 
 
 def docs_commit(repo: Path, ref: str) -> str:
-    """The commit of lancedb/docs main that the build reads `docs/` and
-    assemble.yaml from. The assembler is this checkout's own scripts/, so they
-    must be that commit's too."""
+    """Select docs inputs from main and require this checkout's scripts to match."""
     what = f"{SOURCES['build'][0]} --docs"
     main = docs_main(repo)
     commit = commit_of(repo, ref, what)
@@ -358,12 +311,7 @@ def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
 
 
 def identity(record: dict) -> dict:
-    """What makes two preparations the same release: commits, not ref names.
-
-    This repository's own commit is left out: re-running a release from a later
-    commit of main is still the same release, and its saved edition is kept as
-    it is.
-    """
+    """Exclude docs main so preparing again after it advances keeps the saved edition."""
     release = record["release"]
     return {
         "release": release.get("commit"),
@@ -375,9 +323,7 @@ def identity(record: dict) -> dict:
     }
 
 
-# --------------------------------------------------------------------------- #
 # records
-# --------------------------------------------------------------------------- #
 
 
 def record_path(repo: Path, product: str, version: str) -> Path:
@@ -401,12 +347,9 @@ MISSING = object()
 
 
 def record_problems(record: object, filename: str) -> list[str]:
-    """Each field of `record` that differs from what `prepare` writes.
+    """Validate fields offline; commit existence is not checked.
 
-    Formats are checked first; a field that disagrees with another is
-    reported only when both are well formed, so each problem names the field
-    that is wrong. Nothing is fetched: the commits are checked for form and
-    agreement, not against the repositories.
+    Compare fields only after validating their formats to avoid duplicate errors.
     """
     problems: list[str] = []
 
@@ -465,7 +408,6 @@ def record_problems(record: object, filename: str) -> list[str]:
         if filename != f"{product}-{version}.yaml":
             problems.append(f"product and version name {product}-{version}.yaml, not {filename}")
 
-    # The release, and the commits only it can name.
     own = "lancedb" if product == "oss" else "enterprise"
     extra = ("enterprise_pages",) if product == "oss" else ("qualification", "bundled_lancedb")
     if product and fields("release", ("repository", "tag", "commit", *extra)):
@@ -485,7 +427,6 @@ def record_problems(record: object, filename: str) -> list[str]:
                 check("release.qualification.object", commit, "a tag object hash")
             check("release.bundled_lancedb", commit, "a commit hash")
 
-    # Every root the assembler read, and the spec the docs root ships.
     if fields("sources", tuple(SOURCES), ("openapi",)):
         for name, (repository, folder) in SOURCES.items():
             if fields(f"sources.{name}", ("repository", "path", "commit")):
@@ -499,7 +440,6 @@ def record_problems(record: object, filename: str) -> list[str]:
                 check(f"sources.openapi.{key}", line, "a name")
             check("sources.openapi.sha256", checksum, "a SHA-256 checksum")
 
-    # A source and the release field that selected it name the same commit.
     if product:
         pairs = (
             [("sources.lancedb.commit", "release.commit"),
@@ -573,8 +513,7 @@ def ignored_paths(repo: Path, listing: str, index: bool = False) -> set[str]:
 
 
 def snapshot_state(repo: Path, record: dict) -> str:
-    """Whether the saved edition is the snapshot its record last accepted:
-    the one prepared, or the one its latest correction recorded."""
+    """Require the latest recorded checksum, including corrections."""
     current = candidate.site_checksum(saved_hashes(repo, record["edition"]))
     corrections = record["corrections"]
     accepted = corrections[-1]["sha256"] if corrections else record["prepared"]["sha256"]
@@ -591,9 +530,7 @@ def snapshot_state(repo: Path, record: dict) -> str:
     return f"corrected ({count} correction{'s' if count > 1 else ''})"
 
 
-# --------------------------------------------------------------------------- #
 # prepare
-# --------------------------------------------------------------------------- #
 
 
 def existing(repo: Path, requested: dict) -> str:
@@ -752,13 +689,10 @@ def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
     )
 
 
-# --------------------------------------------------------------------------- #
 # check
-# --------------------------------------------------------------------------- #
 
 
 def differences(was: object, now: object, path: str) -> list[str]:
-    """How two parsed values differ, field by field."""
     if isinstance(was, dict) and isinstance(now, dict):
         return [
             change
@@ -773,11 +707,9 @@ def differences(was: object, now: object, path: str) -> list[str]:
 
 
 def preserved(repo: Path, base: str) -> list[str]:
-    """What has happened since `base` to the editions and records it has.
+    """Require base editions and records to remain; only append corrections.
 
-    Each of them remains. A record keeps every field it had there, except that
-    its corrections may gain entries at the end. Records are compared as
-    parsed values, so a change of formatting is not a change.
+    Compare parsed records so formatting changes are harmless.
     """
     problems = []
     listing = git(repo, "ls-tree", "-z", "--name-only", base, "--", "releases/").decode()
@@ -820,8 +752,7 @@ def preserved(repo: Path, base: str) -> list[str]:
 
 
 def check(repo: Path = REPO_ROOT, base: str | None = None) -> tuple[list[str], list[str]]:
-    """Each edition's state, and every problem with records and editions; with
-    `base`, also every change since that commit to the ones it has."""
+    """Return edition statuses and errors, optionally enforcing preservation from base."""
     lines, problems, paired = [], [], set()
     for path in sorted((repo / "releases").glob("*.yaml")):
         # The file name says which edition is this record's, even when the
