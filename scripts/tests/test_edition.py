@@ -28,6 +28,12 @@ sys.path.insert(0, str(SCRIPTS))
 
 import edition  # noqa: E402
 
+# Bare repositories named lancedb-docs.git stand in for lancedb/docs, whose
+# real URLs preparation requires of origin. Tests accept both; one test checks
+# the real ones alone.
+LANCEDB_DOCS_URLS = edition.DOCS_URLS
+TEST_DOCS_URLS = re.compile(rf"{LANCEDB_DOCS_URLS.pattern}|/.+/lancedb-docs\.git", re.IGNORECASE)
+
 NAVIGATION = {
     "navigation": {
         "tabs": [
@@ -78,6 +84,11 @@ def isolated_git(monkeypatch):
     for key, value in environment().items():
         if key.startswith("GIT_"):
             monkeypatch.setenv(key, value)
+
+
+@pytest.fixture(autouse=True)
+def stand_in_for_lancedb_docs(monkeypatch):
+    monkeypatch.setattr(edition, "DOCS_URLS", TEST_DOCS_URLS)
 
 
 def git(cwd: Path, *args: str, data: bytes | None = None) -> str:
@@ -218,9 +229,10 @@ def docs(tmp_path) -> Path:
 
 
 def docs_checkout(path: Path) -> Path:
-    """A lancedb/docs checkout of main, fetched as origin/main: this
-    repository's assemble.yaml and .gitignore, and docs-owned pages, a
-    navigation fragment and the OpenAPI spec."""
+    """A checkout of lancedb/docs main, whose origin is a bare repository that
+    stands in for lancedb/docs: this repository's assemble.yaml and
+    .gitignore, and docs-owned pages, a navigation fragment and the OpenAPI
+    spec."""
     repo = new_repo(path)
     for name in ("assemble.yaml", ".gitignore"):
         shutil.copy(SCRIPTS.parent / name, repo / name)
@@ -234,13 +246,17 @@ def docs_checkout(path: Path) -> Path:
         (repo / rel).write_text(content)
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "docs")
+    origin = path.parent / f"{path.name}-upstream" / "lancedb-docs.git"
+    git(path.parent, "init", "-q", "--bare", "-b", "main", str(origin))
+    git(repo, "remote", "add", "origin", str(origin))
     on_main(repo)
     return repo
 
 
 def on_main(docs: Path) -> str:
-    """HEAD merged into main and fetched: origin/main points at it."""
-    git(docs, "update-ref", "refs/remotes/origin/main", "HEAD")
+    """HEAD merged into lancedb/docs main: pushed to the repository standing in
+    for it, where preparation fetches main from."""
+    git(docs, "push", "-q", "--force", "origin", "HEAD:refs/heads/main")
     return git(docs, "rev-parse", "HEAD")
 
 
@@ -497,7 +513,9 @@ def test_docs_inputs_off_main_or_unlike_the_running_scripts_are_refused(docs, so
     head = commit_all(docs, "an unmerged page")
     oss = ["oss", "0.98.0", "--enterprise", "v8.1.0"]
 
-    with pytest.raises(edition.EditionError, match=f"--docs: HEAD is {head}, which origin/main does not contain"):
+    main = git(docs, "rev-parse", "origin/main")
+    with pytest.raises(edition.EditionError,
+                       match=rf"--docs: HEAD is {head}, which lancedb/docs main \({main}\) does not contain"):
         prepare(docs, sources, *oss, "--docs", "HEAD")
 
     # The branch changes the assembler, committed and then not.
@@ -510,10 +528,84 @@ def test_docs_inputs_off_main_or_unlike_the_running_scripts_are_refused(docs, so
     with pytest.raises(edition.EditionError, match="commit or stash the changes to scripts/"):
         prepare(docs, sources, *oss)
 
-    git(docs, "update-ref", "-d", "refs/remotes/origin/main")
-    with pytest.raises(edition.EditionError, match="origin/main is not a commit in .*; fetch it first"):
+    git(docs, "remote", "set-url", "origin", str(docs.parent / "missing/lancedb-docs.git"))
+    with pytest.raises(edition.EditionError, match="could not fetch lancedb/docs main: git fetch .* failed"):
+        prepare(docs, sources, *oss)
+    git(docs, "remote", "remove", "origin")
+    with pytest.raises(edition.EditionError, match="this checkout's origin is not set, not lancedb/docs"):
         prepare(docs, sources, *oss)
     assert state(docs) == {}
+
+
+def test_only_the_lancedb_docs_urls_are_accepted_as_origin(docs, monkeypatch):
+    monkeypatch.setattr(edition, "DOCS_URLS", LANCEDB_DOCS_URLS)
+    # Nothing here reaches the network: an accepted URL's fetch stops at once.
+    monkeypatch.setenv("GIT_ALLOW_PROTOCOL", "file")
+    for url in ("https://github.com/lancedb/docs", "https://github.com/lancedb/docs.git",
+                "https://github.com/LanceDB/docs.git", "git@github.com:lancedb/docs.git",
+                "ssh://git@github.com/lancedb/docs.git"):
+        git(docs, "remote", "set-url", "origin", url)
+        with pytest.raises(edition.EditionError, match="could not fetch lancedb/docs main: .*not allowed"):
+            edition.docs_main(docs)
+    for url in ("https://github.com/someone/docs.git", "git@github.com:someone/docs.git",
+                "https://github.com/lancedb/docs-fork.git", "https://github.com/lancedb/docs.git.old",
+                "http://github.com/lancedb/docs.git", "https://github.com.example.com/lancedb/docs.git",
+                "https://example.com/lancedb/docs.git", "file:///srv/lancedb/docs.git",
+                "/srv/git/lancedb-docs.git"):
+        git(docs, "remote", "set-url", "origin", url)
+        with pytest.raises(edition.EditionError, match=f"this checkout's origin is {re.escape(url)}, not"):
+            edition.docs_main(docs)
+
+
+def test_a_fork_origin_is_refused_before_anything_is_fetched_or_saved(docs, sources):
+    """The usual fork layout: origin is a fork, upstream is lancedb/docs, and
+    the fork's main has a docs-owned change lancedb/docs does not have."""
+    fork = docs.parent / "fork.git"
+    git(docs.parent, "clone", "-q", "--bare", git(docs, "remote", "get-url", "origin"), str(fork))
+    git(docs, "remote", "rename", "origin", "upstream")
+    git(docs, "remote", "add", "origin", str(fork))
+    (docs / "docs/geneva/index.mdx").write_text("# Only in the fork\n")
+    fork_main = commit_all(docs, "a change only the fork has")
+    git(docs, "push", "-q", "origin", "HEAD:refs/heads/main")
+    assert not edition.is_ancestor(docs, fork_main, "upstream/main")
+    refs = git(docs, "for-each-ref")
+
+    refused = rf"this checkout's origin is {re.escape(str(fork))}, not lancedb/docs; a fork's main"
+    with pytest.raises(edition.EditionError, match=refused):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    with pytest.raises(edition.EditionError, match=refused):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0", "--docs", "upstream/main")
+    # Every URL of origin must be lancedb/docs's.
+    git(docs, "remote", "set-url", "origin", git(docs, "remote", "get-url", "upstream"))
+    git(docs, "remote", "set-url", "--add", "origin", str(fork))
+    with pytest.raises(edition.EditionError, match=refused):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    # The URL is the one fetching would use, after any rewriting.
+    git(docs, "config", "--unset-all", "remote.origin.url")
+    git(docs, "remote", "set-url", "origin", "https://github.com/lancedb/docs.git")
+    git(docs, "config", f"url.{fork}.insteadOf", "https://github.com/lancedb/docs.git")
+    with pytest.raises(edition.EditionError, match=refused):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    assert state(docs) == {}
+    assert git(docs, "for-each-ref") == refs
+
+
+def test_a_main_not_fetched_from_lancedb_docs_is_not_trusted(docs, sources):
+    main = git(docs, "rev-parse", "origin/main")
+    git(docs, "switch", "-q", "-c", "editions")
+    (docs / "docs/geneva/index.mdx").write_text("# Geneva, on a branch\n")
+    branch = commit_all(docs, "an unmerged page")
+    # As if origin/main had been fetched from elsewhere, or set by hand.
+    git(docs, "update-ref", "refs/remotes/origin/main", branch)
+
+    with pytest.raises(edition.EditionError, match=rf"which lancedb/docs main \({main}\) does not contain"):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0", "--docs", branch)
+    assert state(docs) == {}
+    git(docs, "update-ref", "refs/remotes/origin/main", branch)
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    assert record(docs, "oss-0.98.0")["sources"]["build"]["commit"] == main
+    assert (docs / "editions/oss/0.98.0/geneva/index.mdx").read_text() == "# Geneva\n"
+    assert git(docs, "rev-parse", "origin/main") == main
 
 
 # --------------------------------------------------------------------------- #
@@ -650,9 +742,16 @@ def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
     git(docs, "commit", "-q", "-m", "scripts")
     main = on_main(docs)
 
+    # The checkout's own edition.py, given the test's lancedb/docs URLs: the
+    # real ones refuse the local repository standing in for it.
+    runner = (
+        "import re, sys; sys.path.insert(0, 'scripts'); import edition; "
+        "edition.DOCS_URLS = re.compile(sys.argv[1], re.IGNORECASE); raise SystemExit(edition.main(sys.argv[2:]))"
+    )
+
     def run(*argv: str) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [sys.executable, "-B", "scripts/edition.py", *argv],
+            [sys.executable, "-B", "-c", runner, TEST_DOCS_URLS.pattern, *argv],
             cwd=docs, env=environment(), capture_output=True, text=True,
         )
 
@@ -918,8 +1017,10 @@ def test_records_without_their_pinned_sources_fail(docs, sources):
 def records(tmp_path_factory, sources) -> dict[str, dict]:
     """The records the builder writes, which are the contract."""
     docs = docs_checkout(tmp_path_factory.mktemp("records").resolve() / "docs")
-    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
-    prepare(docs, sources, "enterprise", "8.1.0")
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(edition, "DOCS_URLS", TEST_DOCS_URLS)
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+        prepare(docs, sources, "enterprise", "8.1.0")
     return {name: record(docs, name) for name in ("oss-0.98.0", "enterprise-8.1.0")}
 
 

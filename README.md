@@ -232,12 +232,12 @@ changes one.
 
 ### Preparing an edition
 
-Fetch the release tags into the LanceDB and Enterprise checkouts, and this
-repository's `main`, then run the command from a checkout of this repository
-whose `scripts/` are those of `origin/main`:
+Fetch the release tags into the LanceDB and Enterprise checkouts. Then run the
+command in a clone of this repository whose `origin` is
+`https://github.com/lancedb/docs.git`, or its SSH form, rather than a fork, on
+a branch whose `scripts/` are those of `main`:
 
 ```bash
-git fetch origin main
 uv run --no-project --with pyyaml scripts/edition.py prepare enterprise 1.10.0 --lancedb ../lancedb --sophon ../sophon
 uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterprise v1.10.0 --lancedb ../lancedb --sophon ../sophon
 ```
@@ -255,9 +255,12 @@ uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterp
   settled yet; see [Open questions](VERSIONING.md#open-questions).
 - The LanceDB and Enterprise roots are read from Git at their commits, never
   from a working tree, and only from `docs/web`.
-- This repository's `docs/` and `assemble.yaml` are read from Git at
-  `origin/main`, or at an earlier commit of `main` named with `--docs`, never
-  from your branch or working tree. Squash merges give a branch's commits new
+- Preparation fetches `main` from `origin` itself, and reads this
+  repository's `docs/` and `assemble.yaml` from Git at its head, or at an
+  earlier commit of `main` named with `--docs`. It never reads them from your
+  branch, your working tree or an `origin/main` fetched before. A fork's `main`
+  can hold commits `lancedb/docs` never has, so an `origin` that is not
+  `lancedb/docs` stops preparation. Squash merges give a branch's commits new
   hashes, so a record names only a commit of `main`, and editions prepared one
   after another in the same pull request do not depend on its unmerged
   commits. The assembler that runs is your checkout's `scripts/`, so they must
@@ -268,8 +271,8 @@ Preparation saves nothing, and says why, when a tag or commit is missing, a
 release has no `docs/web`, an Enterprise release is not qualified or bundles
 another LanceDB, a root holds a symlink, the Enterprise root holds a hidden
 file, the assembler stops, `.gitignore` would leave out one of the edition's
-files, the docs input commit is not on `origin/main`, or your `scripts/` are
-not that commit's.
+files, `origin` is not `lancedb/docs`, the docs input commit is not on its
+`main`, or your `scripts/` are not that commit's.
 
 Preparing a saved release again changes nothing when its release commits and
 qualification tag match the record, even after the edition has been corrected,

@@ -24,11 +24,12 @@ fresh content into one. See VERSIONING.md.
 
 Each root is read from Git objects at its commit, never from a working tree,
 and only from its documentation folder: `docs/web` of lancedb/lancedb and
-lancedb/sophon, and `docs` of this repository at a commit of its main branch,
-origin/main or one named with --docs, which also supplies assemble.yaml. A
-branch's commits get new hashes when it is merged, so a record names only a
-commit of main. The assembler that runs is this checkout's scripts/, which
-must be that commit's.
+lancedb/sophon, and `docs` of this repository at a commit of lancedb/docs
+main, which also supplies assemble.yaml. Preparation fetches that main from
+origin, which must be lancedb/docs rather than a fork, and reads its head or
+an earlier commit named with --docs. A branch's commits get new hashes when it
+is merged, so a record names only a commit of main. The assembler that runs is
+this checkout's scripts/, which must be that commit's.
 
 A saved edition is never replaced. Preparing a release that already has one
 changes nothing when the release inputs match its record, even after the
@@ -78,9 +79,15 @@ SOURCES = {
     "enterprise": ("lancedb/sophon", "docs/web"),
     "build": ("lancedb/docs", "docs"),
 }
-# This repository's main as fetched. Squash and rebase merges give a branch's
-# commits new hashes, so only a commit of main stays recoverable.
-DOCS_MAIN = "origin/main"
+# This repository's main, which preparation fetches from origin. Squash and
+# rebase merges give a branch's commits new hashes, so only a commit of main
+# stays recoverable, and a fork's main can hold commits lancedb/docs never
+# has, so origin must be lancedb/docs itself, over HTTPS or SSH.
+DOCS_REMOTE = "origin"
+DOCS_MAIN = f"{DOCS_REMOTE}/main"
+DOCS_URLS = re.compile(
+    r"(?:https://github\.com/|ssh://git@github\.com/|git@github\.com:)lancedb/docs(?:\.git)?", re.IGNORECASE
+)
 # An Enterprise release bundles LanceDB as this gitlink, and a release that
 # passed qualification has an annotated tag of this name on its commit.
 BUNDLED_LANCEDB = "src/lancedb"
@@ -219,16 +226,43 @@ def is_ancestor(repo: Path, commit: str, of: str) -> bool:
     return result.returncode == 0
 
 
+def docs_main(repo: Path) -> str:
+    """lancedb/docs main, fetched now from origin, which must be lancedb/docs.
+
+    An existing remote-tracking branch is not trusted: it may have been fetched
+    from a fork, or before origin was changed. Only what this fetch brings is.
+    """
+    result = subprocess.run(
+        ["git", "-C", str(repo), "remote", "get-url", "--all", DOCS_REMOTE], capture_output=True
+    )
+    # As fetching would use them, with any `insteadOf` rewriting applied.
+    urls = result.stdout.decode().splitlines() if result.returncode == 0 else []
+    others = [url for url in urls if not DOCS_URLS.fullmatch(url)]
+    if not urls or others:
+        raise EditionError(
+            f"this checkout's {DOCS_REMOTE} is {', '.join(others) if urls else 'not set'}, not "
+            f"{SOURCES['build'][0]}; a fork's main can hold commits {SOURCES['build'][0]} never has, "
+            "so prepare an edition in a clone of https://github.com/lancedb/docs.git, over HTTPS "
+            "or SSH"
+        )
+    try:
+        git(repo, "fetch", "--quiet", "--no-tags", DOCS_REMOTE, f"+refs/heads/main:refs/remotes/{DOCS_MAIN}")
+    except EditionError as exc:
+        raise EditionError(f"could not fetch {SOURCES['build'][0]} main: {exc}") from None
+    return commit_of(repo, DOCS_MAIN, SOURCES["build"][0])
+
+
 def docs_commit(repo: Path, ref: str) -> str:
-    """The commit of this repository's main that the build reads `docs/` and
+    """The commit of lancedb/docs main that the build reads `docs/` and
     assemble.yaml from. The assembler is this checkout's own scripts/, so they
     must be that commit's too."""
     what = f"{SOURCES['build'][0]} --docs"
+    main = docs_main(repo)
     commit = commit_of(repo, ref, what)
-    if not is_ancestor(repo, commit, commit_of(repo, DOCS_MAIN, SOURCES["build"][0])):
+    if not is_ancestor(repo, commit, main):
         raise EditionError(
-            f"{what}: {ref} is {commit}, which {DOCS_MAIN} does not contain; name a commit "
-            "of main, because merging gives a branch's commits new hashes"
+            f"{what}: {ref} is {commit}, which {SOURCES['build'][0]} main ({main}) does not "
+            "contain; name a commit of main, because merging gives a branch's commits new hashes"
         )
     changed = text(repo, "status", "--porcelain", "--", "scripts")
     if changed:
@@ -832,8 +866,8 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     prep.add_argument("--sophon", type=Path, default=REPO_ROOT.parent / "sophon",
                       help="a lancedb/sophon repository (default: ../sophon)")
     prep.add_argument("--docs", metavar="REF", default=DOCS_MAIN,
-                      help="the commit of this repository's main to read docs/ and assemble.yaml "
-                           f"from (default: {DOCS_MAIN})")
+                      help="the commit of lancedb/docs main to read docs/ and assemble.yaml from "
+                           f"(default: {DOCS_MAIN}, as fetched from origin when preparing)")
     checking = commands.add_parser("check", help="check the saved editions against their records")
     checking.add_argument("--base", metavar="COMMIT",
                           help="also require the editions and records on COMMIT, such as a pull "

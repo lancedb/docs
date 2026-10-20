@@ -149,8 +149,10 @@ compatibility relationship.
 
 **This repository.** The docs-owned pages and `assemble.yaml` are read from a
 commit of `main`, never from a branch: squash merges give a branch's commits
-new hashes, so only a commit of `main` stays recoverable. The assembler that
-runs must be that commit's.
+new hashes, so only a commit of `main` stays recoverable. Preparation fetches
+`main` itself, from a clone whose origin is `lancedb/docs`, because a fork's
+`main` can hold commits `lancedb/docs` never has. The assembler that runs must
+be that commit's.
 
 A missing tag, absent documentation, an unqualified or inconsistently tagged
 Enterprise release, or private-source files that may not be published stop
