@@ -116,11 +116,15 @@ Publication checksums describe the corrected candidate.
 A pull request may add editions, and add corrections at the end of a record.
 It may not remove an edition or a record, change a record's release, sources
 or prepared snapshot, or change an earlier correction. The Assemble workflow's
-test job checks this offline, on every pull request against its base commit
-and on every push to `main`, by comparing the records' parsed values. That
-protects saved editions only while the check is required before merging, a
-repository rule set up separately. On a push to `main` it can report a
-violation but not undo it, and later pushes no longer see it.
+test job checks this on every pull request against its base commit and on
+every push to `main`, by comparing the records' parsed values. The job fetches
+that commit with its own GitHub token; the check itself is offline and needs
+no Enterprise repository credentials. That protects saved editions only while
+the check is required before merging and changes to the checker and its
+workflow need enforced review, such as required code-owner review of
+`scripts/`, the `Makefile` and `.github/workflows/`. Both are repository rules
+set up separately. On a push to `main` the check can report a violation but
+not undo it, and later pushes no longer see it.
 
 Preparation never overwrites a saved edition:
 

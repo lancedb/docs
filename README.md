@@ -195,7 +195,7 @@ Publishing relies on settings outside this repository:
   Contents: read. Checkout does not persist it, and the token is revoked when
   the job ends. Fork pull requests receive no App secret and cannot run the
   combined build; the assembler guard tests and the saved-edition check still
-  run without credentials.
+  run without Enterprise repository credentials.
 
 Of these, the Publish workflow checks only that production runs from `main`,
 that the environment supplies the deploy key and that `MINTLIFY_CONTENT_DIR` is
@@ -351,16 +351,20 @@ still be there. Every field of a record except `corrections` must be
 unchanged, and its existing corrections must be unchanged and in order, with
 new ones only after them. A new edition is checked by the rules above.
 
-The test job of the Assemble workflow runs `make check-editions` with a base,
-offline and without credentials: for a pull request, the base commit its event
-names, and for a push to `main`, the commit `main` pointed at before. It
-fetches that commit by hash. A manual run of the workflow has no base, and
-checks each edition against its record only.
+The test job of the Assemble workflow runs `make check-editions` with a base:
+for a pull request, the base commit its event names, and for a push to `main`,
+the commit `main` pointed at before. The job first fetches that commit by hash
+with its own GitHub token; `edition.py check` then runs offline and needs no
+Enterprise repository credentials. A manual run of the workflow has no base,
+and checks each edition against its record only.
 
 This keeps saved editions only while the check must pass before a pull request
-merges, which is a repository rule set up separately. The check on a push to
-`main` reports a violation in that push but cannot undo it, and a later push
-does not find it, because its base already includes the change.
+merges, and while changes to the checker and its workflow need enforced review,
+such as required code-owner review of `scripts/`, the `Makefile` and
+`.github/workflows/`, since a pull request runs its own copy of the check. Both
+are repository rules set up separately. The check on a push to `main` reports
+a violation in that push but cannot undo it, and a later push does not find it,
+because its base already includes the change.
 
 ### Correcting a saved edition
 
