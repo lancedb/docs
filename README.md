@@ -299,7 +299,10 @@ corrections: []
 `release` and `sources` say what the edition was built from, and `prepared` is
 the snapshot as first saved; neither changes afterwards. An OSS record has
 `enterprise_pages`, the `--enterprise` ref and its commit, in place of
-`qualification` and `bundled_lancedb`.
+`qualification` and `bundled_lancedb`. `edition.py check` refuses a record
+that lacks any of these fields, or whose commits are malformed or disagree,
+such as an Enterprise record whose `sources.lancedb.commit` is not its
+`release.bundled_lancedb`.
 
 ### Correcting a saved edition
 

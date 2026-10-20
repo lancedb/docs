@@ -9,6 +9,7 @@ built by the real assembler.
 Run with `make test-assemble`.
 """
 
+import copy
 import hashlib
 import json
 import os
@@ -207,9 +208,13 @@ def sources(tmp_path_factory) -> dict:
 
 @pytest.fixture
 def docs(tmp_path) -> Path:
+    return docs_checkout(tmp_path.resolve() / "docs")
+
+
+def docs_checkout(path: Path) -> Path:
     """A lancedb/docs checkout: this repository's assemble.yaml and .gitignore,
     and docs-owned pages, a navigation fragment and the OpenAPI spec."""
-    repo = new_repo(tmp_path.resolve() / "docs")
+    repo = new_repo(path)
     for name in ("assemble.yaml", ".gitignore"):
         shutil.copy(SCRIPTS.parent / name, repo / name)
     files = {
@@ -532,3 +537,157 @@ def test_command_records_only_committed_build_inputs(docs, sources):
 
     result = run("check")
     assert (result.returncode, result.stdout) == (0, "oss 0.98.0: as prepared\n")
+
+
+# --------------------------------------------------------------------------- #
+# release records keep their provenance
+# --------------------------------------------------------------------------- #
+
+
+def rewrite(docs: Path, name: str, change) -> None:
+    path = docs / "releases" / f"{name}.yaml"
+    rec = yaml.safe_load(path.read_text())
+    change(rec)
+    path.write_text(yaml.safe_dump(rec))
+
+
+def test_records_without_their_pinned_sources_fail(docs, sources):
+    """The independent review's two cases, through `check`."""
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    prepare(docs, sources, "enterprise", "8.1.0")
+
+    def oss(rec):
+        del rec["sources"]["build"]
+        rec["sources"]["lancedb"]["commit"] = "not-a-commit"
+
+    def enterprise(rec):
+        del rec["release"]["qualification"]
+        del rec["release"]["bundled_lancedb"]
+
+    rewrite(docs, "oss-0.98.0", oss)
+    rewrite(docs, "enterprise-8.1.0", enterprise)
+
+    assert edition.check(docs) == ([], [
+        "releases/enterprise-8.1.0.yaml: release.qualification is missing; "
+        "release.bundled_lancedb is missing",
+        "releases/oss-0.98.0.yaml: sources.lancedb.commit is 'not-a-commit', not a commit "
+        "hash; sources.build is missing",
+    ])
+
+
+@pytest.fixture(scope="module")
+def records(tmp_path_factory, sources) -> dict[str, dict]:
+    """The records the builder writes, which are the contract."""
+    docs = docs_checkout(tmp_path_factory.mktemp("records").resolve() / "docs")
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    prepare(docs, sources, "enterprise", "8.1.0")
+    return {name: record(docs, name) for name in ("oss-0.98.0", "enterprise-8.1.0")}
+
+
+def change(path: str, value=KeyError):
+    """Set the field at a dotted path, or delete it."""
+    def apply(rec):
+        *parents, key = path.split(".")
+        for parent in parents:
+            rec = rec[parent]
+        if value is KeyError:
+            del rec[key]
+        else:
+            rec[key] = value
+    return apply
+
+
+C = "2" * 40
+
+# One change each, and the one problem it must cause. {release}, {pages},
+# {bundled} and {prepared} stand for the record's own values.
+MALFORMED = [
+    ("oss-0.98.0", change("format", 2), "format is 2, not 1"),
+    ("oss-0.98.0", change("product", "cloud"), "product is 'cloud', not oss or enterprise"),
+    ("oss-0.98.0", change("version", "0.98"), "version is '0.98', not a version such as 1.2.3"),
+    ("oss-0.98.0", change("edition", "editions/oss/0.99.0"),
+     "edition is 'editions/oss/0.99.0', not editions/oss/0.98.0"),
+    ("oss-0.98.0", change("notes", "x"), "notes is not a field here"),
+    ("oss-0.98.0", change("release.repository", "lancedb/sophon"),
+     "release.repository is 'lancedb/sophon', not lancedb/lancedb"),
+    ("oss-0.98.0", change("release.tag", "v0.99.0"), "release.tag is 'v0.99.0', not v0.98.0"),
+    ("oss-0.98.0", change("release.commit", "abc123"), "release.commit is 'abc123', not a commit hash"),
+    ("oss-0.98.0", change("release.commit", C),
+     "sources.lancedb.commit is {release}, but release.commit is " + C),
+    ("oss-0.98.0", change("release.enterprise_pages"), "release.enterprise_pages is missing"),
+    ("oss-0.98.0", change("release.enterprise_pages.ref", ""),
+     "release.enterprise_pages.ref is '', not the tag or commit named with --enterprise"),
+    ("oss-0.98.0", change("release.enterprise_pages.commit", C),
+     "sources.enterprise.commit is {pages}, but release.enterprise_pages.commit is " + C),
+    ("oss-0.98.0", change("release.bundled_lancedb", C), "release.bundled_lancedb is not a field here"),
+    ("oss-0.98.0", change("sources.build"), "sources.build is missing"),
+    ("oss-0.98.0", change("sources.build.commit", "HEAD"), "sources.build.commit is 'HEAD', not a commit hash"),
+    ("oss-0.98.0", change("sources.enterprise.repository", "lancedb/lancedb"),
+     "sources.enterprise.repository is 'lancedb/lancedb', not lancedb/sophon"),
+    ("oss-0.98.0", change("sources.lancedb.path", "docs"), "sources.lancedb.path is 'docs', not docs/web"),
+    ("oss-0.98.0", change("sources.geneva", {}), "sources.geneva is not a field here"),
+    ("oss-0.98.0", change("sources.openapi.sha256", "x"),
+     "sources.openapi.sha256 is 'x', not a SHA-256 checksum"),
+    ("oss-0.98.0", change("prepared"), "prepared is missing"),
+    ("oss-0.98.0", change("prepared.files", "9"), "prepared.files is '9', not a number of files"),
+    ("oss-0.98.0", change("prepared.sha256", "0" * 63),
+     f"prepared.sha256 is {'0' * 63!r}, not a SHA-256 checksum"),
+    ("oss-0.98.0", change("corrections", {}), "corrections is {{}}, not a list"),
+    ("oss-0.98.0", change("corrections", [{"files": ["guide.mdx"]}]), "corrections[0].summary must be one line of text"),
+    ("oss-0.98.0", change("corrections", [{"summary": "One\nTwo"}]),
+     "corrections[0].summary must be one line of text"),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "files": "guide.mdx"}]),
+     "corrections[0].files must be a list of the edition's paths"),
+    ("oss-0.98.0", change("corrections", [{"summary": "Fix.", "approved": True}]),
+     "corrections[0].approved is not a field here"),
+    ("enterprise-8.1.0", change("release.qualification"), "release.qualification is missing"),
+    ("enterprise-8.1.0", change("release.qualification.tag", "release-qualified/v8.2.0"),
+     "release.qualification.tag is 'release-qualified/v8.2.0', not release-qualified/v8.1.0"),
+    ("enterprise-8.1.0", change("release.qualification.object", "annotated"),
+     "release.qualification.object is 'annotated', not a tag object hash"),
+    ("enterprise-8.1.0", change("release.bundled_lancedb"), "release.bundled_lancedb is missing"),
+    ("enterprise-8.1.0", change("release.bundled_lancedb", C),
+     "sources.lancedb.commit is {bundled}, but release.bundled_lancedb is " + C),
+    ("enterprise-8.1.0", change("release.commit", C),
+     "sources.enterprise.commit is {release}, but release.commit is " + C),
+    ("enterprise-8.1.0", change("release.repository", "lancedb/lancedb"),
+     "release.repository is 'lancedb/lancedb', not lancedb/sophon"),
+    ("enterprise-8.1.0", change("release.enterprise_pages", {"ref": "v8.1.0", "commit": C}),
+     "release.enterprise_pages is not a field here"),
+]
+
+
+@pytest.mark.parametrize(
+    "name, mutate, problem", MALFORMED, ids=[f"{n}:{p[:60]}" for n, _m, p in MALFORMED]
+)
+def test_a_malformed_record_names_the_field(records, tmp_path, name, mutate, problem):
+    rec = copy.deepcopy(records[name])
+    values = {
+        "release": rec["release"]["commit"],
+        "pages": (rec["release"].get("enterprise_pages") or {}).get("commit"),
+        "bundled": rec["release"].get("bundled_lancedb"),
+        "prepared": rec["prepared"]["sha256"],
+    }
+    mutate(rec)
+    path = tmp_path / "releases" / f"{name}.yaml"
+    path.parent.mkdir()
+    path.write_text(yaml.safe_dump(rec))
+
+    with pytest.raises(edition.EditionError) as raised:
+        edition.load_record(path)
+    assert str(raised.value) == f"releases/{name}.yaml: " + problem.format(**values)
+
+
+def test_records_the_builder_writes_are_valid(records, tmp_path):
+    """Including an Enterprise record whose bundled LanceDB no release tags,
+    and a record with two corrections."""
+    corrected = copy.deepcopy(records["oss-0.98.0"])
+    corrected["corrections"] = [
+        {"summary": "Fix the guide.", "files": ["guide.mdx"]},
+        {"summary": "Remove a page."},
+    ]
+    for name, rec in [*records.items(), ("oss-0.98.0", corrected)]:
+        assert edition.record_problems(rec, f"{name}.yaml") == []
+    assert edition.record_problems(records["enterprise-8.1.0"], "enterprise-8.2.0.yaml") == [
+        "product and version name enterprise-8.1.0.yaml, not enterprise-8.2.0.yaml"
+    ]

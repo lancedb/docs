@@ -306,36 +306,156 @@ def record_path(repo: Path, product: str, version: str) -> Path:
 
 
 def load_record(path: Path) -> dict:
-    """A release record, checked enough to compare and to verify its edition."""
+    """A release record that holds everything `prepare` writes."""
+    name = f"releases/{path.name}"
     try:
         record = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as exc:
-        raise EditionError(f"{path.name}: unreadable: {exc}") from None
-    if not isinstance(record, dict) or record.get("format") != FORMAT:
-        raise EditionError(f"{path.name}: not a format {FORMAT} release record")
-    product, version = record.get("product"), record.get("version")
-    if product not in PRODUCTS or not isinstance(version, str) or not VERSION_RE.fullmatch(version):
-        raise EditionError(f"{path.name}: product and version are not a release")
-    if path.name != f"{product}-{version}.yaml":
-        raise EditionError(f"{path.name}: names {product} {version}")
-    if record.get("edition") != f"editions/{product}/{version}":
-        raise EditionError(f"{path.name}: edition must be editions/{product}/{version}")
-    prepared = record.get("prepared")
-    if not isinstance(prepared, dict) or not candidate.CHECKSUM_RE.fullmatch(
-        str(prepared.get("sha256"))
-    ):
-        raise EditionError(f"{path.name}: `prepared` has no snapshot checksum")
-    try:
-        identity(record)
-    except (AttributeError, KeyError, TypeError):
-        raise EditionError(f"{path.name}: `release` or `sources` is incomplete") from None
-    corrections = record.get("corrections")
-    if not isinstance(corrections, list) or not all(
-        isinstance(c, dict) and isinstance(c.get("summary"), str) and c["summary"].strip()
-        for c in corrections
-    ):
-        raise EditionError(f"{path.name}: every correction needs a one-line `summary`")
+        raise EditionError(f"{name}: unreadable: {exc}") from None
+    problems = record_problems(record, path.name)
+    if problems:
+        raise EditionError(f"{name}: " + "; ".join(problems))
     return record
+
+
+MISSING = object()
+
+
+def record_problems(record: object, filename: str) -> list[str]:
+    """Each field of `record` that differs from what `prepare` writes.
+
+    Formats are checked first; a field that disagrees with another is
+    reported only when both are well formed, so each problem names the field
+    that is wrong. Nothing is fetched: the commits are checked for form and
+    agreement, not against the repositories.
+    """
+    problems: list[str] = []
+
+    def lookup(path: str) -> object:
+        value = record
+        for key in path.split("."):
+            if not isinstance(value, dict) or key not in value:
+                return MISSING
+            value = value[key]
+        return value
+
+    def fields(path: str, required: tuple[str, ...], optional: tuple[str, ...] = ()) -> bool:
+        """Whether `path` is a mapping; reports any field it should not have."""
+        value = lookup(path) if path else record
+        if value is MISSING:
+            problems.append(f"{path} is missing")
+            return False
+        if not isinstance(value, dict):
+            problems.append(f"{path or 'the record'} is not a mapping")
+            return False
+        for key in sorted(set(value) - set(required) - set(optional), key=str):
+            problems.append(f"{path + '.' if path else ''}{key} is not a field here")
+        return True
+
+    def check(path: str, valid, expected: str) -> object:
+        """The value at `path` if `valid` accepts it, else None and a problem."""
+        value = lookup(path)
+        if value is MISSING:
+            problems.append(f"{path} is missing")
+        elif not valid(value):
+            problems.append(f"{path} is {value!r}, not {expected}")
+        else:
+            return value
+        return None
+
+    def commit(value: object) -> bool:
+        return isinstance(value, str) and COMMIT_RE.fullmatch(value) is not None
+
+    def checksum(value: object) -> bool:
+        return isinstance(value, str) and candidate.CHECKSUM_RE.fullmatch(value) is not None
+
+    def line(value: object) -> bool:
+        return isinstance(value, str) and bool(value.strip()) and "\n" not in value.strip()
+
+    top = ("format", "product", "version", "edition", "release", "sources", "prepared", "corrections")
+    if not fields("", top):
+        return problems
+    if check("format", lambda v: v == FORMAT and not isinstance(v, bool), str(FORMAT)) is None:
+        return problems
+    product = check("product", lambda v: v in PRODUCTS, " or ".join(PRODUCTS))
+    version = check(
+        "version", lambda v: isinstance(v, str) and VERSION_RE.fullmatch(v), "a version such as 1.2.3"
+    )
+    if product and version:
+        check("edition", lambda v: v == f"editions/{product}/{version}", f"editions/{product}/{version}")
+        if filename != f"{product}-{version}.yaml":
+            problems.append(f"product and version name {product}-{version}.yaml, not {filename}")
+
+    # The release, and the commits only it can name.
+    own = "lancedb" if product == "oss" else "enterprise"
+    extra = ("enterprise_pages",) if product == "oss" else ("qualification", "bundled_lancedb")
+    if product and fields("release", ("repository", "tag", "commit", *extra)):
+        check("release.repository", lambda v: v == SOURCES[own][0], SOURCES[own][0])
+        if version:
+            check("release.tag", lambda v: v == f"v{version}", f"v{version}")
+        check("release.commit", commit, "a commit hash")
+        if product == "oss":
+            if fields("release.enterprise_pages", ("ref", "commit")):
+                check("release.enterprise_pages.ref", line, "the tag or commit named with --enterprise")
+                check("release.enterprise_pages.commit", commit, "a commit hash")
+        else:
+            if fields("release.qualification", ("tag", "object")):
+                if version:
+                    tag_name = QUALIFIED_TAG.format(version=version)
+                    check("release.qualification.tag", lambda v: v == tag_name, tag_name)
+                check("release.qualification.object", commit, "a tag object hash")
+            check("release.bundled_lancedb", commit, "a commit hash")
+
+    # Every root the assembler read, and the spec the docs root ships.
+    if fields("sources", tuple(SOURCES), ("openapi",)):
+        for name, (repository, folder) in SOURCES.items():
+            if fields(f"sources.{name}", ("repository", "path", "commit")):
+                check(f"sources.{name}.repository", lambda v, r=repository: v == r, repository)
+                check(f"sources.{name}.path", lambda v, f=folder: v == f, folder)
+                check(f"sources.{name}.commit", commit, "a commit hash")
+        if lookup("sources.openapi") is not MISSING and fields(
+            "sources.openapi", ("repository", "release", "path", "sha256")
+        ):
+            for key in ("repository", "release", "path"):
+                check(f"sources.openapi.{key}", line, "a name")
+            check("sources.openapi.sha256", checksum, "a SHA-256 checksum")
+
+    # A source and the release field that selected it name the same commit.
+    if product:
+        pairs = (
+            [("sources.lancedb.commit", "release.commit"),
+             ("sources.enterprise.commit", "release.enterprise_pages.commit")]
+            if product == "oss"
+            else [("sources.enterprise.commit", "release.commit"),
+                  ("sources.lancedb.commit", "release.bundled_lancedb")]
+        )
+        for source_path, release_path in pairs:
+            a, b = lookup(source_path), lookup(release_path)
+            if commit(a) and commit(b) and a != b:
+                problems.append(f"{source_path} is {a}, but {release_path} is {b}")
+
+    if fields("prepared", ("files", "sha256")):
+        check(
+            "prepared.files",
+            lambda v: isinstance(v, int) and not isinstance(v, bool) and v > 0,
+            "a number of files",
+        )
+        check("prepared.sha256", checksum, "a SHA-256 checksum")
+
+    corrections = check("corrections", lambda v: isinstance(v, list), "a list")
+    for index, entry in enumerate(corrections or []):
+        where = f"corrections[{index}]"
+        if not isinstance(entry, dict):
+            problems.append(f"{where} is not a mapping")
+            continue
+        for key in sorted(set(entry) - {"summary", "files"}, key=str):
+            problems.append(f"{where}.{key} is not a field here")
+        if not line(entry.get("summary")):
+            problems.append(f"{where}.summary must be one line of text")
+        files = entry.get("files", [])
+        if not isinstance(files, list) or not all(isinstance(f, str) and f for f in files):
+            problems.append(f"{where}.files must be a list of the edition's paths")
+    return problems
 
 
 def saved_hashes(repo: Path, edition: str) -> dict[str, str]:
@@ -545,11 +665,13 @@ def check(repo: Path = REPO_ROOT) -> tuple[list[str], list[str]]:
     """Each edition's state, and every problem with records and editions."""
     lines, problems, paired = [], [], set()
     for path in sorted((repo / "releases").glob("*.yaml")):
+        # The file name says which edition is this record's, even when the
+        # record itself is malformed.
+        paired.add("editions/" + path.stem.replace("-", "/", 1))
         try:
             record = load_record(path)
             if not (repo / record["edition"]).is_dir():
-                raise EditionError(f"{path.name}: {record['edition']} is missing")
-            paired.add(record["edition"])
+                raise EditionError(f"releases/{path.name}: {record['edition']} is missing")
             lines.append(f"{record['product']} {record['version']}: {snapshot_state(repo, record)}")
         except (EditionError, candidate.CandidateError) as exc:
             problems.append(str(exc))
