@@ -46,22 +46,6 @@ jobs:
       - name: Test the overlay, navigation and private-root guards
         run: make test-assemble
 
-      # Fetch the event's base SHA so shallow clones and moving branches do not affect preservation checks.
-      - name: Check that saved editions and their records are kept
-        env:
-          EVENT: ${{ github.event_name }}
-          # Not BASE itself: make would read it from the environment.
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || '' }}
-        run: |
-          set -euo pipefail
-          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
-            echo "No base commit for this $EVENT event; checking each edition against its record only."
-            make check-editions
-          else
-            git fetch --no-tags --depth=1 origin "$BASE_SHA"
-            make check-editions BASE="$BASE_SHA"
-          fi
-
   assemble:
     runs-on: ubuntu-latest
     steps:

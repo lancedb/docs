@@ -1,0 +1,96 @@
+name: Compose
+
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compose-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Everything it composes is in this repository, so it needs no secrets.
+  compose:
+    name: Compose the versioned site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      # Fetch the event's base SHA so shallow clones and moving branches do not affect preservation checks.
+      - name: Check that saved editions and their records are kept
+        env:
+          EVENT: ${{ github.event_name }}
+          # Not BASE itself: make would read it from the environment.
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || '' }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
+            echo "No base commit for this $EVENT event; checking each edition against its record only."
+            make check-editions
+          else
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            make check-editions BASE="$BASE_SHA"
+          fi
+
+      - name: Compose
+        id: compose
+        run: |
+          set -euo pipefail
+          if ! compgen -G 'releases/*.yaml' > /dev/null; then
+            echo "No saved editions yet: nothing to compose, so this run records no candidate." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          uv run --no-project --with pyyaml scripts/compose.py --output build/candidate/site \
+            | tee "$RUNNER_TEMP/compose.log"
+          echo "sources=$(sed -n 's/^sources: //p' "$RUNNER_TEMP/compose.log")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.compose.outputs.sources
+        with:
+          node-version: 22
+
+      - name: Install Mintlify CLI
+        if: steps.compose.outputs.sources
+        run: npm install -g mint@4.2.888
+
+      - name: Validate the composed site
+        if: steps.compose.outputs.sources
+        working-directory: build/candidate/site
+        run: mint validate
+
+      - name: Check links, anchors and redirects in the composed site
+        if: steps.compose.outputs.sources
+        working-directory: build/candidate/site
+        run: mint broken-links --check-anchors --check-redirects
+
+      - name: Record the candidate
+        if: steps.compose.outputs.sources
+        env:
+          SOURCES: ${{ steps.compose.outputs.sources }}
+        run: |
+          python3 scripts/candidate.py record build/candidate/site --site versioned \
+            --sources "$SOURCES" --output build/candidate/candidate.json \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the candidate
+        if: steps.compose.outputs.sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate
+          path: build/candidate
+          include-hidden-files: true
+          # A rollback reads production's own history, so it outlives this.
+          retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}

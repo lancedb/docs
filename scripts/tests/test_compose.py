@@ -871,6 +871,18 @@ def test_the_command_reports_unversioned_paths_it_leaves_without_a_redirect(docs
         "unversioned paths without a page in enterprise 8.2.0, left without a redirect for review (1):\n"
         "  /new (oss 0.99.0)\n"
     ) in out
+    # The commit composed, for the candidate's record; uncommitted work is marked.
+    assert out.endswith("sources: build=unversioned\n")
+    subprocess.run(["git", "add", "-A"], cwd=docs, env=environment(), check=True)
+    subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                    "commit", "-q", "-m", "editions"], cwd=docs, env=environment(), check=True)
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=docs, env=environment(),
+                          check=True, capture_output=True, text=True).stdout.strip()
+    assert compose.main(["--output", str(tmp_path / "site")]) == 0
+    assert capsys.readouterr().out.endswith(f"sources: build={head}\n")
+    (docs / "compose.yaml").write_text((docs / "compose.yaml").read_text() + "\n")
+    assert compose.main(["--output", str(tmp_path / "site")]) == 0
+    assert capsys.readouterr().out.endswith(f"sources: build={head}+uncommitted\n")
 
 
 @pytest.mark.parametrize("path", ["editions", "site", "site/static"])
