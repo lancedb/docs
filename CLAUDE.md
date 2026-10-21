@@ -19,3 +19,4 @@ This is a documentation site for [LanceDB](https://docs.lancedb.com).
 - Write new documentation in `lancedb/lancedb` or the Enterprise documentation repository, not in a saved edition.
 - `make compose` builds the versioned site from the saved editions, and `compose.yaml` names each product's preferred edition. See "Composing the site" in README.md.
 - Shared branding, integrations and global assets belong in `site/settings.json` and `site/static/`, not in a saved edition.
+- The Compose workflow keeps each run's versioned site as a candidate, and the Publish workflow puts candidates on `staging` and, after approval, the one staging shows on `assembled`. Never push to either branch yourself. See "Publishing" in README.md.

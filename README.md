@@ -142,36 +142,98 @@ appear in the built site's page data.
 
 ## Publishing
 
-Merging publishes nothing. Every pull request and every push to `main` runs the
-Assemble workflow, which builds the site from the three roots, checks it as
-above, and keeps the checked tree, hidden files such as `.mintignore` included,
-as the run's `candidate` artifact, with a record of the commit each root was
-read from and a SHA-256 for every file. A checksum over those hashes names the
-candidate, and the run's summary shows it.
-That workflow's token can only read.
+Merging publishes nothing by itself. Two workflows build and check a site on
+every pull request and every push to `main`, and keep the checked tree, hidden
+files such as `.mintignore` included, as the run's `candidate` artifact, with a
+record of the commits it was built from and a SHA-256 for every file. A
+checksum over those hashes names the candidate, and the run's summary shows it.
+Neither workflow can write to the repository.
 
-Publishing is a separate, manual step: run the Publish workflow with the ID of a
-successful Assemble run and its candidate's checksum.
+- **Compose** builds the versioned site from the saved editions, as in
+  [Composing the site](#composing-the-site), after checking that the saved
+  editions match their records and keep those of the commit before. It needs
+  no credentials. With no saved editions it composes nothing and records no
+  candidate, so nothing can be published from that run.
+- **Assemble** builds the assembled site from the three roots, as in
+  [Development](#development): today's site, from the producers' `main`.
 
-- `staging` puts the candidate on the `staging` branch, for a Mintlify preview
-  of the combined site. A preview of any other branch of this repository is not
-  one: it holds only `docs/`.
-- `production` puts it on `assembled`. It takes only a candidate built on `main`
-  from both producers' `main`, runs only from `main`, and pushes with the
-  `production` environment's deploy key. It waits for approval only if that
-  environment requires reviewers.
+The Publish workflow publishes a candidate exactly as it was checked; it never
+rebuilds. Each publication is a new commit on its branch that names the
+candidate's checksum, its run and the commits it was built from, and nothing is
+force-pushed. `scripts/candidate.py` records and publishes; `make
+test-assemble` runs its tests against disposable local repositories.
 
-Either way the published files are the candidate's, checked against its record
-and the checksum, and the record must name exactly the three source commits and
-both producers' refs. Nothing is rebuilt, so newer source commits cannot slip in.
-Each publication is a new commit on its branch that names the run, the checksum
-and the source commits, and nothing is force-pushed. To roll back, publish an
-earlier candidate again: its run ID and checksum are in its commit on
-`assembled`. Once its artifact has expired, after 90 days, that earlier commit's
-files are published again, after they are checked against the checksum.
+### Staging
 
-`scripts/candidate.py` records and publishes; `make test-assemble` runs its
-tests against disposable local repositories.
+Staging is the `staging` branch, which Mintlify serves as the shared staging
+preview; a preview of any other branch of this repository shows only `docs/`.
+To put a candidate there, run Publish with target `staging`, the ID of a
+successful Compose or Assemble run, and its candidate's checksum. A versioned
+candidate must be built on `main`. An assembled one can come from a manual run
+on another branch, for a preview before anything merges.
+
+Once staging shows the versioned site, it follows `main` by itself: after each
+successful Compose run on `main`, Publish puts the candidate of `main`'s newest
+commit on staging, unless staging already shows the same files. It reads
+`main` itself, so an older or repeated run never puts an older candidate
+there. Until then, as today, staging changes only by hand. Publishing the first
+versioned candidate there is the deliberate step that switches the shared
+staging site to the versioned site; publishing an assembled candidate there by
+hand stops it following `main`. Staging publications run one at a time, and an
+automatic one never cancels one waiting to run by hand.
+
+A push is not a deployment. Mintlify deploys the commit afterwards and reports
+it as the "Mintlify Deployment" check on that commit. To see which build
+staging shows, open the latest commit on `staging`: its message names the
+candidate's checksum, its run and the docs commit, and its Mintlify check says
+whether the preview has been deployed from it. Until that check succeeds, the
+preview may still show the build before. Each version's "About this version"
+page shows its release and sources.
+
+### Production
+
+Production is the `assembled` branch, and it takes only the versioned site.
+After reviewing staging, run Publish with target `production` and the same run
+ID and checksum. The job waits for a reviewer to approve it in the
+`production` environment. Then it publishes the files staging shows, and only
+if staging still shows that candidate, Mintlify has reported deploying it
+there, and the run's artifact shows that the run built those files. If a newer
+candidate has reached staging since the review, it stops and changes nothing:
+review the new one and promote that instead. The run also reads production
+before it waits for approval, and publishes nothing if production has changed
+by the time it is approved, so an old run left waiting cannot replace a newer
+publication. Cancel a production run you no longer want.
+
+- The staging publication is recorded automatically, as its commit and the
+  Publish run's summary.
+- Mintlify records its deployment of staging, as its check on that commit, and
+  production checks it.
+- The review of the hosted staging site is recorded by hand: it is the
+  reviewer's approval of the production job, which GitHub keeps with the run.
+  Say in the approval's comment what you checked.
+
+Once Mintlify serves production from `assembled`, the "Mintlify Deployment"
+check on the new `assembled` commit says when production shows it.
+
+### Rolling back
+
+- To go back to an earlier release, change the preferred edition in
+  `compose.yaml` in a pull request. It goes through staging and approval like
+  any other change, and every version's URL keeps working.
+- To restore an earlier production site as a whole, run Publish with target
+  `production` and the run ID and checksum named in that publication's commit
+  on `assembled`. It needs approval but not staging. It removes the versions
+  published since, and their URLs stop working, so decide it deliberately.
+
+Candidate artifacts are kept for 90 days, or 7 for pull requests. A rollback
+reads the earlier commit on `assembled` and checks its files against the
+checksum, so it works after the artifact has expired. Promotion from staging
+needs the artifact of the run that staging shows, so promote within 90 days of
+that build, or first publish a newer candidate to staging by hand. Publishing
+to staging by hand also falls back to an earlier staging publication of the
+same candidate.
+
+### Settings outside this repository
 
 Publishing relies on settings outside this repository:
 
@@ -180,13 +242,17 @@ Publishing relies on settings outside this repository:
   deploy key with write access.
 - A ruleset on `assembled` that restricts updates and deletions and blocks force
   pushes, with deploy keys as its only bypass. Without it, any workflow token
-  that can write could change `assembled`.
+  that can write could change `assembled`, and production could not trust its
+  own history for a rollback.
 - A repository variable `MINTLIFY_CONTENT_DIR`: the path Mintlify's Git settings
   read `docs.json` from, such as `/docs`, or `/` for the root. Publishing
   refuses to guess.
 - Mintlify's Git settings: repository `lancedb/docs`, branch `assembled`, and
   the content directory above. Mintlify serves the branch its settings name, so
   publishing to `assembled` reaches production only once that is the branch.
+- A Mintlify preview of the `staging` branch that reports each deployment as
+  the "Mintlify Deployment" check, including for commits the Publish workflow
+  pushes. Without that check, nothing can be promoted.
 - The LanceDB Docs Reader GitHub App installed on the Enterprise documentation repository only, with
   Contents: read and the required Metadata: read permission. Set its Client ID
   in the `SOPHON_DOCS_APP_CLIENT_ID` repository variable and its PEM private key
@@ -194,14 +260,14 @@ Publishing relies on settings outside this repository:
   Check workflows generate a short-lived token scoped to that repository with
   Contents: read. Checkout does not persist it, and the token is revoked when
   the job ends. Fork pull requests receive no App secret and cannot run the
-  combined build; the assembler guard tests and the saved-edition check still
-  run without Enterprise repository credentials.
+  combined build; the assembler guard tests and the Compose workflow still run
+  without Enterprise repository credentials.
 
 Of these, the Publish workflow checks only that production runs from `main`,
-that the environment supplies the deploy key and that `MINTLIFY_CONTENT_DIR` is
-set. It cannot see whether the environment requires reviewers and admits only
-`main`, or whether the ruleset refuses every other writer: verify those
-separately before the first production publication.
+that the environment supplies the deploy key, that `MINTLIFY_CONTENT_DIR` is
+set, and Mintlify's check on staging. It cannot see whether the environment
+requires reviewers and admits only `main`, or whether the ruleset refuses every
+other writer: verify those separately before the first production publication.
 
 ## Saved editions
 
@@ -213,8 +279,8 @@ New documentation is still written in `lancedb/lancedb` and the Enterprise
 documentation repository.
 [VERSIONING.md](VERSIONING.md) describes the design. `make compose` composes
 the saved editions into one versioned site; see
-[Composing the site](#composing-the-site). Publishing it is a later step, and
-for now the site is assembled and published as above.
+[Composing the site](#composing-the-site), and [Publishing](#publishing) for how
+it reaches staging and production.
 
 An edition's content comes from two kinds of commit, and its record names both:
 
@@ -363,9 +429,9 @@ still be there. Every field of a record except `corrections` must be
 unchanged, and its existing corrections must be unchanged and in order, with
 new ones only after them. A new edition is checked by the rules above.
 
-The test job of the Assemble workflow runs `make check-editions` with a base:
-for a pull request, the base commit its event names, and for a push to `main`,
-the commit `main` pointed at before. The job first fetches that commit by hash
+The Compose workflow runs `make check-editions` with a base: for a pull
+request, the base commit its event names, and for a push to `main`, the commit
+`main` pointed at before. The job first fetches that commit by hash
 with its own GitHub token; `edition.py check` then runs offline and needs no
 Enterprise repository credentials. A manual run of the workflow has no base,
 and checks each edition against its record only.
