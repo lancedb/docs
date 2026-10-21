@@ -6,7 +6,7 @@ ASSEMBLE_SCRIPT := scripts/assemble.py
 ASSEMBLE_RUN := uv run --no-project --with pyyaml
 
 # uv run automatically handles virtualenv, so no activation needed
-.PHONY: py ts rs snippets hf-sync assemble test-assemble check-editions check-spec sync-spec
+.PHONY: py ts rs snippets hf-sync assemble test-assemble check-editions compose check-spec sync-spec
 
 # Snippets are generated in lancedb/lancedb, beside the tests they come from;
 # these targets only say so. See "Code snippets" in README.md.
@@ -35,6 +35,11 @@ test-assemble:
 # Set BASE to enforce preservation of editions already merged.
 check-editions:
 	@$(ASSEMBLE_RUN) scripts/edition.py check $(if $(BASE),--base $(BASE))
+
+# Compose the saved editions into the versioned site in build/versioned, as
+# compose.yaml configures it. See "Composing the site" in README.md.
+compose:
+	@$(ASSEMBLE_RUN) scripts/compose.py
 
 # Fail if the tracked OpenAPI spec has drifted from the release pinned in
 # assemble.yaml. Run in CI so the pin cannot rot unnoticed.
