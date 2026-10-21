@@ -32,7 +32,6 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from urllib.parse import quote
 
 import yaml
 
@@ -89,6 +88,7 @@ class Finding:
     reason: str
     commit: str | None = None
     qualification: str | None = None
+    pages: tuple[str, str] | None = None
     why: str = ""
     record: dict | None = None
     preferred: str = ""
@@ -274,14 +274,23 @@ def pulls(github: GitHub, branch: str) -> list[dict]:
     return sorted(found, key=lambda pull: pull["number"], reverse=True)
 
 
-def start_checks(github: GitHub, branch: str) -> None:
-    for workflow in CHECKS:
-        github.post(f"repos/{DOCS}/actions/workflows/{workflow}/dispatches", {"ref": branch})
+def start_checks(github: GitHub, branch: str, workflows) -> None:
+    """Start each workflow on `branch`; one that fails to start does not stop the others."""
+    failed = []
+    for workflow in workflows:
+        try:
+            github.post(f"repos/{DOCS}/actions/workflows/{workflow}/dispatches", {"ref": branch})
+        except DiscoveryError as exc:
+            failed.append(f"{workflow} ({exc})")
+    if failed:
+        raise DiscoveryError(f"could not start {', '.join(failed)} on {branch}; the next run starts what has not run")
 
 
-def checks_started(github: GitHub, commit: str) -> bool:
-    found = github.get(f"repos/{DOCS}/commits/{commit}/check-runs?check_name={quote(CHECKS['compose.yml'])}")
-    return bool(found and found.get("total_count"))
+def unstarted(github: GitHub, commit: str) -> list[str]:
+    """The check workflows with no run of `commit`, whatever became of the runs there are."""
+    return [workflow for workflow in CHECKS if not (
+        github.get(f"repos/{DOCS}/actions/workflows/{workflow}/runs?head_sha={commit}&per_page=1") or {}
+    ).get("total_count")]
 
 
 # releases
@@ -501,30 +510,50 @@ def enterprise_pages(main: Main, tags: dict[str, Tag]) -> tuple[str, str]:
     return ref, commit
 
 
-def prepare_args(finding: Finding, main: Main, lancedb: Path, sophon: Path, pages: str | None) -> list[str]:
+def prepare_args(finding: Finding, main: Main, lancedb: Path, sophon: Path) -> list[str]:
     return [
-        "prepare", finding.product, finding.version, *(["--enterprise", pages] if pages else []),
+        "prepare", finding.product, finding.version, *(["--enterprise", finding.pages[0]] if finding.pages else []),
         "--lancedb", str(lancedb), "--sophon", str(sophon), "--docs", main.commit,
     ]
 
 
-def resolve(finding: Finding, main: Main, lancedb: Path, sophon: Path, sophon_tags) -> str | None:
-    """Fetch what preparation reads, and the record it would write. Returns
-    the Enterprise pages an OSS edition is prepared with."""
-    tag, pages = f"v{finding.version}", None
+def unmoved(finding: Finding, record: dict, where: str) -> None:
+    """Stop unless `record` reads the tags as discovery checked them: the
+    release, its qualification, and the Enterprise pages as their edition
+    records them."""
+    release = record["release"]
+    read = [(f"v{finding.version}", release.get("commit"), finding.commit)]
+    if finding.qualification:
+        read.append((edition.QUALIFIED_TAG.format(version=finding.version),
+                     (release.get("qualification") or {}).get("object"), finding.qualification))
+    if finding.pages:
+        read.append((finding.pages[0], (release.get("enterprise_pages") or {}).get("commit"), finding.pages[1]))
+    moved = [f"{name} at {found or 'nothing'} rather than {checked}"
+             for name, found, checked in read if found != checked]
+    if moved:
+        raise DiscoveryError(f"{where} {'; '.join(moved)}: a tag moved while discovery ran, so nothing is prepared "
+                             "from it. Review the release")
+
+
+def resolve(finding: Finding, main: Main, lancedb: Path, sophon: Path, sophon_tags) -> None:
+    """Fetch what preparation reads, and the record it would write, from the
+    tags as discovery checked them."""
+    tag = f"v{finding.version}"
     if finding.product == "enterprise":
         qualified = [edition.QUALIFIED_TAG.format(version=finding.version)] if finding.qualification else []
         fetch(sophon, *tag_refspecs(tag, *qualified))
-        bundled = edition.bundled_lancedb(sophon, finding.commit, f"lancedb/sophon {tag}")
+        # What the fetched tag bundles; if the tag has moved, the record shows it below.
+        bundled = edition.bundled_lancedb(sophon, f"refs/tags/{tag}^{{commit}}", f"lancedb/sophon {tag}")
         try:
             fetch(lancedb, bundled)
         except edition.EditionError as exc:
             raise DiscoveryError(f"{tag} bundles LanceDB {bundled}, which {LANCEDB} does not serve: {exc}") from None
     else:
+        finding.pages = enterprise_pages(main, sophon_tags())
         fetch(lancedb, *tag_refspecs(tag))
-        pages, _commit = enterprise_pages(main, sophon_tags())
-        fetch(sophon, *tag_refspecs(pages))
-    record = edition.resolve_release(edition.parse(prepare_args(finding, main, lancedb, sophon, pages)), main.path)
+        fetch(sophon, *tag_refspecs(finding.pages[0]))
+    record = edition.resolve_release(edition.parse(prepare_args(finding, main, lancedb, sophon)), main.path)
+    unmoved(finding, record, "preparation would read")
     for name, repo in (("lancedb", lancedb), ("enterprise", sophon)):
         source = record["sources"][name]
         if not edition.text(repo, "ls-tree", "-d", source["commit"], "--", source["path"]):
@@ -533,7 +562,6 @@ def resolve(finding: Finding, main: Main, lancedb: Path, sophon: Path, sophon_ta
                 "from a release's own documentation sources"
             )
     finding.record = record
-    return pages
 
 
 def preferred_note(main: Main, finding: Finding) -> tuple[bool, str]:
@@ -564,25 +592,28 @@ def set_preferred(path: Path, product: str, version: str) -> None:
         raise DiscoveryError(f"could not set the preferred {NAMES[product]} edition in compose.yaml; set it by hand")
 
 
-def prepare_branch(finding: Finding, main: Main, lancedb: Path, sophon: Path, pages: str | None, repo: Path) -> str:
-    """The commit that saves the edition on main, made as by hand."""
+def prepare_branch(finding: Finding, main: Main, lancedb: Path, sophon: Path, repo: Path) -> str:
+    """The commit that saves the edition on main, made as by hand from the
+    sources discovery checked."""
     for name, source_repo in (("lancedb", lancedb), ("enterprise", sophon)):
         source = finding.record["sources"][name]
         prefetch(source_repo, source["commit"], source["path"])
     path = add_worktree(repo, main.commit)
     try:
-        edition.prepare(edition.parse(prepare_args(finding, main, lancedb, sophon, pages)), path)
+        edition.prepare(edition.parse(prepare_args(finding, main, lancedb, sophon)), path)
+        record = edition.load_record(path / record_file(finding))
+        unmoved(finding, record, "preparation read")
         if preferred_note(main, finding)[0]:
             set_preferred(path / compose.CONFIG, finding.product, finding.version)
         _lines, problems = edition.check(path, base=main.commit)
         if problems:
             raise DiscoveryError("`edition.py check` fails on the new branch: " + "; ".join(problems))
-        finding.record = edition.load_record(path / record_file(finding))
+        finding.record = record
         edition.git(path, "add", "--all", "--", "releases", "editions", compose.CONFIG)
         bot = {"GIT_AUTHOR_NAME": BOT[0], "GIT_AUTHOR_EMAIL": BOT[1], "GIT_COMMITTER_NAME": BOT[0],
                "GIT_COMMITTER_EMAIL": BOT[1]}
         command = " ".join(["edition.py prepare", finding.product, finding.version,
-                            *(["--enterprise", pages] if pages else [])])
+                            *(["--enterprise", finding.pages[0]] if finding.pages else [])])
         result = subprocess.run(
             ["git", "-C", str(path), "commit", "--quiet", "-m", title(finding),
              "-m", f"Prepared by release discovery with `{command}`."],
@@ -667,17 +698,17 @@ def open_pull(github: GitHub, finding: Finding, text: str) -> dict:
         return existing
 
 
-def act(finding: Finding, main: Main, repo: Path, lancedb: Path, sophon: Path, pages: str | None,
-        github: GitHub, holds: list[str]) -> None:
+def act(finding: Finding, main: Main, repo: Path, lancedb: Path, sophon: Path, github: GitHub,
+        holds: list[str]) -> None:
     """Prepare, push and open what the finding needs, picking up where an earlier run stopped."""
     resumed = finding.state == "resume"
     if finding.state == "prepare":
-        commit = prepare_branch(finding, main, lancedb, sophon, pages, repo)
+        commit = prepare_branch(finding, main, lancedb, sophon, repo)
         if not push(repo, commit, finding.branch):
             finding.notes.append(f"{finding.branch} appeared while this run prepared it, so its commits are kept")
             classify(finding, main, github, repo, remote_heads(repo), {})
             if finding.state in ("resume", "open"):
-                act(finding, main, repo, lancedb, sophon, pages, github, holds)
+                act(finding, main, repo, lancedb, sophon, github, holds)
             return
     if finding.state in ("prepare", "resume"):
         commit = remote_heads(repo).get(finding.branch)
@@ -695,11 +726,11 @@ def act(finding: Finding, main: Main, repo: Path, lancedb: Path, sophon: Path, p
                 preferred = f"sets the preferred {name} edition to {wanted} in compose.yaml; review it"
         pull = open_pull(github, finding, body(finding, record, preferred, holds, resumed))
         finding.state, finding.pull, finding.done = "open", pull, f"opened pull request #{pull['number']}"
-        start_checks(github, finding.branch)
+        start_checks(github, finding.branch, CHECKS)
         finding.done += " and started its checks"
-    elif finding.state == "open" and not checks_started(github, finding.pull["head"]["sha"]):
-        start_checks(github, finding.branch)
-        finding.done = "started its checks, which had not run"
+    elif finding.state == "open" and (missing := unstarted(github, finding.pull["head"]["sha"])):
+        start_checks(github, finding.branch, missing)
+        finding.done = f"started {' and '.join(missing)}, which had not run on its head"
 
 
 # discovery
@@ -727,7 +758,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
     try:
         main = read_main(path, commit)
         heads = remote_heads(repo)
-        findings, pages = [], {}
+        findings = []
         for product in ("enterprise", "oss"):
             options = settings["products"][product]
             if options["from"] is None:
@@ -745,7 +776,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
                 if finding.state != "prepare":
                     continue
                 try:
-                    pages[finding.name] = resolve(finding, main, lancedb, sophon, sophon_tags)
+                    resolve(finding, main, lancedb, sophon, sophon_tags)
                     finding.preferred = preferred_note(main, finding)[1]
                 except Waiting as exc:
                     finding.state, finding.reason = "waiting", str(exc)
@@ -756,7 +787,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
             for finding in findings:
                 if finding.state in ("prepare", "resume", "open"):
                     try:
-                        act(finding, main, repo, lancedb, sophon, pages.get(finding.name), github, settings["holds"])
+                        act(finding, main, repo, lancedb, sophon, github, settings["holds"])
                     except (DiscoveryError, edition.EditionError, compose.ComposeError) as exc:
                         finding.failed = True
                         finding.done = f"{finding.done}, then failed: {exc}" if finding.done else f"failed: {exc}"

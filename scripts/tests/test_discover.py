@@ -156,14 +156,14 @@ def preferred(config: dict, product: str) -> str | None:
 
 class FakeGitHub:
     """GitHub's API as discovery uses it: lancedb/lancedb releases, and this
-    repository's pull requests, workflow dispatches and check runs."""
+    repository's pull requests, workflow dispatches and the runs they start."""
 
     def __init__(self, origin: Path):
         self.origin = origin
         self.releases = {}
         self.pull_requests = []
         self.posts = []
-        self.check_runs = {}
+        self.runs = {}
         self.failures = {}
 
     def head(self, branch: str) -> str | None:
@@ -182,9 +182,9 @@ class FakeGitHub:
                 if pull["state"] == "open" and self.head(pull["head"]["ref"]):
                     pull["head"]["sha"] = self.head(pull["head"]["ref"])
             return [copy.deepcopy(p) for p in self.pull_requests if p["head"]["ref"] == branch]
-        if match := re.fullmatch(r"repos/lancedb/docs/commits/([0-9a-f]{40})/check-runs", path):
-            assert params["check_name"] == "Compose the versioned site"
-            return {"total_count": self.check_runs.get(match[1], 0)}
+        if match := re.fullmatch(r"repos/lancedb/docs/actions/workflows/([a-z]+\.yml)/runs", path):
+            runs = self.runs.get((match[1], params["head_sha"]), [])
+            return {"total_count": len(runs), "workflow_runs": copy.deepcopy(runs)}
         raise AssertionError(f"unexpected GET {endpoint}")
 
     def post(self, endpoint: str, payload: dict):
@@ -200,11 +200,13 @@ class FakeGitHub:
                 raise discover.DiscoveryError(f"GitHub POST {endpoint}: A pull request already exists (HTTP 422)")
             return copy.deepcopy(self.add_pull(payload["head"], sha, payload["title"], payload["body"]))
         if match := re.fullmatch(r"repos/lancedb/docs/actions/workflows/(.+)/dispatches", endpoint):
-            sha = self.head(payload["ref"])
-            if match[1] == "compose.yml":
-                self.check_runs[sha] = self.check_runs.get(sha, 0) + 1
+            self.ran(match[1], self.head(payload["ref"]))
             return None
         raise AssertionError(f"unexpected POST {endpoint}")
+
+    def ran(self, workflow: str, sha: str, conclusion: str | None = None) -> None:
+        status = "completed" if conclusion else "queued"
+        self.runs.setdefault((workflow, sha), []).append({"status": status, "conclusion": conclusion})
 
     def add_pull(self, branch: str, sha: str, title: str = "", body: str = "") -> dict:
         number = len(self.pull_requests) + 1
@@ -649,7 +651,8 @@ def test_repeated_discovery_reuses_the_open_pull_request_and_keeps_reviewers_com
     git(review, "commit", "-q", "-m", "review")
     git(review, "push", "-q", str(released.origin), f"HEAD:{branch}")
     reviewed = refs(released.origin)[branch]
-    released.github.check_runs[reviewed] = 1
+    for workflow in discover.CHECKS:
+        released.github.ran(workflow, reviewed)
 
     third = released.run(open_prs=True)
 
@@ -711,6 +714,102 @@ def test_a_saved_release_that_is_no_longer_eligible_stops_for_review(released):
 
     assert result["OSS 0.98.0"].state == "blocked"
     assert "saved, but now the GitHub release v0.98.0 is marked as a prerelease" in result.report
+
+
+def test_enterprise_pages_that_move_while_they_are_fetched_are_never_used(released, monkeypatch):
+    saved_enterprise(released)
+    released.configure(oss="0.98.0", pages="preferred")
+    approved = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
+    replacement = released.enterprise("8.3.0", released.bundled)
+    fetch = discover.fetch
+
+    def move_then_fetch(repo, *refspecs):
+        # The tag moves after discovery checked it, before the fetch.
+        if repo == released.clones["sophon"] and "+refs/tags/v8.2.0:refs/tags/v8.2.0" in refspecs:
+            annotated(released.sophon, "v8.2.0", replacement, force=True)
+        return fetch(repo, *refspecs)
+
+    monkeypatch.setattr(discover, "fetch", move_then_fetch)
+    branches, posts = refs(released.origin), len(released.github.posts)
+
+    result = released.run(open_prs=True)
+
+    found = result["OSS 0.98.0"]
+    assert found.state == "blocked"
+    assert (f"preparation would read v8.2.0 at {replacement} rather than {approved}: a tag moved while discovery "
+            "ran, so nothing is prepared from it") in found.reason
+    assert refs(released.origin) == branches
+    assert released.github.posts[posts:] == []
+
+    # Next time the tag no longer names what the preferred edition records, which stops OSS as before.
+    monkeypatch.setattr(discover, "fetch", fetch)
+    assert "the preferred Enterprise edition 8.2.0 was saved from" in released.run(open_prs=True)["OSS 0.98.0"].reason
+    assert refs(released.origin) == branches
+    # Put back, it is prepared from the recorded commit.
+    annotated(released.sophon, "v8.2.0", approved, force=True)
+    assert released.run(open_prs=True)["OSS 0.98.0"].state == "open"
+    record = yaml.safe_load(released.show(refs(released.origin)["refs/heads/editions/oss-0.98.0"],
+                                          "releases/oss-0.98.0.yaml"))
+    assert record["release"]["enterprise_pages"] == {"ref": "v8.2.0", "commit": approved}
+
+
+def test_a_tag_that_moves_before_preparing_is_never_pushed(released, monkeypatch):
+    saved_enterprise(released)
+    released.configure(oss="0.98.0", pages="preferred")
+    approved = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
+    replacement = released.enterprise("8.3.0", released.bundled)
+    prepare = edition.prepare
+
+    def move_then_prepare(args, repo=edition.REPO_ROOT):
+        annotated(released.sophon, "v8.2.0", replacement, force=True)
+        discover.fetch(released.clones["sophon"], *discover.tag_refspecs("v8.2.0"))
+        return prepare(args, repo)
+
+    monkeypatch.setattr(edition, "prepare", move_then_prepare)
+    branches, posts = refs(released.origin), len(released.github.posts)
+
+    result = released.run(open_prs=True)
+
+    found = result["OSS 0.98.0"]
+    assert found.failed
+    assert f"failed: preparation read v8.2.0 at {replacement} rather than {approved}" in found.done
+    assert refs(released.origin) == branches
+    assert released.github.posts[posts:] == []
+    assert len(git(released.docs, "worktree", "list").splitlines()) == 1
+
+
+@pytest.mark.parametrize("tag", ["v8.2.0", "release-qualified/v8.2.0"])
+def test_enterprise_tags_that_move_while_they_are_fetched_stop_for_review(released, monkeypatch, tag):
+    listed = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
+    qualified = git(released.sophon, "rev-parse", "refs/tags/release-qualified/v8.2.0")
+    other = released.enterprise("8.2.0 again", released.bundled, qualified=None, tagged=False)
+    fetch = discover.fetch
+
+    def move_then_fetch(repo, *refspecs):
+        if repo == released.clones["sophon"] and "+refs/tags/v8.2.0:refs/tags/v8.2.0" in refspecs:
+            if tag == "v8.2.0":
+                # Released again from another commit, qualified there too.
+                annotated(released.sophon, "v8.2.0", other, force=True)
+                annotated(released.sophon, "release-qualified/v8.2.0", other, force=True)
+            else:
+                annotated(released.sophon, "release-qualified/v8.2.0", listed, force=True)
+        return fetch(repo, *refspecs)
+
+    monkeypatch.setattr(discover, "fetch", move_then_fetch)
+    branches = refs(released.origin)
+
+    result = released.run(open_prs=True)
+
+    found = result["Enterprise 8.2.0"]
+    assert found.state == "blocked"
+    assert "a tag moved while discovery ran, so nothing is prepared from it" in found.reason
+    if tag == "v8.2.0":
+        assert f"v8.2.0 at {other} rather than {listed}" in found.reason
+    else:
+        now = git(released.sophon, "rev-parse", "refs/tags/release-qualified/v8.2.0")
+        assert f"release-qualified/v8.2.0 at {now} rather than {qualified}" in found.reason
+    assert refs(released.origin) == branches
+    assert released.github.opened() == []
 
 
 def test_changed_qualification_stops_an_open_pull_request(released):
@@ -792,19 +891,50 @@ def test_a_run_interrupted_after_pushing_opens_the_pull_request_next_time(releas
     ]
 
 
-def test_checks_that_did_not_start_are_started_next_time(released):
-    released.github.failures["repos/lancedb/docs/actions/workflows/compose.yml/dispatches"] = 1
+@pytest.mark.parametrize("workflow", ["compose.yml", "assemble.yml"])
+def test_a_check_that_did_not_start_is_started_next_time_on_its_own(released, workflow):
+    branch = "editions/enterprise-8.2.0"
+    dispatch = f"repos/lancedb/docs/actions/workflows/{workflow}/dispatches"
+    released.github.failures[dispatch] = 1
 
     first = released.run(open_prs=True)
 
     found = first["Enterprise 8.2.0"]
     assert found.state == "open" and found.failed
-    assert found.done.startswith("opened pull request #1, then failed: GitHub POST")
-    assert len(released.github.pull_requests) == 1
+    assert found.done.startswith(f"opened pull request #1, then failed: could not start {workflow} (GitHub POST")
+    assert found.done.endswith("the next run starts what has not run")
+    # The other check started anyway.
+    assert released.github.dispatched() == [("compose.yml", branch), ("assemble.yml", branch)]
+    head, posts = released.github.head(branch), len(released.github.posts)
 
     second = released.run(open_prs=True)
 
-    assert second["Enterprise 8.2.0"].done == "started its checks, which had not run"
+    found = second["Enterprise 8.2.0"]
+    assert (found.state, found.failed) == ("open", False)
+    assert found.done == f"started {workflow}, which had not run on its head"
+    assert released.github.posts[posts:] == [(dispatch, {"ref": branch})]
+    assert len(released.github.pull_requests) == 1 and released.github.head(branch) == head
+    assert not discover.failed(second.findings)
+
+    # A check that has run is never started again, whatever its result.
+    for runs in released.github.runs.values():
+        runs[:] = [{"status": "completed", "conclusion": "failure"}]
+    third = released.run(open_prs=True)
+    assert third["Enterprise 8.2.0"].done is None
+    assert len(released.github.posts) == posts + 1
+
+
+def test_a_check_that_still_cannot_start_fails_the_run_with_its_name(released):
+    dispatch = "repos/lancedb/docs/actions/workflows/assemble.yml/dispatches"
+    released.github.failures[dispatch] = 2
+
+    released.run(open_prs=True)
+    second = released.run(open_prs=True)
+
+    found = second["Enterprise 8.2.0"]
+    assert found.failed and discover.failed(second.findings)
+    assert found.done.startswith("failed: could not start assemble.yml (GitHub POST")
+    assert "Failed: could not start assemble.yml" in second.report
     assert len(released.github.pull_requests) == 1
 
 
@@ -998,7 +1128,7 @@ def test_discovery_runs_only_by_hand_and_writes_only_when_enabled_on_main():
     assert "--open-prs" not in yaml.safe_dump(jobs["dry-run"])
     assert jobs["open-prs"]["if"] == "inputs.mode == 'open-prs'"
     assert jobs["open-prs"]["permissions"] == {
-        "contents": "write", "pull-requests": "write", "actions": "write", "checks": "read"
+        "contents": "write", "pull-requests": "write", "actions": "write"
     }
     gate = jobs["open-prs"]["steps"][0]
     assert gate["if"] == "github.ref != 'refs/heads/main' || vars.RELEASE_DISCOVERY != 'open-prs'"

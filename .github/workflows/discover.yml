@@ -78,8 +78,7 @@ jobs:
     permissions:
       contents: write # the editions/* branches
       pull-requests: write
-      actions: write # their pull request checks, which their pushes do not start
-      checks: read # whether those checks started
+      actions: write # their pull request checks, which their pushes do not start, and which have run
     steps:
       - name: Check that opening pull requests is enabled
         if: github.ref != 'refs/heads/main' || vars.RELEASE_DISCOVERY != 'open-prs'
