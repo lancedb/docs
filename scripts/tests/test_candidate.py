@@ -1162,6 +1162,11 @@ DEPLOYMENT_EVIDENCE = {
         {},
         "is failure at no address",
     ),
+    "a newer status at the staging address that is not a success": (
+        lambda s: [deployment(s, statuses=[status(), status("failure", id=2)])],
+        {},
+        f"is failure at {STAGING_URL}, " + NOT_LIVE,
+    ),
     "a success added by another account": (
         lambda s: [
             deployment(s, statuses=[status("failure", None), status(id=2, creator=ACTIONS)])
