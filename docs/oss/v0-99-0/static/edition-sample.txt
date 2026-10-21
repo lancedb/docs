@@ -1,1 +1,0 @@
-PR2 shared download fixture. Not product data.
