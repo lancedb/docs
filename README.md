@@ -180,7 +180,8 @@ there. Until then, as today, staging changes only by hand. Publishing the first
 versioned candidate there is the deliberate step that switches the shared
 staging site to the versioned site; publishing an assembled candidate there by
 hand stops it following `main`. Publications to staging and production run one
-at a time, and one waiting its turn, by hand or not, is never cancelled.
+at a time. Pending publications queue rather than replace earlier ones, up to
+GitHub’s limit of 100 pending jobs.
 
 A push is not a deployment. Mintlify deploys the commit afterwards: the
 "Mintlify Deployment" check on the commit says when, and the deployment
