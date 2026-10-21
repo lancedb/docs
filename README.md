@@ -456,6 +456,8 @@ link. A link to something the edition does not publish is a warning, and
 `mint broken-links` checks the composed site. Component link attributes must use
 a quoted string or a constant string expression on one line, without escapes or
 interpolation. Dynamic targets stop composition with the page and line to fix.
+HTML entities in quoted link attributes are refused too; use a literal path in
+a constant string expression, such as `href={"/guide?a=1&b=2"}`.
 Other component attributes may use quoted values or simple brace expressions
 on one line, including arrow functions. Spreads, nested JSX, regex, division,
 less-than comparisons and template interpolation are refused rather than guessed. Fenced examples, inline

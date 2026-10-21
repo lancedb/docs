@@ -709,6 +709,26 @@ def test_wildcard_to_parent_keeps_the_parent_page(docs, tmp_path):
     assert '[Guide](/enterprise/v8-1-0/guide)' in (site / 'enterprise/v8-1-0/index.mdx').read_text()
 
 
+@pytest.mark.parametrize("target", ["&#47;enterprise/security", "&#x2f;enterprise/security", "&sol;enterprise/security", "/guide?a=1&amp;b=2"])
+def test_html_entities_in_link_attributes_are_refused(docs, tmp_path, target):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += f'\n<a href="{target}">Guide</a>\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    with pytest.raises(compose.ComposeError, match=r"guide.mdx:\d+: href contains HTML entities"):
+        composed(docs, tmp_path)
+    assert not (tmp_path / "site").exists()
+
+
+def test_literal_query_in_link_expression_is_preserved(docs, tmp_path):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += '\n<a href={"/guide?a=1&b=2"}>Guide</a>\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    page = (composed(docs, tmp_path) / "enterprise/v8-1-0/guide.mdx").read_text()
+    assert 'href={"/enterprise/v8-1-0/guide?a=1&b=2"}' in page
+
+
 def test_attribute_names_in_urls_and_prose_are_not_jsx(docs, tmp_path):
     text = '\n[Query](/guide?href=/enterprise/security)\nThe parameter href=target is prose.\n<Card title="href=example > text" href={`/guide`} />\n'
     files = edition_files('8.1.0'); files['guide.mdx'] += text

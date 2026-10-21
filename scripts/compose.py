@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import html
 import json
 import posixpath
 import re
@@ -502,6 +503,9 @@ class Linker:
             self.fail(f"{match[1]} must be a constant string on one line, without escapes or interpolation")
             return line[match.start():], len(line)
         end += int(expression)
+        if not expression and html.unescape(value) != value:
+            self.fail(f"{match[1]} contains HTML entities; use a literal path in a constant string expression")
+            return line[match.start():end], end
         named_icon = match[1] in NAMES_OR_LINKS and not value.startswith("/") and not SCHEME_RE.match(value)
         pointed = value if named_icon else self.point(value)
         return line[match.start():start + 1] + pointed + line[close:end], end
