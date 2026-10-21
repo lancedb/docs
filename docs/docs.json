@@ -1,0 +1,21 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Publication rehearsal",
+  "colors": {
+    "primary": "#2563EB"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Rehearsal",
+        "pages": [
+          "index"
+        ]
+      }
+    ]
+  },
+  "seo": {
+    "indexing": "disabled"
+  }
+}
