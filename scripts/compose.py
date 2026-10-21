@@ -67,7 +67,7 @@ PARAM_RE = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)([*+?]?)")
 FENCE_RE = re.compile(r"[ \t]*(`{3,}|~{3,})")
 INLINE_LINK_RE = re.compile(r"(\]\([ \t]*)(<[^<>\n]*>|[^\s()<>]+)")
 DEFINITION_RE = re.compile(r"( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^<>\n]*>|\S+)")
-ATTRIBUTE_START_RE = re.compile(rf"(?<![\w-])({'|'.join(LINK_ATTRIBUTES)})[ \t]*=[ \t]*")
+ATTRIBUTE_START_RE = re.compile(r"([A-Za-z_:][\w:.-]*)([ \t]*=[ \t]*)?")
 TAG_START_RE = re.compile(r"<[A-Za-z][\w.-]*(?=\s|/?>)")
 ANY_ATTRIBUTE_RE = re.compile(r"""[\w:-]+[ \t]*=[ \t]*\{?[ \t]*(["'`])[^"'`\n]*\1""")
 LINK_TEXT_RE = re.compile(r"\[[^\]\n]*\]")
@@ -197,23 +197,19 @@ class Redirect:
 
 
 def redirect_pattern(source: str) -> re.Pattern:
-    regex = ""
+    regex, wildcards = "", 0
     for segment in [s for s in source.split("/") if s]:
         param = PARAM_RE.fullmatch(segment)
-        if param is None:
-            regex += "/" + re.escape(segment)
-        elif param[2] == "*":
+        if param and param[2] == "*":
+            wildcards += 1
             regex += rf"(?:/(?P<{param[1]}>.*))?"
-        elif param[2] == "+":
-            regex += rf"/(?P<{param[1]}>.+)"
-        elif param[2] == "?":
-            regex += rf"(?:/(?P<{param[1]}>[^/]+))?"
+        elif not any(char in segment for char in "*:?+#"):
+            regex += "/" + re.escape(segment)
         else:
-            regex += rf"/(?P<{param[1]}>[^/]+)"
-    try:
-        return re.compile(regex or "/")
-    except re.error as exc:
-        raise ComposeError(f"the redirect source {source!r} cannot be read: {exc}") from None
+            raise ComposeError(f"unsupported redirect source {source!r}; use a literal path or one :name* segment")
+    if wildcards > 1:
+        raise ComposeError(f"unsupported redirect source {source!r}; use only one :name* segment")
+    return re.compile(regex or "/")
 
 
 def redirect(item: object, where: str, host: str | None = None) -> Redirect:
@@ -510,6 +506,73 @@ class Linker:
         pointed = value if named_icon else self.point(value)
         return line[match.start():start + 1] + pointed + line[close:end], end
 
+    def expression_end(self, line: str, start: int) -> int:
+        depth, i = 1, start + 1
+        while i < len(line) and line[i] not in "\r\n":
+            char = line[i]
+            if char in "\"'`":
+                quote, i = char, i + 1
+                while i < len(line) and line[i] not in "\r\n":
+                    if line[i] == "\\":
+                        i += 2
+                    elif quote == "`" and line.startswith("${", i):
+                        raise ComposeError("template interpolation in a component attribute is not supported")
+                    elif line[i] == quote:
+                        i += 1
+                        break
+                    else:
+                        i += 1
+                else:
+                    raise ComposeError("component attribute strings must close on the same line")
+                continue
+            if line.startswith("/*", i):
+                end = line.find("*/", i + 2)
+                if end < 0:
+                    break
+                i = end + 2
+                continue
+            if char in "/<":
+                raise ComposeError("component attribute expressions cannot contain regex, division or nested JSX")
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return i + 1
+            i += 1
+        raise ComposeError("component attribute expressions must close on the same line")
+
+    def tag_part(self, line: str, start: int) -> tuple[str, int]:
+        if line[start].isspace():
+            return line[start], start + 1
+        if line.startswith("/>", start) or line[start] == ">":
+            end = start + (2 if line[start] == "/" else 1)
+            self.in_tag = False
+            return line[start:end], end
+        match = ATTRIBUTE_START_RE.match(line, start)
+        try:
+            if match is None:
+                raise ComposeError("unsupported component attribute; write attributes explicitly without spreads")
+            if match[1] in LINK_ATTRIBUTES:
+                if not match[2]:
+                    raise ComposeError(f"{match[1]} must have its value on the same line")
+                return self.attribute(line, match)
+            if not match[2]:
+                return match[0], match.end()
+            value = match.end()
+            if line.startswith("{", value):
+                end = self.expression_end(line, value)
+            elif line[value:value + 1] in ('"', "'"):
+                end = line.find(line[value], value + 1) + 1
+                if not end:
+                    raise ComposeError("component attribute strings must close on the same line")
+            else:
+                raise ComposeError("component attributes need a quoted value or a brace expression")
+            return line[start:end], end
+        except ComposeError as exc:
+            self.fail(str(exc))
+            return line[start:], len(line)
+
     def prose(self, segment: str, at_start: bool) -> str:
         """Text outside code and comments, with its links pointed into this edition."""
         # What is left once link targets, link text and attributes are blanked
@@ -550,13 +613,16 @@ class Linker:
                 out.append(line[i : end + 3])
                 i, comment = end + 3, False
                 continue
-            attribute = ATTRIBUTE_START_RE.search(line, i) if self.in_tag else None
-            other = ANY_ATTRIBUTE_RE.search(line, i) if self.in_tag else None
-            tag = None if self.in_tag else TAG_START_RE.search(line, i)
-            close_tag = line.find(">", i) if self.in_tag else -1
-            stops = [p for p in (line.find("`", i), line.find("{/*", i), close_tag,
-                                 attribute.start() if attribute else -1,
-                                 other.start() if other else -1, tag.start() if tag else -1) if p >= 0]
+            if line.startswith("{/*", i):
+                comment = True
+                continue
+            if self.in_tag:
+                rewritten, i = self.tag_part(line, i)
+                out.append(rewritten)
+                continue
+            tag = TAG_START_RE.search(line, i)
+            stops = [p for p in (line.find("`", i), line.find("{/*", i),
+                                 tag.start() if tag else -1) if p >= 0]
             stop = min(stops) if stops else len(line)
             out.append(self.prose(line[i:stop], at_start=i == 0))
             if stop == len(line):
@@ -564,18 +630,6 @@ class Linker:
             if tag and stop == tag.start():
                 out.append(tag[0])
                 i, self.in_tag = tag.end(), True
-                continue
-            if stop == close_tag:
-                out.append(">")
-                i, self.in_tag = stop + 1, False
-                continue
-            if attribute and stop == attribute.start():
-                rewritten, i = self.attribute(line, attribute)
-                out.append(rewritten)
-                continue
-            if other and stop == other.start():
-                out.append(other[0])
-                i = other.end()
                 continue
             if line.startswith("{/*", stop):
                 i, comment = stop, True

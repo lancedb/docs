@@ -456,8 +456,15 @@ link. A link to something the edition does not publish is a warning, and
 `mint broken-links` checks the composed site. Component link attributes must use
 a quoted string or a constant string expression on one line, without escapes or
 interpolation. Dynamic targets stop composition with the page and line to fix.
-Fenced examples, inline code and MDX comments are left alone. Redirect checks
-follow redirects before pages, and reject loops and chains longer than 100 hops.
+Other component attributes may use quoted values or simple brace expressions
+on one line, including arrow functions. Spreads, nested JSX, regex, division,
+less-than comparisons and template interpolation are refused rather than guessed. Fenced examples, inline
+code and MDX comments are left alone.
+
+Redirect sources must be plain paths or contain one `:name*` segment. Other
+patterns, including partial wildcards such as `/article-*`, stop composition
+with an error; use explicit paths instead. Redirect checks follow redirects
+before pages, and reject loops and chains longer than 100 hops.
 
 An example that downloads a file from `docs.lancedb.com` keeps the URL it
 shows, and the file is also served there, at its unversioned path. Every

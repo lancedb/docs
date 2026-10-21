@@ -718,3 +718,56 @@ def test_attribute_names_in_urls_and_prose_are_not_jsx(docs, tmp_path):
     assert '[Query](/enterprise/v8-1-0/guide?href=/enterprise/security)' in page
     assert 'The parameter href=target is prose.' in page
     assert '<Card title="href=example > text" href={`/enterprise/v8-1-0/guide`} />' in page
+
+
+@pytest.mark.parametrize('attribute', [
+    'onClick={() => {}}',
+    'data={{message: "> }", nested: {enabled: true}}}',
+    'onClick={() => { /* } > */ return "done"; }}',
+    'title={`literal > }`}',
+    'disabled={count > 0}',
+])
+def test_other_jsx_expressions_cannot_hide_a_link(docs, tmp_path, attribute):
+    markup = f'<a {attribute}\n  href={{`/enterprise/security`}}>Next</a>'
+    files = edition_files('8.1.0')
+    files['guide.mdx'] += '\n' + markup + '\n'
+    save(docs, 'enterprise', '8.1.0', files)
+    save(docs, 'enterprise', '8.2.0')
+    configure(docs, enterprise='8.2.0')
+    page = (composed(docs, tmp_path) / 'enterprise/v8-1-0/guide.mdx').read_text()
+    assert markup.replace('/enterprise/security', '/enterprise/v8-1-0/enterprise/security') in page
+    if MDX_COMPILER and shutil.which('node'):
+        result = compile_mdx(page)
+        assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize('attributes', [
+    'onClick={() => /}/.test(value)} href={`/guide`}',
+    'title={`value ${suffix}`} href={`/guide`}',
+    '{...props} href={`/guide`}',
+    'title={<a href="/guide">Guide</a>} href={`/guide`}',
+    'onClick={() => {\n}} href={`/guide`}',
+    'href\n = {`/guide`}',
+    'title="long\n title" href={`/guide`}',
+])
+def test_unsupported_jsx_attributes_fail_instead_of_hiding_links(docs, tmp_path, attributes):
+    files = edition_files('8.1.0')
+    files['guide.mdx'] += f'\n<a {attributes}>Next</a>\n'
+    save(docs, 'enterprise', '8.1.0', files)
+    configure(docs, enterprise='8.1.0')
+    with pytest.raises(compose.ComposeError, match=r'guide.mdx:\d+:'):
+        composed(docs, tmp_path)
+    assert not (tmp_path / 'site').exists()
+
+
+@pytest.mark.parametrize('source', ['/legacy/article-*', '/legacy/*', '/:first*/:second*', '/legacy/:slug+', '/legacy/:slug?'])
+def test_unhandled_redirect_patterns_are_refused(docs, tmp_path, source):
+    files = edition_files('8.1.0', redirects=[
+        {'source': source, 'destination': '/guide'},
+        {'source': '/guide', 'destination': '/legacy/article-one'},
+    ], extra={'legacy/article-one.mdx': '---\ntitle: Legacy\n---\nExisting page.\n'})
+    save(docs, 'enterprise', '8.1.0', files)
+    configure(docs, enterprise='8.1.0')
+    with pytest.raises(compose.ComposeError, match='unsupported redirect source'):
+        composed(docs, tmp_path)
+    assert not (tmp_path / 'site').exists()
