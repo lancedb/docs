@@ -67,9 +67,8 @@ PARAM_RE = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)([*+?]?)")
 FENCE_RE = re.compile(r"[ \t]*(`{3,}|~{3,})")
 INLINE_LINK_RE = re.compile(r"(\]\([ \t]*)(<[^<>\n]*>|[^\s()<>]+)")
 DEFINITION_RE = re.compile(r"( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^<>\n]*>|\S+)")
-ATTRIBUTE_RE = re.compile(
-    rf"""((?<![\w-])({'|'.join(LINK_ATTRIBUTES)})[ \t]*=[ \t]*\{{?[ \t]*)(["'`])([^"'`\n]*)\3"""
-)
+ATTRIBUTE_START_RE = re.compile(rf"(?<![\w-])({'|'.join(LINK_ATTRIBUTES)})[ \t]*=[ \t]*")
+TAG_START_RE = re.compile(r"<[A-Za-z][\w.-]*(?=\s|/?>)")
 ANY_ATTRIBUTE_RE = re.compile(r"""[\w:-]+[ \t]*=[ \t]*\{?[ \t]*(["'`])[^"'`\n]*\1""")
 LINK_TEXT_RE = re.compile(r"\[[^\]\n]*\]")
 IMPORT_RE = re.compile(r"""([ \t]*(?:import\b[^'"\n]*?\bfrom|\}[ \t]*from)[ \t]*)(["'])(/[^'"\n]+)\2""")
@@ -184,17 +183,17 @@ class Redirect:
 
     @property
     def external(self) -> bool:
-        return SCHEME_RE.match(self.destination) is not None
+        return external_url(self.destination)
 
     def target(self, path: str) -> str:
         """Where this redirect sends `path`, which its source matches."""
         found = self.pattern.fullmatch(path)
         values = found.groupdict() if found else {}
         target = PARAM_RE.sub(lambda m: values.get(m[1]) or "", self.destination)
-        if SCHEME_RE.match(target):
+        if external_url(target):
             return target
-        route, mark, anchor = target.partition("#")
-        return normal(re.sub(r"/+", "/", route)) + mark + anchor
+        parts = urllib.parse.urlsplit(target)
+        return urllib.parse.urlunsplit(parts._replace(path=normal(safe_path(parts.path))))
 
 
 def redirect_pattern(source: str) -> re.Pattern:
@@ -217,7 +216,7 @@ def redirect_pattern(source: str) -> re.Pattern:
         raise ComposeError(f"the redirect source {source!r} cannot be read: {exc}") from None
 
 
-def redirect(item: object, where: str) -> Redirect:
+def redirect(item: object, where: str, host: str | None = None) -> Redirect:
     if (
         not isinstance(item, dict)
         or not isinstance(item.get("source"), str)
@@ -226,10 +225,14 @@ def redirect(item: object, where: str) -> Redirect:
     ):
         raise ComposeError(f"{where}: a redirect needs a source path and a destination, not {item!r}")
     destination = item["destination"]
-    # Some sources write `a/b` for `/a/b`.
-    if not SCHEME_RE.match(destination) and not destination.startswith("/"):
-        destination = "/" + destination
-    source = normal(item["source"])
+    parts = urllib.parse.urlsplit(destination)
+    if host and parts.hostname == host and parts.scheme.lower() in ("", "http", "https"):
+        destination = urllib.parse.urlunsplit(("", "", parts.path or "/", parts.query, parts.fragment))
+    if not external_url(destination):
+        parts = urllib.parse.urlsplit(destination)
+        path = parts.path if parts.path.startswith("/") else "/" + parts.path
+        destination = urllib.parse.urlunsplit(parts._replace(path=safe_path(path)))
+    source = normal(safe_path(item["source"]))
     return Redirect(source, destination, item.get("permanent"), redirect_pattern(source))
 
 
@@ -240,6 +243,54 @@ def entry(source: str, destination: str, permanent: bool | None) -> dict:
 
 def normal(path: str) -> str:
     return path.rstrip("/") or "/"
+
+
+def external_url(target: str) -> bool:
+    return bool(SCHEME_RE.match(target) or target.startswith("//"))
+
+
+def safe_path(path: str) -> str:
+    # Browsers normalize encoded dot segments too, before requesting a page.
+    segments = []
+    for segment in path.split("/"):
+        decoded = urllib.parse.unquote(segment)
+        if "\\" in decoded or "/" in decoded:
+            raise ComposeError(f"{path} has an encoded separator or backslash; use a plain path")
+        if decoded == "..":
+            if not segments:
+                raise ComposeError(f"{path} leaves the edition")
+            segments.pop()
+        elif decoded not in ("", "."):
+            segments.append(segment)
+    result = ("/" if path.startswith("/") else "") + "/".join(segments)
+    return result + ("/" if path.endswith("/") and segments else "")
+
+
+def matching_redirect(path: str, redirects: list[Redirect]) -> Redirect | None:
+    return next((r for r in redirects if not r.wildcard and r.source == path), None) or next(
+        (r for r in redirects if r.wildcard and r.pattern.fullmatch(path)), None)
+
+
+def follow_redirects(start: str, redirects: list[Redirect], paths: set[str], *, symbolic=False) -> str | None:
+    path, query, anchor, seen = normal(start), "", "", set()
+    for _ in range(100):
+        found = matching_redirect(path, redirects)
+        if found is None:
+            if path not in paths and not (symbolic and PARAM_RE.search(path)):
+                return None
+            return urllib.parse.urlunsplit(("", "", path, query, anchor))
+        if path in seen:
+            raise ComposeError(f"the redirect from {start} loops at {path}")
+        seen.add(path)
+        target = found.target(path)
+        if external_url(target):
+            return target
+        # Mintlify ignores a wildcard's no-op match at its parent page.
+        if found.wildcard and target == path and found.source != found.destination:
+            return path if path in paths else None
+        parts = urllib.parse.urlsplit(target)
+        path, query, anchor = normal(parts.path), parts.query or query, parts.fragment or anchor
+    raise ComposeError(f"the redirect from {start} does not terminate within 100 hops")
 
 
 def versioned(prefix: str, path: str) -> str:
@@ -276,7 +327,7 @@ class Edition:
         return tuple(int(part) for part in self.record["version"].split("."))
 
     def match(self, path: str) -> Redirect | None:
-        return next((r for r in self.redirects if r.pattern.fullmatch(path)), None)
+        return matching_redirect(path, self.redirects)
 
     def publishes(self, path: str) -> bool:
         """Whether a site path names a page, folder or file of this edition, or one of its redirects."""
@@ -285,23 +336,15 @@ class Edition:
             return True
         return self.match(path) is not None
 
-    def landing(self, path: str) -> tuple[str, str] | None:
-        """Where a reader of `path` lands, following redirects, and the anchor they add."""
-        anchor, seen, path = "", set(), normal(path)
-        while path not in self.paths:
-            found = self.match(path)
-            if found is None or path in seen:
-                return None
-            seen.add(path)
-            target = found.target(path)
-            if SCHEME_RE.match(target):
-                return None
-            path, _, added = target.partition("#")
-            anchor = added or anchor
-        return path, anchor
+    def landing(self, path: str) -> str | None:
+        try:
+            return follow_redirects(path, self.redirects, self.paths)
+        except ComposeError:
+            # check_redirects reports the cycle with the composed route.
+            return None
 
 
-def read_edition(repo: Path, record: dict) -> Edition:
+def read_edition(repo: Path, record: dict, host: str) -> Edition:
     rel = record["edition"]
     root = repo / rel
     prefix = f"{record['product']}/v{record['version'].replace('.', '-')}"
@@ -332,7 +375,7 @@ def read_edition(repo: Path, record: dict) -> Edition:
     stems = {"/" + p.rsplit(".", 1)[0] for p, shown in pages.items() if shown}
     folders = {"/".join(r.split("/")[:depth]) for r in routes for depth in range(2, r.count("/") + 1)}
     assets = {f"/{p}" for p in published if p in files and p not in pages}
-    redirects = [redirect(item, f"{rel}/{NAV}") for item in docs.get("redirects") or []]
+    redirects = [redirect(item, f"{rel}/{NAV}", host) for item in docs.get("redirects") or []]
     site_wide = [p for p in kept if p.endswith(SITE_WIDE) and p in published]
     return Edition(record, prefix, docs, ignore, files, pages, routes, routes | stems | folders | assets,
                    assets, redirects, site_wide)
@@ -389,34 +432,40 @@ class Linker:
             return raw
         parts = urllib.parse.urlsplit(target)
         ed = self.ed
-        if parts.scheme or target.startswith("//"):
-            if parts.scheme.lower() not in ("", "http", "https") or (parts.hostname or "") != self.host:
+        absolute = bool(parts.scheme or target.startswith("//"))
+        if absolute and (parts.scheme.lower() not in ("", "http", "https") or parts.hostname != self.host):
+            return raw
+        try:
+            if not absolute and not target.startswith("/"):
+                try:
+                    resolved = safe_path(posixpath.join(posixpath.dirname(self.page), parts.path))
+                except ComposeError as exc:
+                    raise ComposeError(f"{target} leaves the edition or has an unsafe path: {exc}") from None
+                if parts.path and not ed.publishes("/" + resolved):
+                    self.note(f"{target} leads to nothing {ed.name} publishes")
                 return raw
-            landed = ed.landing(parts.path or "/")
-            if landed is None:
-                self.note(f"{target} has no page in {ed.name}; it now points at that path in {ed.name}")
-                landed = (normal(parts.path or "/"), "")
-            path, anchor = landed
-            # The link's own anchor wins over one a redirect adds.
-            anchor = parts.fragment or anchor
-            pointed = versioned(ed.prefix, path) + (f"?{parts.query}" if parts.query else "") + (
-                f"#{anchor}" if anchor else "")
-        elif target.startswith("/"):
-            found = VERSIONED_RE.match(parts.path)
+            original = parts.path or "/"
+            found = VERSIONED_RE.match(original)
             if found:
                 if found[0] != f"/{ed.prefix}":
                     self.fail(f"{target} points into another edition; an edition links only within itself")
-                return raw
-            if not ed.publishes(parts.path):
+                    return raw
+                original = original[len(found[0]):] or "/"
+            path = safe_path(original)
+            if absolute:
+                landed = ed.landing(path)
+                if landed is not None and external_url(landed):
+                    return landed
+                if landed is None:
+                    self.note(f"{target} has no page in {ed.name}; it now points at that path in {ed.name}")
+                resolved = urllib.parse.urlsplit(landed or path)
+                path = resolved.path
+                parts = parts._replace(query=parts.query or resolved.query, fragment=parts.fragment or resolved.fragment)
+            elif not ed.publishes(path):
                 self.note(f"{target} leads to nothing {ed.name} publishes")
-            pointed = versioned(ed.prefix, parts.path) + target[len(parts.path):]
-        else:
-            # Mintlify resolves a relative link against the page's own file.
-            resolved = posixpath.normpath(posixpath.join(posixpath.dirname(self.page), parts.path))
-            if resolved == ".." or resolved.startswith("../"):
-                self.fail(f"{target} leaves the edition; a relative link must stay within it")
-            elif parts.path and not ed.publishes("/" + ("" if resolved == "." else resolved)):
-                self.note(f"{target} leads to nothing {ed.name} publishes")
+            pointed = urllib.parse.urlunsplit(("", "", versioned(ed.prefix, path), parts.query, parts.fragment))
+        except ComposeError as exc:
+            self.fail(str(exc))
             return raw
         return f"<{pointed}>" if bracketed else pointed
 
@@ -435,11 +484,31 @@ class Linker:
             self.line = number
             self.code(line)
 
-    def attribute(self, match: re.Match) -> str:
-        lead, name, quote, value = match[1], match[2], match[3], match[4]
-        if name in NAMES_OR_LINKS and not value.startswith("/") and not SCHEME_RE.match(value):
-            return match[0]
-        return lead + quote + self.point(value) + quote
+    def attribute(self, line: str, match: re.Match) -> tuple[str, int]:
+        start = match.end()
+        expression = line.startswith("{", start)
+        if expression:
+            start += 1
+            while start < len(line) and line[start] in " \t":
+                start += 1
+        quote = line[start:start + 1]
+        if quote not in ('"', "'", "`") or (quote == "`" and not expression):
+            self.fail(f"{match[1]} must be a quoted path or a constant string expression")
+            return line[match.start():], len(line)
+        close = line.find(quote, start + 1)
+        value = line[start + 1:close] if close >= 0 else ""
+        end = close + 1
+        if expression:
+            while end < len(line) and line[end] in " \t":
+                end += 1
+        if (close < 0 or "\\" in value or (quote == "`" and "${" in value)
+                or (expression and not line.startswith("}", end))):
+            self.fail(f"{match[1]} must be a constant string on one line, without escapes or interpolation")
+            return line[match.start():], len(line)
+        end += int(expression)
+        named_icon = match[1] in NAMES_OR_LINKS and not value.startswith("/") and not SCHEME_RE.match(value)
+        pointed = value if named_icon else self.point(value)
+        return line[match.start():start + 1] + pointed + line[close:end], end
 
     def prose(self, segment: str, at_start: bool) -> str:
         """Text outside code and comments, with its links pointed into this edition."""
@@ -467,7 +536,7 @@ class Linker:
             if found:
                 segment = found[1] + self.point(found[2]) + segment[found.end():]
         segment = INLINE_LINK_RE.sub(lambda m: m[1] + self.point(m[2]), segment)
-        return ATTRIBUTE_RE.sub(self.attribute, segment)
+        return segment
 
     def prose_line(self, line: str, comment: bool) -> tuple[str, bool]:
         """A line outside code fences: its prose rewritten, its code spans and MDX comments kept."""
@@ -481,11 +550,33 @@ class Linker:
                 out.append(line[i : end + 3])
                 i, comment = end + 3, False
                 continue
-            stops = [p for p in (line.find("`", i), line.find("{/*", i)) if p >= 0]
+            attribute = ATTRIBUTE_START_RE.search(line, i) if self.in_tag else None
+            other = ANY_ATTRIBUTE_RE.search(line, i) if self.in_tag else None
+            tag = None if self.in_tag else TAG_START_RE.search(line, i)
+            close_tag = line.find(">", i) if self.in_tag else -1
+            stops = [p for p in (line.find("`", i), line.find("{/*", i), close_tag,
+                                 attribute.start() if attribute else -1,
+                                 other.start() if other else -1, tag.start() if tag else -1) if p >= 0]
             stop = min(stops) if stops else len(line)
             out.append(self.prose(line[i:stop], at_start=i == 0))
             if stop == len(line):
                 break
+            if tag and stop == tag.start():
+                out.append(tag[0])
+                i, self.in_tag = tag.end(), True
+                continue
+            if stop == close_tag:
+                out.append(">")
+                i, self.in_tag = stop + 1, False
+                continue
+            if attribute and stop == attribute.start():
+                rewritten, i = self.attribute(line, attribute)
+                out.append(rewritten)
+                continue
+            if other and stop == other.start():
+                out.append(other[0])
+                i = other.end()
+                continue
             if line.startswith("{/*", stop):
                 i, comment = stop, True
                 continue
@@ -506,7 +597,7 @@ class Linker:
 
     def rewrite(self, rel: str, text: str, published: bool) -> str:
         """One page, its links pointed into this edition; a draft's problems are not reported."""
-        self.page, self.quiet = rel, not published
+        self.page, self.quiet, self.in_tag = rel, not published, False
         lines = text.splitlines(keepends=True)
         out, start = [], 0
         if text.startswith("---\n"):
@@ -671,7 +762,7 @@ def legacy_redirects(editions: list[Edition], default: Edition) -> tuple[list[di
         elif moved is not None and moved.wildcard:
             destination = versioned(default.prefix, moved.destination)
         elif moved is not None and (landed := default.landing(path)) is not None:
-            destination = versioned(default.prefix, landed[0]) + (f"#{landed[1]}" if landed[1] else "")
+            destination = landed if external_url(landed) else versioned(default.prefix, landed)
         else:
             unresolved.append((path, known[path]))
             continue
@@ -687,33 +778,23 @@ def check_redirects(redirects: list[dict], legacy: list[dict], routes: set[str],
         counts[item["source"]] = counts.get(item["source"], 0) + 1
     problems += [f"redirects {source} more than once" for source, n in sorted(counts.items()) if n > 1]
     parsed = [redirect(item, "the composed redirects") for item in redirects]
-    exact = {}
-    for r in parsed:
-        if not r.wildcard:
-            exact.setdefault(r.source, r)
-    wildcards = [r for r in parsed if r.wildcard]
     for item in legacy:
         r = redirect(item, "an unversioned redirect")
         captured = sorted(route for route in routes if r.pattern.fullmatch(route))
         if captured:
             problems.append(f"the unversioned redirect from {r.source} would capture {captured[0]}")
     for r in parsed:
-        if r.wildcard or r.source in paths:
-            continue
-        path, seen = r.source, []
-        while path not in paths:
-            found = exact.get(path) or next((w for w in wildcards if w.pattern.fullmatch(path)), None)
-            if found is None:
-                problems.append(f"the redirect from {r.source} leads to {path}, which the site does not have")
-                break
-            if path in seen:
-                problems.append(f"the redirect from {r.source} loops: {' -> '.join([*seen, path])}")
-                break
-            seen.append(path)
-            target = found.target(path)
-            if SCHEME_RE.match(target):
-                break
-            path = target.partition("#")[0]
+        probes = {r.source}
+        if r.wildcard:
+            probes.update(path for path in paths | {p.source for p in parsed if not p.wildcard}
+                          if r.pattern.fullmatch(path))
+        for path in sorted(probes):
+            try:
+                landed = follow_redirects(path, parsed, paths, symbolic=r.wildcard and path == r.source)
+                if landed is None:
+                    problems.append(f"the redirect from {r.source} leads nowhere the site publishes")
+            except ComposeError as exc:
+                problems.append(str(exc))
     return problems
 
 
@@ -768,7 +849,7 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
     records = [edition.load_record(path) for path in sorted((repo / "releases").glob("*.yaml"))]
     if not records:
         raise ComposeError("there are no saved editions to compose")
-    editions = [read_edition(repo, record) for record in records]
+    editions = [read_edition(repo, record, config["host"]) for record in records]
     products = {p["product"]: p for p in config["products"]}
     shown = {
         name: sorted((e for e in editions if e.record["product"] == name), key=lambda e: e.version, reverse=True)
@@ -843,7 +924,7 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
                     )
 
             for r in ed.redirects:
-                if not r.wildcard and not r.external and not ed.publishes(r.destination.partition("#")[0]):
+                if not r.wildcard and not r.external and not ed.publishes(urllib.parse.urlsplit(r.destination).path):
                     problems.append(f"{ed.record['edition']}/{NAV}: the redirect from {r.source} leads to "
                                     f"{r.destination}, which {ed.name} does not publish")
                 destination = r.destination if r.external else versioned(ed.prefix, r.destination)

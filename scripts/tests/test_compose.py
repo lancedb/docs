@@ -590,3 +590,131 @@ def test_composing_never_writes_over_the_saved_editions(docs, tmp_path):
     with pytest.raises(compose.ComposeError, match=r"overlaps"):
         compose.compose(docs, docs / "editions")
     assert (docs / "editions/enterprise/8.1.0/guide.mdx").is_file()
+
+
+@pytest.mark.parametrize("value", ['"/enterprise/security"', "{'/enterprise/security'}", '{`/enterprise/security`}'])
+def test_static_jsx_links_stay_with_the_selected_edition(docs, tmp_path, value):
+    markup = f'<Card title="Next" href={value} />'
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += markup + '\n'
+    save(docs, "enterprise", "8.1.0", files)
+    save(docs, "enterprise", "8.2.0")
+    configure(docs, enterprise="8.2.0")
+    site = composed(docs, tmp_path)
+    text = (site / "enterprise/v8-1-0/guide.mdx").read_text()
+    assert markup.replace('/enterprise/security', '/enterprise/v8-1-0/enterprise/security') in text
+    if MDX_COMPILER and shutil.which("node"):
+        result = compile_mdx(text)
+        assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("value", ['{target}', '{`/guide/${section}`}', '{"/guide" + suffix}', '{\n"/guide"\n}'])
+def test_unresolved_jsx_links_stop_before_output(docs, tmp_path, value):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += f'<Card href={value} />\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    with pytest.raises(compose.ComposeError, match=r'guide.mdx:\d+: href must be'):
+        composed(docs, tmp_path)
+    assert not (tmp_path / "site").exists()
+
+
+def test_jsx_in_examples_and_comments_is_not_rewritten(docs, tmp_path):
+    examples = '\n``<Card href={`/guide`} />``\n\n```jsx\n<Card href={target} />\n```\n{/* <Card href={target} /> */}\n'
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += examples
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    assert (composed(docs, tmp_path) / "enterprise/v8-1-0/guide.mdx").read_text().endswith(examples)
+
+
+@pytest.mark.parametrize("host", ['https://docs.lancedb.com', '//docs.lancedb.com'])
+def test_same_host_redirects_stay_in_the_edition(docs, tmp_path, host):
+    redirects = [
+        {"source": "/start", "destination": host + "/middle?mode=old#setup"},
+        {"source": "/middle", "destination": "/guide"},
+        {"source": "/external", "destination": "https://example.com/guide?q=1#x"},
+    ]
+    files = edition_files("8.1.0", redirects=redirects)
+    files["guide.mdx"] += '\n[Old](https://docs.lancedb.com/start)\n'
+    save(docs, "enterprise", "8.1.0", files)
+    save(docs, "enterprise", "8.2.0")
+    configure(docs, enterprise="8.2.0")
+    site = composed(docs, tmp_path)
+    targets = {r['source']: r['destination'] for r in site_json(site)['redirects']}
+    assert targets['/enterprise/v8-1-0/start'] == '/enterprise/v8-1-0/middle?mode=old#setup'
+    assert targets['/enterprise/v8-1-0/external'] == 'https://example.com/guide?q=1#x'
+    assert '[Old](/enterprise/v8-1-0/guide?mode=old#setup)' in (site / 'enterprise/v8-1-0/guide.mdx').read_text()
+
+
+@pytest.mark.parametrize("redirects", [
+    [{"source": "/guide", "destination": "/guide"}],
+    [{"source": "/guide", "destination": "/enterprise/security"},
+     {"source": "/enterprise/security", "destination": "/guide"}],
+    [{"source": "/old/:slug*", "destination": "/old/:slug*"}],
+    [{"source": "/old/:slug*", "destination": "/other/:slug*"},
+     {"source": "/other/:slug*", "destination": "/old/:slug*"}],
+    [{"source": "/old/:slug*", "destination": "/old/more/:slug*"}],
+])
+def test_redirects_cannot_loop_even_with_pages_or_wildcards(docs, tmp_path, redirects):
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", redirects=redirects))
+    configure(docs, enterprise="8.1.0")
+    with pytest.raises(compose.ComposeError, match=r'loops|does not terminate'):
+        composed(docs, tmp_path)
+
+
+def test_redirect_takes_precedence_over_an_existing_page(docs, tmp_path):
+    files = edition_files("8.1.0", redirects=[{"source": "/guide", "destination": "/enterprise/security#detail"}])
+    files["index.mdx"] += '\n[Moved](https://docs.lancedb.com/guide)\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    assert '[Moved](/enterprise/v8-1-0/enterprise/security#detail)' in (composed(docs, tmp_path) / 'enterprise/v8-1-0/index.mdx').read_text()
+
+
+@pytest.mark.parametrize("target", ['/../../enterprise/security', '/%2e%2e/guide', '/enterprise/v8-1-0/../guide'])
+def test_root_paths_cannot_traverse_out_of_the_edition(docs, tmp_path, target):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += f'\n[Escape]({target})\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    with pytest.raises(compose.ComposeError, match='leaves the edition'):
+        composed(docs, tmp_path)
+
+
+def test_safe_dot_segments_are_normalized(docs, tmp_path):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += '\n[Security](/guide/../enterprise/./security?q=1#detail)\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    assert '[Security](/enterprise/v8-1-0/enterprise/security?q=1#detail)' in (composed(docs, tmp_path) / 'enterprise/v8-1-0/guide.mdx').read_text()
+
+
+def test_exact_redirect_wins_over_an_earlier_wildcard(docs, tmp_path):
+    files = edition_files('8.1.0', redirects=[
+        {'source': '/old/:slug*', 'destination': '/guide'},
+        {'source': '/old/guide', 'destination': '/enterprise/security'},
+    ])
+    files['index.mdx'] += '\n[Exact](https://docs.lancedb.com/old/guide)\n'
+    save(docs, 'enterprise', '8.1.0', files)
+    configure(docs, enterprise='8.1.0')
+    assert '[Exact](/enterprise/v8-1-0/enterprise/security)' in (composed(docs, tmp_path) / 'enterprise/v8-1-0/index.mdx').read_text()
+
+
+def test_wildcard_to_parent_keeps_the_parent_page(docs, tmp_path):
+    files = edition_files('8.1.0', redirects=[{'source': '/guide/:slug*', 'destination': '/guide'}])
+    files['index.mdx'] += '\n[Guide](https://docs.lancedb.com/guide/old)\n'
+    save(docs, 'enterprise', '8.1.0', files)
+    configure(docs, enterprise='8.1.0')
+    site = composed(docs, tmp_path)
+    assert '[Guide](/enterprise/v8-1-0/guide)' in (site / 'enterprise/v8-1-0/index.mdx').read_text()
+
+
+def test_attribute_names_in_urls_and_prose_are_not_jsx(docs, tmp_path):
+    text = '\n[Query](/guide?href=/enterprise/security)\nThe parameter href=target is prose.\n<Card title="href=example > text" href={`/guide`} />\n'
+    files = edition_files('8.1.0'); files['guide.mdx'] += text
+    save(docs, 'enterprise', '8.1.0', files)
+    configure(docs, enterprise='8.1.0')
+    page = (composed(docs, tmp_path) / 'enterprise/v8-1-0/guide.mdx').read_text()
+    assert '[Query](/enterprise/v8-1-0/guide?href=/enterprise/security)' in page
+    assert 'The parameter href=target is prose.' in page
+    assert '<Card title="href=example > text" href={`/enterprise/v8-1-0/guide`} />' in page

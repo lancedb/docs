@@ -444,14 +444,20 @@ Links are pointed into their own edition:
   components and frontmatter, and imports get the edition's path.
 - A link to `docs.lancedb.com` becomes a link to the page it lands on in the
   same edition, after that edition's redirects.
-- Relative links stay as written.
+- Same-site redirect destinations stay within the edition, including absolute URLs.
+- Relative links stay as written. Root paths have dot segments normalized before
+  the edition path is added.
 - Code and MDX comments are never rewritten.
 
 Composition stops, naming the page and line, at a link into another edition, a
-relative link that leaves its edition, or a bare `docs.lancedb.com` URL in the
+path that leaves its edition, or a bare `docs.lancedb.com` URL in the
 text, which Mintlify would link to the default edition; write it as a Markdown
 link. A link to something the edition does not publish is a warning, and
-`mint broken-links` checks the composed site.
+`mint broken-links` checks the composed site. Component link attributes must use
+a quoted string or a constant string expression on one line, without escapes or
+interpolation. Dynamic targets stop composition with the page and line to fix.
+Fenced examples, inline code and MDX comments are left alone. Redirect checks
+follow redirects before pages, and reject loops and chains longer than 100 hops.
 
 An example that downloads a file from `docs.lancedb.com` keeps the URL it
 shows, and the file is also served there, at its unversioned path. Every
