@@ -283,7 +283,7 @@ against `main`, and commit the edition and its record together:
 
 ```bash
 (cd editions/enterprise/1.10.0 && mint validate && mint broken-links --check-anchors --check-redirects)
-uv run --no-project --with pyyaml scripts/edition.py check --base origin/main
+uv run --no-project --with pyyaml scripts/edition.py check --base refs/remotes/origin/main
 ```
 
 A record looks like this. It is illustrative: the Enterprise repository is a
@@ -390,7 +390,7 @@ A saved edition can be corrected after review, at the same URL:
      sha256: 3f9c2a7e…
    ```
 
-4. Run the checks above, with `--base origin/main` after fetching `main`.
+4. Run the checks above, with `--base refs/remotes/origin/main` after fetching `main`.
    `edition.py check` now passes: each edition matches the checksum of its
    latest correction. Any later change to the edition, including a deleted
    file, fails again until it is recorded the same way, as a further entry.
