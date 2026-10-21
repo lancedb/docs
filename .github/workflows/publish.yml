@@ -41,10 +41,10 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.event != 'pull_request' &&
       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
-    # Staging publications run one at a time, and an automatic one never
-    # cancels one waiting to run by hand.
+    # One group for both targets, so no Publish run changes staging while
+    # production checks it and pushes. Each waits its turn; none is cancelled.
     concurrency:
-      group: publish-staging
+      group: publish
       queue: max
       cancel-in-progress: false
     permissions:
@@ -131,13 +131,16 @@ jobs:
     runs-on: ubuntu-latest
     # Environment restrictions and branch rules must be enforced externally.
     environment: production
+    # The staging job's group: staging, production and Mintlify's deployments
+    # are read only once this job is in it.
     concurrency:
-      group: publish-production
+      group: publish
+      queue: max
       cancel-in-progress: false
     permissions:
       contents: read
       actions: read # the candidate artifact and its run
-      checks: read # Mintlify's deployment of the staging commit
+      deployments: read # Mintlify's deployments of the staging commit
     steps:
       - name: Require main and the production key
         env:
@@ -171,16 +174,22 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
         run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
 
-      # A push is not a deployment: Mintlify reports each deployment as a check run.
-      - name: Read Mintlify's deployment of staging
+      # A push is not a deployment: Mintlify records each deployment of a commit,
+      # and the address it went live at, as a GitHub deployment.
+      - name: Read Mintlify's deployments of staging
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           staging=$(git ls-remote origin refs/heads/staging | cut -f1)
           if [ -n "$staging" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/commits/$staging/check-runs?check_name=Mintlify%20Deployment" \
-              > "$RUNNER_TEMP/staging-checks.json"
+            api="repos/$GITHUB_REPOSITORY/deployments"
+            ids=$(gh api "$api?sha=$staging&per_page=100" --jq '.[].id')
+            for id in $ids; do
+              gh api "$api/$id/statuses?per_page=100" > "$RUNNER_TEMP/statuses.json"
+              gh api "$api/$id" | jq --slurpfile statuses "$RUNNER_TEMP/statuses.json" \
+                '. + {statuses: $statuses[0]}'
+            done | jq -s . > "$RUNNER_TEMP/staging-deployments.json"
           fi
 
       - name: Publish
@@ -188,10 +197,12 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
           SITE_SHA256: ${{ inputs.site_sha256 }}
           PRODUCTION: ${{ needs.request.outputs.production }}
+          STAGING_URL: ${{ vars.MINTLIFY_STAGING_URL }}
         run: |
           python3 scripts/candidate.py publish --target production \
             --run-id "$RUN_ID" --site-sha256 "$SITE_SHA256" \
             --run "$RUNNER_TEMP/run.json" --repository "$GITHUB_REPOSITORY" \
             --content-dir "$MINTLIFY_CONTENT_DIR" --candidate "$RUNNER_TEMP/candidate" \
-            --staging-checks "$RUNNER_TEMP/staging-checks.json" \
+            --staging-deployments "$RUNNER_TEMP/staging-deployments.json" \
+            --staging-url "$STAGING_URL" \
             --production-was "$PRODUCTION" --summary "$GITHUB_STEP_SUMMARY"

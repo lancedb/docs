@@ -20,9 +20,10 @@ branch:
                  itself, once staging shows the versioned site, main's newest
                  versioned candidate.
     production   the `assembled` branch. Only the versioned site: the
-                 candidate staging shows, once Mintlify reports deploying it,
-                 or one production has published before, to roll back; and
-                 only if production is as it was when the run was requested.
+                 candidate staging shows, once Mintlify reports it live at the
+                 staging address, or one production has published before, to
+                 roll back; and only if production is as it was when the run
+                 was requested.
 
 If the run's artifact has expired, an earlier publication of the same candidate
 on the target branch is published again once its files match the checksum, so
@@ -37,7 +38,7 @@ Usage:
     python scripts/candidate.py publish --target staging|production --run-id ID
         --site-sha256 HEX --run RUN_JSON --repository OWNER/NAME --content-dir DIR
         [--candidate DIR] [--remote REMOTE]
-        [--staging-checks CHECKS_JSON --production-was COMMIT]   (production)
+        [--staging-deployments JSON --staging-url URL --production-was COMMIT]   (production)
     python scripts/candidate.py publish --target staging --automatic [--run-id ID]
         [--run RUN_JSON] --repository OWNER/NAME --content-dir DIR [--candidate DIR]
 """
@@ -84,9 +85,12 @@ SITES = {site.name: site for site in (ASSEMBLED, VERSIONED)}
 EVENTS = ("push", "workflow_dispatch")
 # The root read from this repository: its commit is the one the run checked out.
 DOCS_ROOT = "build"
-# Mintlify's GitHub App reports each deployment of a commit as this check run.
-MINTLIFY_APP = "mintlify"
+# Mintlify reports each deployment of a commit as this check run, for people,
+# and records it as a GitHub deployment whose status names the address it went
+# live at. Only its GitHub App's account can create either.
 MINTLIFY_CHECK = "Mintlify Deployment"
+MINTLIFY_BOT = "mintlify[bot]"
+ADDRESS_RE = re.compile(r"https://[a-z0-9.-]+(?:/[A-Za-z0-9._~-]+)*")
 COMMIT_RE = re.compile(r"[0-9a-f]{40}")
 CHECKSUM_RE = re.compile(r"[0-9a-f]{64}")
 REF_RE = re.compile(r"[A-Za-z0-9._/-]+")
@@ -547,28 +551,59 @@ def earlier_publication(head: str | None, run_id: str, expected: str, site: Site
     return None
 
 
-def check_deployed(checks: Path | None, commit: str) -> None:
-    """Mintlify must have reported deploying `commit`: a push is not a deployment."""
+def staging_address(value: str | None) -> str:
+    """Where Mintlify serves staging, exactly as its deployments name it."""
+    if not ADDRESS_RE.fullmatch(value or ""):
+        raise CandidateError(
+            f"no staging address {value!r}: set the repository variable MINTLIFY_STAGING_URL "
+            "to the address Mintlify's deployments of staging name, such as "
+            "https://example-staging.mintlify.site, with no trailing slash"
+        )
+    return value
+
+
+def by_mintlify(entry) -> bool:
+    creator = entry.get("creator") if isinstance(entry, dict) else None
+    return (
+        isinstance(creator, dict)
+        and creator.get("login") == MINTLIFY_BOT
+        and creator.get("type") == "Bot"
+    )
+
+
+def newest(entries: list[dict]) -> dict:
+    return max(entries, key=lambda e: e["id"] if isinstance(e.get("id"), int) else -1)
+
+
+def check_deployed(deployments: Path | None, commit: str, address: str) -> None:
+    """Mintlify's newest deployment of `commit` must have put it live at `address`.
+
+    A push is not a deployment, and the same commit can be deployed to another
+    preview, so neither a successful check nor an older deployment is enough.
+    """
     try:
-        runs = json.loads(checks.read_text())["check_runs"] if checks else []
-    except (OSError, ValueError, KeyError, TypeError):
-        runs = []
-    deployed = [
-        r
-        for r in (runs if isinstance(runs, list) else [])
-        if isinstance(r, dict)
-        and r.get("head_sha") == commit
-        and r.get("name") == MINTLIFY_CHECK
-        and isinstance(r.get("app"), dict)
-        and r["app"].get("slug") == MINTLIFY_APP
-        and r.get("status") == "completed"
-        and r.get("conclusion") == "success"
+        listed = json.loads(deployments.read_text()) if deployments else []
+    except (OSError, ValueError):
+        listed = []
+    mintlify = [
+        d for d in (listed if isinstance(listed, list) else [])
+        if by_mintlify(d) and d.get("sha") == commit
     ]
-    if not deployed:
+    if not mintlify:
         raise CandidateError(
             f"Mintlify has not reported deploying staging commit {commit}: wait until its "
-            f"'{MINTLIFY_CHECK}' check on that commit succeeds, review the preview, then run "
+            f"'{MINTLIFY_CHECK}' check on that commit succeeds, review {address}, then run "
             "this again"
+        )
+    # Anyone who can write deployments can add a status, so only Mintlify's count.
+    deployment = newest(mintlify)
+    statuses = [s for s in deployment.get("statuses") or [] if by_mintlify(s)]
+    status = newest(statuses) if statuses else {}
+    state, live_at = status.get("state"), status.get("environment_url")
+    if state != "success" or live_at != address:
+        raise CandidateError(
+            f"Mintlify's newest deployment of staging commit {commit} is "
+            f"{state or 'unfinished'} at {live_at or 'no address'}, not live at {address}"
         )
 
 
@@ -586,6 +621,7 @@ def promotion(args: argparse.Namespace, run: dict, site: Site, expected: str, he
     if earlier is not None:
         commit, sources, refs = earlier
         return tree_of(commit), sources, refs, f"earlier publication {commit}"
+    address = staging_address(args.staging_url)
     staging = remote_head(args.remote, TARGETS["staging"])
     staged = publication(staging)
     if staged is None or (staged["run"], staged["site_sha256"], staged["site"]) != (
@@ -604,7 +640,7 @@ def promotion(args: argparse.Namespace, run: dict, site: Site, expected: str, he
             "staging shows; publish a newer candidate to staging"
         )
     sources, refs = check_artifact(args.candidate, run, expected, site)
-    check_deployed(args.staging_checks, staging)
+    check_deployed(args.staging_deployments, staging, address)
     return tree_of(staging), sources, refs, f"staging {staging}"
 
 
@@ -649,10 +685,6 @@ def follow_main(args: argparse.Namespace, prefix: str) -> tuple | dict:
             f"run {args.run_id} built {run.get('head_sha')}, but main is now {main}; the "
             "Compose run of that commit publishes it",
         )
-    if parse_sources(staged["sources"], VERSIONED)[DOCS_ROOT] == main:
-        return skipped(
-            "staging", f"staging already shows a candidate of main's newest commit {main}"
-        )
     if not has_artifact(args.candidate):
         raise CandidateError(
             f"run {args.run_id}, of main's newest commit, has no candidate artifact"
@@ -660,7 +692,9 @@ def follow_main(args: argparse.Namespace, prefix: str) -> tuple | dict:
     expected = read_record(args.candidate).get("site_sha256")
     if not isinstance(expected, str) or not CHECKSUM_RE.fullmatch(expected):
         raise CandidateError(f"the candidate of run {args.run_id} names no site checksum")
-    # A push to main that leaves the site as it was needs no new deployment.
+    check_artifact(args.candidate, run, expected, site)
+    # A push to main that leaves the site as it was needs no new deployment. Only
+    # staging's files show that: its message, sources and all, can sit on others.
     if staged["site_sha256"] == expected and shows(head, prefix, expected):
         return skipped(
             "staging",
@@ -812,8 +846,12 @@ def main() -> int:
     pub.add_argument("--content-dir", required=True)
     pub.add_argument("--candidate", type=Path, help="the downloaded candidate artifact")
     pub.add_argument(
-        "--staging-checks", type=Path,
-        help="production: the check runs of staging's commit, as the API returns them",
+        "--staging-deployments", type=Path,
+        help="production: the deployments of staging's commit, as the API returns them, "
+        "each with its `statuses`",
+    )
+    pub.add_argument(
+        "--staging-url", help="production: the address Mintlify serves staging at"
     )
     pub.add_argument(
         "--production-was", metavar="COMMIT",

@@ -8,12 +8,15 @@ remote.
 Run with `make test-assemble`.
 """
 
+import collections
 import hashlib
 import json
 import os
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -25,6 +28,10 @@ WORKFLOWS = SCRIPTS.parent / ".github" / "workflows"
 REPOSITORY = "lancedb/docs"
 WORKFLOW = ".github/workflows/assemble.yml"
 COMPOSE = ".github/workflows/compose.yml"
+STAGING_URL = "https://example-staging.mintlify.site"
+ANOTHER_PREVIEW = "https://example-some-other-preview.mintlify.site"
+MINTLIFY = {"login": "mintlify[bot]", "type": "Bot"}
+ACTIONS = {"login": "github-actions[bot]", "type": "Bot"}
 
 SITE = {
     "docs.json": b'{"name": "LanceDB"}\n',
@@ -250,7 +257,8 @@ def publish(
     content_dir: str = "/docs",
     artifact: Path | None | bool = True,
     automatic: bool = False,
-    checks: Path | None = None,
+    deployments: Path | None = None,
+    staging_url: str = STAGING_URL,
     production_was: str | None = None,
     env: dict | None = None,
 ) -> subprocess.CompletedProcess:
@@ -269,30 +277,41 @@ def publish(
         command += ["--candidate", str(candidate.dir)]
     elif artifact:
         command += ["--candidate", str(artifact)]
-    if checks is not None:
-        command += ["--staging-checks", str(checks)]
+    if deployments is not None:
+        command += ["--staging-deployments", str(deployments)]
     if target == "production":
         if production_was is None:
             production_was = git(remote["bare"], "for-each-ref", "--format=%(objectname)",
                                  "refs/heads/assembled")
-        command += ["--production-was", production_was]
+        command += ["--staging-url", staging_url, "--production-was", production_was]
     return subprocess.run(
         command, cwd=remote["workspace"], env=env or environment(), capture_output=True, text=True
     )
 
 
-def deployed(base: Path, commit_sha: str, name: str = "deployed", **fields) -> Path:
-    """Check runs for a commit, as the API returns them: Mintlify's deployment."""
-    check = {
-        "name": "Mintlify Deployment",
-        "head_sha": commit_sha,
-        "status": "completed",
-        "conclusion": "success",
-        "app": {"slug": "mintlify"},
-        **fields,
+def status(state="success", address=STAGING_URL, id=1, creator=MINTLIFY) -> dict:
+    """A deployment status, as the API returns it."""
+    entry = {"id": id, "state": state, "environment": "staging - docs", "creator": creator}
+    if address is not None:
+        entry["environment_url"] = address
+    return entry
+
+
+def deployment(commit_sha: str, address=STAGING_URL, *, id=1, creator=MINTLIFY,
+               statuses: list | None = None) -> dict:
+    """A deployment of a commit with its statuses, as the Publish workflow reads it.
+    By default Mintlify's, live at the staging address."""
+    return {
+        "id": id, "sha": commit_sha, "ref": commit_sha, "environment": "staging - docs",
+        "payload": {"branch": "staging"}, "creator": creator,
+        "statuses": [status(address=address)] if statuses is None else statuses,
     }
-    path = base / f"checks-{name}.json"
-    path.write_text(json.dumps({"total_count": 1, "check_runs": [check]}))
+
+
+def deployed(base: Path, commit_sha: str, name: str = "deployed", *entries: dict) -> Path:
+    """The deployments of a commit: by default, Mintlify's one to staging."""
+    path = base / f"deployments-{name}.json"
+    path.write_text(json.dumps(list(entries) or [deployment(commit_sha)]))
     return path
 
 
@@ -303,8 +322,8 @@ def staged(remote: dict, candidate: Candidate) -> str:
     return git(remote["bare"], "rev-parse", "staging")
 
 
-def promote(remote: dict, candidate: Candidate, checks: Path | None, **options):
-    return publish(remote, candidate, target="production", checks=checks, **options)
+def promote(remote: dict, candidate: Candidate, deployments: Path | None, **options):
+    return publish(remote, candidate, target="production", deployments=deployments, **options)
 
 
 # --------------------------------------------------------------------------- #
@@ -979,9 +998,9 @@ def test_an_earlier_publication_must_still_match_its_checksum(tmp_path, remote):
 @pytest.mark.parametrize("target", ["staging", "production"])
 def test_a_branch_moved_by_someone_else_is_never_overwritten(tmp_path, remote, target):
     candidate = Candidate(tmp_path, remote["docs_commit"], site="versioned")
-    checks = None
+    deployments = None
     if target == "production":
-        checks = deployed(tmp_path, staged(remote, candidate))
+        deployments = deployed(tmp_path, staged(remote, candidate))
     branch = {"staging": "staging", "production": "assembled"}[target]
     # Another writer moves the branch just before this publication pushes.
     mover = tmp_path / "mover"
@@ -998,7 +1017,7 @@ def test_a_branch_moved_by_someone_else_is_never_overwritten(tmp_path, remote, t
     (shim / "git").chmod(0o755)
 
     result = publish(
-        remote, candidate, target=target, checks=checks,
+        remote, candidate, target=target, deployments=deployments,
         env=environment(PATH=f"{shim}:{os.environ['PATH']}"),
     )
 
@@ -1075,65 +1094,25 @@ def stage_newer(tmp_path, remote, candidate):
     return newer
 
 
-def mintlify(**fields):
-    return lambda tmp_path, remote, candidate, staging: deployed(tmp_path, staging, **fields)
-
-
 PROMOTION_REFUSALS = {
     "never on staging": (
-        lambda tmp_path, remote, c: None,
-        lambda tmp_path, remote, c, staging: deployed(tmp_path, staging),
-        "staging shows no candidate, not candidate",
+        lambda tmp_path, remote, c: None, "staging shows no candidate, not candidate"
     ),
-    "a newer build reached staging after review": (
-        stage_newer,
-        lambda tmp_path, remote, c, staging: deployed(tmp_path, staging),
-        "staging shows candidate",
-    ),
-    "no record of Mintlify's deployment": (
-        lambda tmp_path, remote, c: None, lambda *_: None, "Mintlify has not reported deploying"
-    ),
-    "Mintlify still deploying": (
-        lambda tmp_path, remote, c: None,
-        mintlify(status="in_progress", conclusion=None),
-        "Mintlify has not reported deploying",
-    ),
-    "Mintlify's deployment failed": (
-        lambda tmp_path, remote, c: None,
-        mintlify(conclusion="failure"),
-        "Mintlify has not reported deploying",
-    ),
-    "Mintlify skipped it": (
-        lambda tmp_path, remote, c: None,
-        mintlify(conclusion="skipped"),
-        "Mintlify has not reported deploying",
-    ),
-    "Mintlify deployed another commit": (
-        lambda tmp_path, remote, c: None,
-        lambda tmp_path, remote, c, staging: deployed(tmp_path, "e" * 40),
-        "Mintlify has not reported deploying",
-    ),
-    "a check of the same name from another app": (
-        lambda tmp_path, remote, c: None,
-        mintlify(app={"slug": "github-actions"}),
-        "Mintlify has not reported deploying",
-    ),
+    "a newer build reached staging after review": (stage_newer, "staging shows candidate"),
     "artifact expired before promotion": (
         lambda tmp_path, remote, c: shutil.rmtree(c.dir),
-        lambda tmp_path, remote, c, staging: deployed(tmp_path, staging),
         "has no candidate artifact, so nothing shows it built what staging shows",
     ),
     "artifact altered since staging": (
         lambda tmp_path, remote, c: next(c.site.rglob("index.mdx")).write_bytes(b"# Changed\n"),
-        lambda tmp_path, remote, c, staging: deployed(tmp_path, staging),
         "the artifact's files differ from its record",
     ),
 }
 
 
 @pytest.mark.parametrize("case", PROMOTION_REFUSALS)
-def test_production_refuses_what_staging_does_not_show_deployed(tmp_path, remote, case):
-    after_staging, checks, message = PROMOTION_REFUSALS[case]
+def test_production_refuses_what_staging_does_not_show(tmp_path, remote, case):
+    after_staging, message = PROMOTION_REFUSALS[case]
     candidate = Candidate(tmp_path, remote["docs_commit"], site="versioned")
     if case != "never on staging":
         staged(remote, candidate)
@@ -1141,11 +1120,91 @@ def test_production_refuses_what_staging_does_not_show_deployed(tmp_path, remote
     staging = git(remote["bare"], "rev-parse", "staging")
     before = refs(remote["bare"])
 
-    result = promote(remote, candidate, checks(tmp_path, remote, candidate, staging))
+    result = promote(remote, candidate, deployed(tmp_path, staging))
 
     assert result.returncode == 1, result.stdout
     assert message in result.stderr
     assert refs(remote["bare"]) == before
+
+
+NOT_LIVE = f"not live at {STAGING_URL}"
+# What the Publish workflow read about the staging commit `s`, the staging
+# address it was given, and what production then says, or None to publish.
+DEPLOYMENT_EVIDENCE = {
+    "Mintlify put it live at the staging address": (lambda s: [deployment(s)], {}, None),
+    "Mintlify's success after its own earlier status": (
+        lambda s: [deployment(s, statuses=[status("in_progress", None), status(id=2)])], {}, None
+    ),
+    "another account's newer deployment beside Mintlify's": (
+        lambda s: [deployment(s), deployment(s, ANOTHER_PREVIEW, id=2, creator=ACTIONS)], {}, None
+    ),
+    "Mintlify put it live at another preview": (
+        lambda s: [deployment(s, ANOTHER_PREVIEW)],
+        {},
+        f"is success at {ANOTHER_PREVIEW}, " + NOT_LIVE,
+    ),
+    "Mintlify's newest deployment of it went to another preview": (
+        lambda s: [deployment(s), deployment(s, ANOTHER_PREVIEW, id=2)], {}, NOT_LIVE
+    ),
+    "a lookalike address": (
+        lambda s: [deployment(s, STAGING_URL + ".example.com")], {}, NOT_LIVE
+    ),
+    "a status that names no address": (
+        lambda s: [deployment(s, None)], {}, "is success at no address, " + NOT_LIVE
+    ),
+    "Mintlify still deploying it again": (
+        lambda s: [deployment(s), deployment(s, id=2, statuses=[])],
+        {},
+        "is unfinished at no address",
+    ),
+    "Mintlify's deployment failed": (
+        lambda s: [deployment(s, statuses=[status("failure", None)])],
+        {},
+        "is failure at no address",
+    ),
+    "a success added by another account": (
+        lambda s: [
+            deployment(s, statuses=[status("failure", None), status(id=2, creator=ACTIONS)])
+        ],
+        {},
+        "is failure at no address",
+    ),
+    "a deployment recorded by another account": (
+        lambda s: [deployment(s, creator=ACTIONS)], {}, "Mintlify has not reported deploying"
+    ),
+    "a deployment of another commit": (
+        lambda s: [deployment("e" * 40)], {}, "Mintlify has not reported deploying"
+    ),
+    "no deployments read": (lambda s: None, {}, "Mintlify has not reported deploying"),
+    "no staging address set": (
+        lambda s: [deployment(s)], {"staging_url": ""}, "no staging address"
+    ),
+    "a staging address with a trailing slash": (
+        lambda s: [deployment(s, STAGING_URL + "/")],
+        {"staging_url": STAGING_URL + "/"},
+        "no staging address",
+    ),
+}
+
+
+@pytest.mark.parametrize("case", DEPLOYMENT_EVIDENCE)
+def test_production_requires_mintlify_to_report_staging_live_at_its_address(tmp_path, remote, case):
+    evidence, options, message = DEPLOYMENT_EVIDENCE[case]
+    candidate = Candidate(tmp_path, remote["docs_commit"], site="versioned")
+    staging = staged(remote, candidate)
+    entries = evidence(staging)
+    deployments = None if entries is None else deployed(tmp_path, staging, "case", *entries)
+    before = refs(remote["bare"])
+
+    result = promote(remote, candidate, deployments, **options)
+
+    if message is None:
+        assert result.returncode == 0, result.stderr
+        assert published(remote["bare"], "assembled") == candidate.files
+    else:
+        assert result.returncode == 1, result.stdout
+        assert message in result.stderr
+        assert refs(remote["bare"]) == before
 
 
 def test_production_refuses_staging_files_that_are_not_the_candidate(tmp_path, remote):
@@ -1212,16 +1271,16 @@ def test_an_approval_given_after_production_changed_publishes_nothing(tmp_path, 
         assert promote(remote, second, deployed(tmp_path, staging, "2")).returncode == 0
         first_staged = staged(remote, first)
         assert promote(remote, first, deployed(tmp_path, first_staged, "1")).returncode == 0
-        candidate, checks = second, None
+        candidate, deployments = second, None
     else:
-        candidate, checks = second, deployed(tmp_path, staging)
+        candidate, deployments = second, deployed(tmp_path, staging)
     # Requested while production showed this; approved after it changed.
     requested = git(remote["bare"], "rev-parse", "assembled")
     forge(tmp_path, remote, {"docs/index.mdx": b"# Promoted meanwhile\n"}, "another publication",
           branch="assembled")
     before = refs(remote["bare"])
 
-    result = promote(remote, candidate, checks, production_was=requested)
+    result = promote(remote, candidate, deployments, production_was=requested)
 
     assert result.returncode == 1
     assert f"production has changed since this run was requested: it was {requested}" in (
@@ -1230,14 +1289,79 @@ def test_an_approval_given_after_production_changed_publishes_nothing(tmp_path, 
     assert refs(remote["bare"]) == before
 
 
+def publication_group(job: str) -> str:
+    return workflow("publish.yml")["jobs"][job]["concurrency"]["group"]
+
+
+def test_staging_waits_while_production_checks_it_and_pushes(tmp_path, remote):
+    # Two valid candidates: the first is promoted while the second is published
+    # to staging. GitHub runs one job per concurrency group at a time; a lock
+    # per group name, as publish.yml names them, plays that here.
+    first = Candidate(tmp_path, remote["docs_commit"], site="versioned", run_id="1001")
+    first_staged = staged(remote, first)
+    deployments = deployed(tmp_path, first_staged)
+    newer = Candidate(
+        tmp_path, advance_main(tmp_path, remote, "newer"), files=versioned_site("8.2.0"),
+        run_id="1002", site="versioned",
+    )
+    groups = collections.defaultdict(threading.Lock)
+    # Production stops just before its push until it is told to go on.
+    signals = tmp_path / "signals"
+    signals.mkdir()
+    shim = tmp_path / "bin"
+    shim.mkdir()
+    (shim / "git").write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = push ]; then\n'
+        f'  : > "{signals}/pushing"; i=0\n'
+        f'  while [ ! -e "{signals}/go" ] && [ $i -lt 1200 ]; do sleep 0.05; i=$((i+1)); done\n'
+        "fi\n"
+        f'exec "{shutil.which("git")}" "$@"\n'
+    )
+    (shim / "git").chmod(0o755)
+    results, started = {}, threading.Event()
+
+    def production():
+        with groups[publication_group("production")]:
+            results["production"] = promote(
+                remote, first, deployments, env=environment(PATH=f"{shim}:{os.environ['PATH']}")
+            )
+
+    def staging():
+        with groups[publication_group("staging")]:
+            started.set()
+            results["staging"] = publish(remote, newer)
+
+    promoting = threading.Thread(target=production)
+    promoting.start()
+    while not (signals / "pushing").exists() and promoting.is_alive():
+        time.sleep(0.05)
+    publishing = threading.Thread(target=staging)
+    publishing.start()
+    # In a group of its own, the staging publication would finish now.
+    if started.wait(timeout=2):
+        publishing.join()
+    staging_at_push = git(remote["bare"], "rev-parse", "staging")
+    (signals / "go").touch()
+    promoting.join()
+    publishing.join()
+
+    assert results["production"].returncode == 0, results["production"].stderr
+    assert staging_at_push == first_staged, "staging changed while production checked it"
+    assert published(remote["bare"], "assembled") == first.files
+    assert results["staging"].returncode == 0, results["staging"].stderr
+    assert published(remote["bare"], "staging") == newer.files
+
+
 def test_production_must_say_what_it_was_when_requested(tmp_path, remote):
     candidate = Candidate(tmp_path, remote["docs_commit"], site="versioned")
-    checks = deployed(tmp_path, staged(remote, candidate))
+    deployments = deployed(tmp_path, staged(remote, candidate))
     command = [
         sys.executable, str(CANDIDATE), "publish", "--target", "production",
         "--run-id", candidate.run_id, "--site-sha256", candidate.checksum,
         "--run", str(candidate.run_json), "--repository", REPOSITORY, "--content-dir", "/docs",
-        "--candidate", str(candidate.dir), "--staging-checks", str(checks),
+        "--candidate", str(candidate.dir), "--staging-deployments", str(deployments),
+        "--staging-url", STAGING_URL,
     ]
     before = refs(remote["bare"])
 
@@ -1327,19 +1451,45 @@ def test_staging_is_left_alone_when_main_leaves_the_site_as_it_was(tmp_path, rem
     assert refs(remote["bare"]) == before
 
 
-def test_staging_files_that_are_not_the_candidate_they_claim_are_replaced(tmp_path, remote):
+def test_staging_is_left_alone_only_beside_a_verified_candidate(tmp_path, remote):
+    candidate = Candidate(tmp_path, remote["docs_commit"], site="versioned")
+    staged(remote, candidate)
+    next(candidate.site.rglob("index.mdx")).write_bytes(b"# Changed\n")
+    before = refs(remote["bare"])
+
+    result = follow(remote, candidate)
+
+    assert result.returncode == 1, result.stdout
+    assert "the artifact's files differ from its record" in result.stderr
+    assert refs(remote["bare"]) == before
+
+
+@pytest.mark.parametrize("main", ["moved on", "where it was", "where it was, artifact expired"])
+def test_staging_files_that_are_not_the_candidate_they_claim_are_replaced(tmp_path, remote, main):
     first = Candidate(tmp_path, remote["docs_commit"], site="versioned", run_id="1001")
     message = git(remote["bare"], "log", "-1", "--format=%B", staged(remote, first))
-    forge(tmp_path, remote, {"docs/docs.json": b"{}\n"}, message)
-    same = Candidate(
-        tmp_path, advance_main(tmp_path, remote, "readme"), run_id="1002", site="versioned"
-    )
+    # Other files under the publication's own message, its sources included.
+    forged = forge(tmp_path, remote, {"docs/docs.json": b"{}\n"}, message)
+    newest = first
+    if main == "moved on":
+        newest = Candidate(
+            tmp_path, advance_main(tmp_path, remote, "readme"), run_id="1002", site="versioned"
+        )
+    if main.endswith("artifact expired"):
+        shutil.rmtree(newest.dir)
+    before = refs(remote["bare"])
 
-    result = follow(remote, same)
+    result = follow(remote, newest)
 
-    assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)["published"] is True
-    assert published(remote["bare"], "staging") == same.files
+    if main.endswith("artifact expired"):
+        assert result.returncode == 1, result.stdout
+        assert "of main's newest commit, has no candidate artifact" in result.stderr
+        assert refs(remote["bare"]) == before
+    else:
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout)["published"] is True
+        assert git(remote["bare"], "rev-parse", "staging^") == forged
+        assert published(remote["bare"], "staging") == newest.files
 
 
 FOLLOW_SKIPS = {
@@ -1348,8 +1498,9 @@ FOLLOW_SKIPS = {
         lambda tmp_path, remote, c: advance_main(tmp_path, remote, "later"), {},
         "but main is now",
     ),
-    "staging already shows main's newest commit": (
-        lambda tmp_path, remote, c: None, {}, "staging already shows a candidate of main's newest",
+    # Its files, checked against the run's record, not its message.
+    "staging already shows main's newest candidate": (
+        lambda tmp_path, remote, c: None, {}, "staging already shows candidate ",
     ),
     "no successful run of main's newest commit yet": (
         lambda tmp_path, remote, c: None, {"run_id": ""}, "has no successful Compose run yet",
@@ -1456,7 +1607,12 @@ def test_publish_runs_only_this_repositorys_main_code_with_its_credentials():
     # A run that wakes staging is not trusted for what to publish.
     assert "workflow_run.id" not in text and "workflow_run.head_sha" not in text
     assert "github.event.workflow_run.event != 'pull_request'" in jobs["staging"]["if"]
-    assert jobs["staging"]["concurrency"] == {
-        "group": "publish-staging", "queue": "max", "cancel-in-progress": False
+    # Both targets publish in one group, and a publication waiting there,
+    # by hand or not, is never cancelled.
+    for job in ("staging", "production"):
+        assert jobs[job]["concurrency"] == {
+            "group": "publish", "queue": "max", "cancel-in-progress": False
+        }
+    assert jobs["production"]["permissions"] == {
+        "contents": "read", "actions": "read", "deployments": "read"
     }
-    assert jobs["production"]["concurrency"]["group"] == "publish-production"
