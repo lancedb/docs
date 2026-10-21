@@ -19,7 +19,7 @@ This design has practical consequences. Query fleets can scale for interactive t
 
 ## Architecture {#architecture}
 
-At a high level, the control plane governs the system and the data plane executes the work. The control plane is responsible for configuration, service discovery, identity integration, policy, and cluster lifecycle. It determines how the system should behave, but it is not the layer serving table data or executing user queries -- that's the role of the data plane.
+At a high level, the control plane governs the system and the data plane executes the work. The control plane is responsible for configuration, service discovery, identity integration, policy, and cluster lifecycle. It determines how the system should behave, but it is not the layer serving table data or executing user queries. That's the role of the data plane.
 
 Within the data plane, serving is separated into two kinds of nodes that are provisioned independently. Query nodes are the client-facing layer. They receive requests against remote tables, validate them, resolve the target table, plan the work, and return results.
 
@@ -89,7 +89,7 @@ Writes follow a different path because durability comes first:
 2. The query node validates the request and commits the new table state.
 3. After the write succeeds, the system emits follow-up signals for indexing, compaction, or cleanup.
 
-Keeping the commit path centered on object storage ensures that the durable record of the table lives outside any single query node. Regardless of whether you're using Lance namespaces or an external catalog, the catalog's role is mainly to resolve table names and provide access details -- the table’s actual data and index artifacts remain in object storage.
+Keeping the commit path centered on object storage ensures that the durable record of the table lives outside any single query node. Regardless of whether you're using Lance namespaces or an external catalog, the catalog's role is mainly to resolve table names and provide access details. The table’s actual data and index artifacts remain in object storage.
 
 ## Background work {#background-work}
 
@@ -105,14 +105,60 @@ This separation is one of the clearest architectural reasons to use LanceDB Ente
 
 ## Fault tolerance and caching {#fault-tolerance}
 
-Query nodes and plan executors run with 2+ replicas. Traffic is load-balanced
-across them, and each plan executor replica maintains a synchronized copy of
-its cached data subset. Losing a single replica costs no downtime -- the
-remaining replicas absorb the traffic, with transient latency or throughput
-impact until the failed replica recovers.
+With multiple serving replicas, traffic can be routed to surviving nodes when
+one fails. Cache loss or reassignment can temporarily increase latency or
+reduce throughput while replacement nodes load the needed content. The effect
+depends on available capacity and placement.
 
-The plan executor's cache holds table data, not table indices, and is backed
-by NVMe SSD by default for every deployment.
+Plan executors can cache table data. Data caches and index caches have separate
+settings. Their memory and disk tiers depend on the deployment configuration; caches accelerate
+reads while object storage remains the durable source of table data and index
+artifacts.
+
+## Cache prewarming and readiness {#cache-prewarming-and-readiness}
+
+Prewarming loads selected data or index structures before queries need them.
+It can reduce the loading work on initial queries after a restart or before
+a planned workload. It does not build a missing index or keep cached content
+resident indefinitely: capacity, eviction, new table versions, and changes in
+which nodes serve the workload still affect cache warmth.
+
+For example, consider prewarming before a scheduled search workload or when
+replacing serving capacity that has lost its caches. Warming data columns
+prepares table reads; warming indexes prepares the selected search or filtering
+structures. If regular queries already keep the working set cached, another
+warm may provide little benefit.
+
+Work with your deployment operator or LanceDB support to identify targets for
+that workload and request the warm. Your operator or support team can confirm
+the supported controls, report which targets completed, and investigate
+failures. Use those results with your query measurements to decide whether
+prewarming helps the workload.
+
+Readiness and cache warmth answer different questions:
+
+| Signal | Meaning |
+| --- | --- |
+| Process health | The process can respond to its health check. |
+| Query readiness | The service's configured startup policy permits query traffic. |
+| Cache warmth | Relevant data or index structures are already cached; health and readiness checks do not establish this. |
+
+Where startup prewarming is enabled, a deployment can delay query readiness
+while selected targets warm. Waiting can reduce cold-start work for incoming
+queries, but it also delays when new capacity can serve traffic. A deployment
+may instead allow traffic while warming runs, or allow a node to become ready
+with cold caches after warming fails or times out. Confirm the policy and
+available controls for your deployment and release with your deployment
+operator. A healthy or query-ready node is not a guarantee that every target
+is warm.
+
+To evaluate prewarming, record baseline query latency, then ask your operator
+or support team to confirm when the requested warm has finished and report its
+target outcomes. Run the same representative queries again with comparable
+tables, indexes, and query concurrency. Compare your observed latency across
+initial and repeated queries. Disk-resident content may still need promotion
+to memory on initial reads; a completed warm does not guarantee a particular
+latency improvement.
 
 ## What this means for users {#what-this-means-for-users}
 

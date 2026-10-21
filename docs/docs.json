@@ -450,6 +450,7 @@
               "management/namespace",
               "management/table",
               "tables/branching",
+              "tables/realtime-engine",
               "management/materialized-view",
               "management/view"
             ]
