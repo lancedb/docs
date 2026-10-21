@@ -471,7 +471,8 @@ For each release from `from` on, discovery looks at `main` and at the branch
   name the commit and qualification tag its record names. If they do not, it
   stops for review: an edition is never replaced.
 - **An open pull request from the branch:** kept as it is, with any commits
-  reviewers have pushed. Discovery starts its checks if none have run.
+  reviewers have pushed. Discovery starts each check workflow that has not run
+  on its head, and never reruns one that has.
 - **A pull request closed without merging:** left closed. Reopen it to prepare
   the release again.
 - **The branch without a pull request,** as a run that stopped after pushing
@@ -485,10 +486,12 @@ For each release from `from` on, discovery looks at `main` and at the branch
   preferred edition, for its reviewers to decide.
 
 Discovery creates a branch only if it does not exist yet, so two runs never
-open two pull requests or overwrite each other's work. A release whose inputs
-are missing or contradictory stops for review with the reason, and leaves
-`main`, the saved editions and the other releases as they are. Any stop fails
-the run, until the release is fixed or listed in `skip`.
+open two pull requests or overwrite each other's work. It prepares a release
+only from its tags as it checked them, and checks the prepared record before
+pushing, so a tag that moves while it runs stops that release. A release whose
+inputs are missing or contradictory stops for review with the reason, and
+leaves `main`, the saved editions and the other releases as they are. Any stop
+fails the run, until the release is fixed or listed in `skip`.
 
 A dry run reports what discovery would do: each eligible release's exact
 inputs, and why the others are waiting, skipped or stopped. It fetches release
