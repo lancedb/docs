@@ -1,0 +1,110 @@
+---
+title: "Multimodal Feature Engineering with Geneva"
+sidebarTitle: Overview
+description: "Learn how to do multimodal feature engineering in LanceDB Enterprise to transform raw data into meaningful features for AI models."
+icon: layer-group
+keywords: ["geneva", "feature engineering", "add features"]
+---
+
+<Badge color="red">Enterprise-only</Badge>
+
+{/*
+Draft for the Functions release.
+
+<Note>
+For new feature engineering in Python on a deployment, use
+[Functions](/management/function). Geneva remains available for existing
+pipelines; see [Geneva and Functions](#functions).
+</Note>
+*/}
+
+When working with multimodal data at scale, [LanceDB Enterprise](/enterprise/v8-1-1/enterprise) makes it easy
+to define, extract, and transform raw data into useful information and features for your
+AI applications. LanceDB Enterprise's _Multimodal Feature Engineering_ package is designed to improve
+the productivity of AI engineers operating at immense scale.
+
+With an API designed to leverage LanceDB's optimized data storage and retrieval, it
+streamlines prototyping extraction and transformation tasks, performing experiments, exploring your
+data, scaling up execution, and moving to production.
+
+LanceDB Multimodal Feature Engineering enables researchers to seamlessly transition from
+experiments in local notebooks to fully-managed distributed job execution on datasets with
+billions of rows.
+
+<Card>
+The `geneva` Python package is currently only available as part of
+[LanceDB Enterprise](/enterprise/v8-1-1/enterprise). Please [contact us](https://www.lancedb.com/contact) if you're interested
+in scaling up your feature engineering workloads for your AI and multimodal use cases.
+</Card>
+
+Feature engineering itself is not Enterprise-only: LanceDB OSS has
+[computed columns](/enterprise/v8-1-1/feature-engineering/add-computed-column) and
+[materialized views](/enterprise/v8-1-1/feature-engineering/materialized-views), which need no
+extra package. See [Feature engineering](/enterprise/v8-1-1/feature-engineering) to choose between
+them and Geneva.
+
+The `geneva` package uses Python [User Defined Functions (UDFs)](/enterprise/v8-1-1/geneva/udfs/udfs) to define features
+as columns in a Lance dataset. Adding a feature is straightforward:
+
+<Steps>
+  <Step>
+  Prototype your Python function in your favorite environment.
+  </Step>
+  <Step>
+  Wrap the function with a small UDF decorator (see [UDFs](/enterprise/v8-1-1/geneva/udfs/udfs)).
+  </Step>
+  <Step>
+  Register the UDF as a virtual column using `Table.add_columns()`.
+  </Step>
+  <Step>
+  (Optional, advanced) Override where the job runs — see [Advanced Execution Contexts](/enterprise/v8-1-1/geneva/jobs/contexts). On LanceDB Enterprise, distributed job execution is fully managed, so most users can skip this step.
+  </Step>
+  <Step>
+  Trigger a `backfill` operation (see [Backfilling](/enterprise/v8-1-1/geneva/jobs/backfilling/)).
+  </Step>
+</Steps>
+
+<Tip>
+You can build your Python feature generator function in an IDE or a notebook using your project's Python versions and dependencies. `geneva` will automate much of the dependency and version management needed to move from prototype to scale and production.
+</Tip>
+
+Ready to write your first feature? Head to [Getting Started](/enterprise/v8-1-1/geneva/getting-started).
+
+{/*
+Draft for the Functions release.
+
+## Geneva and Functions {#functions}
+
+[Functions](/management/function) are the recommended way to fill columns with
+Python on a deployment. They are part of the `lancedb` package and run on the
+deployment that enables them. Geneva remains available for existing pipelines.
+The concepts correspond:
+
+| Geneva | Functions |
+| --- | --- |
+| `geneva.connect(...)` | `lancedb.connect(...)`, with the same URI, endpoint and key |
+| `@geneva.udf(data_type=...)` | `@udf` from `lancedb`, typed by its annotations |
+| `tbl.add_columns({"col": udf})` | register with `db.create_function_async(fn)`, then `table.add_columns({"col": version(x=col("x"))})` |
+| `tbl.backfill("col")` | `table.refresh_column_async("col")`, a [job](/basics/jobs) |
+| a manifest's pip or conda packages | `pip`, `conda` and `env` on `@udf` |
+
+Moving a column means registering its UDF as a Function and declaring the column
+again with that Function; the Function page covers both, and what a Function
+packages with it.
+*/}
+
+## Continue learning
+
+Visit the following pages to learn more about featuring engineering in LanceDB Enterprise:
+
+- **Get started**: [Getting Started](/enterprise/v8-1-1/geneva/getting-started) · [What is Feature Engineering?](/enterprise/v8-1-1/geneva/overview/) · [End-to-end example](/enterprise/v8-1-1/geneva/end-to-end)
+- **UDFs**: [Using UDFs](/enterprise/v8-1-1/geneva/udfs/udfs) · [Blob helpers](/enterprise/v8-1-1/geneva/udfs/blobs/) · [Error handling](/enterprise/v8-1-1/geneva/udfs/error_handling) · [Advanced configuration](/enterprise/v8-1-1/geneva/udfs/advanced-configuration) 
+- **Jobs**: [Job execution overview](/enterprise/v8-1-1/geneva/jobs/) · [Backfilling](/enterprise/v8-1-1/geneva/jobs/backfilling/) · [Materialized views](/enterprise/v8-1-1/geneva/jobs/materialized-views/) · [Startup optimizations](/enterprise/v8-1-1/geneva/jobs/startup/) · [Advanced job configuration](/enterprise/v8-1-1/geneva/jobs/advanced-job-configuration/) · [Advanced execution contexts](/enterprise/v8-1-1/geneva/jobs/contexts/) · [Geneva console](/enterprise/v8-1-1/geneva/jobs/console) · [Performance](/enterprise/v8-1-1/geneva/jobs/performance/)
+- **Deployment**: [Deployment overview](/enterprise/v8-1-1/geneva/deployment/) · [Helm deployment](/enterprise/v8-1-1/geneva/deployment/helm/) · [Troubleshooting](/enterprise/v8-1-1/geneva/deployment/troubleshooting/)
+
+## API Reference
+
+- [`geneva.connect()`](https://lancedb.github.io/geneva/api/) — connect to a Geneva database
+- [Connection](https://lancedb.github.io/geneva/api/connection/) — manage tables, views, jobs, clusters, and manifests
+- [Table](https://lancedb.github.io/geneva/api/table/) — add columns, backfill, search, and manage table data
+- [UDF](https://lancedb.github.io/geneva/api/udf/) — define user-defined functions for feature computation

@@ -1,0 +1,51 @@
+# Composed by scripts/compose.py from each edition's .mintignore.
+
+# enterprise 8.2.0
+# Functions are documented before their release. At release, remove these
+# entries, add the pages back to the navigation in docs.json, restore the
+# /feature-engineering/functions redirect to /management/function, and publish
+# the drafts marked "Draft for the Functions release".
+/enterprise/v8-2-0/management/function.mdx
+/enterprise/v8-2-0/sql/ddl/function.mdx
+
+/enterprise/v8-2-0/**/edition-unpublished.mdx
+
+# enterprise 8.1.1
+# Functions are documented before their release. At release, remove these
+# entries, add the pages back to the navigation in docs.json, restore the
+# /feature-engineering/functions redirect to /management/function, and publish
+# the drafts marked "Draft for the Functions release".
+/enterprise/v8-1-1/management/function.mdx
+/enterprise/v8-1-1/sql/ddl/function.mdx
+
+/enterprise/v8-1-1/**/edition-unpublished.mdx
+
+# enterprise 8.1.0
+# Functions are documented before their release. At release, remove these
+# entries, add the pages back to the navigation in docs.json, restore the
+# /feature-engineering/functions redirect to /management/function, and publish
+# the drafts marked "Draft for the Functions release".
+/enterprise/v8-1-0/management/function.mdx
+/enterprise/v8-1-0/sql/ddl/function.mdx
+
+/enterprise/v8-1-0/**/edition-unpublished.mdx
+
+# oss 0.99.0
+# Functions are documented before their release. At release, remove these
+# entries, add the pages back to the navigation in docs.json, restore the
+# /feature-engineering/functions redirect to /management/function, and publish
+# the drafts marked "Draft for the Functions release".
+/oss/v0-99-0/management/function.mdx
+/oss/v0-99-0/sql/ddl/function.mdx
+
+/oss/v0-99-0/**/edition-unpublished.mdx
+
+# oss 0.98.0
+# Functions are documented before their release. At release, remove these
+# entries, add the pages back to the navigation in docs.json, restore the
+# /feature-engineering/functions redirect to /management/function, and publish
+# the drafts marked "Draft for the Functions release".
+/oss/v0-98-0/management/function.mdx
+/oss/v0-98-0/sql/ddl/function.mdx
+
+/oss/v0-98-0/**/edition-unpublished.mdx

@@ -1,0 +1,355 @@
+---
+title: "Update rows"
+sidebarTitle: "Update"
+description: "Select existing rows, change values or expressions, and verify the changes."
+icon: pen
+---
+
+
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Update rows through the SDKs in OSS and Enterprise. Enterprise also supports the SQL UPDATE statement.
+
+Use `update` to change rows selected by a predicate. Use
+[merge insert](/oss/v0-99-0/ingestion/merge-insert) instead when matching an incoming dataset
+against existing keys.
+
+## Select the rows to change {#select-rows}
+
+Check the predicate with a [filtered query](/oss/v0-99-0/search/filtering) before applying
+the update. These examples target the row with `id = 2`. Review the scope
+carefully when omitting a predicate, since that can update the entire table.
+
+Each example below starts from Alice with 10 logins and Bob with 20. The
+Python programs create and remove their own temporary database. TypeScript
+and Rust operation blocks use `db`; a complete program is provided below.
+
+## Assign a new value {#update-rows}
+
+<CodeGroup>
+```python Python icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    import pyarrow as pa
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+    table.update(where="id = 2", values={"name": "Bobby"})
+
+    print("Rows:", table.count_rows())
+```
+```typescript TypeScript icon="square-js"
+const table = await db.createTable(
+  "users_example",
+  [
+    { id: 1, name: "Alice", login_count: 10 },
+    { id: 2, name: "Bob", login_count: 20 },
+  ],
+  { mode: "overwrite" },
+);
+await table.update({ where: "id = 2", values: { name: "Bobby" } });
+```
+```rust Rust icon="rust"
+let table = db
+    .create_table(
+        "users_example",
+        make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+    )
+    .mode(CreateTableMode::Overwrite)
+    .execute()
+    .await
+    .unwrap();
+table
+    .update()
+    .only_if("id = 2")
+    .column("name", "'Bobby'")
+    .execute()
+    .await
+    .unwrap();
+```
+</CodeGroup>
+
+The result contains Alice and **Bobby**, with their login counts unchanged.
+The Python `values` and TypeScript `values` arguments take literal values.
+Rust's `column` argument is an expression, so the string value includes SQL quotes.
+
+## Calculate a value from the existing row {#update-rows-with-sql-expressions}
+
+<CodeGroup>
+```python Python icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    import pyarrow as pa
+
+    table = db.create_table(
+        "users_example",
+        data=pa.table(
+            {
+                "id": [1, 2],
+                "name": ["Alice", "Bob"],
+                "login_count": [10, 20],
+            }
+        ),
+        mode="overwrite",
+    )
+    table.update(where="id = 2", values_sql={"login_count": "login_count + 1"})
+
+    print("Rows:", table.count_rows())
+```
+```typescript TypeScript icon="square-js"
+const table = await db.createTable(
+  "users_example",
+  [
+    { id: 1, name: "Alice", login_count: 10 },
+    { id: 2, name: "Bob", login_count: 20 },
+  ],
+  { mode: "overwrite" },
+);
+await table.update({
+  where: "id = 2",
+  valuesSql: { login_count: "login_count + 1" },
+});
+```
+```rust Rust icon="rust"
+let table = db
+    .create_table(
+        "users_example",
+        make_users_reader(vec![1, 2], vec!["Alice", "Bob"], Some(vec![10, 20])),
+    )
+    .mode(CreateTableMode::Overwrite)
+    .execute()
+    .await
+    .unwrap();
+table
+    .update()
+    .only_if("id = 2")
+    .column("login_count", "login_count + 1")
+    .execute()
+    .await
+    .unwrap();
+```
+</CodeGroup>
+
+In this separate example, Bob keeps his name and his login count becomes **21**.
+Python's `values_sql` and TypeScript's `valuesSql` accept expressions.
+These SDK expressions work with embedded OSS tables; they do not require an
+Enterprise SQL endpoint. Enterprise also offers [`UPDATE`](/oss/v0-99-0/sql/dml/update).
+
+## Verify the affected data {#verify}
+
+Read the selected rows again and inspect the changed fields. For another
+connection or table handle, account for its
+[read consistency](/oss/v0-99-0/tables/consistency) settings.
+
+Nested-field updates are not supported by these operations. For schema changes,
+see [schema evolution](/oss/v0-99-0/management/table#schema). Treat derived values separately:
+changing an input field is not a guarantee that every stored feature has been
+recomputed. See [Refresh a column](/oss/v0-99-0/feature-engineering/refresh-column).
+
+Updates can change index coverage and query cost. After a large update,
+inspect the workload and follow [index maintenance](/oss/v0-99-0/indexing/reindexing)
+guidance for the backend you use.
+
+## Complete write workflow {#complete-example}
+
+<Accordion title="Complete examples: create, append, update, upsert and delete">
+
+Each program creates a temporary local database, performs the five operations,
+prints the result, and removes its temporary data when finished.
+
+- **Python:** install `lancedb`, save the code as `ingestion.py`, and run
+  `python ingestion.py`.
+- **TypeScript:** install `@lancedb/lancedb`, save the code as `ingestion.mts`,
+  and run `node ingestion.mts` with Node.js 22.18 or later.
+- **Rust:** download the [complete Rust project](/oss/v0-99-0/static/code/ingestion-rust.zip),
+  extract it, and run `cargo run --locked`. It includes `src/main.rs`, the Cargo
+  manifest and a lockfile for the example's dependencies. The code is shown below.
+
+<CodeGroup>
+```python ingestion.py icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    table = db.create_table(
+        "users",
+        [
+            {"id": 1, "name": "Alice", "login_count": 10},
+            {"id": 2, "name": "Bob", "login_count": 20},
+        ],
+    )
+    table.add([{"id": 3, "name": "Charlie", "login_count": 5}])
+    table.update(where="id = 2", values={"name": "Bobby"})
+    table.update(where="id = 2", values_sql={"login_count": "login_count + 1"})
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(
+            [
+                {"id": 3, "name": "Charlie", "login_count": 6},
+                {"id": 4, "name": "Dana", "login_count": 1},
+            ]
+        )
+    )
+    print("Rows selected for deletion:", table.search().where("id = 4").to_list())
+    table.delete("id = 4")
+    rows = sorted(table.search().to_list(), key=lambda row: row["id"])
+    print(rows)
+```
+```typescript ingestion.mts icon="square-js"
+const lancedb = await import("@lancedb/lancedb");
+const { mkdtemp, rm } = await import("node:fs/promises");
+const { tmpdir } = await import("node:os");
+const { join } = await import("node:path");
+
+const uri = await mkdtemp(join(tmpdir(), "lancedb-ingestion-"));
+try {
+  const db = await lancedb.connect(uri);
+  const table = await db.createTable("users", [
+    { id: 1, name: "Alice", login_count: 10 },
+    { id: 2, name: "Bob", login_count: 20 },
+  ]);
+  await table.add([{ id: 3, name: "Charlie", login_count: 5 }]);
+  await table.update({ where: "id = 2", values: { name: "Bobby" } });
+  await table.update({
+    where: "id = 2",
+    valuesSql: { login_count: "login_count + 1" },
+  });
+  await table
+    .mergeInsert("id")
+    .whenMatchedUpdateAll()
+    .whenNotMatchedInsertAll()
+    .execute([
+      { id: 3, name: "Charlie", login_count: 6 },
+      { id: 4, name: "Dana", login_count: 1 },
+    ]);
+  console.log(
+    "Rows selected for deletion:",
+    await table.query().where("id = 4").toArray(),
+  );
+  await table.delete("id = 4");
+  const rows = (await table.query().toArray()).sort((a, b) => a.id - b.id);
+  console.log(rows);
+} finally {
+  await rm(uri, { recursive: true, force: true });
+}
+```
+```rust src/main.rs icon="rust"
+use std::sync::Arc;
+
+use arrow_array::{Int64Array, RecordBatch, RecordBatchIterator, RecordBatchReader, StringArray};
+use arrow_schema::{DataType, Field, Schema};
+use futures::TryStreamExt;
+use lancedb::query::{ExecutableQuery, QueryBase};
+
+fn make_users_reader(rows: &[(i64, &str, i64)]) -> Box<dyn RecordBatchReader + Send> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("login_count", DataType::Int64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.0))),
+            Arc::new(StringArray::from_iter_values(rows.iter().map(|r| r.1))),
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.2))),
+        ],
+    )
+    .unwrap();
+    Box::new(RecordBatchIterator::new(
+        vec![Ok(batch)].into_iter(),
+        schema,
+    ))
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempfile::tempdir()?;
+    let db = lancedb::connect(directory.path().to_str().unwrap())
+        .execute()
+        .await?;
+    let table = db
+        .create_table(
+            "users",
+            make_users_reader(&[(1, "Alice", 10), (2, "Bob", 20)]),
+        )
+        .execute()
+        .await?;
+    table
+        .add(make_users_reader(&[(3, "Charlie", 5)]))
+        .execute()
+        .await?;
+    table
+        .update()
+        .only_if("id = 2")
+        .column("name", "'Bobby'")
+        .execute()
+        .await?;
+    table
+        .update()
+        .only_if("id = 2")
+        .column("login_count", "login_count + 1")
+        .execute()
+        .await?;
+    let mut merge = table.merge_insert(&["id"]);
+    merge
+        .when_matched_update_all(None)
+        .when_not_matched_insert_all();
+    merge
+        .execute(make_users_reader(&[(3, "Charlie", 6), (4, "Dana", 1)]))
+        .await?;
+    let selected: Vec<RecordBatch> = table
+        .query()
+        .only_if("id = 4")
+        .execute()
+        .await?
+        .try_collect()
+        .await?;
+    println!("Rows selected for deletion: {selected:?}");
+    table.delete("id = 4").await?;
+    let rows: Vec<RecordBatch> = table.query().execute().await?.try_collect().await?;
+    println!("Remaining rows: {rows:?}");
+    assert_eq!(table.count_rows(None).await?, 3);
+    assert_eq!(
+        table
+            .count_rows(Some(
+                "id = 2 AND name = 'Bobby' AND login_count = 21".into()
+            ))
+            .await?,
+        1
+    );
+    assert_eq!(
+        table
+            .count_rows(Some("id = 3 AND login_count = 6".into()))
+            .await?,
+        1
+    );
+    Ok(())
+}
+```
+</CodeGroup>
+
+After the operations, Alice has 10 logins, Bobby has 21, and Charlie has 6.
+Dana is selected for deletion and is absent from the final result.
+
+</Accordion>

@@ -1,0 +1,255 @@
+---
+title: "Data evolution"
+sidebarTitle: "Data Evolution"
+description: "Derive new columns from data already in the table, without rewriting what is already there."
+icon: wand-magic-sparkles
+keywords: ["data evolution", "derived columns", "add_columns", "zero copy", "feature engineering"]
+---
+
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Adding columns computed from SQL expressions works in the embedded library and in LanceDB Enterprise.
+
+Add derived columns to calculate features from data already in a table.
+For example, compute a product score from existing fields without reading
+and rewriting the table in your application.
+
+Lance can write the new columns without rewriting the existing columns.
+This is useful when the table also contains large images, video or embeddings.
+See [Lance format](/oss/v0-99-0/basics/lance) for the storage model.
+
+<Note>
+In SQL, on an Enterprise cluster that enables computed columns, this is [`ALTER TABLE ... ADD COLUMN ... AS`](/oss/v0-99-0/sql/ddl/table#computed-column).
+</Note>
+
+## Set up the example table {#set-up-the-example-table}
+
+The examples use `db`, a connection opened as in
+[Connect to LanceDB](/oss/v0-99-0/basics/connect), and create a small product table in it:
+
+<CodeGroup>
+    ```python Python icon="python"
+    import numpy as np
+
+    data = [
+        {
+            "id": 1,
+            "name": "Laptop",
+            "price": 1200.00,
+            "vector": np.random.random(128).tolist(),
+        },
+        {
+            "id": 2,
+            "name": "Smartphone",
+            "price": 800.00,
+            "vector": np.random.random(128).tolist(),
+        },
+        {
+            "id": 3,
+            "name": "Headphones",
+            "price": 150.00,
+            "vector": np.random.random(128).tolist(),
+        },
+    ]
+    table = db.create_table("schema_evolution_add_example", data, mode="overwrite")
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    const schemaAddData = [
+      {
+        id: 1,
+        name: "Laptop",
+        price: 1200.0,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+      {
+        id: 2,
+        name: "Smartphone",
+        price: 800.0,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+      {
+        id: 3,
+        name: "Headphones",
+        price: 150.0,
+        vector: Array.from({ length: 128 }, () => Math.random()),
+      },
+    ];
+    const schemaAddTable = await db.createTable(
+      "schema_evolution_add_example",
+      schemaAddData,
+      { mode: "overwrite" },
+    );
+    ```
+
+    ```rust Rust icon="rust"
+    let schema_add_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("price", DataType::Float64, false),
+        Field::new(
+            "vector",
+            DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 128),
+            false,
+        ),
+    ]));
+    let schema_add_batch = RecordBatch::try_new(
+        schema_add_schema.clone(),
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3])),
+            Arc::new(StringArray::from(vec!["Laptop", "Smartphone", "Headphones"])),
+            Arc::new(Float64Array::from(vec![1200.0, 800.0, 150.0])),
+            Arc::new(
+                FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                    vec![
+                        Some(vec![Some(0.1_f32); 128]),
+                        Some(vec![Some(0.2_f32); 128]),
+                        Some(vec![Some(0.3_f32); 128]),
+                    ],
+                    128,
+                ),
+            ),
+        ],
+    )
+    .unwrap();
+    let schema_add_reader: Box<dyn RecordBatchReader + Send> = Box::new(RecordBatchIterator::new(
+        vec![Ok(schema_add_batch)].into_iter(),
+        schema_add_schema.clone(),
+    ));
+    let schema_add_table = db
+        .create_table("schema_evolution_add_example", schema_add_reader)
+        .mode(CreateTableMode::Overwrite)
+        .execute()
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+## Add derived columns {#add-derived-columns}
+
+You can add new columns that are derived from existing data using SQL expressions.
+For feature engineering on large existing tables, group related derived features into
+one `add_columns` operation instead of running many separate writes. This creates one
+new table version for the schema change and computes the new columns from the existing
+rows, which avoids growing the table's version history with many small updates.
+
+<CodeGroup>
+    ```python Python icon="python"
+    # Add a discounted price column (10% discount)
+    table.add_columns({"discounted_price": "cast((price * 0.9) as float)"})
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    // Add a discounted price column (10% discount)
+    await schemaAddTable.addColumns([
+      {
+        name: "discounted_price",
+        valueSql: "cast((price * 0.9) as float)",
+      },
+    ]);
+    ```
+
+    ```rust Rust icon="rust"
+    // Add a discounted price column (10% discount)
+    schema_add_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![(
+                "discounted_price".to_string(),
+                "cast((price * 0.9) as float)".to_string(),
+            )]),
+            None,
+        )
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+The same call can add multiple derived columns at once. For example, if you are
+building several lightweight features from existing product fields, pass all of the
+new column expressions together:
+
+<CodeGroup>
+    ```python Python icon="python"
+    table.add_columns(
+        {
+            "price_per_id": "cast(price / id as float)",
+            "price_log": "ln(price)",
+            "price_score": "cast(price / (price + 100.0) as float)",
+        }
+    )
+    ```
+
+    ```typescript TypeScript icon="square-js"
+    await schemaAddTable.addColumns([
+      {
+        name: "price_per_id",
+        valueSql: "cast(price / id as float)",
+      },
+      {
+        name: "price_log",
+        valueSql: "ln(price)",
+      },
+      {
+        name: "price_score",
+        valueSql: "cast(price / (price + 100.0) as float)",
+      },
+    ]);
+    ```
+
+    ```rust Rust icon="rust"
+    schema_add_table
+        .add_columns(
+            NewColumnTransform::SqlExpressions(vec![
+                (
+                    "price_per_id".to_string(),
+                    "cast(price / id as float)".to_string(),
+                ),
+                ("price_log".to_string(), "ln(price)".to_string()),
+                (
+                    "price_score".to_string(),
+                    "cast(price / (price + 100.0) as float)".to_string(),
+                ),
+            ]),
+            None,
+        )
+        .await
+        .unwrap();
+    ```
+</CodeGroup>
+
+<Info>
+LanceDB `add_columns` does not currently accept Python callables, batch UDFs, or
+PyArrow `RecordBatch` iterators for populating new columns. New column values must be
+defined with SQL expressions, or added as NULL columns from an Arrow field or schema.
+If your transformation cannot be expressed in SQL, compute the values outside
+`add_columns` before writing them back through another workflow.
+</Info>
+
+## When SQL is not enough {#beyond-sql}
+
+The expressions above are evaluated once, as part of the call. For other workflows:
+
+- A [computed column](/oss/v0-99-0/feature-engineering/add-computed-column) declares the
+  expression and leaves the column empty, so you choose when the work happens.
+  Use it when you want to schedule the computation separately.
+- On LanceDB Enterprise, [Geneva](/oss/v0-99-0/geneva) fills a column with Python, for
+  values SQL cannot express: an embedding, a model call, an image decode.
+
+{/*
+Draft for the Functions release. Replaces the Geneva item in the list above:
+- A [function](/management/function) fills a column with Python, for values SQL
+  cannot express -- an embedding, a model call, an image decode.
+*/}
+
+A deployment has to enable computed columns before you use them.
+{/* Draft for the Functions release: Functions need enabling there too. */}
+
+## Related guides {#next}
+
+<CardGroup cols={2}>
+  <Card title="Add a computed column" icon="table-columns" href="/oss/v0-99-0/feature-engineering/add-computed-column">
+    Declare now, fill later.
+  </Card>
+  <Card title="Schema evolution" icon="boxes-stacked" href="/oss/v0-99-0/management/table#schema">
+    Change the table's shape instead of its contents.
+  </Card>
+</CardGroup>
