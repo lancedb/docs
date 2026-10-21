@@ -179,12 +179,13 @@ commit on staging, unless staging already shows the same files. It reads
 there. Until then, as today, staging changes only by hand. Publishing the first
 versioned candidate there is the deliberate step that switches the shared
 staging site to the versioned site; publishing an assembled candidate there by
-hand stops it following `main`. Staging publications run one at a time, and an
-automatic one never cancels one waiting to run by hand.
+hand stops it following `main`. Publications to staging and production run one
+at a time, and one waiting its turn, by hand or not, is never cancelled.
 
-A push is not a deployment. Mintlify deploys the commit afterwards and reports
-it as the "Mintlify Deployment" check on that commit. To see which build
-staging shows, open the latest commit on `staging`: its message names the
+A push is not a deployment. Mintlify deploys the commit afterwards: the
+"Mintlify Deployment" check on the commit says when, and the deployment
+Mintlify records for the commit names the address it went live at. To see which
+build staging shows, open the latest commit on `staging`: its message names the
 candidate's checksum, its run and the docs commit, and its Mintlify check says
 whether the preview has been deployed from it. Until that check succeeds, the
 preview may still show the build before. Each version's "About this version"
@@ -196,18 +197,25 @@ Production is the `assembled` branch, and it takes only the versioned site.
 After reviewing staging, run Publish with target `production` and the same run
 ID and checksum. The job waits for a reviewer to approve it in the
 `production` environment. Then it publishes the files staging shows, and only
-if staging still shows that candidate, Mintlify has reported deploying it
-there, and the run's artifact shows that the run built those files. If a newer
-candidate has reached staging since the review, it stops and changes nothing:
-review the new one and promote that instead. The run also reads production
-before it waits for approval, and publishes nothing if production has changed
-by the time it is approved, so an old run left waiting cannot replace a newer
-publication. Cancel a production run you no longer want.
+if staging still shows that candidate, Mintlify's newest deployment of that
+staging commit is live at the staging address, and the run's artifact shows
+that the run built those files. If a newer candidate has reached staging since
+the review, it stops and changes nothing: review the new one and promote that
+instead. The run also reads production before it waits for approval, and
+publishes nothing if production has changed by the time it is approved, so an
+old run left waiting cannot replace a newer publication.
+
+Production and staging publications share one concurrency group, so staging
+cannot change through Publish between production's check of it and its push.
+Staging publications wait while a production run is in the group, which can
+include its wait for approval, so reject or cancel a production run you no
+longer want. A push to `staging` from outside Publish is not ordered with it:
+publish to `staging` only through Publish.
 
 - The staging publication is recorded automatically, as its commit and the
   Publish run's summary.
-- Mintlify records its deployment of staging, as its check on that commit, and
-  production checks it.
+- Mintlify records its deployment of staging, as the commit's check and a
+  deployment naming the address, and production checks the deployment.
 - The review of the hosted staging site is recorded by hand: it is the
   reviewer's approval of the production job, which GitHub keeps with the run.
   Say in the approval's comment what you checked.
@@ -247,12 +255,17 @@ Publishing relies on settings outside this repository:
 - A repository variable `MINTLIFY_CONTENT_DIR`: the path Mintlify's Git settings
   read `docs.json` from, such as `/docs`, or `/` for the root. Publishing
   refuses to guess.
+- A repository variable `MINTLIFY_STAGING_URL`: the address Mintlify serves the
+  staging preview at, exactly as its deployments name it, such as
+  `https://<project>-staging.mintlify.site`, with no trailing slash.
+  Production takes only a staging commit that Mintlify put live there.
 - Mintlify's Git settings: repository `lancedb/docs`, branch `assembled`, and
   the content directory above. Mintlify serves the branch its settings name, so
   publishing to `assembled` reaches production only once that is the branch.
-- A Mintlify preview of the `staging` branch that reports each deployment as
-  the "Mintlify Deployment" check, including for commits the Publish workflow
-  pushes. Without that check, nothing can be promoted.
+- A Mintlify preview of the `staging` branch that records each deployment as a
+  deployment of the commit, with a status naming that address, including for
+  commits the Publish workflow pushes. Without that record, nothing can be
+  promoted.
 - The LanceDB Docs Reader GitHub App installed on the Enterprise documentation repository only, with
   Contents: read and the required Metadata: read permission. Set its Client ID
   in the `SOPHON_DOCS_APP_CLIENT_ID` repository variable and its PEM private key
@@ -264,10 +277,11 @@ Publishing relies on settings outside this repository:
   without Enterprise repository credentials.
 
 Of these, the Publish workflow checks only that production runs from `main`,
-that the environment supplies the deploy key, that `MINTLIFY_CONTENT_DIR` is
-set, and Mintlify's check on staging. It cannot see whether the environment
-requires reviewers and admits only `main`, or whether the ruleset refuses every
-other writer: verify those separately before the first production publication.
+that the environment supplies the deploy key, that `MINTLIFY_CONTENT_DIR` and
+`MINTLIFY_STAGING_URL` are set, and Mintlify's deployment of staging. It cannot
+see whether the environment requires reviewers and admits only `main`, or
+whether the ruleset refuses every other writer: verify those separately before
+the first production publication.
 
 ## Saved editions
 
