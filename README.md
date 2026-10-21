@@ -211,9 +211,10 @@ assembler built from one product release's own sources, in
 `releases/<product>-<version>.yaml` that names every source it was read from.
 New documentation is still written in `lancedb/lancedb` and the Enterprise
 documentation repository.
-[VERSIONING.md](VERSIONING.md) describes the design. Composing the saved
-editions into the site, and publishing them, are later steps; for now the site
-is assembled and published as above.
+[VERSIONING.md](VERSIONING.md) describes the design. `make compose` composes
+the saved editions into one versioned site; see
+[Composing the site](#composing-the-site). Publishing it is a later step, and
+for now the site is assembled and published as above.
 
 An edition's content comes from two kinds of commit, and its record names both:
 
@@ -406,6 +407,70 @@ A saved edition can be corrected after review, at the same URL:
 Preparing that release again later checks its release inputs and saved files,
 then keeps the edition and its corrections. It does not fetch docs main or
 require matching assembler scripts unless it is building a new edition.
+
+### Composing the site
+
+`make compose` composes every saved edition into one site in
+`build/versioned`, with Mintlify's own product and version selectors. Check
+and preview it as you would the assembled site:
+
+```bash
+make compose
+(cd build/versioned && mint validate && mint broken-links --check-anchors --check-redirects)
+cd build/versioned && mint dev
+```
+
+Each edition is published as it was saved, under
+`/<product>/v<major>-<minor>-<patch>/`, such as
+`/enterprise/v1-10-0/quickstart`: its pages, assets, navigation, availability
+badges, redirects and drafts. Nothing is rebuilt from product sources, and an
+edition that does not match its record is not composed. Each edition also gets
+an "About this version" page, made from its record and listed last in its first
+navigation group, with its release, the commits its pages come from and its
+corrections.
+
+`compose.yaml` lists the products in selector order, with their labels, and
+names each product's preferred edition. A product's versions are listed newest
+first, each under its version number, such as 1.10.0, and the preferred one is
+the default, tagged Latest. Readers land on the first product's preferred
+edition, the site's default edition. A preferred edition changes only when
+`compose.yaml` does, in a reviewed pull request; preparing a newer release, or
+a maintenance release of an older line, never changes it. A product with saved
+editions must name one.
+
+Links are pointed into their own edition:
+
+- Root-relative links and images, the `href`, `src` and icon paths of
+  components and frontmatter, and imports get the edition's path.
+- A link to `docs.lancedb.com` becomes a link to the page it lands on in the
+  same edition, after that edition's redirects.
+- Relative links stay as written.
+- Code and MDX comments are never rewritten.
+
+Composition stops, naming the page and line, at a link into another edition, a
+relative link that leaves its edition, or a bare `docs.lancedb.com` URL in the
+text, which Mintlify would link to the default edition; write it as a Markdown
+link. A link to something the edition does not publish is a warning, and
+`mint broken-links` checks the composed site.
+
+An example that downloads a file from `docs.lancedb.com` keeps the URL it
+shows, and the file is also served there, at its unversioned path. Every
+edition whose code downloads it must hold the same file, so a newer release
+cannot change it beneath an older example. If they differ, composition stops:
+give the newer example its own URL in its source.
+
+Mintlify loads every stylesheet and script on every page, so the site takes
+them from its default edition, with the branding and other settings of that
+edition's `docs.json`. Older editions keep their content but take on the
+current look.
+
+Each edition's redirects stay within it. Every unversioned path that some
+edition publishes, as a page or a redirect, redirects to the same page in the
+default edition, and `/` goes there too. Those redirects are temporary, so
+readers follow a change of preferred edition. A path the default edition does
+not have gets no redirect, because a catch-all would hide the missing page:
+`make compose` lists it for review. Each edition's `.mintignore` entries are
+pointed at its own folder, so its drafts stay hidden there and nowhere else.
 
 ## Code snippets
 
