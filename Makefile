@@ -6,7 +6,7 @@ ASSEMBLE_SCRIPT := scripts/assemble.py
 ASSEMBLE_RUN := uv run --no-project --with pyyaml
 
 # uv run automatically handles virtualenv, so no activation needed
-.PHONY: py ts rs snippets hf-sync assemble test-assemble check-editions compose check-spec sync-spec
+.PHONY: py ts rs snippets hf-sync assemble test-assemble check-editions compose discover check-spec sync-spec
 
 # Snippets are generated in lancedb/lancedb, beside the tests they come from;
 # these targets only say so. See "Code snippets" in README.md.
@@ -40,6 +40,12 @@ check-editions:
 # compose.yaml configures it. See "Composing the site" in README.md.
 compose:
 	@$(ASSEMBLE_RUN) scripts/compose.py
+
+# Report which releases would get an edition pull request, as discover.yaml
+# configures it, without writing anything. See "Discovering releases" in
+# README.md.
+discover:
+	@$(ASSEMBLE_RUN) scripts/discover.py
 
 # Fail if the tracked OpenAPI spec has drifted from the release pinned in
 # assemble.yaml. Run in CI so the pin cannot rot unnoticed.
