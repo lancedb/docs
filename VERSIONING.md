@@ -33,10 +33,6 @@ New editions arrive as pull requests. They can be prepared by hand with
 `scripts/edition.py prepare`, and a discovery job prepares one for each new
 qualified release. People review and merge every one.
 
-Before an edition is saved, its pages and snippets are checked. Components
-have to spell out their attributes, so property spreads and calculated links
-are refused; code examples and drafts are not affected.
-
 ## What goes into an edition
 
 An Enterprise edition has the Enterprise release's own pages, plus the shared
