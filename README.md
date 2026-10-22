@@ -238,8 +238,8 @@ command in a clone of this repository whose `origin` is
 a branch whose `scripts/` are those of `main`:
 
 ```bash
-uv run --no-project --with pyyaml scripts/edition.py prepare enterprise 1.10.0 --lancedb ../lancedb --sophon ../sophon
-uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterprise v1.10.0 --lancedb ../lancedb --sophon ../sophon
+uv run --no-project --with pyyaml scripts/edition.py prepare enterprise 1.10.0 --lancedb ../lancedb --enterprise-repo ../enterprise
+uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterprise v1.10.0 --lancedb ../lancedb --enterprise-repo ../enterprise
 ```
 
 - **Enterprise** reads the Enterprise release tag `v1.10.0`, which must have an

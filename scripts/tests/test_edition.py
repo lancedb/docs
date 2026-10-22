@@ -255,7 +255,7 @@ def on_main(docs: Path) -> str:
 def prepare(docs: Path, sources: dict, *argv: str, lancedb: Path | None = None) -> str:
     args = edition.parse([
         "prepare", *argv,
-        "--lancedb", str(lancedb or sources["lancedb"]), "--sophon", str(sources["sophon"]),
+        "--lancedb", str(lancedb or sources["lancedb"]), "--enterprise-repo", str(sources["sophon"]),
     ])
     return edition.prepare(args, repo=docs)
 
@@ -779,7 +779,7 @@ def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
             cwd=docs, env=environment(), capture_output=True, text=True,
         )
 
-    repos = ["--lancedb", str(sources["lancedb"]), "--sophon", str(sources["sophon"])]
+    repos = ["--lancedb", str(sources["lancedb"]), "--enterprise-repo", str(sources["sophon"])]
     result = run("prepare", "oss", "0.98.0", "--enterprise", "v8.1.0", *repos)
     assert result.returncode == 0, result.stderr
     assert record(docs, "oss-0.98.0")["sources"]["build"]["commit"] == main

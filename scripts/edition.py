@@ -9,10 +9,10 @@ requires `check --base` to pass before merging. See VERSIONING.md.
 
 Usage:
 
-    python scripts/edition.py prepare oss VERSION --enterprise REF [--lancedb REPO] [--sophon REPO]
+    python scripts/edition.py prepare oss VERSION --enterprise REF [--lancedb REPO] [--enterprise-repo REPO]
         [--docs REF]
     python scripts/edition.py prepare enterprise VERSION [--bundled-lancedb COMMIT]
-        [--lancedb REPO] [--sophon REPO] [--docs REF]
+        [--lancedb REPO] [--enterprise-repo REPO] [--docs REF]
     python scripts/edition.py check [--base COMMIT]
 """
 
@@ -238,7 +238,7 @@ def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
     product, version = args.product, args.version
     if not VERSION_RE.fullmatch(version):
         raise EditionError(f"{version!r} is not a stable release version such as 1.2.3")
-    lancedb, sophon = args.lancedb.resolve(), args.sophon.resolve()
+    lancedb, sophon = args.lancedb.resolve(), args.enterprise_repo.resolve()
     if product == "oss":
         if args.bundled_lancedb:
             raise EditionError("--bundled-lancedb applies to Enterprise releases only")
@@ -647,7 +647,7 @@ def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
         for name, (repository, folder) in SOURCES.items():
             roots[name] = staging / "roots" / name
             commit = requested["sources"][name]["commit"]
-            source_repo = {"lancedb": args.lancedb, "enterprise": args.sophon}.get(name, repo)
+            source_repo = {"lancedb": args.lancedb, "enterprise": args.enterprise_repo}.get(name, repo)
             export(source_repo.resolve(), commit, folder, roots[name], f"{repository} {commit}")
         site = staging / "site"
         build = requested["sources"]["build"]["commit"]
@@ -790,13 +790,13 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     prep.add_argument("product", choices=PRODUCTS)
     prep.add_argument("version", help="the release version, such as 1.2.3")
     prep.add_argument("--enterprise", metavar="REF",
-                      help="OSS only: the lancedb/sophon tag or commit for the Enterprise pages")
+                      help="OSS only: the Enterprise tag or commit for the Enterprise pages")
     prep.add_argument("--bundled-lancedb", metavar="COMMIT",
                       help="Enterprise only: the LanceDB commit the release is expected to bundle")
     prep.add_argument("--lancedb", type=Path, default=REPO_ROOT.parent / "lancedb",
                       help="a lancedb/lancedb repository (default: ../lancedb)")
-    prep.add_argument("--sophon", type=Path, default=REPO_ROOT.parent / "sophon",
-                      help="a lancedb/sophon repository (default: ../sophon)")
+    prep.add_argument("--enterprise-repo", type=Path, default=REPO_ROOT.parent / "enterprise",
+                      help="an Enterprise source repository (default: ../enterprise)")
     prep.add_argument("--docs", metavar="REF",
                       help="the commit of lancedb/docs main to read docs/ and assemble.yaml from "
                            "(default: main as fetched from origin when preparing)")
