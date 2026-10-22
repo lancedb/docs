@@ -169,8 +169,10 @@ Staging is the `staging` branch, which Mintlify serves as the shared staging
 preview; a preview of any other branch of this repository shows only `docs/`.
 To put a candidate there, run Publish with target `staging`, the ID of a
 successful Compose or Assemble run, and its candidate's checksum. A versioned
-candidate must be built on `main`. An assembled one can come from a manual run
-on another branch, for a preview before anything merges.
+candidate must be built from a commit that `main` contains. Publish reads
+`refs/heads/main` itself, for production too, so a run of a tag named `main`
+is refused. An assembled candidate can come from a manual run on another
+branch, for a preview before anything merges.
 
 Once staging shows the versioned site, it follows `main` by itself: after each
 successful Compose run on `main`, Publish puts the candidate of `main`'s newest
