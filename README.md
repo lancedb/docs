@@ -448,13 +448,16 @@ those pull requests; discovery never merges or publishes.
   pipeline adds the qualification tag first and the release tag last, once the
   release is published, so a qualification tag on its own means the release is
   still being published. A release tag without a qualification tag stops for
-  review.
+  review. Discovery reads both tags from the Enterprise repository on every
+  run, so a withdrawn qualification stops a release even in a clone that still
+  has the old tag.
 - **OSS:** a release is eligible once `lancedb/lancedb` has a published GitHub
   release for its `vX.Y.Z` tag that is not marked as a prerelease. Its
   Enterprise pages come from the preferred Enterprise edition, at the release
   its record names, so OSS releases wait until `compose.yaml` prefers one.
-- Betas and release candidates never get editions. Discovery counts them
-  without naming them.
+- Betas and release candidates never get editions. Discovery counts them, and
+  Enterprise releases that are qualified but not yet published, without naming
+  them.
 - GitHub's "latest release" is not used: it can be a maintenance release of an
   older line.
 
