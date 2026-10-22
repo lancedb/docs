@@ -74,6 +74,9 @@ ANY_ATTRIBUTE_RE = re.compile(r"""[\w:-]+[ \t]*=[ \t]*\{?[ \t]*(["'`])[^"'`\n]*\
 LINK_TEXT_RE = re.compile(r"\[[^\]\n]*\]")
 IMPORT_RE = re.compile(r"""([ \t]*(?:import\b[^'"\n]*?\bfrom|\}[ \t]*from)[ \t]*)(["'])(/[^'"\n]+)\2""")
 CONSTANT_RE = re.compile(r"""[ \t]*export[ \t]+(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(["'`])""")
+STATEMENT_RE = re.compile(r"(?:import|export) ")
+# An apostrophe within a word cannot start or end a JavaScript string.
+STRING_OR_BRACKET_RE = re.compile(r"""\\.|[()\[\]{}"]|(?<!\w)'|'(?!\w)""")
 FRONTMATTER_RE = re.compile(
     rf"""((?:{'|'.join(map(re.escape, FRONTMATTER_LINKS))})[ \t]*:[ \t]*)(["']?)([^"'\s]+)\2([ \t]*)"""
 )
@@ -469,6 +472,17 @@ class Linker:
                       "snippet's strings as written, and cannot tell code from links in other forms")
         self.code(line)
 
+    def javascript(self, text: str) -> None:
+        """Snippet prose: strings in export statements and {...} expressions are refused."""
+        for found in STRING_OR_BRACKET_RE.finditer(text):
+            char = found[0]
+            if char in "([{" and (self.in_export or char == "{"):
+                self.depth += 1
+            elif char in ")]}" and (self.in_export or char == "}"):
+                self.depth = max(self.depth - 1, 0)
+            elif char in "\"'" and (self.in_export or self.depth):
+                self.refused = True
+
     def attribute(self, line: str, match: re.Match) -> tuple[str, int]:
         start = match.end()
         expression = line.startswith("{", start)
@@ -616,6 +630,8 @@ class Linker:
             stops = [p for p in (line.find("`", i), line.find("{/*", i),
                                  tag.start() if tag else -1) if p >= 0]
             stop = min(stops) if stops else len(line)
+            if self.snippet:
+                self.javascript(line[i:stop])
             out.append(self.prose(line[i:stop], at_start=i == 0))
             if stop == len(line):
                 break
@@ -626,6 +642,8 @@ class Linker:
             if line.startswith("{/*", stop):
                 i, comment = stop, True
                 continue
+            if self.in_export or self.depth:
+                self.refused = True
             run = len(line) - stop - len(line[stop:].lstrip("`"))
             close = re.compile(rf"(?<!`){'`' * run}(?!`)").search(line, stop + run)
             end = close.end() if close else stop + run
@@ -644,10 +662,11 @@ class Linker:
     def rewrite(self, rel: str, text: str, published: bool, snippet: bool = False) -> str:
         """One page, its links pointed into this edition; a draft's problems are not reported.
 
-        In a snippet, exported strings are code, and relative links are relative
-        to each page that imports it.
+        In a snippet, strings in its JavaScript are code, and relative links are
+        relative to each page that imports it.
         """
         self.page, self.quiet, self.in_tag, self.snippet = rel, not published, False, snippet
+        self.in_export, self.depth = False, 0
         lines = text.splitlines(keepends=True)
         out, start = [], 0
         if text.startswith("---\n"):
@@ -677,12 +696,20 @@ class Linker:
                 fence = opening[1]
                 out.append(line)
                 continue
-            if snippet and not comment and not self.in_tag and (constant := CONSTANT_RE.match(line)):
-                self.constant(line, constant)
-                out.append(line)
-                continue
-            line, comment = self.prose_line(line, comment)
-            out.append(line)
+            if snippet and not comment and not self.in_tag and not self.depth:
+                if STATEMENT_RE.match(line) or not line.strip():
+                    self.in_export = line.startswith("export")
+                if constant := CONSTANT_RE.match(line):
+                    self.constant(line, constant)
+                    out.append(line)
+                    continue
+            self.refused = False
+            pointed, comment = self.prose_line(line, comment)
+            if self.refused:
+                self.fail("a string in a snippet's JavaScript must be a component attribute or an export of one "
+                          "string on one line, such as export const Name = \"...\": composition keeps a snippet's "
+                          "strings as written, and cannot tell code from links in other forms")
+            out.append(line if self.refused else pointed)
         return "".join(out)
 
 

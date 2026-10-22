@@ -515,6 +515,63 @@ def test_snippet_links_composition_cannot_place_stop_it(docs, tmp_path, text, pr
     assert not (tmp_path / "site").exists()
 
 
+STRINGS = [
+    ("export const Example = ('<a href=\"/guide\">Guide</a>');\n", 1),
+    ("export const Examples = { html: '<a href=\"/guide\">Guide</a>' };\n", 1),
+    ("export const Examples = {\n  html: '<a href=\"/guide\">Guide</a>',\n};\n", 2),
+    ("export const Examples = [\n\n  '[Guide](/guide)',\n];\n", 3),
+    ("export const Tip = () => <pre>{`<a href=\"/guide\">Guide</a>`}</pre>;\n", 1),
+    ("<CodeBlock>{'<a href=\"/guide\">Guide</a>'}</CodeBlock>\n", 1),
+]
+
+
+@pytest.mark.parametrize("text, line", STRINGS)
+def test_strings_in_a_snippets_javascript_stop_composition(docs, tmp_path, text, line):
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={"snippets/example.mdx": text}))
+    configure(docs, enterprise="8.1.0")
+
+    with pytest.raises(compose.ComposeError, match=rf"snippets/example.mdx:{line}: a string in a snippet's JavaScript"):
+        composed(docs, tmp_path)
+    assert not (tmp_path / "site").exists()
+
+
+def test_a_draft_snippets_strings_are_kept_as_written(docs, tmp_path):
+    drafts = {f"snippets/draft{n}.mdx": text for n, (text, _line) in enumerate(STRINGS)}
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={".mintignore": "snippets/draft*.mdx\n", **drafts}))
+    configure(docs, enterprise="8.1.0")
+    site = composed(docs, tmp_path)
+
+    assert {rel: (site / "enterprise/v8-1-0" / rel).read_text() for rel in drafts} == drafts
+
+
+COMPONENT = """export const Label = "Don't [edit](/guide)";
+export const Steps = () => <Note>Step 1) is <a href="/guide">the guide</a>.</Note>;
+import { PyGuide } from "/snippets/generated.mdx";
+export const Tip = ({ title }) => (
+  <Note title="Don't miss it">
+    It's in <a href="/guide">the guide</a>.
+
+    <Card href="/guide" icon="book" />
+  </Note>
+);
+
+Say "hi" to [the guide](/guide), or {PyGuide}.
+"""
+
+
+def test_a_snippet_component_over_several_lines_still_points_its_links(docs, tmp_path):
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={
+        "snippets/component.mdx": COMPONENT, "snippets/generated.mdx": GENERATED}))
+    configure(docs, enterprise="8.1.0")
+    site = composed(docs, tmp_path)
+
+    pointed = (COMPONENT.replace('"/snippets/', '"/enterprise/v8-1-0/snippets/')
+               .replace('href="/guide"', 'href="/enterprise/v8-1-0/guide"')
+               .replace("[the guide](/guide)", "[the guide](/enterprise/v8-1-0/guide)"))
+    assert (site / "enterprise/v8-1-0/snippets/component.mdx").read_text() == pointed
+    assert "[edit](/guide)" in pointed
+
+
 def test_a_draft_page_is_composed_hidden_and_its_links_are_not_checked(docs, tmp_path):
     save(docs, "enterprise", "8.2.0", edition_files("8.2.0", extra={
         ".mintignore": "# Drafts\ndraft.mdx\nnotes/\n!keep.mdx\n",
