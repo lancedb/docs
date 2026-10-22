@@ -279,7 +279,10 @@ Before saving a new edition, preparation checks the release-pinned pages and
 MDX snippets with the same authoring rules as composition. Write component
 attributes explicitly and use literal paths for links. Property spreads such
 as `<a {...props}>` and calculated links such as `href={target}` stop
-preparation with a file and line; fix the source before preparing the edition.
+preparation with a file and line in the assembled page; that line can differ
+from the source because assembly expands examples. Fix the source before the
+release is tagged. If a tagged release fails this check, leave it without an
+edition and fix the source for a later release.
 Code examples and unpublished drafts are excluded from this rule. Preparation
 needs Node.js and npm and installs the pinned parser packages on first use.
 
