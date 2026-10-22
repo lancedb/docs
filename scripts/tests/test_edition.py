@@ -823,8 +823,9 @@ def test_check_pairs_records_and_requires_corrections_to_be_listed(docs, sources
 def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
     """End to end, as a person runs it: the scripts are part of the checkout."""
     (docs / "scripts").mkdir()
-    for name in ("assemble.py", "candidate.py", "edition.py"):
+    for name in ("assemble.py", "candidate.py", "edition.py", "compose.py"):
         shutil.copy(SCRIPTS / name, docs / "scripts" / name)
+    shutil.copytree(SCRIPTS / "mdx", docs / "scripts/mdx", ignore=shutil.ignore_patterns("node_modules"))
     git(docs, "add", "-A")
     git(docs, "commit", "-q", "-m", "scripts")
     main = on_main(docs)
@@ -1215,3 +1216,39 @@ def test_records_the_builder_writes_are_valid(records, tmp_path):
     assert edition.record_problems(records["enterprise-8.1.0"], "enterprise-8.2.0.yaml") == [
         "product and version name enterprise-8.1.0.yaml, not enterprise-8.2.0.yaml"
     ]
+
+
+@pytest.mark.parametrize("rel, text, message", [
+    ("guide.mdx", '<a {...props}>Guide</a>\n', "component property spreads"),
+    ("snippets/guide.mdx", 'export const PyGuide = "example";\n\nexport const Link = () => <a {...props}>Guide</a>;\n', "component property spreads"),
+    ("guide.mdx", '<a href={target}>Guide</a>\n', "href is computed"),
+])
+def test_release_authoring_is_checked_before_saving(docs, sources, tmp_path, rel, text, message):
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    before = state(docs)
+    source = new_repo(tmp_path / "unsafe-source")
+    files = oss_pages("0.99.0")
+    files[f"docs/web/{rel}"] = text.encode()
+    if rel.startswith("snippets/"):
+        files["docs/web/guide.mdx"] += b'\nimport { Link } from "/snippets/guide.mdx";\n\n<Link />\n'
+    commit = snapshot(source, files, "release")
+    git(source, "tag", "v0.99.0", commit)
+    (source / "docs/web").mkdir(parents=True)
+    (source / "docs/web/guide.mdx").write_text("Safe working tree text\n")
+    with pytest.raises(edition.EditionError, match=message):
+        prepare(docs, sources, "oss", "0.99.0", "--enterprise", "v8.1.0", lancedb=source)
+    assert state(docs) == before
+    assert not (docs / "editions/oss/0.99.0").exists()
+    assert not (docs / "releases/oss-0.99.0.yaml").exists()
+
+
+def test_release_authoring_keeps_drafts_and_code_examples(docs, sources, tmp_path):
+    source = new_repo(tmp_path / "safe-source")
+    files = oss_pages("0.99.0")
+    files["docs/web/guide.mdx"] += b'\n```jsx\n<a {...props}>Guide</a>\n```\n'
+    files["docs/web/draft.mdx"] = b'<a {...props}>Draft</a>\n'
+    commit = snapshot(source, files, "release")
+    git(source, "tag", "v0.99.0", commit)
+    prepare(docs, sources, "oss", "0.99.0", "--enterprise", "v8.1.0", lancedb=source)
+    assert (docs / "editions/oss/0.99.0/draft.mdx").read_bytes() == files["docs/web/draft.mdx"]
+    assert b'<a {...props}>Guide</a>' in (docs / "editions/oss/0.99.0/guide.mdx").read_bytes()

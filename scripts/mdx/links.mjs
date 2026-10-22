@@ -48,7 +48,7 @@ function find(text) {
     if (error?.reason === undefined) throw error
     return {error: [error.line ?? null, error.reason]}
   }
-  const found = {links: [], imports: [], computed: [], bare: [], code: []}
+  const found = {links: [], imports: [], computed: [], spreads: [], bare: [], code: []}
   for (const [start, end, url] of destinations) found.links.push([at(start), at(end), url, null])
   visit(tree)
   return found
@@ -67,7 +67,9 @@ function find(text) {
 
   function attribute(node) {
     const value = node.value
-    if (node.type !== 'mdxJsxAttribute' || !linkAttributes.has(node.name)) {
+    if (node.type === 'mdxJsxExpressionAttribute') {
+      found.spreads.push(at(node.position.start.offset))
+    } else if (node.type !== 'mdxJsxAttribute' || !linkAttributes.has(node.name)) {
       script(node.data?.estree ?? value?.data?.estree)
     } else if (typeof value === 'string') {
       const end = node.position.end.offset - 1
@@ -91,6 +93,10 @@ function find(text) {
   function script(node) {
     if (Array.isArray(node)) return node.forEach(script)
     if (typeof node?.type !== 'string') return
+    if (node.type === 'JSXSpreadAttribute') {
+      found.spreads.push(at(node.start))
+      return
+    }
     if (node.type === 'JSXAttribute') return jsxAttribute(node)
     if (node.type === 'Literal' && typeof node.value === 'string') found.code.push([at(node.start), node.value])
     if (node.type === 'TemplateElement') found.code.push([at(node.start), node.value.cooked ?? node.value.raw])

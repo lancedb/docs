@@ -39,6 +39,10 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Test the overlay, navigation and private-root guards
         run: make test-assemble
 

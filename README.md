@@ -275,6 +275,14 @@ file, the assembler stops, `.gitignore` would leave out one of the edition's
 files, `origin` is not `lancedb/docs`, the docs input commit is not on its
 `main`, or your `scripts/` are not that commit's.
 
+Before saving a new edition, preparation checks the release-pinned pages and
+MDX snippets with the same authoring rules as composition. Write component
+attributes explicitly and use literal paths for links. Property spreads such
+as `<a {...props}>` and calculated links such as `href={target}` stop
+preparation with a file and line; fix the source before preparing the edition.
+Code examples and unpublished drafts are excluded from this rule. Preparation
+needs Node.js and npm and installs the pinned parser packages on first use.
+
 Preparing a saved release again changes nothing when its release commits and
 qualification tag match the record, even after the edition has been corrected,
 and stops when they differ. It never replaces a saved edition.
@@ -455,13 +463,15 @@ pinned in `scripts/mdx`, and changes only the link destinations it finds:
 - Same-site redirect destinations stay within the edition, including absolute URLs.
 - Relative links stay as written.
 - Code blocks, inline code, JavaScript strings and comments are never
-  rewritten, so a URL in a string stays as written even if a component links
-  to it.
+  rewritten.
 
 A link attribute that JavaScript calculates, such as `href={page.url}` or
 ``href={`/guides/${name}`}``, cannot be pointed into the edition, so composition
 stops there with the page and line: write the path itself, as `href="/guide"`
-or `href={"/guide"}`. Composition also stops, naming the page and line, at a
+or `href={"/guide"}`. Component property spreads such as `<a {...props}>` are
+also refused: write the attributes explicitly instead. This applies to
+rendered components, including exported components, but not to code examples.
+Composition also stops, naming the page and line, at a
 link into another edition, a path that leaves its edition, a root-relative or
 `docs.lancedb.com` link written with escapes or character references, a
 published page or snippet that is not valid MDX, or a bare `docs.lancedb.com`
@@ -481,6 +491,10 @@ shows, and the file is also served there, at its unversioned path. Every
 edition whose code downloads it must hold the same file, so a newer release
 cannot change it beneath an older example. If they differ, composition stops:
 give the newer example its own URL in its source.
+
+When changing the composer or these authoring rules, compose all saved editions
+before merging. Do not silently rewrite an older edition to satisfy a new rule;
+any necessary content change uses the reviewed correction process.
 
 Site-wide settings live in `site/settings.json`: the theme, banner, logos,
 navbar, footer and integrations. Edit that file to change the shared site

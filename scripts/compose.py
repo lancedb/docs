@@ -383,6 +383,38 @@ def mdx_links(texts: list[str]) -> list[dict]:
     return json.loads(result.stdout)
 
 
+def authoring_errors(text: str, found: dict) -> list[tuple[int, str]]:
+    if "error" in found:
+        line, reason = found["error"]
+        return [(line or 0, f"is not valid MDX: {reason}")]
+    errors = []
+    for offset, name in found["computed"]:
+        errors.append((text.count("\n", 0, offset) + 1,
+                       f"{name} is computed, so composition cannot point it into this edition; "
+                       f'write the path itself, such as {name}="/guide"'))
+    for offset in found["spreads"]:
+        errors.append((text.count("\n", 0, offset) + 1,
+                       'component property spreads are not supported; write attributes explicitly, '
+                       'such as href="/guide"'))
+    return errors
+
+
+def check_authoring(root: Path) -> None:
+    ignore = root / IGNORE
+    rules = ignore_rules([*MINT_IGNORES, *(ignore.read_text().splitlines() if ignore.is_file() else [])])
+    texts = {
+        rel: (root / rel).read_text(encoding="utf-8")
+        for rel in sorted(candidate.file_hashes(root))
+        if rel.endswith(PAGE_SUFFIXES) and not ignored(rules, rel)
+        and (rel.startswith("snippets/") or not (rel.endswith(".md") and PurePosixPath(rel).stem.lower() in NOT_PAGES))
+    }
+    errors = [f"{rel}:{line}: {message}"
+              for (rel, text), found in zip(texts.items(), mdx_links(list(texts.values())))
+              for line, message in authoring_errors(text, found)]
+    if errors:
+        raise ComposeError("documentation cannot be saved as an edition:\n" + "\n".join(errors))
+
+
 class Linker:
     """Points the links in one edition's pages, snippets and navigation into the edition."""
 
@@ -482,6 +514,9 @@ class Linker:
             self.line = line or 0
             self.fail(f"is not valid MDX: {reason}")
             return text
+        for line, message in authoring_errors(text, found):
+            self.line = line
+            self.fail(message)
         edits = []
         for start, end, value, name in found["links"]:
             at(start)
@@ -495,10 +530,6 @@ class Linker:
                 if module.lstrip("/") not in self.ed.files:
                     self.note(f"imports {module}, which {self.ed.name} does not have")
                 edits.append((start, end, module, versioned(self.ed.prefix, module)))
-        for start, name in found["computed"]:
-            at(start)
-            self.fail(f"{name} is computed, so composition cannot point it into this edition; "
-                      f'write the path itself, such as {name}="/guide"')
         for start, url in found["bare"]:
             at(start)
             if self.site_url.match(url):

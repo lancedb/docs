@@ -555,7 +555,6 @@ LINKS = [
     "<Card href={\n  \"/guide\"\n} />\n",
     "<a onClick={() => /}/.test(value)} href={`/guide`}>Next</a>\n",
     "<a title={`value ${suffix}`} href={`/guide`}>Next</a>\n",
-    "<a {...props} href={`/guide`}>Next</a>\n",
     "<a title={<a href=\"/guide\">Guide</a>} href={`/guide`}>Next</a>\n",
     "<a onClick={() => {\n}} href={`/guide`}>Next</a>\n",
     "<a href\n = {`/guide`}>Next</a>\n",
@@ -1053,3 +1052,32 @@ def test_unhandled_redirect_patterns_are_refused(docs, tmp_path, source):
     with pytest.raises(compose.ComposeError, match='unsupported redirect source'):
         composed(docs, tmp_path)
     assert not (tmp_path / 'site').exists()
+
+
+@pytest.mark.parametrize("text", [
+    '<a {...{href: "/guide"}}>Guide</a>\n',
+    '<a href="/guide" {...{href: "/guide"}}>Guide</a>\n',
+    '<a {...props} href="/guide">Guide</a>\n',
+    'export const Link = () => <a {...props}>Guide</a>;\n',
+    '<Card title={<a {...props}>Guide</a>} />\n',
+    '<span {...{className: "label"}}>Label</span>\n',
+])
+@pytest.mark.parametrize("rel", ["example.mdx", "snippets/example.mdx"])
+def test_component_spreads_stop_composition(docs, tmp_path, text, rel):
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={rel: text}))
+    save(docs, "enterprise", "8.2.0")
+    configure(docs, enterprise="8.2.0")
+    with pytest.raises(compose.ComposeError, match="component property spreads are not supported"):
+        composed(docs, tmp_path)
+    assert not (tmp_path / "site").exists()
+
+
+def test_spreads_in_example_code_and_drafts_are_unchanged(docs, tmp_path):
+    code = 'export const Example = \'<a {...props}>Guide</a>\';\n\n```jsx\n<a {...props}>Guide</a>\n```\n'
+    draft = '<a {...props}>Unreleased</a>\n'
+    files = edition_files("8.1.0", extra={"example.mdx": code, "draft.mdx": draft})
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    site = composed(docs, tmp_path)
+    assert (site / "enterprise/v8-1-0/example.mdx").read_text() == code
+    assert (site / "enterprise/v8-1-0/draft.mdx").read_text() == draft
