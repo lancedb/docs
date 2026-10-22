@@ -1048,6 +1048,63 @@ def test_the_versioned_site_is_published_only_from_main(tmp_path, remote):
     assert refs(remote["bare"]) == before
 
 
+def tagged_main(tmp_path: Path, remote: dict) -> str:
+    """A commit that never merged, pushed as a tag named main. GitHub reports a
+    run of it with the head_branch main."""
+    clone = tmp_path / "tagger"
+    git(tmp_path, "clone", "-q", "-b", "main", str(remote["bare"]), str(clone))
+    head = commit(clone, {"unreviewed.md": b"never merged\n"}, "not on main")
+    git(clone, "tag", "main", head)
+    git(clone, "push", "-q", "origin", "refs/tags/main")
+    return head
+
+
+def test_a_run_of_a_tag_named_main_is_never_published(tmp_path, remote):
+    candidate = Candidate(tmp_path, tagged_main(tmp_path, remote), site="versioned",
+                          event="workflow_dispatch")
+    before = refs(remote["bare"])
+
+    result = publish(remote, candidate)
+
+    assert result.returncode == 1
+    assert f"run 1001 built {candidate.docs_commit}, which main does not contain" in result.stderr
+    assert refs(remote["bare"]) == before
+
+
+def test_production_refuses_a_tag_named_main_even_when_staging_shows_it(tmp_path, remote):
+    candidate = Candidate(tmp_path, tagged_main(tmp_path, remote), site="versioned",
+                          event="workflow_dispatch")
+    # Pushed to staging outside Publish, with a publication's trailers.
+    staging = forge(
+        tmp_path, remote, {f"docs/{path}": data for path, data in candidate.files.items()},
+        f"Publish candidate\n\nCandidate-Site-SHA256: {candidate.checksum}\nCandidate-Run: 1001\n"
+        f"Candidate-Site: versioned\nSources: build={candidate.docs_commit}\n",
+    )
+    before = refs(remote["bare"])
+
+    result = promote(remote, candidate, deployed(tmp_path, staging))
+
+    assert result.returncode == 1
+    assert "which main does not contain" in result.stderr
+    assert refs(remote["bare"]) == before
+
+
+@pytest.mark.parametrize("checkout", ["full", "shallow"])
+def test_an_earlier_commit_of_main_is_published_and_promoted(tmp_path, remote, checkout):
+    candidate = Candidate(tmp_path, remote["docs_commit"], site="versioned", event="workflow_dispatch")
+    advance_main(tmp_path, remote, "later")
+    if checkout == "shallow":
+        shutil.rmtree(remote["workspace"])
+        git(tmp_path, "clone", "-q", "--depth", "1", "-b", "main", f"file://{remote['bare']}",
+            str(remote["workspace"]))
+        assert git(remote["workspace"], "rev-parse", "--is-shallow-repository") == "true"
+
+    result = promote(remote, candidate, deployed(tmp_path, staged(remote, candidate)))
+
+    assert result.returncode == 0, result.stderr
+    assert published(remote["bare"], "assembled") == candidate.files
+
+
 def test_a_versioned_candidate_lists_its_products(tmp_path, remote):
     files = versioned_site()
     files["docs.json"] = b'{"name": "LanceDB", "navigation": {"tabs": []}}'

@@ -341,6 +341,24 @@ def tree_of(commit: str) -> str:
     return text("rev-parse", f"{commit}^{{tree}}")
 
 
+def on_main(remote: str, commit: object, run_id: str) -> None:
+    """The remote's `refs/heads/main` must contain `commit`: a run's head_branch
+    is only a name, which a run of a tag named main has too."""
+    if not isinstance(commit, str) or not COMMIT_RE.fullmatch(commit):
+        raise CandidateError(f"run {run_id} names no commit it built")
+    main = remote_head(remote, "main")
+    if main is None:
+        raise CandidateError(f"{remote} has no main branch")
+    # A shallow checkout lacks the earlier commits of main.
+    if text("rev-parse", "--is-shallow-repository") == "true":
+        git("fetch", "--quiet", "--no-tags", "--unshallow", remote, "+refs/heads/main:refs/candidate-publish/main")
+    if subprocess.run(["git", "merge-base", "--is-ancestor", commit, main], capture_output=True).returncode:
+        raise CandidateError(
+            f"the versioned site is published only from main; run {run_id} built {commit}, which main "
+            "does not contain"
+        )
+
+
 # --------------------------------------------------------------------------- #
 # publishing
 # --------------------------------------------------------------------------- #
@@ -719,6 +737,8 @@ def publish(args: argparse.Namespace) -> dict:
             raise CandidateError(f"{args.site_sha256!r} is not a lowercase SHA-256")
         run = load_run(args.run, args.run_id)
         site = check_run(run, args.run_id, args.repository, args.target)
+        if site is VERSIONED:
+            on_main(args.remote, run.get("head_sha"), args.run_id)
         head = remote_head(args.remote, branch)
 
     if args.target == "production":
