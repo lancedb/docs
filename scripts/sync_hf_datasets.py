@@ -30,6 +30,8 @@ from typing import Iterable
 
 import yaml
 
+from structured_data import dataset_schema, render_jsonld
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "scripts" / "hf_datasets.yaml"
 DATASETS_DIR = REPO_ROOT / "docs" / "datasets"
@@ -238,7 +240,10 @@ def transform_card(ds: Dataset, card_text: str) -> tuple[str, str]:
         f"Source dataset card and downloadable files for `lance-format/{ds.hf}`.\n"
         f"</Card>\n\n"
     )
-    return frontmatter + hf_card + body.rstrip() + "\n", description
+    schema = render_jsonld(dataset_schema(
+        ds.title, plain_text(first_paragraph(body)), ds.slug, hf_url
+    ))
+    return frontmatter + schema + "\n" + hf_card + body.rstrip() + "\n", description
 
 
 # ----- index.mdx card grid ----------------------------------------------------

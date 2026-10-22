@@ -5,6 +5,19 @@
   },
   "theme": "mint",
   "name": "LanceDB",
+  "seo": {
+    "organization": {
+      "id": "https://lancedb.com/#organization",
+      "name": "LanceDB",
+      "url": "https://lancedb.com",
+      "logo": "https://docs.lancedb.com/static/assets/logo/dark-lancedb-logo.svg",
+      "sameAs": [
+        "https://github.com/lancedb",
+        "https://www.linkedin.com/company/lancedb",
+        "https://x.com/lancedb"
+      ]
+    }
+  },
   "banner": {
     "content": "[Why Multimodal Data Needs a Better Lakehouse? \u2014 Download the Research Study](https://lancedb.com/download/)",
     "dismissible": true

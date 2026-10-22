@@ -23,6 +23,33 @@ Check broken links (applies to internal links within this docs site only):
 mint broken-links
 ```
 
+## Structured data
+
+`docs/docs.json` configures LanceDB's publisher identity through Mintlify's
+`seo.organization`, including the official profiles in `sameAs`.
+
+The FAQ pages include server-rendered `FAQPage` JSON-LD generated from their
+visible question headings and complete answers. After editing a FAQ, run:
+
+```bash
+python3 scripts/sync_faq_schema.py
+python3 scripts/sync_faq_schema.py --check
+python3 -m unittest discover -s scripts/tests
+```
+
+Edit the prose above the `FAQ_SCHEMA` block, then regenerate it. CI checks that
+the markup matches the prose. The generator supports the Markdown and callouts
+currently used by these FAQs and fails on unsupported MDX rather than omitting
+answer content.
+
+Dataset sync also emits `Dataset` JSON-LD from each card's title, opening
+paragraph, and Hugging Face URL. The DocVQA card is a dataset description and
+the Ollama page is an integration guide; neither is a shopping offer. Ahrefs'
+"Product page missing Product schema" classification for these two URLs is a
+false positive, so they should be excluded from that Product-specific report
+if they remain flagged after recrawling. Do not add invented prices or ratings
+to satisfy it.
+
 ## Generate snippets
 
 To generate snippets, use `uv` to sync your local Python environment so that you can run the Python script described below.
