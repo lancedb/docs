@@ -17,8 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Check structured data
         run: |
+          python3 -m pip install pyyaml
           python3 -m unittest discover -s scripts/tests
           python3 scripts/sync_faq_schema.py --check
 

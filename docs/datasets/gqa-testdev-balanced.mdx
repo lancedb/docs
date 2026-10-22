@@ -4,6 +4,16 @@ sidebarTitle: "GQA testdev-balanced"
 description: "A Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined against the matching 398 images — sourced from lmms-lab/GQA. The original redistribution ships instructions and images as separate…"
 ---
 
+<script type="application/ld+json" children='{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "@id": "https://docs.lancedb.com/datasets/gqa-testdev-balanced#dataset",
+  "name": "GQA testdev-balanced",
+  "description": "A Lance-formatted version of the canonical GQA testdev_balanced slice — 12,578 compositional VQA questions joined against the matching 398 images — sourced from lmms-lab/GQA. The original redistribution ships instructions and images as separate parquet configs; here they are pre-joined on image_id, so each row carries the question text, the short answer, the GQA reasoning-program tags, paired CLIP image and question embeddings, and the inline JPEG bytes — all available directly from the Hub at hf://datasets/lance-format/gqa-testdev-balanced-lance/data.",
+  "url": "https://docs.lancedb.com/datasets/gqa-testdev-balanced",
+  "sameAs": "https://huggingface.co/datasets/lance-format/gqa-testdev-balanced-lance"
+}' />
+
 <Card
   title="View on Hugging Face"
   icon="/static/assets/logo/huggingface-logo.svg"

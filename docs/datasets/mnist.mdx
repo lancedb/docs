@@ -4,6 +4,16 @@ sidebarTitle: "MNIST"
 description: "A Lance-formatted version of the classic MNIST handwritten-digit dataset covering 70,000 28×28 grayscale digits across ten balanced classes. Each row carries inline PNG bytes, the digit label, the human-readable class name, and a cosine-normalized…"
 ---
 
+<script type="application/ld+json" children='{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "@id": "https://docs.lancedb.com/datasets/mnist#dataset",
+  "name": "MNIST",
+  "description": "A Lance-formatted version of the classic MNIST handwritten-digit dataset covering 70,000 28×28 grayscale digits across ten balanced classes. Each row carries inline PNG bytes, the digit label, the human-readable class name, and a cosine-normalized CLIP image embedding, all backed by a bundled IVF_PQ vector index plus scalar indices on the label columns and available directly from the Hub at hf://datasets/lance-format/mnist-lance/data.",
+  "url": "https://docs.lancedb.com/datasets/mnist",
+  "sameAs": "https://huggingface.co/datasets/lance-format/mnist-lance"
+}' />
+
 <Card
   title="View on Hugging Face"
   icon="/static/assets/logo/huggingface-logo.svg"

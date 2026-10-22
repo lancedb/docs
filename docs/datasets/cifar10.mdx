@@ -4,6 +4,16 @@ sidebarTitle: "CIFAR-10"
 description: "A Lance-formatted version of CIFAR-10 covering 60,000 32×32 RGB images across ten balanced object classes. Each row carries inline PNG bytes, the integer label, the human-readable class name, and a cosine-normalized CLIP image embedding, all backed…"
 ---
 
+<script type="application/ld+json" children='{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "@id": "https://docs.lancedb.com/datasets/cifar10#dataset",
+  "name": "CIFAR-10",
+  "description": "A Lance-formatted version of CIFAR-10 covering 60,000 32×32 RGB images across ten balanced object classes. Each row carries inline PNG bytes, the integer label, the human-readable class name, and a cosine-normalized CLIP image embedding, all backed by a bundled IVF_PQ vector index plus scalar indices on the label columns and available directly from the Hub at hf://datasets/lance-format/cifar10-lance/data.",
+  "url": "https://docs.lancedb.com/datasets/cifar10",
+  "sameAs": "https://huggingface.co/datasets/lance-format/cifar10-lance"
+}' />
+
 <Card
   title="View on Hugging Face"
   icon="/static/assets/logo/huggingface-logo.svg"

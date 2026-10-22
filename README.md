@@ -34,16 +34,19 @@ visible question headings and complete answers. After editing a FAQ, run:
 ```bash
 python3 scripts/sync_faq_schema.py
 python3 scripts/sync_faq_schema.py --check
-python3 -m unittest discover -s scripts/tests
+uv run python -m unittest discover -s scripts/tests
 ```
 
 Edit the prose above the `FAQ_SCHEMA` block, then regenerate it. CI checks that
 the markup matches the prose. The generator supports the Markdown and callouts
-currently used by these FAQs and fails on unsupported MDX rather than omitting
-answer content.
+currently used by these FAQs and fails on anything else (fenced code, tables,
+blockquotes, reference links, other MDX), on question headings that don't end
+in `?`, and on text under a non-question heading, rather than omitting answer
+content. To add a FAQ page, list it in `FAQ_PAGES` in
+`scripts/sync_faq_schema.py`.
 
-Dataset sync also emits `Dataset` JSON-LD from each card's title, opening
-paragraph, and Hugging Face URL. The DocVQA card is a dataset description and
+`make hf-sync` also emits `Dataset` JSON-LD on every dataset page from the
+card's title, opening paragraph, and Hugging Face URL. The DocVQA card is a dataset description and
 the Ollama page is an integration guide; neither is a shopping offer. Ahrefs'
 "Product page missing Product schema" classification for these two URLs is a
 false positive, so they should be excluded from that Product-specific report

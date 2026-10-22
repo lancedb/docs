@@ -4,6 +4,16 @@ sidebarTitle: "ImageNet-1k Validation"
 description: "A Lance-formatted version of the canonical 50,000-image ImageNet-1k (ILSVRC2012) validation split, sourced from benjamin-paine/imagenet-1k. Each row is one image with its integer class id, a string class name, and a cosine-normalized OpenCLIP image…"
 ---
 
+<script type="application/ld+json" children='{
+  "@context": "https://schema.org",
+  "@type": "Dataset",
+  "@id": "https://docs.lancedb.com/datasets/imagenet-1k-val#dataset",
+  "name": "ImageNet-1k Validation",
+  "description": "A Lance-formatted version of the canonical 50,000-image ImageNet-1k (ILSVRC2012) validation split, sourced from benjamin-paine/imagenet-1k. Each row is one image with its integer class id, a string class name, and a cosine-normalized OpenCLIP image embedding — all stored inline and available directly from the Hub at hf://datasets/lance-format/imagenet-1k-val-lance/data. The 1.28 M ImageNet-1k train split (~155 GB) is intentionally out of scope for this redistribution; the val split is the canonical evaluation slice for classification benchmarks and is small enough (~7 GB Lance) to ride entirely in inline storage alongside its embeddings.",
+  "url": "https://docs.lancedb.com/datasets/imagenet-1k-val",
+  "sameAs": "https://huggingface.co/datasets/lance-format/imagenet-1k-val-lance"
+}' />
+
 <Card
   title="View on Hugging Face"
   icon="/static/assets/logo/huggingface-logo.svg"
