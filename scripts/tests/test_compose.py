@@ -201,9 +201,6 @@ def standard(docs: Path) -> None:
     configure(docs, enterprise="8.2.0", oss="0.99.0")
 
 
-# selectors and layout
-
-
 def test_the_selectors_list_enterprise_first_and_each_products_versions_newest_first(docs, tmp_path):
     for version in ("8.9.0", "8.10.0", "8.2.0"):
         save(docs, "enterprise", version)
@@ -337,9 +334,6 @@ def test_shared_assets_refuse_symlinks(docs, tmp_path):
         composed(docs, tmp_path)
 
 
-# links
-
-
 PAGE = """---
 title: "Links"
 icon: "/static/logo.svg"
@@ -424,7 +418,6 @@ def with_navigation(files: dict, **navigation) -> dict:
 
 
 def test_navigation_links_to_this_host_stay_in_their_edition(docs, tmp_path):
-    # The independent review's case: an older edition's menu names the production host.
     tabs = NAVIGATION["tabs"] + [
         {"tab": "Setup", "href": "https://docs.lancedb.com/guide#setup"},
         {"tab": "Moved", "href": "//docs.lancedb.com/start?tab=py", "icon": "https://docs.lancedb.com/static/logo.svg"},
@@ -447,7 +440,6 @@ def test_navigation_links_to_this_host_stay_in_their_edition(docs, tmp_path):
         {"tab": "GitHub", "href": "https://github.com/lancedb/lancedb", "icon": "https://example.com/github.svg"},
     ]
     assert old["global"]["anchors"] == [{"anchor": "Old", "href": "/enterprise/v8-1-0/guide#setup", "icon": "clock"}]
-    # Unversioned paths still lead to the preferred edition, and page links are pointed as before.
     assert {r["source"]: r["destination"] for r in unversioned(site)}["/guide"] == "/enterprise/v8-2-0/guide"
     assert "[guide](/enterprise/v8-1-0/guide#setup)" in (site / "enterprise/v8-1-0/index.mdx").read_text()
 
@@ -476,7 +468,6 @@ PROSE = "\n[Guide](/guide)\n\n```bash\ncd /guide\n```\n"
 
 
 def test_snippet_links_stay_in_the_edition_of_the_page_that_imports_them(docs, tmp_path):
-    # The independent review's case: an older edition's page shows a snippet that links.
     for version in ("8.1.0", "8.2.0"):
         save(docs, "enterprise", version, edition_files(version, extra={"snippets/tip.mdx": TIP, "tip.mdx": TIP_PAGE}))
     configure(docs, enterprise="8.2.0")
@@ -500,7 +491,6 @@ def test_a_snippets_exported_strings_and_code_are_kept_as_written(docs, tmp_path
 
     assert (site / "generated.mdx").read_bytes() == (docs / "editions/enterprise/8.1.0/snippets/generated.mdx").read_bytes()
     assert (site / "mixed.mdx").read_text() == GENERATED + PROSE.replace("[Guide](/guide)", "[Guide](/enterprise/v8-1-0/guide)")
-    # What their code downloads is still served where it fetches it.
     assert list(summary["downloads"]) == ["/static/data/rows.csv"]
     assert (tmp_path / "site/static/data/rows.csv").read_text() == "a,b\n"
 
@@ -567,9 +557,6 @@ def test_the_composed_mintignore_hides_what_each_editions_own_did_and_nothing_el
     assert not any(compose.ignored(rules, f"enterprise/v8-2-0/{p}") for p in paths)
 
 
-# downloads
-
-
 CURL = "```bash\ncurl -O https://docs.lancedb.com/static/data/rows.csv\n```\n"
 
 
@@ -600,9 +587,6 @@ def test_examples_that_download_different_files_from_one_address_stop_compositio
     with pytest.raises(compose.ComposeError, match=r"/static/data/rows.csv is the download of enterprise "
                        r"8.2.0 and the download of enterprise 8.1.0, and they differ"):
         composed(docs, tmp_path)
-
-
-# redirects
 
 
 def test_redirects_stay_in_their_edition_and_keep_their_anchors(docs, tmp_path):
@@ -649,9 +633,6 @@ def test_redirects_that_loop_capture_pages_or_lead_nowhere_stop_composition(docs
 
     with pytest.raises(compose.ComposeError, match=problem):
         composed(docs, tmp_path)
-
-
-# adding editions and the preferred edition
 
 
 def test_adding_editions_leaves_older_editions_and_unversioned_redirects_unchanged(docs, tmp_path):
@@ -709,9 +690,6 @@ def test_compose_yaml_must_name_a_saved_preferred_edition_for_each_product(docs,
         composed(docs, tmp_path)
 
 
-# corrections
-
-
 def test_a_recorded_correction_is_composed_and_listed_on_the_about_page(docs, tmp_path):
     save(docs, "enterprise", "8.1.0")
     configure(docs, enterprise="8.1.0")
@@ -731,9 +709,6 @@ def test_an_edition_changed_without_a_recorded_correction_is_not_composed(docs, 
 
     with pytest.raises(compose.ComposeError, match=r"do not match their records"):
         composed(docs, tmp_path)
-
-
-# the About page and the command
 
 
 def compile_mdx(text: str) -> subprocess.CompletedProcess:

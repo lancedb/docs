@@ -61,7 +61,6 @@ MINT_IGNORES = (
 NOT_PAGES = frozenset({"readme", "license", "contributing", "contribute"})
 FRONTMATTER_LINKS = ("icon", "og:image", "twitter:image")
 LINK_ATTRIBUTES = ("href", "src", "icon", "img", "image", "poster")
-# Values of these name an icon unless they are a path or a URL.
 NAMES_OR_LINKS = ("icon",)
 VERSIONED_RE = re.compile(rf"/(?:{'|'.join(edition.PRODUCTS)})/v[0-9]+-[0-9]+-[0-9]+(?=[/?#]|$)")
 SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
@@ -74,7 +73,6 @@ TAG_START_RE = re.compile(r"<[A-Za-z][\w.-]*(?=\s|/?>)")
 ANY_ATTRIBUTE_RE = re.compile(r"""[\w:-]+[ \t]*=[ \t]*\{?[ \t]*(["'`])[^"'`\n]*\1""")
 LINK_TEXT_RE = re.compile(r"\[[^\]\n]*\]")
 IMPORT_RE = re.compile(r"""([ \t]*(?:import\b[^'"\n]*?\bfrom|\}[ \t]*from)[ \t]*)(["'])(/[^'"\n]+)\2""")
-# A snippet's exported string: code that pages show, such as a generated example.
 CONSTANT_RE = re.compile(r"""[ \t]*export[ \t]+(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(["'`])""")
 FRONTMATTER_RE = re.compile(
     rf"""((?:{'|'.join(map(re.escape, FRONTMATTER_LINKS))})[ \t]*:[ \t]*)(["']?)([^"'\s]+)\2([ \t]*)"""
@@ -83,9 +81,6 @@ FRONTMATTER_RE = re.compile(
 
 class ComposeError(Exception):
     """Inputs that must stop composition before anything is written."""
-
-
-# .mintignore
 
 
 @dataclass(frozen=True)
@@ -170,13 +165,9 @@ def pointed_ignore(line: str, prefix: str) -> str:
     return ("!" if negated else "") + body + ("/" if directory else "")
 
 
-# redirects
-
-
 @dataclass(frozen=True)
 class Redirect:
     source: str
-    # A site path with a leading slash, or an external URL.
     destination: str
     permanent: bool | None
     pattern: re.Pattern
@@ -294,11 +285,7 @@ def follow_redirects(start: str, redirects: list[Redirect], paths: set[str], *, 
 
 
 def versioned(prefix: str, path: str) -> str:
-    """A site path of an edition, at its place in the composed site."""
     return f"/{prefix}" + ("" if path in ("/", "") else path)
-
-
-# editions
 
 
 @dataclass
@@ -306,12 +293,9 @@ class Edition:
     record: dict
     prefix: str
     docs: dict
-    # Its .mintignore, pointed at its prefix.
     ignore: list[str]
-    # The files copied under its prefix, and whether each of its pages is published.
     files: list[str]
     pages: dict[str, bool]
-    # What it publishes, as site paths: page routes, folders and files.
     routes: set[str]
     paths: set[str]
     assets: set[str]
@@ -365,7 +349,6 @@ def read_edition(repo: Path, record: dict, host: str) -> Edition:
         p: p in published
         for p in files
         if p.endswith(PAGE_SUFFIXES)
-        # Snippet modules are code that pages import.
         and not p.startswith("snippets/")
         and not (p.endswith(".md") and PurePosixPath(p).stem.lower() in NOT_PAGES)
     }
@@ -379,15 +362,11 @@ def read_edition(repo: Path, record: dict, host: str) -> Edition:
                    assets, redirects)
 
 
-# pages
-
-
 def blank(match: re.Match) -> str:
     return " " * len(match[0])
 
 
 def monospace(text: str) -> str:
-    """`text` as inline code."""
     fence = "`" * (max((len(run) for run in re.findall(r"`+", text)), default=0) + 1)
     pad = " " if text.startswith("`") or text.endswith("`") else ""
     return f"{fence}{pad}{text}{pad}{fence}"
@@ -404,7 +383,6 @@ class Linker:
     def __init__(self, ed: Edition, host: str, problems: list[str], warnings: list[str]):
         self.ed, self.host = ed, host
         self.problems, self.warnings = problems, warnings
-        # Where code uses a URL on this site, and the URL's path.
         self.code_urls: list[tuple[str, str]] = []
         self.page, self.line, self.quiet, self.snippet = "", 0, False, False
         self.site_url = re.compile(
@@ -423,7 +401,6 @@ class Linker:
             self.warnings.append(f"{self.where()}: {message}")
 
     def point(self, raw: str) -> str:
-        """A link target, pointed into this edition."""
         bracketed = raw.startswith("<") and raw.endswith(">")
         target = raw[1:-1] if bracketed else raw
         if not target or target.startswith("#"):
@@ -436,7 +413,6 @@ class Linker:
         try:
             if not absolute and not target.startswith("/"):
                 if self.snippet:
-                    # Relative to each page that imports the snippet, wherever that page is.
                     if ".." in (urllib.parse.unquote(s) for s in parts.path.split("/")):
                         raise ComposeError(f"{target} climbs out of the folder of each page that imports this "
                                            "snippet; link from the root instead, such as /guide")
@@ -668,9 +644,8 @@ class Linker:
     def rewrite(self, rel: str, text: str, published: bool, snippet: bool = False) -> str:
         """One page, its links pointed into this edition; a draft's problems are not reported.
 
-        A snippet module is rewritten as a page is, except for its exported
-        strings, which are code, and its relative links, which are relative to
-        each page that imports it.
+        In a snippet, exported strings are code, and relative links are relative
+        to each page that imports it.
         """
         self.page, self.quiet, self.in_tag, self.snippet = rel, not published, False, snippet
         lines = text.splitlines(keepends=True)
@@ -711,9 +686,6 @@ class Linker:
         return "".join(out)
 
 
-# navigation and the About page
-
-
 def prefixed_nav(node, prefix: str, linker: Linker, key: str | None = None):
     if isinstance(node, dict):
         if "openapi" in node or "asyncapi" in node:
@@ -724,7 +696,6 @@ def prefixed_nav(node, prefix: str, linker: Linker, key: str | None = None):
     if isinstance(node, str):
         if key in ("pages", "root") and not SCHEME_RE.match(node):
             return f"{prefix}/{node.lstrip('/')}"
-        # Links as in pages; an icon that is neither a path nor a URL names an icon.
         if key == "href" or (key == "icon" and (node.startswith("/") or SCHEME_RE.match(node))):
             return linker.point(node)
     return node
@@ -820,9 +791,6 @@ def about_page(ed: Edition, product: dict) -> str:
     ])
 
 
-# unversioned URLs and checks
-
-
 def legacy_redirects(editions: list[Edition], default: Edition) -> tuple[list[dict], list[tuple[str, list[str]]]]:
     """Redirects from each unversioned path to the default edition, and the paths it lacks."""
     known: dict[str, list[str]] = {}
@@ -885,9 +853,6 @@ def check_output(repo: Path, output: Path) -> None:
         kept = (repo / name).resolve()
         if output == kept or kept.is_relative_to(output) or output.is_relative_to(kept):
             raise ComposeError(f"the output {output} overlaps {kept}; composing would delete it")
-
-
-# compose
 
 
 def shared_site(repo: Path) -> tuple[dict, dict[str, tuple[str, Path, str]]]:
