@@ -57,13 +57,13 @@ Start with targeted searches:
 
 - docs repo: snippets, tests, nearby pages
 - lancedb repo: public API files, doc comments, tests, lifecycle code
-- sophon repo: request schemas, UI copy, config, integration tests
+- Enterprise source repository: request schemas, UI copy, config, integration tests
 
 Useful commands:
 
 ```bash
-rg -n "keyword1|keyword2|keyword3" <docs-repo> <lancedb-repo> <sophon-repo>
-rg --files <docs-repo> <lancedb-repo> <sophon-repo> | rg "search|index|storage"
+rg -n "keyword1|keyword2|keyword3" <docs-repo> <lancedb-repo> <enterprise-repo>
+rg --files <docs-repo> <lancedb-repo> <enterprise-repo> | rg "search|index|storage"
 ```
 
 Resolve those repo roots from `config.toml` before you search.

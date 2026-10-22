@@ -1,8 +1,5 @@
 name: Discover releases
 
-# By hand only. A dry run reports what discovery would do; open-prs prepares
-# editions and opens their pull requests, once enabled. See "Discovering
-# releases" in README.md.
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +14,6 @@ on:
 permissions:
   contents: read
 
-# One discovery at a time, and a request waiting its turn is kept.
 concurrency:
   group: discover
   queue: max
@@ -72,7 +68,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           uv run --no-project --with pyyaml scripts/discover.py \
-            --lancedb "$RUNNER_TEMP/lancedb.git" --sophon "$RUNNER_TEMP/sophon.git" \
+            --lancedb "$RUNNER_TEMP/lancedb.git" --enterprise-repo "$RUNNER_TEMP/sophon.git" \
             --summary "$GITHUB_STEP_SUMMARY"
 
   open-prs:
@@ -128,5 +124,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           uv run --no-project --with pyyaml scripts/discover.py --open-prs \
-            --lancedb "$RUNNER_TEMP/lancedb.git" --sophon "$RUNNER_TEMP/sophon.git" \
+            --lancedb "$RUNNER_TEMP/lancedb.git" --enterprise-repo "$RUNNER_TEMP/sophon.git" \
             --summary "$GITHUB_STEP_SUMMARY"

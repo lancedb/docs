@@ -12,8 +12,8 @@ backfill. Editions are prepared by `edition.py prepare`, as by hand. See
 
 Usage:
 
-    python scripts/discover.py [--lancedb REPO] [--sophon REPO] [--config FILE] [--summary FILE]
-    python scripts/discover.py --open-prs [--lancedb REPO] [--sophon REPO] [--summary FILE]
+    python scripts/discover.py [--lancedb REPO] [--enterprise-repo REPO] [--config FILE] [--summary FILE]
+    python scripts/discover.py --open-prs [--lancedb REPO] [--enterprise-repo REPO] [--summary FILE]
 
 Without --open-prs discovery only reports: it fetches release tags and commits
 into the two repositories, and pushes, opens and starts nothing. --open-prs is
@@ -47,8 +47,6 @@ LANCEDB = edition.SOURCES["lancedb"][0]
 NAMES = {"enterprise": "Enterprise", "oss": "OSS"}
 BRANCH = "editions/{product}-{version}"
 PRERELEASE_RE = re.compile(r"v(\d+\.\d+\.\d+)-[0-9A-Za-z.-]+")
-# Pushes and pull requests made with the workflow's token start no workflows,
-# so discovery starts the pull request checks on its branch itself.
 CHECKS = {"compose.yml": "Compose the versioned site", "assemble.yml": "Test the assembler"}
 BOT = ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com")
 STATES = {
@@ -512,7 +510,7 @@ def enterprise_pages(main: Main, tags: dict[str, Tag]) -> tuple[str, str]:
 def prepare_args(finding: Finding, main: Main, lancedb: Path, sophon: Path) -> list[str]:
     return [
         "prepare", finding.product, finding.version, *(["--enterprise", finding.pages[0]] if finding.pages else []),
-        "--lancedb", str(lancedb), "--sophon", str(sophon), "--docs", main.commit,
+        "--lancedb", str(lancedb), "--enterprise-repo", str(sophon), "--docs", main.commit,
     ]
 
 
@@ -819,8 +817,8 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--lancedb", type=Path, default=REPO_ROOT.parent / "lancedb",
                         help="a lancedb/lancedb repository to fetch release tags and commits into "
                              "(default: ../lancedb)")
-    parser.add_argument("--sophon", type=Path, default=REPO_ROOT.parent / "sophon",
-                        help="a lancedb/sophon repository to fetch release tags and commits into (default: ../sophon)")
+    parser.add_argument("--enterprise-repo", type=Path, default=REPO_ROOT.parent / "enterprise",
+                        help="an Enterprise source repository to fetch release tags and commits into (default: ../enterprise)")
     parser.add_argument("--config", type=Path,
                         help=f"read this file instead of {CONFIG}, to try a configuration in a dry run")
     parser.add_argument("--open-prs", action="store_true",
@@ -835,7 +833,7 @@ def parse(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse(argv)
     try:
-        findings, commit = discover(REPO_ROOT, args.lancedb.resolve(), args.sophon.resolve(),
+        findings, commit = discover(REPO_ROOT, args.lancedb.resolve(), args.enterprise_repo.resolve(),
                                     GitHub(writes=args.open_prs), args.config, args.open_prs)
     except (DiscoveryError, edition.EditionError) as exc:
         print(f"discover: {exc}", file=sys.stderr)

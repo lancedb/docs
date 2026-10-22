@@ -336,7 +336,7 @@ uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterp
 
 - **Enterprise** reads the Enterprise release tag `v1.10.0`, which must have an
   annotated `release-qualified/v1.10.0` tag on the same commit. The shared
-  pages come from the LanceDB commit that release bundles at `src/lancedb`,
+  pages come from the LanceDB commit that release bundles,
   which may be one no OSS release tags: fetch it with `git -C ../lancedb fetch
   origin <commit>`. `--bundled-lancedb <commit>`, given the full 40-character
   hash, stops preparation if the release bundles a different one.
@@ -444,13 +444,11 @@ each one as above, and opens a pull request for it. People review and merge
 those pull requests; discovery never merges or publishes.
 
 - **Enterprise:** a release is eligible once its `vX.Y.Z` tag and an annotated
-  `release-qualified/vX.Y.Z` tag name the same commit. The Enterprise release
-  pipeline adds the qualification tag first and the release tag last, once the
-  release is published, so a qualification tag on its own means the release is
-  still being published. A release tag without a qualification tag stops for
-  review. Discovery reads both tags from the Enterprise repository on every
-  run, so a withdrawn qualification stops a release even in a clone that still
-  has the old tag.
+  `release-qualified/vX.Y.Z` tag name the same commit. A qualification tag
+  without a release tag is not eligible; a release tag without a qualification
+  tag stops for review. Discovery reads both tags from the Enterprise
+  repository on every run, so a withdrawn qualification stops a release even
+  in a clone that still has the old tag.
 - **OSS:** a release is eligible once `lancedb/lancedb` has a published GitHub
   release for its `vX.Y.Z` tag that is not marked as a prerelease. Its
   Enterprise pages come from the preferred Enterprise edition, at the release
@@ -505,7 +503,7 @@ opens and starts nothing. Run it in a clone set up as for preparing, with
 `--config` to try a configuration before committing it:
 
 ```bash
-uv run --no-project --with pyyaml scripts/discover.py --lancedb ../lancedb --sophon ../sophon
+uv run --no-project --with pyyaml scripts/discover.py --lancedb ../lancedb --enterprise-repo ../enterprise
 ```
 
 The Discover releases workflow runs it when started by hand, as a dry run by

@@ -36,9 +36,6 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$EVENT" = workflow_dispatch ]; then
-            # Release discovery starts this on its pull request branches. A dispatched
-            # run checks out the branch, not a merge, so compare it with the commit of
-            # main it was made from.
             git fetch --no-tags --unshallow origin +refs/heads/main:refs/remotes/origin/main
             BASE_SHA=$(git merge-base HEAD refs/remotes/origin/main)
           elif [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ]; then
