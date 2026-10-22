@@ -1,0 +1,14 @@
+{
+  "name": "compose-mdx",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "mdast-util-from-markdown": "2.1.0",
+    "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.0",
+    "remark-math": "6.0.0",
+    "remark-mdx": "3.1.0",
+    "remark-parse": "11.0.0",
+    "unified": "11.0.5"
+  }
+}

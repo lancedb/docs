@@ -19,13 +19,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import bisect
 import copy
 import hashlib
-import html
 import json
 import posixpath
 import re
 import shutil
+import subprocess
 import sys
 import urllib.parse
 from dataclasses import dataclass
@@ -40,6 +41,7 @@ import candidate  # noqa: E402
 import edition  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+MDX = Path(__file__).resolve().parent / "mdx"
 CONFIG = "compose.yaml"
 SITE = "site"
 SETTINGS = "settings.json"
@@ -65,18 +67,6 @@ NAMES_OR_LINKS = ("icon",)
 VERSIONED_RE = re.compile(rf"/(?:{'|'.join(edition.PRODUCTS)})/v[0-9]+-[0-9]+-[0-9]+(?=[/?#]|$)")
 SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*:")
 PARAM_RE = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)([*+?]?)")
-FENCE_RE = re.compile(r"[ \t]*(`{3,}|~{3,})")
-INLINE_LINK_RE = re.compile(r"(\]\([ \t]*)(<[^<>\n]*>|[^\s()<>]+)")
-DEFINITION_RE = re.compile(r"( {0,3}\[[^\]\n]+\]:[ \t]*)(<[^<>\n]*>|\S+)")
-ATTRIBUTE_START_RE = re.compile(r"([A-Za-z_:][\w:.-]*)([ \t]*=[ \t]*)?")
-TAG_START_RE = re.compile(r"<[A-Za-z][\w.-]*(?=\s|/?>)")
-ANY_ATTRIBUTE_RE = re.compile(r"""[\w:-]+[ \t]*=[ \t]*\{?[ \t]*(["'`])[^"'`\n]*\1""")
-LINK_TEXT_RE = re.compile(r"\[[^\]\n]*\]")
-IMPORT_RE = re.compile(r"""([ \t]*(?:import\b[^'"\n]*?\bfrom|\}[ \t]*from)[ \t]*)(["'])(/[^'"\n]+)\2""")
-CONSTANT_RE = re.compile(r"""[ \t]*export[ \t]+(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(["'`])""")
-STATEMENT_RE = re.compile(r"(?:import|export) ")
-# An apostrophe within a word cannot start or end a JavaScript string.
-STRING_OR_BRACKET_RE = re.compile(r"""\\.|[()\[\]{}"]|(?<!\w)'|'(?!\w)""")
 FRONTMATTER_RE = re.compile(
     rf"""((?:{'|'.join(map(re.escape, FRONTMATTER_LINKS))})[ \t]*:[ \t]*)(["']?)([^"'\s]+)\2([ \t]*)"""
 )
@@ -365,10 +355,6 @@ def read_edition(repo: Path, record: dict, host: str) -> Edition:
                    assets, redirects)
 
 
-def blank(match: re.Match) -> str:
-    return " " * len(match[0])
-
-
 def monospace(text: str) -> str:
     fence = "`" * (max((len(run) for run in re.findall(r"`+", text)), default=0) + 1)
     pad = " " if text.startswith("`") or text.endswith("`") else ""
@@ -378,6 +364,23 @@ def monospace(text: str) -> str:
 def plain(text: str) -> str:
     """`text` shown as itself in MDX."""
     return re.sub(r"([\\`*_{}\[\]<>|~#!&])", r"\\\1", text.strip())
+
+
+def mdx_links(texts: list[str]) -> list[dict]:
+    """The links, imports and code of each MDX text, as the parser Mint uses reads them."""
+    digest = hashlib.sha256((MDX / "package-lock.json").read_bytes()).hexdigest()
+    installed = MDX / "node_modules" / ".package-lock.sha256"
+    try:
+        if not installed.is_file() or installed.read_text() != digest:
+            subprocess.run(["npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund", "--loglevel=error"],
+                           cwd=MDX, check=True, capture_output=True, encoding="utf-8")
+            installed.write_text(digest)
+        result = subprocess.run(["node", str(MDX / "links.mjs")], check=True, capture_output=True,
+                                encoding="utf-8", input=json.dumps({"attributes": LINK_ATTRIBUTES, "texts": texts}))
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ComposeError("cannot run the MDX parser in scripts/mdx, which needs Node.js and npm: "
+                           f"{getattr(exc, 'stderr', None) or exc}") from None
+    return json.loads(result.stdout)
 
 
 class Linker:
@@ -403,16 +406,14 @@ class Linker:
         if not self.quiet:
             self.warnings.append(f"{self.where()}: {message}")
 
-    def point(self, raw: str) -> str:
-        bracketed = raw.startswith("<") and raw.endswith(">")
-        target = raw[1:-1] if bracketed else raw
+    def point(self, target: str) -> str:
         if not target or target.startswith("#"):
-            return raw
+            return target
         parts = urllib.parse.urlsplit(target)
         ed = self.ed
         absolute = bool(parts.scheme or target.startswith("//"))
         if absolute and (parts.scheme.lower() not in ("", "http", "https") or parts.hostname != self.host):
-            return raw
+            return target
         try:
             if not absolute and not target.startswith("/"):
                 if self.snippet:
@@ -420,20 +421,20 @@ class Linker:
                         raise ComposeError(f"{target} climbs out of the folder of each page that imports this "
                                            "snippet; link from the root instead, such as /guide")
                     safe_path(parts.path)
-                    return raw
+                    return target
                 try:
                     resolved = safe_path(posixpath.join(posixpath.dirname(self.page), parts.path))
                 except ComposeError as exc:
                     raise ComposeError(f"{target} leaves the edition or has an unsafe path: {exc}") from None
                 if parts.path and not ed.publishes("/" + resolved):
                     self.note(f"{target} leads to nothing {ed.name} publishes")
-                return raw
+                return target
             original = parts.path or "/"
             found = VERSIONED_RE.match(original)
             if found:
                 if found[0] != f"/{ed.prefix}":
                     self.fail(f"{target} points into another edition; an edition links only within itself")
-                    return raw
+                    return target
                 original = original[len(found[0]):] or "/"
             path = safe_path(original)
             if absolute:
@@ -450,8 +451,8 @@ class Linker:
             pointed = urllib.parse.urlunsplit(("", "", versioned(ed.prefix, path), parts.query, parts.fragment))
         except ComposeError as exc:
             self.fail(str(exc))
-            return raw
-        return f"<{pointed}>" if bracketed else pointed
+            return target
+        return pointed
 
     def code(self, text: str) -> None:
         """Note each URL of this site that code uses; code is never rewritten."""
@@ -461,197 +462,6 @@ class Linker:
             path = re.split(r"[?#]", found[1])[0].rstrip(".,;:!")
             self.code_urls.append((self.where(), normal(path or "/")))
 
-    def constant(self, line: str, found: re.Match) -> None:
-        """A snippet's exported string is code that pages show: note its URLs, keep it as written."""
-        quote, i = found[2], found.end()
-        while i < len(line) and line[i] not in (quote, "\n"):
-            i += 2 if line[i] == "\\" else 1
-        closed = i < len(line) and line[i] == quote
-        if not closed or (quote == "`" and "${" in line[found.end():i]) or line[i + 1:].strip() not in ("", ";"):
-            self.fail(f"{found[1]} must be one string on one line, without interpolation: composition keeps a "
-                      "snippet's strings as written, and cannot tell code from links in other forms")
-        self.code(line)
-
-    def javascript(self, text: str) -> None:
-        """Snippet prose: strings in export statements and {...} expressions are refused."""
-        for found in STRING_OR_BRACKET_RE.finditer(text):
-            char = found[0]
-            if char in "([{" and (self.in_export or char == "{"):
-                self.depth += 1
-            elif char in ")]}" and (self.in_export or char == "}"):
-                self.depth = max(self.depth - 1, 0)
-            elif char in "\"'" and (self.in_export or self.depth):
-                self.refused = True
-
-    def attribute(self, line: str, match: re.Match) -> tuple[str, int]:
-        start = match.end()
-        expression = line.startswith("{", start)
-        if expression:
-            start += 1
-            while start < len(line) and line[start] in " \t":
-                start += 1
-        quote = line[start:start + 1]
-        if quote not in ('"', "'", "`") or (quote == "`" and not expression):
-            self.fail(f"{match[1]} must be a quoted path or a constant string expression")
-            return line[match.start():], len(line)
-        close = line.find(quote, start + 1)
-        value = line[start + 1:close] if close >= 0 else ""
-        end = close + 1
-        if expression:
-            while end < len(line) and line[end] in " \t":
-                end += 1
-        if (close < 0 or "\\" in value or (quote == "`" and "${" in value)
-                or (expression and not line.startswith("}", end))):
-            self.fail(f"{match[1]} must be a constant string on one line, without escapes or interpolation")
-            return line[match.start():], len(line)
-        end += int(expression)
-        if not expression and html.unescape(value) != value:
-            self.fail(f"{match[1]} contains HTML entities; use a literal path in a constant string expression")
-            return line[match.start():end], end
-        named_icon = match[1] in NAMES_OR_LINKS and not value.startswith("/") and not SCHEME_RE.match(value)
-        pointed = value if named_icon else self.point(value)
-        return line[match.start():start + 1] + pointed + line[close:end], end
-
-    def expression_end(self, line: str, start: int) -> int:
-        depth, i = 1, start + 1
-        while i < len(line) and line[i] not in "\r\n":
-            char = line[i]
-            if char in "\"'`":
-                quote, i = char, i + 1
-                while i < len(line) and line[i] not in "\r\n":
-                    if line[i] == "\\":
-                        i += 2
-                    elif quote == "`" and line.startswith("${", i):
-                        raise ComposeError("template interpolation in a component attribute is not supported")
-                    elif line[i] == quote:
-                        i += 1
-                        break
-                    else:
-                        i += 1
-                else:
-                    raise ComposeError("component attribute strings must close on the same line")
-                continue
-            if line.startswith("/*", i):
-                end = line.find("*/", i + 2)
-                if end < 0:
-                    break
-                i = end + 2
-                continue
-            if char in "/<":
-                raise ComposeError("component attribute expressions cannot contain regex, division or nested JSX")
-            if char == "{":
-                depth += 1
-            elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    return i + 1
-            i += 1
-        raise ComposeError("component attribute expressions must close on the same line")
-
-    def tag_part(self, line: str, start: int) -> tuple[str, int]:
-        if line[start].isspace():
-            return line[start], start + 1
-        if line.startswith("/>", start) or line[start] == ">":
-            end = start + (2 if line[start] == "/" else 1)
-            self.in_tag = False
-            return line[start:end], end
-        match = ATTRIBUTE_START_RE.match(line, start)
-        try:
-            if match is None:
-                raise ComposeError("unsupported component attribute; write attributes explicitly without spreads")
-            if match[1] in LINK_ATTRIBUTES:
-                if not match[2]:
-                    raise ComposeError(f"{match[1]} must have its value on the same line")
-                return self.attribute(line, match)
-            if not match[2]:
-                return match[0], match.end()
-            value = match.end()
-            if line.startswith("{", value):
-                end = self.expression_end(line, value)
-            elif line[value:value + 1] in ('"', "'"):
-                end = line.find(line[value], value + 1) + 1
-                if not end:
-                    raise ComposeError("component attribute strings must close on the same line")
-            else:
-                raise ComposeError("component attributes need a quoted value or a brace expression")
-            return line[start:end], end
-        except ComposeError as exc:
-            self.fail(str(exc))
-            return line[start:], len(line)
-
-    def prose(self, segment: str, at_start: bool) -> str:
-        """Text outside code and comments, with its links pointed into this edition."""
-        # What is left once link targets, link text and attributes are blanked
-        # is text, which Mintlify would turn into a link to this host.
-        masked = INLINE_LINK_RE.sub(lambda m: m[1] + " " * len(m[2]), segment)
-        definition = DEFINITION_RE.match(masked) if at_start else None
-        if definition:
-            masked = definition[1] + " " * len(definition[2]) + masked[definition.end():]
-        masked = ANY_ATTRIBUTE_RE.sub(blank, LINK_TEXT_RE.sub(blank, masked))
-        for found in self.site_url.finditer(masked):
-            self.fail(
-                f"{found[0]} is a bare link to {self.host}; write it as a Markdown link, which "
-                "composition points into this edition"
-            )
-        if at_start:
-            found = IMPORT_RE.match(segment)
-            if found:
-                module = found[3]
-                if module.lstrip("/") not in self.ed.files:
-                    self.note(f"imports {module}, which {self.ed.name} does not have")
-                pointed = versioned(self.ed.prefix, module)
-                return found[1] + found[2] + pointed + found[2] + segment[found.end():]
-            found = DEFINITION_RE.match(segment)
-            if found:
-                segment = found[1] + self.point(found[2]) + segment[found.end():]
-        segment = INLINE_LINK_RE.sub(lambda m: m[1] + self.point(m[2]), segment)
-        return segment
-
-    def prose_line(self, line: str, comment: bool) -> tuple[str, bool]:
-        """A line outside code fences: its prose rewritten, its code spans and MDX comments kept."""
-        out, i = [], 0
-        while i < len(line):
-            if comment:
-                end = line.find("*/}", i)
-                if end < 0:
-                    out.append(line[i:])
-                    return "".join(out), True
-                out.append(line[i : end + 3])
-                i, comment = end + 3, False
-                continue
-            if line.startswith("{/*", i):
-                comment = True
-                continue
-            if self.in_tag:
-                rewritten, i = self.tag_part(line, i)
-                out.append(rewritten)
-                continue
-            tag = TAG_START_RE.search(line, i)
-            stops = [p for p in (line.find("`", i), line.find("{/*", i),
-                                 tag.start() if tag else -1) if p >= 0]
-            stop = min(stops) if stops else len(line)
-            if self.snippet:
-                self.javascript(line[i:stop])
-            out.append(self.prose(line[i:stop], at_start=i == 0))
-            if stop == len(line):
-                break
-            if tag and stop == tag.start():
-                out.append(tag[0])
-                i, self.in_tag = tag.end(), True
-                continue
-            if line.startswith("{/*", stop):
-                i, comment = stop, True
-                continue
-            if self.in_export or self.depth:
-                self.refused = True
-            run = len(line) - stop - len(line[stop:].lstrip("`"))
-            close = re.compile(rf"(?<!`){'`' * run}(?!`)").search(line, stop + run)
-            end = close.end() if close else stop + run
-            self.code(line[stop:end])
-            out.append(line[stop:end])
-            i = end
-        return "".join(out), comment
-
     def frontmatter(self, line: str) -> str:
         body = line.rstrip("\r\n")
         found = FRONTMATTER_RE.fullmatch(body)
@@ -659,58 +469,59 @@ class Linker:
             return line
         return found[1] + found[2] + self.point(found[3]) + found[2] + found[4] + line[len(body):]
 
-    def rewrite(self, rel: str, text: str, published: bool, snippet: bool = False) -> str:
-        """One page, its links pointed into this edition; a draft's problems are not reported.
+    def rewrite(self, rel: str, text: str, found: dict, published: bool, snippet: bool = False) -> str:
+        """One page or snippet, its links pointed into this edition; a draft's problems are not reported."""
+        self.page, self.quiet, self.snippet = rel, not published, snippet
+        newlines = [m.start() for m in re.finditer("\n", text)]
 
-        In a snippet, strings in its JavaScript are code, and relative links are
-        relative to each page that imports it.
-        """
-        self.page, self.quiet, self.in_tag, self.snippet = rel, not published, False, snippet
-        self.in_export, self.depth = False, 0
-        lines = text.splitlines(keepends=True)
-        out, start = [], 0
-        if text.startswith("---\n"):
-            end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r\n") == "---"), None)
-            if end is not None:
-                out.append(lines[0])
-                for number in range(1, end):
-                    self.line = number + 1
-                    out.append(self.frontmatter(lines[number]))
-                out.append(lines[end])
-                start = end + 1
-        fence, comment = None, False
-        for number in range(start, len(lines)):
-            self.line, line = number + 1, lines[number]
-            if fence is not None:
-                closing = FENCE_RE.match(line)
-                if (closing and closing[1][0] == fence[0] and len(closing[1]) >= len(fence)
-                        and not line[closing.end():].strip()):
-                    fence = None
-                else:
-                    self.code(line)
-                out.append(line)
+        def at(offset: int) -> None:
+            self.line = bisect.bisect_left(newlines, offset) + 1
+
+        if "error" in found:
+            line, reason = found["error"]
+            self.line = line or 0
+            self.fail(f"is not valid MDX: {reason}")
+            return text
+        edits = []
+        for start, end, value, name in found["links"]:
+            at(start)
+            named_icon = name in NAMES_OR_LINKS and not value.startswith("/") and not SCHEME_RE.match(value)
+            pointed = value if named_icon else self.point(value)
+            if pointed != value:
+                edits.append((start, end, value, pointed))
+        for start, end, module in found["imports"]:
+            if module.startswith("/"):
+                at(start)
+                if module.lstrip("/") not in self.ed.files:
+                    self.note(f"imports {module}, which {self.ed.name} does not have")
+                edits.append((start, end, module, versioned(self.ed.prefix, module)))
+        for start, name in found["computed"]:
+            at(start)
+            self.fail(f"{name} is computed, so composition cannot point it into this edition; "
+                      f'write the path itself, such as {name}="/guide"')
+        for start, url in found["bare"]:
+            at(start)
+            if self.site_url.match(url):
+                self.fail(f"{url} is a bare link to {self.host}; write it as a Markdown link, which "
+                          "composition points into this edition")
+        for start, code in found["code"]:
+            at(start)
+            self.code(code)
+        out, last = [], 0
+        for start, end, value, pointed in sorted(edits):
+            if text[start:end] != value:
+                at(start)
+                self.fail(f"{text[start:end]} has escapes or character references; write the path itself")
                 continue
-            opening = None if comment else FENCE_RE.match(line)
-            # A backtick in a backtick fence's info string makes it inline code.
-            if opening and not (opening[1][0] == "`" and "`" in line[opening.end():]):
-                fence = opening[1]
-                out.append(line)
-                continue
-            if snippet and not comment and not self.in_tag and not self.depth:
-                if STATEMENT_RE.match(line) or not line.strip():
-                    self.in_export = line.startswith("export")
-                if constant := CONSTANT_RE.match(line):
-                    self.constant(line, constant)
-                    out.append(line)
-                    continue
-            self.refused = False
-            pointed, comment = self.prose_line(line, comment)
-            if self.refused:
-                self.fail("a string in a snippet's JavaScript must be a component attribute or an export of one "
-                          "string on one line, such as export const Name = \"...\": composition keeps a snippet's "
-                          "strings as written, and cannot tell code from links in other forms")
-            out.append(line if self.refused else pointed)
-        return "".join(out)
+            out += [text[last:start], pointed]
+            last = end
+        lines = "".join([*out, text[last:]]).splitlines(keepends=True)
+        if text.removeprefix("\ufeff").startswith("---\n"):
+            end = next((i for i in range(1, len(lines)) if lines[i].rstrip("\r\n") == "---"), 0)
+            for number in range(1, end):
+                self.line = number + 1
+                lines[number] = self.frontmatter(lines[number])
+        return "".join(lines)
 
 
 def prefixed_nav(node, prefix: str, linker: Linker, key: str | None = None):
@@ -987,16 +798,21 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
         versions = []
         for ed in shown[name]:
             linker = Linker(ed, config["host"], problems, warnings)
+            texts = {
+                rel: (repo / ed.record["edition"] / rel).read_text(encoding="utf-8")
+                for rel in ed.files
+                if rel in ed.pages or (rel.startswith("snippets/") and rel.endswith(PAGE_SUFFIXES))
+            }
+            found = dict(zip(texts, mdx_links(list(texts.values()))))
             for rel in ed.files:
                 source = repo / ed.record["edition"] / rel
                 if rel in ed.pages:
-                    text = source.read_text(encoding="utf-8")
-                    files[f"{ed.prefix}/{rel}"] = linker.rewrite(rel, text, ed.pages[rel]).encode("utf-8")
-                elif rel.startswith("snippets/") and rel.endswith(PAGE_SUFFIXES):
-                    text = source.read_text(encoding="utf-8")
-                    pointed = linker.rewrite(rel, text, f"/{rel}" in ed.assets, snippet=True)
+                    pointed = linker.rewrite(rel, texts[rel], found[rel], ed.pages[rel])
+                    files[f"{ed.prefix}/{rel}"] = pointed.encode("utf-8")
+                elif rel in texts:
+                    pointed = linker.rewrite(rel, texts[rel], found[rel], f"/{rel}" in ed.assets, snippet=True)
                     # A snippet with nothing to point is copied byte for byte.
-                    files[f"{ed.prefix}/{rel}"] = source if pointed == text else pointed.encode("utf-8")
+                    files[f"{ed.prefix}/{rel}"] = source if pointed == texts[rel] else pointed.encode("utf-8")
                 else:
                     files[f"{ed.prefix}/{rel}"] = source
             if any(f"{ABOUT}{suffix}" in ed.files for suffix in PAGE_SUFFIXES):

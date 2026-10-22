@@ -340,6 +340,7 @@ icon: "/static/logo.svg"
 ---
 
 [Root](/guide#setup) [Home](/) [Folder](/enterprise/) [Page](/enterprise/security)
+After an emoji 🚀 [Root](/guide).
 [Host](https://docs.lancedb.com/start?tab=py) [Moved](https://docs.lancedb.com/old/x) [Own anchor](https://docs.lancedb.com/old/x#own)
 [https://docs.lancedb.com/guide](https://docs.lancedb.com/guide)
 [Relative](guide) [External](https://example.com/guide) [Anchor](#setup) [Mail](mailto:a@example.com)
@@ -365,6 +366,7 @@ icon: "/enterprise/v8-2-0/static/logo.svg"
 ---
 
 [Root](/enterprise/v8-2-0/guide#setup) [Home](/enterprise/v8-2-0) [Folder](/enterprise/v8-2-0/enterprise/) [Page](/enterprise/v8-2-0/enterprise/security)
+After an emoji 🚀 [Root](/enterprise/v8-2-0/guide).
 [Host](/enterprise/v8-2-0/guide?tab=py) [Moved](/enterprise/v8-2-0/guide#setup) [Own anchor](/enterprise/v8-2-0/guide#own)
 [https://docs.lancedb.com/guide](/enterprise/v8-2-0/guide)
 [Relative](guide) [External](https://example.com/guide) [Anchor](#setup) [Mail](mailto:a@example.com)
@@ -498,11 +500,8 @@ def test_a_snippets_exported_strings_and_code_are_kept_as_written(docs, tmp_path
 @pytest.mark.parametrize(
     "text, problem",
     [
-        ("export const Code = `first line\nsecond line`;\n", r"Code must be one string on one line"),
-        ("export const Code = `pip install lancedb==${version}`;\n", r"Code must be one string on one line"),
-        ('export const Code = "pip install " + name;\n', r"Code must be one string on one line"),
         ("See [up](../guide).\n", r"\.\./guide climbs out of the folder of each page that imports this snippet"),
-        ("export const Go = ({ to }) => <a href={to}>Go</a>;\n", r"href must be a quoted path"),
+        ("export const Go = ({ to }) => <a href={to}>Go</a>;\n", r"href is computed"),
         ("See https://docs.lancedb.com/guide for more.\n", r"https://docs.lancedb.com/guide is a bare link"),
     ],
 )
@@ -515,33 +514,98 @@ def test_snippet_links_composition_cannot_place_stop_it(docs, tmp_path, text, pr
     assert not (tmp_path / "site").exists()
 
 
-STRINGS = [
-    ("export const Example = ('<a href=\"/guide\">Guide</a>');\n", 1),
-    ("export const Examples = { html: '<a href=\"/guide\">Guide</a>' };\n", 1),
-    ("export const Examples = {\n  html: '<a href=\"/guide\">Guide</a>',\n};\n", 2),
-    ("export const Examples = [\n\n  '[Guide](/guide)',\n];\n", 3),
-    ("export const Tip = () => <pre>{`<a href=\"/guide\">Guide</a>`}</pre>;\n", 1),
-    ("<CodeBlock>{'<a href=\"/guide\">Guide</a>'}</CodeBlock>\n", 1),
+# Valid MDX in which link syntax is code or JSX text, which pages show as written.
+EXAMPLES = [
+    "export const Example = ('<a href=\"/guide\">Guide</a>');\n",
+    "export const Examples = { html: '<a href=\"/guide\">Guide</a>' };\n",
+    "export const Examples = {\n  html: '<a href=\"/guide\">Guide</a>',\n};\n",
+    "export const Examples = [\n\n  '[Guide](/guide)',\n];\n",
+    "export const Example =\n\n  '<a href=\"/guide\">Guide</a>';\n\n<pre>{Example}</pre>\n",
+    "export default\n\n  '<a href=\"/guide\">Guide</a>';\n",
+    "export const Code = `first line\nsecond line [Guide](/guide)`;\n",
+    "export const Code = `pip install lancedb==${version} # [Guide](/guide)`;\n",
+    "export const Code = \"pip install \" + name + ' [Guide](/guide)';\n",
+    "export const Tip = () => <pre>{`<a href=\"/guide\">Guide</a>`}</pre>;\n",
+    "export const Steps = () => (\n  <Note>Step 1)\n\n  <pre>{'<a href=\"/guide\">Guide</a>'}</pre>\n  </Note>\n);\n",
+    "export const New = ({ color = \"gray\" }) => <b style={{ color }}>New{\" \"}[Guide](/guide)</b>;\n",
+    "<CodeBlock>{'<a href=\"/guide\">Guide</a>'}</CodeBlock>\n\nOne{\" \"}space. {/* See [the plan](/plans/next). */}\n",
 ]
 
 
-@pytest.mark.parametrize("text, line", STRINGS)
-def test_strings_in_a_snippets_javascript_stop_composition(docs, tmp_path, text, line):
-    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={"snippets/example.mdx": text}))
+@pytest.mark.parametrize("text", EXAMPLES)
+def test_example_code_in_pages_and_snippets_is_kept_as_written(docs, tmp_path, text):
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={"example.mdx": text, "snippets/example.mdx": text}))
+    configure(docs, enterprise="8.1.0")
+    site = composed(docs, tmp_path) / "enterprise/v8-1-0"
+
+    assert (site / "example.mdx").read_text() == text
+    assert (site / "snippets/example.mdx").read_bytes() == text.encode()
+    if MDX_COMPILER and shutil.which("node"):
+        result = compile_mdx(text)
+        assert result.returncode == 0, result.stderr
+
+
+# Valid MDX with links that Mint renders, however the JSX around them is written.
+LINKS = [
+    # Without a space after `export`, MDX reads a paragraph holding a link.
+    "export\tconst Example = ('<a href=\"/guide\">Guide</a>');\n",
+    "export const Tip = ({ title }) => (\n  <Note title={title}>\n    See <a href=\"/guide\">it</a>.\n\n"
+    "    <Card href={`/guide`} icon=\"book\" />\n  </Note>\n);\n",
+    "{<a href=\"/guide\">Guide</a>}\n",
+    "<Card href={\n  \"/guide\"\n} />\n",
+    "<a onClick={() => /}/.test(value)} href={`/guide`}>Next</a>\n",
+    "<a title={`value ${suffix}`} href={`/guide`}>Next</a>\n",
+    "<a {...props} href={`/guide`}>Next</a>\n",
+    "<a title={<a href=\"/guide\">Guide</a>} href={`/guide`}>Next</a>\n",
+    "<a onClick={() => {\n}} href={`/guide`}>Next</a>\n",
+    "<a href\n = {`/guide`}>Next</a>\n",
+    "<a title=\"long\n title\" href={`/guide`}>Next</a>\n",
+    "<Tabs>\n  <Tab title=\"Python\">\n    See [the guide](/guide).\n  </Tab>\n</Tabs>\n",
+    # Saved with a byte order mark.
+    "\ufeff---\ntitle: \"Guide\"\nicon: \"/guide/logo.svg\"\n---\n\nSee [the guide](/guide).\n",
+]
+
+
+@pytest.mark.parametrize("text", LINKS)
+def test_links_in_jsx_and_exported_components_point_into_the_edition(docs, tmp_path, text):
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={"links.mdx": text, "snippets/links.mdx": text}))
+    configure(docs, enterprise="8.1.0")
+    site = composed(docs, tmp_path) / "enterprise/v8-1-0"
+
+    pointed = text.replace("/guide", "/enterprise/v8-1-0/guide")
+    assert (site / "links.mdx").read_text() == pointed
+    assert (site / "snippets/links.mdx").read_text() == pointed
+    if MDX_COMPILER and shutil.which("node"):
+        result = compile_mdx(pointed)
+        assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("text", [
+    "<Card href={target} />\n",
+    "<Card href={`/guide/${section}`} />\n",
+    '<Card href={"/guide" + suffix} />\n',
+    "export const Go = ({ to }) => <a href={to}>Go</a>;\n",
+])
+def test_computed_link_attributes_stop_composition(docs, tmp_path, text):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += "\n" + text
+    save(docs, "enterprise", "8.1.0", files)
     configure(docs, enterprise="8.1.0")
 
-    with pytest.raises(compose.ComposeError, match=rf"snippets/example.mdx:{line}: a string in a snippet's JavaScript"):
+    with pytest.raises(compose.ComposeError, match=r"guide.mdx:9: href is computed, .* such as href=\"/guide\""):
         composed(docs, tmp_path)
     assert not (tmp_path / "site").exists()
 
 
-def test_a_draft_snippets_strings_are_kept_as_written(docs, tmp_path):
-    drafts = {f"snippets/draft{n}.mdx": text for n, (text, _line) in enumerate(STRINGS)}
-    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={".mintignore": "snippets/draft*.mdx\n", **drafts}))
+def test_a_page_that_is_not_valid_mdx_stops_composition_unless_it_is_a_draft(docs, tmp_path):
+    broken = '---\ntitle: "Broken"\n---\n\nThis {is not closed.\n'
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={"broken.mdx": broken}))
     configure(docs, enterprise="8.1.0")
-    site = composed(docs, tmp_path)
+    with pytest.raises(compose.ComposeError, match=r"broken.mdx:5: is not valid MDX"):
+        composed(docs, tmp_path)
 
-    assert {rel: (site / "enterprise/v8-1-0" / rel).read_text() for rel in drafts} == drafts
+    save(docs, "enterprise", "8.1.0", edition_files("8.1.0", extra={".mintignore": "broken.mdx\n", "broken.mdx": broken}))
+    assert (composed(docs, tmp_path) / "enterprise/v8-1-0/broken.mdx").read_text() == broken
 
 
 COMPONENT = """export const Label = "Don't [edit](/guide)";
@@ -776,7 +840,7 @@ def compile_mdx(text: str) -> subprocess.CompletedProcess:
         "await compile(source);\n"
     )
     # Mintlify reads a heading's `{#id}` itself; the bare compiler cannot.
-    body = re.sub(r"^(#{1,6} .*?) \{#[A-Za-z0-9][A-Za-z0-9._-]*\}$", r"\1", text.split("\n---\n", 1)[1], flags=re.M)
+    body = re.sub(r"^(#{1,6} .*?) \{#[A-Za-z0-9][A-Za-z0-9._-]*\}$", r"\1", text.split("\n---\n", 1)[-1], flags=re.M)
     return subprocess.run(["node", "--input-type=module", "-e", script], input=body,
                           capture_output=True, text=True)
 
@@ -834,17 +898,6 @@ def test_static_jsx_links_stay_with_the_selected_edition(docs, tmp_path, value):
     if MDX_COMPILER and shutil.which("node"):
         result = compile_mdx(text)
         assert result.returncode == 0, result.stderr
-
-
-@pytest.mark.parametrize("value", ['{target}', '{`/guide/${section}`}', '{"/guide" + suffix}', '{\n"/guide"\n}'])
-def test_unresolved_jsx_links_stop_before_output(docs, tmp_path, value):
-    files = edition_files("8.1.0")
-    files["guide.mdx"] += f'<Card href={value} />\n'
-    save(docs, "enterprise", "8.1.0", files)
-    configure(docs, enterprise="8.1.0")
-    with pytest.raises(compose.ComposeError, match=r'guide.mdx:\d+: href must be'):
-        composed(docs, tmp_path)
-    assert not (tmp_path / "site").exists()
 
 
 def test_jsx_in_examples_and_comments_is_not_rewritten(docs, tmp_path):
@@ -943,7 +996,7 @@ def test_html_entities_in_link_attributes_are_refused(docs, tmp_path, target):
     files["guide.mdx"] += f'\n<a href="{target}">Guide</a>\n'
     save(docs, "enterprise", "8.1.0", files)
     configure(docs, enterprise="8.1.0")
-    with pytest.raises(compose.ComposeError, match=r"guide.mdx:\d+: href contains HTML entities"):
+    with pytest.raises(compose.ComposeError, match=r"guide.mdx:\d+: .* has escapes or character references"):
         composed(docs, tmp_path)
     assert not (tmp_path / "site").exists()
 
@@ -987,25 +1040,6 @@ def test_other_jsx_expressions_cannot_hide_a_link(docs, tmp_path, attribute):
     if MDX_COMPILER and shutil.which('node'):
         result = compile_mdx(page)
         assert result.returncode == 0, result.stderr
-
-
-@pytest.mark.parametrize('attributes', [
-    'onClick={() => /}/.test(value)} href={`/guide`}',
-    'title={`value ${suffix}`} href={`/guide`}',
-    '{...props} href={`/guide`}',
-    'title={<a href="/guide">Guide</a>} href={`/guide`}',
-    'onClick={() => {\n}} href={`/guide`}',
-    'href\n = {`/guide`}',
-    'title="long\n title" href={`/guide`}',
-])
-def test_unsupported_jsx_attributes_fail_instead_of_hiding_links(docs, tmp_path, attributes):
-    files = edition_files('8.1.0')
-    files['guide.mdx'] += f'\n<a {attributes}>Next</a>\n'
-    save(docs, 'enterprise', '8.1.0', files)
-    configure(docs, enterprise='8.1.0')
-    with pytest.raises(compose.ComposeError, match=r'guide.mdx:\d+:'):
-        composed(docs, tmp_path)
-    assert not (tmp_path / 'site').exists()
 
 
 @pytest.mark.parametrize('source', ['/legacy/article-*', '/legacy/*', '/:first*/:second*', '/legacy/:slug+', '/legacy/:slug?'])
