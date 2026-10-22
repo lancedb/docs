@@ -540,19 +540,79 @@ def test_unqualified_unpublished_and_prerelease_releases_are_not_prepared(releas
     result = released.run(open_prs=True)
 
     assert result.states() == {
-        "Enterprise 8.2.0": "open", "Enterprise 8.3.0": "blocked", "Enterprise 8.4.0": "waiting",
+        "Enterprise 8.2.0": "open", "Enterprise 8.3.0": "blocked",
         "OSS 0.98.0": "waiting", "OSS 0.99.0": "waiting", "OSS 0.99.1": "skipped",
     }
-    assert "lancedb/sophon v8.3.0 is not qualified" in result.report
-    assert "the Enterprise release pipeline tags a release last, once it is published" in result.report
+    assert "v8.3.0 is not qualified: the Enterprise repository has no release-qualified/v8.3.0 tag" in result.report
+    assert ("1 qualified release from 8.2.0 on is not published yet: the Enterprise release pipeline tags a "
+            "release last, once it is published") in result.report
     assert "v0.99.0 has no published GitHub release yet" in result.report
     assert "the GitHub release v0.99.1 is marked as a prerelease" in result.report
     assert "1 prerelease from 8.2.0 on: only stable releases get editions" in result.report
     assert "1 prerelease from 0.98.0 on" in result.report
     # Counted, never named.
-    assert "rc.1" not in result.report and "beta.1" not in result.report
+    assert "8.4.0" not in result.report and "rc.1" not in result.report and "beta.1" not in result.report
     assert [p["head"] for p in released.github.opened()] == ["editions/enterprise-8.2.0"]
     assert discover.failed(result.findings)
+
+
+@pytest.mark.parametrize("clone", ["reused", "fresh"])
+def test_a_withdrawn_qualification_stops_the_release_in_any_clone(released, tmp_path, clone):
+    released.enterprise("8.3.0", released.bundled)
+    assert released.run()["Enterprise 8.3.0"].state == "prepare"
+    git(released.sophon, "tag", "-d", "release-qualified/v8.3.0")
+    if clone == "fresh":
+        for name, upstream in (("sophon", released.sophon), ("lancedb", released.lancedb)):
+            path = tmp_path / "fresh" / f"{name}.git"
+            path.mkdir(parents=True)
+            git(path, "init", "-q", "--bare")
+            git(path, "remote", "add", "origin", f"file://{upstream}")
+            released.clones[name] = path
+    else:
+        # The dry run fetched the tag into the clone that this run reuses.
+        assert "refs/tags/release-qualified/v8.3.0" in refs(released.clones["sophon"])
+
+    result = released.run(open_prs=True)
+
+    found = result["Enterprise 8.3.0"]
+    assert (found.state, found.reason) == ("blocked", (
+        "v8.3.0 is not qualified: the Enterprise repository has no release-qualified/v8.3.0 tag, which its "
+        "release pipeline adds before v8.3.0"))
+    assert "release-qualified/v8.3.0 tag name the same commit" not in result.report
+    assert "refs/heads/editions/enterprise-8.3.0" not in refs(released.origin)
+    assert [p["head"] for p in released.github.opened()] == ["editions/enterprise-8.2.0"]
+
+
+def test_unpublished_enterprise_releases_are_counted_not_named(released):
+    for version in ("8.1.5", "8.3.0", "8.4.0"):
+        released.enterprise(version, released.bundled, tagged=False)
+
+    result = released.run()
+
+    assert result.states() == {"Enterprise 8.2.0": "prepare"}
+    assert "1 release before 8.2.0 (8.1.0): discovery starts at 8.2.0, with no backfill" in result.report
+    assert ("2 qualified releases from 8.2.0 on are not published yet: the Enterprise release pipeline tags a "
+            "release last, once it is published") in result.report
+    assert not any(version in result.report for version in ("8.1.5", "8.3.0", "8.4.0"))
+
+
+def test_a_saved_release_whose_release_tag_is_gone_is_named_for_review(released):
+    saved_enterprise(released)
+    git(released.sophon, "tag", "-d", "v8.2.0")
+
+    result = released.run(open_prs=True)
+
+    found = result["Enterprise 8.2.0"]
+    assert found.state == "blocked"
+    assert "saved, but now release-qualified/v8.2.0 exists, but v8.2.0 does not yet" in found.reason
+
+
+def test_a_record_naming_a_qualification_discovery_did_not_see_is_refused():
+    finding = discover.Finding("enterprise", "8.3.0", "prepare", "", commit="c" * 40)
+    record = {"release": {"commit": "c" * 40, "qualification": {"object": "a" * 40}}}
+
+    with pytest.raises(discover.DiscoveryError, match=f"release-qualified/v8.3.0 at {'a' * 40} rather than nothing"):
+        discover.unmoved(finding, record, "preparation read")
 
 
 @pytest.mark.parametrize(

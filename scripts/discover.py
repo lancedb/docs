@@ -96,6 +96,8 @@ class Finding:
     notes: list[str] = field(default_factory=list)
     done: str | None = None
     failed: bool = False
+    # Counted rather than named while it waits: nothing public names it yet.
+    unpublished: bool = False
 
     @property
     def name(self) -> str:
@@ -330,23 +332,39 @@ def list_enterprise(tags: dict[str, Tag], start: str) -> list[Finding]:
         version = name.removeprefix("release-qualified/v")
         if version != name and edition.VERSION_RE.fullmatch(version):
             qualified[version] = tag
-    found, earlier = [], []
+    found = []
+    earlier = [version for version in sorted(releases, key=key) if key(version) < key(start)]
     for version in sorted(set(releases) | set(qualified), key=key):
         if key(version) < key(start):
-            earlier.append(version)
             continue
         release, qualification = releases.get(version), qualified.get(version)
         tag, qtag = f"v{version}", edition.QUALIFIED_TAG.format(version=version)
         if release is None:
             found.append(Finding("enterprise", version, "waiting", (
                 f"{qtag} exists, but {tag} does not yet: the Enterprise release pipeline tags a release last, "
-                "once it is published")))
-            continue
-        # Preparation checks the qualification tag itself, as by hand.
-        why = f"{tag} and the annotated {qtag} tag name the same commit, so the release is published and qualified"
-        found.append(Finding("enterprise", version, "prepare", why, commit=release.commit,
-                             qualification=qualification.object if qualification else None, why=why))
+                "once it is published"), unpublished=True))
+        elif qualification is None:
+            found.append(Finding("enterprise", version, "blocked", (
+                f"{tag} is not qualified: the Enterprise repository has no {qtag} tag, which its release "
+                f"pipeline adds before {tag}")))
+        else:
+            # Preparation checks the qualification tag itself, as by hand.
+            why = (f"{tag} and the annotated {qtag} tag name the same commit, so the release is published and "
+                   "qualified")
+            found.append(Finding("enterprise", version, "prepare", why, commit=release.commit,
+                                 qualification=qualification.object, why=why))
     return found + summaries("enterprise", earlier, prereleases, start)
+
+
+def counted(findings: list[Finding], product: str, start: str) -> list[Finding]:
+    """`findings`, with the unpublished releases that still wait as one count."""
+    waiting = sum(finding.unpublished and finding.state == "waiting" for finding in findings)
+    if not waiting:
+        return findings
+    return [finding for finding in findings if not (finding.unpublished and finding.state == "waiting")] + [
+        Finding(product, "", "waiting", (
+            f"{plural(waiting, 'qualified release')} from {start} on {'is' if waiting == 1 else 'are'} not "
+            "published yet: the Enterprise release pipeline tags a release last, once it is published"))]
 
 
 def list_oss(tags: dict[str, Tag], start: str, github: GitHub) -> list[Finding]:
@@ -523,12 +541,12 @@ def unmoved(finding: Finding, record: dict, where: str) -> None:
     records them."""
     release = record["release"]
     read = [(f"v{finding.version}", release.get("commit"), finding.commit)]
-    if finding.qualification:
+    if finding.product == "enterprise":
         read.append((edition.QUALIFIED_TAG.format(version=finding.version),
                      (release.get("qualification") or {}).get("object"), finding.qualification))
     if finding.pages:
         read.append((finding.pages[0], (release.get("enterprise_pages") or {}).get("commit"), finding.pages[1]))
-    moved = [f"{name} at {found or 'nothing'} rather than {checked}"
+    moved = [f"{name} at {found or 'nothing'} rather than {checked or 'nothing'}"
              for name, found, checked in read if found != checked]
     if moved:
         raise DiscoveryError(f"{where} {'; '.join(moved)}: a tag moved while discovery ran, so nothing is prepared "
@@ -540,8 +558,7 @@ def resolve(finding: Finding, main: Main, lancedb: Path, sophon: Path, sophon_ta
     tags as discovery checked them."""
     tag = f"v{finding.version}"
     if finding.product == "enterprise":
-        qualified = [edition.QUALIFIED_TAG.format(version=finding.version)] if finding.qualification else []
-        fetch(sophon, *tag_refspecs(tag, *qualified))
+        fetch(sophon, *tag_refspecs(tag, edition.QUALIFIED_TAG.format(version=finding.version)))
         # What the fetched tag bundles; if the tag has moved, the record shows it below.
         bundled = edition.bundled_lancedb(sophon, f"refs/tags/{tag}^{{commit}}", f"lancedb/sophon {tag}")
         try:
@@ -782,7 +799,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
                     finding.state, finding.reason = "waiting", str(exc)
                 except (DiscoveryError, edition.EditionError) as exc:
                     finding.state, finding.reason = "blocked", str(exc)
-            findings += listed
+            findings += counted(listed, product, options["from"])
         if open_prs:
             for finding in findings:
                 if finding.state in ("prepare", "resume", "open"):
