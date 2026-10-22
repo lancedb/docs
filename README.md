@@ -411,8 +411,10 @@ require matching assembler scripts unless it is building a new edition.
 ### Composing the site
 
 `make compose` composes every saved edition into one site in
-`build/versioned`, with Mintlify's own product and version selectors. Check
-and preview it as you would the assembled site:
+`build/versioned`, with Mintlify's own product and version selectors. Like
+Mint, it needs Node.js and npm: the first run installs the pinned packages of
+`scripts/mdx` into its `node_modules`. Check and preview the site as you would
+the assembled site:
 
 ```bash
 make compose
@@ -438,43 +440,36 @@ edition, the site's default edition. A preferred edition changes only when
 a maintenance release of an older line, never changes it. A product with saved
 editions must name one.
 
-Links in pages, snippet modules and navigation are pointed into their own
-edition:
+Use explicit paths for internal documentation links, such as `/guide`, so they
+stay within the selected version. Code examples are preserved as written.
 
-- Root-relative links and images, the `href`, `src` and icon paths of
-  components, frontmatter and navigation, and imports get the edition's path.
+Composition reads each page and snippet module with the MDX parser Mint uses,
+pinned in `scripts/mdx`, and changes only the link destinations it finds:
+
+- Root-relative Markdown links, images and link definitions, the `href`, `src`
+  and icon paths of components, including components that pages and snippets
+  export, frontmatter, navigation and imports get the edition's path. Dot
+  segments are normalized first.
 - A link to `docs.lancedb.com` becomes a link to the page it lands on in the
   same edition, after that edition's redirects.
 - Same-site redirect destinations stay within the edition, including absolute URLs.
-- Relative links stay as written. Root paths have dot segments normalized before
-  the edition path is added.
-- Code and MDX comments are never rewritten, and neither are the strings a
-  snippet exports, such as generated examples.
+- Relative links stay as written.
+- Code blocks, inline code, JavaScript strings and comments are never
+  rewritten, so a URL in a string stays as written even if a component links
+  to it.
 
-Composition stops, naming the page and line, at a link into another edition, a
-path that leaves its edition, or a bare `docs.lancedb.com` URL in the
-text, which Mintlify would link to the default edition; write it as a Markdown
-link. A link to something the edition does not publish is a warning, and
-`mint broken-links` checks the composed site. Component link attributes must use
-a quoted string or a constant string expression on one line, without escapes or
-interpolation. Dynamic targets stop composition with the page and line to fix.
-HTML entities in quoted link attributes are refused too; use a literal path in
-a constant string expression, such as `href={"/guide?a=1&b=2"}`. A URL that
-JavaScript builds, rather than an attribute or Markdown link, is not pointed.
-Other component attributes may use quoted values or simple brace expressions
-on one line, including arrow functions. Spreads, nested JSX, regex, division,
-less-than comparisons and template interpolation are refused rather than guessed. Fenced examples, inline
-code and MDX comments are left alone.
-
-In a snippet, `export` statements and `{...}` expressions are JavaScript, and
-composition cannot tell code from links in their strings. Their component
-attributes are read as in a page, with links pointed, but any other string in
-them must be an export of one string on one line, such as
-`export const Name = "...";`, which is kept as written. Composition stops at
-any other quote or backtick there; an apostrophe within a word, as in `Don't`,
-is allowed. An `export` statement is read to the first blank line outside
-brackets. A relative link in a snippet cannot climb with `..`: it is relative to
-each page that imports the snippet. Composition stops at that too.
+A link attribute that JavaScript calculates, such as `href={page.url}` or
+``href={`/guides/${name}`}``, cannot be pointed into the edition, so composition
+stops there with the page and line: write the path itself, as `href="/guide"`
+or `href={"/guide"}`. Composition also stops, naming the page and line, at a
+link into another edition, a path that leaves its edition, a root-relative or
+`docs.lancedb.com` link written with escapes or character references, a
+published page or snippet that is not valid MDX, or a bare `docs.lancedb.com`
+URL in the text, which Mintlify would link to the default edition; write it as
+a Markdown link. A relative link in a snippet cannot climb with `..`, since it
+is relative to each page that imports the snippet. A link to something the
+edition does not publish is a warning, and `mint broken-links` checks the
+composed site.
 
 Redirect sources must be plain paths or contain one `:name*` segment. Other
 patterns, including partial wildcards such as `/article-*`, stop composition
