@@ -506,10 +506,10 @@ def enterprise_pages(main: Main, tags: dict[str, Tag]) -> tuple[str, str]:
     return ref, commit
 
 
-def prepare_args(finding: Finding, main: Main, lancedb: Path, sophon: Path) -> list[str]:
+def prepare_args(finding: Finding, main: Main, lancedb: Path, enterprise_repo: Path) -> list[str]:
     return [
         "prepare", finding.product, finding.version, *(["--enterprise", finding.pages[0]] if finding.pages else []),
-        "--lancedb", str(lancedb), "--enterprise-repo", str(sophon), "--docs", main.commit,
+        "--lancedb", str(lancedb), "--enterprise-repo", str(enterprise_repo), "--docs", main.commit,
     ]
 
 
@@ -531,25 +531,25 @@ def unmoved(finding: Finding, record: dict, where: str) -> None:
                              "from it. Review the release")
 
 
-def resolve(finding: Finding, main: Main, lancedb: Path, sophon: Path, sophon_tags) -> None:
+def resolve(finding: Finding, main: Main, lancedb: Path, enterprise_repo: Path, enterprise_tags) -> None:
     """Fetch what preparation reads, and the record it would write, from the
     tags as discovery checked them."""
     tag = f"v{finding.version}"
     if finding.product == "enterprise":
-        fetch(sophon, *tag_refspecs(tag, edition.QUALIFIED_TAG.format(version=finding.version)))
+        fetch(enterprise_repo, *tag_refspecs(tag, edition.QUALIFIED_TAG.format(version=finding.version)))
         # What the fetched tag bundles; if the tag has moved, the record shows it below.
-        bundled = edition.bundled_lancedb(sophon, f"refs/tags/{tag}^{{commit}}", f"lancedb/sophon {tag}")
+        bundled = edition.bundled_lancedb(enterprise_repo, f"refs/tags/{tag}^{{commit}}", f"Enterprise {tag}")
         try:
             fetch(lancedb, bundled)
         except edition.EditionError as exc:
             raise DiscoveryError(f"{tag} bundles LanceDB {bundled}, which {LANCEDB} does not serve: {exc}") from None
     else:
-        finding.pages = enterprise_pages(main, sophon_tags())
+        finding.pages = enterprise_pages(main, enterprise_tags())
         fetch(lancedb, *tag_refspecs(tag))
-        fetch(sophon, *tag_refspecs(finding.pages[0]))
-    record = edition.resolve_release(edition.parse(prepare_args(finding, main, lancedb, sophon)), main.path)
+        fetch(enterprise_repo, *tag_refspecs(finding.pages[0]))
+    record = edition.resolve_release(edition.parse(prepare_args(finding, main, lancedb, enterprise_repo)), main.path)
     unmoved(finding, record, "preparation would read")
-    for name, repo in (("lancedb", lancedb), ("enterprise", sophon)):
+    for name, repo in (("lancedb", lancedb), ("enterprise", enterprise_repo)):
         source = record["sources"][name]
         if not edition.text(repo, "ls-tree", "-d", source["commit"], "--", source["path"]):
             raise DiscoveryError(
@@ -587,15 +587,15 @@ def set_preferred(path: Path, product: str, version: str) -> None:
         raise DiscoveryError(f"could not set the preferred {NAMES[product]} edition in compose.yaml; set it by hand")
 
 
-def prepare_branch(finding: Finding, main: Main, lancedb: Path, sophon: Path, repo: Path) -> str:
+def prepare_branch(finding: Finding, main: Main, lancedb: Path, enterprise_repo: Path, repo: Path) -> str:
     """The commit that saves the edition on main, made as by hand from the
     sources discovery checked."""
-    for name, source_repo in (("lancedb", lancedb), ("enterprise", sophon)):
+    for name, source_repo in (("lancedb", lancedb), ("enterprise", enterprise_repo)):
         source = finding.record["sources"][name]
         prefetch(source_repo, source["commit"], source["path"])
     path = add_worktree(repo, main.commit)
     try:
-        edition.prepare(edition.parse(prepare_args(finding, main, lancedb, sophon)), path)
+        edition.prepare(edition.parse(prepare_args(finding, main, lancedb, enterprise_repo)), path)
         record = edition.load_record(path / record_file(finding))
         unmoved(finding, record, "preparation read")
         if preferred_note(main, finding)[0]:
@@ -690,17 +690,17 @@ def open_pull(github: GitHub, finding: Finding, text: str) -> dict:
         return existing
 
 
-def act(finding: Finding, main: Main, repo: Path, lancedb: Path, sophon: Path, github: GitHub,
+def act(finding: Finding, main: Main, repo: Path, lancedb: Path, enterprise_repo: Path, github: GitHub,
         holds: list[str]) -> None:
     """Prepare, push and open what the finding needs, picking up where an earlier run stopped."""
     resumed = finding.state == "resume"
     if finding.state == "prepare":
-        commit = prepare_branch(finding, main, lancedb, sophon, repo)
+        commit = prepare_branch(finding, main, lancedb, enterprise_repo, repo)
         if not push(repo, commit, finding.branch):
             finding.notes.append(f"{finding.branch} appeared while this run prepared it, so its commits are kept")
             classify(finding, main, github, repo, remote_heads(repo), {})
             if finding.state in ("resume", "open"):
-                act(finding, main, repo, lancedb, sophon, github, holds)
+                act(finding, main, repo, lancedb, enterprise_repo, github, holds)
             return
     if finding.state in ("prepare", "resume"):
         commit = remote_heads(repo).get(finding.branch)
@@ -725,7 +725,7 @@ def act(finding: Finding, main: Main, repo: Path, lancedb: Path, sophon: Path, g
         finding.done = f"started {' and '.join(missing)}, which had not run on its head"
 
 
-def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Path | None = None,
+def discover(repo: Path, lancedb: Path, enterprise_repo: Path, github: GitHub, config: Path | None = None,
              open_prs: bool = False) -> tuple[list[Finding], str]:
     settings = load_config(config or repo / CONFIG)
     commit = edition.docs_main(repo)
@@ -739,10 +739,10 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
     path = add_worktree(repo, commit)
     tags = {}
 
-    def sophon_tags() -> dict[str, Tag]:
-        if "sophon" not in tags:
-            tags["sophon"] = remote_tags(sophon, "refs/tags/v*", "refs/tags/release-qualified/v*")
-        return tags["sophon"]
+    def enterprise_tags() -> dict[str, Tag]:
+        if "enterprise_repo" not in tags:
+            tags["enterprise_repo"] = remote_tags(enterprise_repo, "refs/tags/v*", "refs/tags/release-qualified/v*")
+        return tags["enterprise_repo"]
 
     try:
         main = read_main(path, commit)
@@ -755,7 +755,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
                                         f"discovery is off: {CONFIG} names no release to start from"))
                 continue
             if product == "enterprise":
-                listed = list_enterprise(sophon_tags(), options["from"])
+                listed = list_enterprise(enterprise_tags(), options["from"])
             else:
                 listed = list_oss(remote_tags(lancedb, "refs/tags/v*"), options["from"], github)
             for finding in listed:
@@ -765,7 +765,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
                 if finding.state != "prepare":
                     continue
                 try:
-                    resolve(finding, main, lancedb, sophon, sophon_tags)
+                    resolve(finding, main, lancedb, enterprise_repo, enterprise_tags)
                     finding.preferred = preferred_note(main, finding)[1]
                 except Waiting as exc:
                     finding.state, finding.reason = "waiting", str(exc)
@@ -776,7 +776,7 @@ def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Pa
             for finding in findings:
                 if finding.state in ("prepare", "resume", "open"):
                     try:
-                        act(finding, main, repo, lancedb, sophon, github, settings["holds"])
+                        act(finding, main, repo, lancedb, enterprise_repo, github, settings["holds"])
                     except (DiscoveryError, edition.EditionError, compose.ComposeError) as exc:
                         finding.failed = True
                         finding.done = f"{finding.done}, then failed: {exc}" if finding.done else f"failed: {exc}"

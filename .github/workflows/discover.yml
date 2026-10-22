@@ -39,8 +39,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Create a read-only Sophon token
-        id: sophon-token
+      - name: Create a read-only Enterprise token
+        id: enterprise-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
@@ -51,7 +51,7 @@ jobs:
 
       - name: Set up the release repositories
         env:
-          SOPHON_TOKEN: ${{ steps.sophon-token.outputs.token }}
+          ENTERPRISE_TOKEN: ${{ steps.enterprise-token.outputs.token }}
         run: |
           set -euo pipefail
           for name in lancedb sophon; do
@@ -59,7 +59,7 @@ jobs:
             git -C "$RUNNER_TEMP/$name.git" remote add origin "https://github.com/lancedb/$name.git"
           done
           # In that repository's own configuration, as actions/checkout keeps a token.
-          basic=$(printf 'x-access-token:%s' "$SOPHON_TOKEN" | base64 -w0)
+          basic=$(printf 'x-access-token:%s' "$ENTERPRISE_TOKEN" | base64 -w0)
           echo "::add-mask::$basic"
           git -C "$RUNNER_TEMP/sophon.git" config http.https://github.com/.extraheader "AUTHORIZATION: basic $basic"
 
@@ -95,8 +95,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Create a read-only Sophon token
-        id: sophon-token
+      - name: Create a read-only Enterprise token
+        id: enterprise-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
@@ -107,7 +107,7 @@ jobs:
 
       - name: Set up the release repositories
         env:
-          SOPHON_TOKEN: ${{ steps.sophon-token.outputs.token }}
+          ENTERPRISE_TOKEN: ${{ steps.enterprise-token.outputs.token }}
         run: |
           set -euo pipefail
           for name in lancedb sophon; do
@@ -115,7 +115,7 @@ jobs:
             git -C "$RUNNER_TEMP/$name.git" remote add origin "https://github.com/lancedb/$name.git"
           done
           # In that repository's own configuration, as actions/checkout keeps a token.
-          basic=$(printf 'x-access-token:%s' "$SOPHON_TOKEN" | base64 -w0)
+          basic=$(printf 'x-access-token:%s' "$ENTERPRISE_TOKEN" | base64 -w0)
           echo "::add-mask::$basic"
           git -C "$RUNNER_TEMP/sophon.git" config http.https://github.com/.extraheader "AUTHORIZATION: basic $basic"
 

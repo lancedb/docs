@@ -41,6 +41,7 @@ jobs:
           elif [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ]; then
             git fetch --no-tags --depth=1 origin "$BASE_SHA"
           fi
+          # An all-zero SHA means there is no previous commit; validate the saved editions without comparing to a base.
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
             echo "No base commit for this $EVENT event; checking each edition against its record only."
             make check-editions

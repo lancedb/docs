@@ -1,6 +1,6 @@
 """Tests for discovering releases and preparing their edition pull requests.
 
-Disposable repositories stand in for lancedb/lancedb, lancedb/sophon and this
+Disposable repositories stand in for LanceDB, Enterprise and this
 repository, and a fake stands in for GitHub's API. Their versions are
 fixtures, not releases: OSS 0.97.0 to 0.99.2 and Enterprise 8.1.0 to 8.6.0.
 Every edition is prepared by the real `edition.py prepare`, which builds it
@@ -247,7 +247,7 @@ class World:
 
     def __init__(self, base: Path):
         self.lancedb = serving(base / "lancedb")
-        self.sophon = serving(base / "sophon")
+        self.enterprise_repo = serving(base / "enterprise_repo")
         self.docs = serving(base / "docs")
         for name in ("assemble.yaml", ".gitignore", "compose.yaml", "discover.yaml"):
             shutil.copy(SCRIPTS.parent / name, self.docs / name)
@@ -265,7 +265,7 @@ class World:
         self.publish()
         self.github = FakeGitHub(self.origin)
         self.clones = {}
-        for name, upstream in (("lancedb", self.lancedb), ("sophon", self.sophon)):
+        for name, upstream in (("lancedb", self.lancedb), ("enterprise_repo", self.enterprise_repo)):
             clone = base / "work" / f"{name}.git"
             clone.mkdir(parents=True)
             git(clone, "init", "-q", "--bare")
@@ -287,16 +287,16 @@ class World:
 
     def enterprise(self, version: str, bundled: str | None, docs: bool = True,
                    qualified: str | None = "annotated", tagged: bool = True) -> str:
-        target = commit(self.sophon, enterprise_pages(version, bundled, docs), f"v{version}")
+        target = commit(self.enterprise_repo, enterprise_pages(version, bundled, docs), f"v{version}")
         if tagged:
-            annotated(self.sophon, f"v{version}", target)
+            annotated(self.enterprise_repo, f"v{version}", target)
         name = f"release-qualified/v{version}"
         if qualified == "annotated":
-            annotated(self.sophon, name, target)
+            annotated(self.enterprise_repo, name, target)
         elif qualified == "lightweight":
-            git(self.sophon, "tag", name, target)
+            git(self.enterprise_repo, "tag", name, target)
         elif qualified:
-            annotated(self.sophon, name, qualified)
+            annotated(self.enterprise_repo, name, qualified)
         return target
 
     def publish(self) -> str:
@@ -334,13 +334,13 @@ class World:
 
     def run(self, open_prs: bool = False, config: Path | None = None) -> Result:
         findings, main = discover.discover(
-            self.docs, self.clones["lancedb"], self.clones["sophon"], self.github, config, open_prs
+            self.docs, self.clones["lancedb"], self.clones["enterprise_repo"], self.github, config, open_prs
         )
         return Result(findings, main, discover.report(findings, main, open_prs))
 
     def remotes(self) -> dict:
         return {name: refs(repo) for name, repo in
-                (("lancedb", self.lancedb), ("sophon", self.sophon), ("docs", self.origin))}
+                (("lancedb", self.lancedb), ("enterprise_repo", self.enterprise_repo), ("docs", self.origin))}
 
 
 @pytest.fixture
@@ -396,14 +396,14 @@ def test_a_dry_run_reports_each_releases_exact_inputs_and_writes_nothing(release
 
     found = result["Enterprise 8.2.0"]
     assert found.state == "prepare"
-    sophon = released.sophon
+    enterprise_repo = released.enterprise_repo
     assert found.record["release"] == {
         "repository": "lancedb/sophon",
         "tag": "v8.2.0",
-        "commit": git(sophon, "rev-parse", "v8.2.0^{commit}"),
+        "commit": git(enterprise_repo, "rev-parse", "v8.2.0^{commit}"),
         "qualification": {
             "tag": "release-qualified/v8.2.0",
-            "object": git(sophon, "rev-parse", "refs/tags/release-qualified/v8.2.0"),
+            "object": git(enterprise_repo, "rev-parse", "refs/tags/release-qualified/v8.2.0"),
         },
         "bundled_lancedb": released.bundled,
     }
@@ -492,7 +492,7 @@ def test_an_eligible_oss_release_takes_the_preferred_enterprise_editions_pages(r
     assert waiting["OSS 0.98.0"].state == "waiting"
     assert "compose.yaml names none yet" in waiting["OSS 0.98.0"].reason
     released.merge(1)
-    enterprise = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
+    enterprise = git(released.enterprise_repo, "rev-parse", "v8.2.0^{commit}")
 
     result = released.run(open_prs=True)
 
@@ -514,7 +514,7 @@ def test_unqualified_unpublished_and_prerelease_releases_are_not_prepared(releas
     released.enterprise("8.3.0", released.bundled, qualified=None)
     released.enterprise("8.4.0", released.bundled, tagged=False)
     rc = released.enterprise("8.5.0", released.bundled, qualified=None, tagged=False)
-    annotated(released.sophon, "v8.5.0-rc.1", rc)
+    annotated(released.enterprise_repo, "v8.5.0-rc.1", rc)
     released.oss("0.99.0", release=None)
     released.oss("0.99.1", release="prerelease")
     annotated(released.lancedb, "v0.99.2-beta.1", released.lancedb_commit("beta"))
@@ -543,9 +543,9 @@ def test_unqualified_unpublished_and_prerelease_releases_are_not_prepared(releas
 def test_a_withdrawn_qualification_stops_the_release_in_any_clone(released, tmp_path, clone):
     released.enterprise("8.3.0", released.bundled)
     assert released.run()["Enterprise 8.3.0"].state == "prepare"
-    git(released.sophon, "tag", "-d", "release-qualified/v8.3.0")
+    git(released.enterprise_repo, "tag", "-d", "release-qualified/v8.3.0")
     if clone == "fresh":
-        for name, upstream in (("sophon", released.sophon), ("lancedb", released.lancedb)):
+        for name, upstream in (("enterprise_repo", released.enterprise_repo), ("lancedb", released.lancedb)):
             path = tmp_path / "fresh" / f"{name}.git"
             path.mkdir(parents=True)
             git(path, "init", "-q", "--bare")
@@ -553,7 +553,7 @@ def test_a_withdrawn_qualification_stops_the_release_in_any_clone(released, tmp_
             released.clones[name] = path
     else:
         # The dry run fetched the tag into the clone that this run reuses.
-        assert "refs/tags/release-qualified/v8.3.0" in refs(released.clones["sophon"])
+        assert "refs/tags/release-qualified/v8.3.0" in refs(released.clones["enterprise_repo"])
 
     result = released.run(open_prs=True)
 
@@ -581,7 +581,7 @@ def test_unpublished_enterprise_releases_are_counted_not_named(released):
 
 def test_a_saved_release_whose_release_tag_is_gone_is_named_for_review(released):
     saved_enterprise(released)
-    git(released.sophon, "tag", "-d", "v8.2.0")
+    git(released.enterprise_repo, "tag", "-d", "v8.2.0")
 
     result = released.run(open_prs=True)
 
@@ -638,7 +638,7 @@ def test_absent_docs_ambiguous_pins_and_conflicting_qualification_stop_for_revie
 
 def test_oss_stops_when_the_preferred_enterprise_release_tag_has_moved(released):
     saved_enterprise(released)
-    annotated(released.sophon, "v8.2.0", released.enterprise("8.9.9", released.bundled), force=True)
+    annotated(released.enterprise_repo, "v8.2.0", released.enterprise("8.9.9", released.bundled), force=True)
     released.configure(oss="0.98.0", pages="preferred")
 
     result = released.run(open_prs=True)
@@ -725,7 +725,7 @@ def test_a_saved_edition_is_left_alone_after_corrections(released):
 
 def test_a_moved_tag_or_recreated_qualification_stops_for_review(released):
     saved_enterprise(released)
-    annotated(released.sophon, "release-qualified/v8.2.0", git(released.sophon, "rev-parse", "v8.2.0^{commit}"),
+    annotated(released.enterprise_repo, "release-qualified/v8.2.0", git(released.enterprise_repo, "rev-parse", "v8.2.0^{commit}"),
               force=True)
 
     result = released.run(open_prs=True)
@@ -736,8 +736,8 @@ def test_a_moved_tag_or_recreated_qualification_stops_for_review(released):
     assert "An edition is never replaced" in found.reason
 
     moved = released.enterprise("8.2.1", released.bundled, qualified=None, tagged=False)
-    annotated(released.sophon, "v8.2.0", moved, force=True)
-    annotated(released.sophon, "release-qualified/v8.2.0", moved, force=True)
+    annotated(released.enterprise_repo, "v8.2.0", moved, force=True)
+    annotated(released.enterprise_repo, "release-qualified/v8.2.0", moved, force=True)
     assert "v8.2.0 was" in released.run()["Enterprise 8.2.0"].reason
 
 
@@ -758,14 +758,14 @@ def test_a_saved_release_that_is_no_longer_eligible_stops_for_review(released):
 def test_enterprise_pages_that_move_while_they_are_fetched_are_never_used(released, monkeypatch):
     saved_enterprise(released)
     released.configure(oss="0.98.0", pages="preferred")
-    approved = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
+    approved = git(released.enterprise_repo, "rev-parse", "v8.2.0^{commit}")
     replacement = released.enterprise("8.3.0", released.bundled)
     fetch = discover.fetch
 
     def move_then_fetch(repo, *refspecs):
         # The tag moves after discovery checked it, before the fetch.
-        if repo == released.clones["sophon"] and "+refs/tags/v8.2.0:refs/tags/v8.2.0" in refspecs:
-            annotated(released.sophon, "v8.2.0", replacement, force=True)
+        if repo == released.clones["enterprise_repo"] and "+refs/tags/v8.2.0:refs/tags/v8.2.0" in refspecs:
+            annotated(released.enterprise_repo, "v8.2.0", replacement, force=True)
         return fetch(repo, *refspecs)
 
     monkeypatch.setattr(discover, "fetch", move_then_fetch)
@@ -785,7 +785,7 @@ def test_enterprise_pages_that_move_while_they_are_fetched_are_never_used(releas
     assert "the preferred Enterprise edition 8.2.0 was saved from" in released.run(open_prs=True)["OSS 0.98.0"].reason
     assert refs(released.origin) == branches
     # Put back, it is prepared from the recorded commit.
-    annotated(released.sophon, "v8.2.0", approved, force=True)
+    annotated(released.enterprise_repo, "v8.2.0", approved, force=True)
     assert released.run(open_prs=True)["OSS 0.98.0"].state == "open"
     record = yaml.safe_load(released.show(refs(released.origin)["refs/heads/editions/oss-0.98.0"],
                                           "releases/oss-0.98.0.yaml"))
@@ -795,13 +795,13 @@ def test_enterprise_pages_that_move_while_they_are_fetched_are_never_used(releas
 def test_a_tag_that_moves_before_preparing_is_never_pushed(released, monkeypatch):
     saved_enterprise(released)
     released.configure(oss="0.98.0", pages="preferred")
-    approved = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
+    approved = git(released.enterprise_repo, "rev-parse", "v8.2.0^{commit}")
     replacement = released.enterprise("8.3.0", released.bundled)
     prepare = edition.prepare
 
     def move_then_prepare(args, repo=edition.REPO_ROOT):
-        annotated(released.sophon, "v8.2.0", replacement, force=True)
-        discover.fetch(released.clones["sophon"], *discover.tag_refspecs("v8.2.0"))
+        annotated(released.enterprise_repo, "v8.2.0", replacement, force=True)
+        discover.fetch(released.clones["enterprise_repo"], *discover.tag_refspecs("v8.2.0"))
         return prepare(args, repo)
 
     monkeypatch.setattr(edition, "prepare", move_then_prepare)
@@ -819,19 +819,19 @@ def test_a_tag_that_moves_before_preparing_is_never_pushed(released, monkeypatch
 
 @pytest.mark.parametrize("tag", ["v8.2.0", "release-qualified/v8.2.0"])
 def test_enterprise_tags_that_move_while_they_are_fetched_stop_for_review(released, monkeypatch, tag):
-    listed = git(released.sophon, "rev-parse", "v8.2.0^{commit}")
-    qualified = git(released.sophon, "rev-parse", "refs/tags/release-qualified/v8.2.0")
+    listed = git(released.enterprise_repo, "rev-parse", "v8.2.0^{commit}")
+    qualified = git(released.enterprise_repo, "rev-parse", "refs/tags/release-qualified/v8.2.0")
     other = released.enterprise("8.2.0 again", released.bundled, qualified=None, tagged=False)
     fetch = discover.fetch
 
     def move_then_fetch(repo, *refspecs):
-        if repo == released.clones["sophon"] and "+refs/tags/v8.2.0:refs/tags/v8.2.0" in refspecs:
+        if repo == released.clones["enterprise_repo"] and "+refs/tags/v8.2.0:refs/tags/v8.2.0" in refspecs:
             if tag == "v8.2.0":
                 # Released again from another commit, qualified there too.
-                annotated(released.sophon, "v8.2.0", other, force=True)
-                annotated(released.sophon, "release-qualified/v8.2.0", other, force=True)
+                annotated(released.enterprise_repo, "v8.2.0", other, force=True)
+                annotated(released.enterprise_repo, "release-qualified/v8.2.0", other, force=True)
             else:
-                annotated(released.sophon, "release-qualified/v8.2.0", listed, force=True)
+                annotated(released.enterprise_repo, "release-qualified/v8.2.0", listed, force=True)
         return fetch(repo, *refspecs)
 
     monkeypatch.setattr(discover, "fetch", move_then_fetch)
@@ -845,7 +845,7 @@ def test_enterprise_tags_that_move_while_they_are_fetched_stop_for_review(releas
     if tag == "v8.2.0":
         assert f"v8.2.0 at {other} rather than {listed}" in found.reason
     else:
-        now = git(released.sophon, "rev-parse", "refs/tags/release-qualified/v8.2.0")
+        now = git(released.enterprise_repo, "rev-parse", "refs/tags/release-qualified/v8.2.0")
         assert f"release-qualified/v8.2.0 at {now} rather than {qualified}" in found.reason
     assert refs(released.origin) == branches
     assert released.github.opened() == []
@@ -853,7 +853,7 @@ def test_enterprise_tags_that_move_while_they_are_fetched_stop_for_review(releas
 
 def test_changed_qualification_stops_an_open_pull_request(released):
     released.run(open_prs=True)
-    annotated(released.sophon, "release-qualified/v8.2.0", git(released.sophon, "rev-parse", "v8.2.0^{commit}"),
+    annotated(released.enterprise_repo, "release-qualified/v8.2.0", git(released.enterprise_repo, "rev-parse", "v8.2.0^{commit}"),
               force=True)
 
     result = released.run(open_prs=True)
