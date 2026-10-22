@@ -466,9 +466,15 @@ on one line, including arrow functions. Spreads, nested JSX, regex, division,
 less-than comparisons and template interpolation are refused rather than guessed. Fenced examples, inline
 code and MDX comments are left alone.
 
-A snippet's exported strings must each be one string on one line, without
-interpolation, and a relative link in a snippet cannot climb with `..`: it is
-relative to each page that imports the snippet. Composition stops at either.
+In a snippet, `export` statements and `{...}` expressions are JavaScript, and
+composition cannot tell code from links in their strings. Their component
+attributes are read as in a page, with links pointed, but any other string in
+them must be an export of one string on one line, such as
+`export const Name = "...";`, which is kept as written. Composition stops at
+any other quote or backtick there; an apostrophe within a word, as in `Don't`,
+is allowed. An `export` statement is read to the first blank line outside
+brackets. A relative link in a snippet cannot climb with `..`: it is relative to
+each page that imports the snippet. Composition stops at that too.
 
 Redirect sources must be plain paths or contain one `:name*` segment. Other
 patterns, including partial wildcards such as `/article-*`, stop composition
