@@ -438,16 +438,18 @@ edition, the site's default edition. A preferred edition changes only when
 a maintenance release of an older line, never changes it. A product with saved
 editions must name one.
 
-Links are pointed into their own edition:
+Links in pages, snippet modules and navigation are pointed into their own
+edition:
 
 - Root-relative links and images, the `href`, `src` and icon paths of
-  components and frontmatter, and imports get the edition's path.
+  components, frontmatter and navigation, and imports get the edition's path.
 - A link to `docs.lancedb.com` becomes a link to the page it lands on in the
   same edition, after that edition's redirects.
 - Same-site redirect destinations stay within the edition, including absolute URLs.
 - Relative links stay as written. Root paths have dot segments normalized before
   the edition path is added.
-- Code and MDX comments are never rewritten.
+- Code and MDX comments are never rewritten, and neither are the strings a
+  snippet exports, such as generated examples.
 
 Composition stops, naming the page and line, at a link into another edition, a
 path that leaves its edition, or a bare `docs.lancedb.com` URL in the
@@ -457,11 +459,16 @@ link. A link to something the edition does not publish is a warning, and
 a quoted string or a constant string expression on one line, without escapes or
 interpolation. Dynamic targets stop composition with the page and line to fix.
 HTML entities in quoted link attributes are refused too; use a literal path in
-a constant string expression, such as `href={"/guide?a=1&b=2"}`.
+a constant string expression, such as `href={"/guide?a=1&b=2"}`. A URL that
+JavaScript builds, rather than an attribute or Markdown link, is not pointed.
 Other component attributes may use quoted values or simple brace expressions
 on one line, including arrow functions. Spreads, nested JSX, regex, division,
 less-than comparisons and template interpolation are refused rather than guessed. Fenced examples, inline
 code and MDX comments are left alone.
+
+A snippet's exported strings must each be one string on one line, without
+interpolation, and a relative link in a snippet cannot climb with `..`: it is
+relative to each page that imports the snippet. Composition stops at either.
 
 Redirect sources must be plain paths or contain one `:name*` segment. Other
 patterns, including partial wildcards such as `/article-*`, stop composition
