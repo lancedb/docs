@@ -495,6 +495,8 @@ pushing, so a tag that moves while it runs stops that release. A release whose
 inputs are missing or contradictory stops for review with the reason, and
 leaves `main`, the saved editions and the other releases as they are. Any stop
 fails the run, until the release is fixed or listed in `skip`.
+If a tagged release fails the authoring check, list it in `skip`; it gets no
+edition. Fix the source for a later release instead of moving the tag.
 
 A dry run reports what discovery would do: each eligible release's exact
 inputs, and why the others are waiting, skipped or stopped. It fetches release
