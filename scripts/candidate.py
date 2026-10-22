@@ -66,9 +66,7 @@ class Site:
 
     name: str
     workflow: str
-    # Its roots, each recorded with the commit it was read from.
     roots: tuple[str, ...]
-    # The roots read from other repositories, each from a ref the run asked for.
     producers: tuple[str, ...]
 
 
@@ -459,7 +457,6 @@ def read_record(candidate: Path) -> dict:
 
 
 def check_products(site: Path) -> None:
-    """The versioned site's navigation lists products, each with versions."""
     try:
         products = json.loads((site / "docs.json").read_text())["navigation"]["products"]
         listed = bool(products) and all(p["versions"] for p in products)
