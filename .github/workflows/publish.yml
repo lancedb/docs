@@ -41,8 +41,6 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.event != 'pull_request' &&
       github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
-    # One group for both targets, so no Publish run changes staging while
-    # production checks it and pushes. Each waits its turn; none is cancelled.
     concurrency:
       group: publish
       queue: max
@@ -53,8 +51,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # By hand, the run named. Automatically, the newest successful Compose
-      # run of main's newest commit, if there is one yet.
       - name: Choose the run
         id: run
         env:
@@ -104,8 +100,6 @@ jobs:
             --content-dir "$MINTLIFY_CONTENT_DIR" --candidate "$RUNNER_TEMP/candidate" \
             --summary "$GITHUB_STEP_SUMMARY"
 
-  # Runs before the approval: an approval given after production has changed
-  # publishes nothing.
   request:
     name: Read production when requested
     if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
@@ -131,8 +125,6 @@ jobs:
     runs-on: ubuntu-latest
     # Environment restrictions and branch rules must be enforced externally.
     environment: production
-    # The staging job's group: staging, production and Mintlify's deployments
-    # are read only once this job is in it.
     concurrency:
       group: publish
       queue: max
@@ -174,8 +166,6 @@ jobs:
           RUN_ID: ${{ inputs.run_id }}
         run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
 
-      # A push is not a deployment: Mintlify records each deployment of a commit,
-      # and the address it went live at, as a GitHub deployment.
       - name: Read Mintlify's deployments of staging
         env:
           GH_TOKEN: ${{ github.token }}

@@ -610,7 +610,6 @@ def check_deployed(deployments: Path | None, commit: str, address: str) -> None:
             f"'{MINTLIFY_CHECK}' check on that commit succeeds, review {address}, then run "
             "this again"
         )
-    # Anyone who can write deployments can add a status, so only Mintlify's count.
     deployment = newest(mintlify)
     statuses = [s for s in deployment.get("statuses") or [] if by_mintlify(s)]
     status = newest(statuses) if statuses else {}
