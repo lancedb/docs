@@ -118,9 +118,9 @@ def pinned(repo: Path, ref: str, what: str) -> str:
     return tag(repo, ref, what)[1]
 
 
-def bundled_lancedb(sophon: Path, commit: str, what: str) -> str:
+def bundled_lancedb(enterprise_repo: Path, commit: str, what: str) -> str:
     """The LanceDB commit an Enterprise release bundles, from its gitlink."""
-    listing = git(sophon, "ls-tree", "-z", commit, "--", BUNDLED_LANCEDB).decode()
+    listing = git(enterprise_repo, "ls-tree", "-z", commit, "--", BUNDLED_LANCEDB).decode()
     meta = listing.split("\t", 1)[0].split()
     if len(meta) != 3 or meta[0] != "160000":
         raise EditionError(
@@ -239,18 +239,18 @@ def release_inputs(args: argparse.Namespace) -> dict:
     product, version = args.product, args.version
     if not VERSION_RE.fullmatch(version):
         raise EditionError(f"{version!r} is not a stable release version such as 1.2.3")
-    lancedb, sophon = args.lancedb.resolve(), args.enterprise_repo.resolve()
+    lancedb, enterprise_repo = args.lancedb.resolve(), args.enterprise_repo.resolve()
     if product == "oss":
         if args.bundled_lancedb:
             raise EditionError("--bundled-lancedb applies to Enterprise releases only")
         if not args.enterprise:
             raise EditionError(
-                "an OSS edition includes the Enterprise pages, so name the lancedb/sophon "
+                "an OSS edition includes the Enterprise pages, so name the Enterprise "
                 "tag or commit they come from with --enterprise"
             )
         release_tag = f"v{version}"
         commit = tag(lancedb, release_tag, f"lancedb/lancedb {release_tag}")[1]
-        enterprise = pinned(sophon, args.enterprise, "lancedb/sophon --enterprise")
+        enterprise = pinned(enterprise_repo, args.enterprise, "Enterprise --enterprise")
         release = {
             "repository": SOURCES["lancedb"][0],
             "tag": release_tag,
@@ -269,22 +269,22 @@ def release_inputs(args: argparse.Namespace) -> dict:
                 f"bundles, not {args.bundled_lancedb!r}"
             )
         release_tag = f"v{version}"
-        what = f"lancedb/sophon {release_tag}"
-        enterprise = tag(sophon, release_tag, what)[1]
+        what = f"Enterprise {release_tag}"
+        enterprise = tag(enterprise_repo, release_tag, what)[1]
         qualified = QUALIFIED_TAG.format(version=version)
         try:
-            qualification, qualified_commit = tag(sophon, qualified, what)
+            qualification, qualified_commit = tag(enterprise_repo, qualified, what)
         except EditionError:
             raise EditionError(
-                f"{what} is not qualified: {sophon} has no tag {qualified}"
+                f"{what} is not qualified: {enterprise_repo} has no tag {qualified}"
             ) from None
-        if text(sophon, "cat-file", "-t", qualification) != "tag":
+        if text(enterprise_repo, "cat-file", "-t", qualification) != "tag":
             raise EditionError(f"{what}: {qualified} is not an annotated tag")
         if qualified_commit != enterprise:
             raise EditionError(
                 f"{what} is {enterprise}, but {qualified} qualifies {qualified_commit}"
             )
-        shared = bundled_lancedb(sophon, enterprise, what)
+        shared = bundled_lancedb(enterprise_repo, enterprise, what)
         if args.bundled_lancedb and args.bundled_lancedb != shared:
             raise EditionError(
                 f"--bundled-lancedb {args.bundled_lancedb} disagrees with {what}, which "

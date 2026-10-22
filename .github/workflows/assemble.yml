@@ -14,7 +14,7 @@ on:
         description: lancedb/lancedb ref to read docs/web from
         default: main
       sophon_ref:
-        description: lancedb/sophon ref to read docs/web from
+        description: Enterprise ref to read docs/web from
         default: main
 
 permissions:
@@ -72,8 +72,8 @@ jobs:
           sparse-checkout: docs/web
           persist-credentials: false
 
-      - name: Create a read-only Sophon token
-        id: sophon-token
+      - name: Create a read-only Enterprise token
+        id: enterprise-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
@@ -88,7 +88,7 @@ jobs:
           repository: lancedb/sophon
           ref: ${{ inputs.sophon_ref || 'main' }}
           path: sophon
-          token: ${{ steps.sophon-token.outputs.token }}
+          token: ${{ steps.enterprise-token.outputs.token }}
           sparse-checkout: docs/web
           submodules: false
           persist-credentials: false
@@ -147,10 +147,10 @@ jobs:
         env:
           SOURCES: ${{ steps.assemble.outputs.sources }}
           LANCEDB_REF: ${{ inputs.lancedb_ref || 'main' }}
-          SOPHON_REF: ${{ inputs.sophon_ref || 'main' }}
+          ENTERPRISE_REF: ${{ inputs.sophon_ref || 'main' }}
         run: |
           python3 scripts/candidate.py record build/site --sources "$SOURCES" \
-            --ref "lancedb=$LANCEDB_REF" --ref "enterprise=$SOPHON_REF" \
+            --ref "lancedb=$LANCEDB_REF" --ref "enterprise=$ENTERPRISE_REF" \
             --output build/candidate.json --summary "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the candidate

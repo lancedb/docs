@@ -1,6 +1,6 @@
 """Tests for preparing saved editions from release records.
 
-Disposable repositories stand in for lancedb/lancedb, lancedb/sophon and this
+Disposable repositories stand in for LanceDB, Enterprise and this
 repository. Their versions are fixtures, not releases: OSS 0.94.0 to 0.99.0 and
 Enterprise 8.1.0 to 8.10.0, each built to exercise one case. The docs fixture
 uses this repository's own assemble.yaml and .gitignore, and every edition is
@@ -170,7 +170,7 @@ def enterprise_pages(label: str, bundled: str | None, **extra) -> dict:
 
 @pytest.fixture(scope="module")
 def sources(tmp_path_factory) -> dict:
-    """lancedb and sophon repositories with tagged fixture releases. Shared, so
+    """LanceDB and Enterprise repositories with tagged fixture releases. Shared, so
     tests only read them."""
     base = tmp_path_factory.mktemp("sources").resolve()
     lancedb = new_repo(base / "lancedb")
@@ -192,16 +192,16 @@ def sources(tmp_path_factory) -> dict:
     (lancedb / "docs/web").mkdir(parents=True)
     (lancedb / "docs/web/guide.mdx").write_text("Uncommitted text\n")
 
-    sophon = new_repo(base / "sophon")
+    enterprise_repo = new_repo(base / "enterprise_repo")
     e = {}
 
     def release(version: str, files: dict, qualified: str | None = "self") -> str:
-        commit = snapshot(sophon, files, version)
-        annotated(sophon, f"v{version}", commit)
+        commit = snapshot(enterprise_repo, files, version)
+        annotated(enterprise_repo, f"v{version}", commit)
         if qualified == "lightweight":
-            git(sophon, "tag", f"release-qualified/v{version}", commit)
+            git(enterprise_repo, "tag", f"release-qualified/v{version}", commit)
         elif qualified:
-            annotated(sophon, f"release-qualified/v{version}", commit if qualified == "self" else qualified)
+            annotated(enterprise_repo, f"release-qualified/v{version}", commit if qualified == "self" else qualified)
         e[version] = commit
         return commit
 
@@ -215,8 +215,8 @@ def sources(tmp_path_factory) -> dict:
     release("8.8.0", enterprise_pages("8.8", c["0.99.0"], **{"docs/web/enterprise/ci.md": Symlink("../../ci.md")}))
     release("8.9.0", enterprise_pages("8.9", "1" * 40))
     release("8.10.0", enterprise_pages("8.10", c["0.99.0"]), qualified="lightweight")
-    e["main"] = snapshot(sophon, enterprise_pages("unreleased main", c["main"]), "main moves on")
-    return {"lancedb": lancedb, "sophon": sophon, "oss": c, "enterprise": e}
+    e["main"] = snapshot(enterprise_repo, enterprise_pages("unreleased main", c["main"]), "main moves on")
+    return {"lancedb": lancedb, "enterprise_repo": enterprise_repo, "oss": c, "enterprise": e}
 
 
 @pytest.fixture
@@ -255,7 +255,7 @@ def on_main(docs: Path) -> str:
 def prepare(docs: Path, sources: dict, *argv: str, lancedb: Path | None = None) -> str:
     args = edition.parse([
         "prepare", *argv,
-        "--lancedb", str(lancedb or sources["lancedb"]), "--enterprise-repo", str(sources["sophon"]),
+        "--lancedb", str(lancedb or sources["lancedb"]), "--enterprise-repo", str(sources["enterprise_repo"]),
     ])
     return edition.prepare(args, repo=docs)
 
@@ -382,14 +382,14 @@ def test_enterprise_edition_reads_the_lancedb_it_bundles(docs, sources):
     assert not any(INTERNAL in data for data in files.values())
 
     rec = record(docs, "enterprise-8.1.0")
-    sophon = sources["sophon"]
+    enterprise_repo = sources["enterprise_repo"]
     assert rec["release"] == {
         "repository": "lancedb/sophon",
         "tag": "v8.1.0",
         "commit": sources["enterprise"]["8.1.0"],
         "qualification": {
             "tag": "release-qualified/v8.1.0",
-            "object": git(sophon, "rev-parse", "refs/tags/release-qualified/v8.1.0"),
+            "object": git(enterprise_repo, "rev-parse", "refs/tags/release-qualified/v8.1.0"),
         },
         "bundled_lancedb": bundled,
     }
@@ -403,7 +403,7 @@ def test_enterprise_edition_reads_the_lancedb_it_bundles(docs, sources):
         (["oss", "0.97.0", "--enterprise", "v8.1.0"], "has no docs/web"),
         (["oss", "0.96.0", "--enterprise", "v8.1.0"], "has no tag v0.96.0"),
         (["oss", "1.0.0-beta.1", "--enterprise", "v8.1.0"], "not a stable release version"),
-        (["oss", "0.98.0"], "name the lancedb/sophon tag or commit"),
+        (["oss", "0.98.0"], "name the Enterprise tag or commit"),
         (["oss", "0.98.0", "--enterprise", "main"], "not a branch"),
         (["oss", "0.98.0", "--enterprise", "v8.1.0", "--bundled-lancedb", "1" * 40], "Enterprise releases only"),
         (["oss", "0.95.0", "--enterprise", "v8.1.0"], ".gitignore would leave out"),
@@ -415,7 +415,7 @@ def test_enterprise_edition_reads_the_lancedb_it_bundles(docs, sources):
         (["enterprise", "8.10.0"], "release-qualified/v8.10.0 is not an annotated tag"),
         (["enterprise", "8.5.0"], "has no docs/web"),
         (["enterprise", "8.6.0"], "records no bundled LanceDB"),
-        (["enterprise", "8.1.0", "--bundled-lancedb", "1" * 40], "disagrees with lancedb/sophon v8.1.0"),
+        (["enterprise", "8.1.0", "--bundled-lancedb", "1" * 40], "disagrees with Enterprise v8.1.0"),
         (["enterprise", "8.9.0"], "fetch it first"),
         (["enterprise", "8.7.0"], r"\.notes\.mdx is hidden"),
         (["enterprise", "8.8.0"], "ci.md is a symlink"),
@@ -841,7 +841,7 @@ def test_command_prepares_from_main_and_checks_against_the_base(docs, sources):
             cwd=docs, env=environment(), capture_output=True, text=True,
         )
 
-    repos = ["--lancedb", str(sources["lancedb"]), "--enterprise-repo", str(sources["sophon"])]
+    repos = ["--lancedb", str(sources["lancedb"]), "--enterprise-repo", str(sources["enterprise_repo"])]
     result = run("prepare", "oss", "0.98.0", "--enterprise", "v8.1.0", *repos)
     assert result.returncode == 0, result.stderr
     assert record(docs, "oss-0.98.0")["sources"]["build"]["commit"] == main

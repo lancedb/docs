@@ -24,7 +24,7 @@ hf-sync:
 
 # Assemble the published tree from the roots declared in assemble.yaml into
 # build/site. Set LANCEDB_DOCS_ROOT and SOPHON_DOCS_ROOT when the lancedb and
-# sophon checkouts are not beside this one.
+# Enterprise checkouts are not beside this one.
 assemble:
 	@$(ASSEMBLE_RUN) $(ASSEMBLE_SCRIPT)
 

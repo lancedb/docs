@@ -3,7 +3,7 @@ Assemble the published documentation tree from one or more content roots.
 
 The site is not published straight from this repository. It is assembled here
 from the roots in `assemble.yaml` -- the open-source pages from
-`lancedb/lancedb`, the Enterprise pages from `sophon` as whole-page overlays, and
+`lancedb/lancedb`, the Enterprise pages as whole-page overlays, and
 this repository's `docs/`. CI checks each assembly and keeps it as a candidate;
 only the Publish workflow puts a chosen candidate on the `assembled` branch
 (see `candidate.py`).
@@ -416,7 +416,7 @@ def merge_nav(base: dict, fragment: dict) -> dict:
     sidebar order is what a reader navigates by, and dropping Governance below
     Support or Datasets past Use Cases silently reorders the whole site.
 
-    This is the same shape sophon's Enterprise fragment uses.
+    This is the same shape the Enterprise fragment uses.
     """
 
     def descend(node: dict | list, path: list[str]) -> list:

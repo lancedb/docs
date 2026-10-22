@@ -4,7 +4,7 @@ name: Prose style
 # annotations on the lines a pull request adds or changes and never fail the
 # job; an install, sync or configuration error still does. Reviewers decide
 # everything else. The rules job tests the shared package that lancedb/lancedb
-# and lancedb/sophon pin by release.
+# and the Enterprise documentation pin by release.
 
 on:
   pull_request:
