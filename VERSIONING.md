@@ -2,9 +2,10 @@
 
 Readers should be able to find the docs for the version of LanceDB they run.
 The docs are still written next to the code, in `lancedb/lancedb` and the
-Enterprise documentation repository. What's new is that each release's docs are
-saved when it ships, and the site lets readers switch between those saved
-versions.
+Enterprise documentation repository. Each release gets a saved edition that
+combines its product pages, the selected shared or Enterprise pages, and pages
+owned by this repository. These come from separately recorded commits. Readers
+can switch between editions on the site.
 
 Release records and saved editions are in place; see
 [Saved editions](README.md#saved-editions). Composing the site, publishing it
@@ -13,8 +14,8 @@ built and published as it is today.
 
 ## How it works
 
-Each release gets a saved edition: the site the assembler built from that
-release's sources, stored in `editions/oss/<version>/` or
+Each edition is the site the assembler built from those sources, stored in
+`editions/oss/<version>/` or
 `editions/enterprise/<version>/`. A record in `releases/` lists the commits it
 came from. An edition is built once. Later changes to `main` or to a product's
 docs don't reach it, so older versions keep the pages they shipped with.

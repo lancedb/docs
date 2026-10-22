@@ -250,9 +250,9 @@ uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterp
   hash, stops preparation if the release bundles a different one.
 - **OSS** reads lancedb's tag `v0.41.0`. The Enterprise pages come from the
   Enterprise tag or full commit hash named with `--enterprise`; a branch name
-  is not accepted, so the record pins an exact commit. Pinning a commit does
-  not decide that it may be published with that OSS release, which is not
-  settled yet; see [Open questions](VERSIONING.md#open-questions).
+  is not accepted, so the record pins an exact commit. The named Enterprise
+  release supplies the Enterprise pages in that OSS edition; see
+  [What goes into an edition](VERSIONING.md#what-goes-into-an-edition).
 - The LanceDB and Enterprise roots are read from Git at their commits, never
   from a working tree, and only from `docs/web`.
 - Preparation fetches `main` from `origin` itself, and reads this
@@ -403,7 +403,9 @@ A saved edition can be corrected after review, at the same URL:
    whether each correction is right; the checksum shows only that the record
    describes the files.
 
-Preparing that release again later keeps the edition and its corrections.
+Preparing that release again later checks its release inputs and saved files,
+then keeps the edition and its corrections. It does not fetch docs main or
+require matching assembler scripts unless it is building a new edition.
 
 ## Code snippets
 

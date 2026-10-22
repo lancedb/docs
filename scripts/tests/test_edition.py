@@ -511,7 +511,7 @@ def test_docs_inputs_off_main_or_unlike_the_running_scripts_are_refused(docs, so
         prepare(docs, sources, *oss)
 
     git(docs, "remote", "set-url", "origin", str(docs.parent / "missing/lancedb-docs.git"))
-    with pytest.raises(edition.EditionError, match="could not fetch lancedb/docs main: git fetch .* failed"):
+    with pytest.raises(edition.EditionError, match="could not fetch lancedb/docs main; check network access and Git authentication"):
         prepare(docs, sources, *oss)
     git(docs, "remote", "remove", "origin")
     with pytest.raises(edition.EditionError, match="this checkout's origin is not set, not lancedb/docs"):
@@ -527,7 +527,7 @@ def test_only_the_lancedb_docs_urls_are_accepted_as_origin(docs, monkeypatch):
                 "https://github.com/LanceDB/docs.git", "git@github.com:lancedb/docs.git",
                 "ssh://git@github.com/lancedb/docs.git"):
         git(docs, "remote", "set-url", "origin", url)
-        with pytest.raises(edition.EditionError, match="could not fetch lancedb/docs main: .*not allowed"):
+        with pytest.raises(edition.EditionError, match="could not fetch lancedb/docs main; check network access and Git authentication"):
             edition.docs_main(docs)
     for url in ("https://github.com/someone/docs.git", "git@github.com:someone/docs.git",
                 "https://github.com/lancedb/docs-fork.git", "https://github.com/lancedb/docs.git.old",
@@ -535,8 +535,43 @@ def test_only_the_lancedb_docs_urls_are_accepted_as_origin(docs, monkeypatch):
                 "https://example.com/lancedb/docs.git", "file:///srv/lancedb/docs.git",
                 "/srv/git/lancedb-docs.git"):
         git(docs, "remote", "set-url", "origin", url)
-        with pytest.raises(edition.EditionError, match=f"this checkout's origin is {re.escape(url)}, not"):
+        with pytest.raises(edition.EditionError, match="this checkout's origin is not supported, not"):
             edition.docs_main(docs)
+
+
+
+@pytest.mark.parametrize("rewritten", [False, True])
+def test_rejected_remote_does_not_print_credentials(docs, monkeypatch, rewritten):
+    secret = "fixture-only-remote-password"
+    remote = f"https://user:{secret}@github.com/lancedb/docs.git"
+    monkeypatch.setattr(edition, "DOCS_URLS", LANCEDB_DOCS_URLS)
+    if rewritten:
+        git(docs, "remote", "set-url", "origin", "https://github.com/lancedb/docs.git")
+        git(docs, "config", f"url.{remote}.insteadOf", "https://github.com/lancedb/docs.git")
+    else:
+        git(docs, "remote", "set-url", "origin", remote)
+    with pytest.raises(edition.EditionError, match="origin is not supported") as caught:
+        edition.docs_main(docs)
+    assert secret not in str(caught.value)
+    assert remote not in str(caught.value)
+
+
+def test_fetch_failure_does_not_print_remote_diagnostics(docs, monkeypatch):
+    secret = "fixture-only-fetch-password"
+    run = subprocess.run
+
+    def fail_fetch(argv, **kwargs):
+        if argv[:4] == ["git", "-C", str(docs), "fetch"]:
+            return subprocess.CompletedProcess(argv, 128, b"", (
+                f"fatal: unable to access 'https://user:{secret}@example.com/docs.git': denied"
+            ).encode())
+        return run(argv, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", fail_fetch)
+    with pytest.raises(edition.EditionError, match="check network access and Git authentication") as caught:
+        edition.docs_main(docs)
+    assert secret not in str(caught.value)
+    assert "example.com" not in str(caught.value)
 
 
 def test_a_fork_origin_is_refused_before_anything_is_fetched_or_saved(docs, sources):
@@ -552,7 +587,7 @@ def test_a_fork_origin_is_refused_before_anything_is_fetched_or_saved(docs, sour
     assert not edition.is_ancestor(docs, fork_main, "upstream/main")
     refs = git(docs, "for-each-ref")
 
-    refused = rf"this checkout's origin is {re.escape(str(fork))}, not lancedb/docs; a fork's main"
+    refused = r"this checkout's origin is not supported, not lancedb/docs; a fork's main"
     with pytest.raises(edition.EditionError, match=refused):
         prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
     with pytest.raises(edition.EditionError, match=refused):
@@ -656,6 +691,33 @@ def test_conflicting_inputs_for_a_saved_release_stop(docs, sources, tmp_path):
         prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0", lancedb=retagged)
 
     assert state(docs) == before
+
+
+
+@pytest.mark.parametrize("scripts_state", ["uncommitted", "branch", "main"])
+def test_saved_edition_does_not_need_the_current_assembler(docs, sources, monkeypatch, scripts_state):
+    prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    correct(docs, "oss-0.98.0", "guide.mdx", "Corrected guide\n")
+    before = state(docs)
+    (docs / "scripts").mkdir()
+    (docs / "scripts/assemble.py").write_text("# a later assembler\n")
+    if scripts_state != "uncommitted":
+        commit_all(docs, "change assembler")
+        if scripts_state == "main":
+            on_main(docs)
+
+    def must_not_fetch(_repo):
+        pytest.fail("an existing edition must not fetch docs main")
+
+    monkeypatch.setattr(edition, "docs_main", must_not_fetch)
+    out = prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    assert "is corrected (1 correction); nothing changed" in out
+    assert state(docs) == before
+    (docs / "editions/oss/0.98.0/guide.mdx").write_text("Unrecorded edit\n")
+    with pytest.raises(edition.EditionError, match="has changed since its latest recorded correction"):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.1.0")
+    with pytest.raises(edition.EditionError, match="enterprise_pages recorded"):
+        prepare(docs, sources, "oss", "0.98.0", "--enterprise", "v8.2.0")
 
 
 def test_duplicate_preparation_changes_nothing_even_after_a_correction(docs, sources):

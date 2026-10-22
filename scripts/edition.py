@@ -196,15 +196,17 @@ def docs_main(repo: Path) -> str:
     others = [url for url in urls if not DOCS_URLS.fullmatch(url)]
     if not urls or others:
         raise EditionError(
-            f"this checkout's {DOCS_REMOTE} is {', '.join(others) if urls else 'not set'}, not "
+            f"this checkout's {DOCS_REMOTE} is {'not supported' if urls else 'not set'}, not "
             f"{SOURCES['build'][0]}; a fork's main can hold commits {SOURCES['build'][0]} never has, "
             "so prepare an edition in a clone of https://github.com/lancedb/docs.git, over HTTPS "
             "or SSH"
         )
     try:
         git(repo, "fetch", "--quiet", "--no-tags", DOCS_REMOTE, f"+refs/heads/main:{DOCS_MAIN}")
-    except EditionError as exc:
-        raise EditionError(f"could not fetch {SOURCES['build'][0]} main: {exc}") from None
+    except EditionError:
+        raise EditionError(
+            f"could not fetch {SOURCES['build'][0]} main; check network access and Git authentication"
+        ) from None
     return commit_of(repo, DOCS_MAIN, SOURCES["build"][0])
 
 
@@ -233,8 +235,7 @@ def docs_commit(repo: Path, ref: str | None) -> str:
     return commit
 
 
-def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
-    """The record a preparation would write, before anything is built."""
+def release_inputs(args: argparse.Namespace) -> dict:
     product, version = args.product, args.version
     if not VERSION_RE.fullmatch(version):
         raise EditionError(f"{version!r} is not a stable release version such as 1.2.3")
@@ -306,9 +307,14 @@ def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
         "sources": {
             "lancedb": source("lancedb", shared),
             "enterprise": source("enterprise", enterprise),
-            "build": source("build", docs_commit(repo, args.docs)),
         },
     }
+
+
+def resolve_release(args: argparse.Namespace, repo: Path) -> dict:
+    requested = release_inputs(args)
+    requested["sources"]["build"] = source("build", docs_commit(repo, args.docs))
+    return requested
 
 
 def identity(record: dict) -> dict:
@@ -634,12 +640,13 @@ def place(staging: Path, site: Path, record: str, repo: Path, edition: Path, pat
 
 
 def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
-    requested = resolve_release(args, repo)
+    requested = release_inputs(args)
     edition = repo / requested["edition"]
     path = record_path(repo, requested["product"], requested["version"])
     if os.path.lexists(edition) or os.path.lexists(path):
         return existing(repo, requested)
 
+    requested["sources"]["build"] = source("build", docs_commit(repo, args.docs))
     (repo / "build").mkdir(exist_ok=True)
     staging = Path(tempfile.mkdtemp(prefix="edition-", dir=repo / "build")).resolve()
     try:
