@@ -44,6 +44,10 @@ jobs:
             make check-editions BASE="$BASE_SHA"
           fi
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Compose
         id: compose
         run: |
@@ -56,11 +60,6 @@ jobs:
           uv run --no-project --with pyyaml scripts/compose.py --output build/candidate/site \
             | tee "$RUNNER_TEMP/compose.log"
           echo "sources=$(sed -n 's/^sources: //p' "$RUNNER_TEMP/compose.log")" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/setup-node@v4
-        if: steps.compose.outputs.sources
-        with:
-          node-version: 22
 
       - name: Install Mintlify CLI
         if: steps.compose.outputs.sources
