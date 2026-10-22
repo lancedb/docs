@@ -51,7 +51,6 @@ PRERELEASE_RE = re.compile(r"v(\d+\.\d+\.\d+)-[0-9A-Za-z.-]+")
 # so discovery starts the pull request checks on its branch itself.
 CHECKS = {"compose.yml": "Compose the versioned site", "assemble.yml": "Test the assembler"}
 BOT = ("github-actions[bot]", "41898282+github-actions[bot]@users.noreply.github.com")
-# The report's sections, in order.
 STATES = {
     "prepare": "To prepare",
     "resume": "Pushed, pull request not opened",
@@ -127,9 +126,6 @@ def plural(count: int, word: str) -> str:
     return f"{count} {word}{'' if count == 1 else 's'}"
 
 
-# configuration
-
-
 def load_config(path: Path) -> dict:
     where = path.name
     try:
@@ -169,9 +165,6 @@ def load_config(path: Path) -> dict:
     if not isinstance(holds, list) or not all(isinstance(h, str) and h.strip() for h in holds):
         raise DiscoveryError(f"{where}: holds lists one line of text for each hold")
     return {"products": settings, "holds": holds}
-
-
-# git
 
 
 def remote_tags(repo: Path, *patterns: str) -> dict[str, Tag]:
@@ -237,9 +230,6 @@ def remove_worktree(repo: Path, path: Path) -> None:
     subprocess.run(["git", "-C", str(repo), "worktree", "prune"], capture_output=True)
 
 
-# GitHub
-
-
 class GitHub:
     """GitHub's REST API through `gh`, which authenticates with GH_TOKEN. Only --open-prs writes."""
 
@@ -293,9 +283,6 @@ def unstarted(github: GitHub, commit: str) -> list[str]:
     return [workflow for workflow in CHECKS if not (
         github.get(f"repos/{DOCS}/actions/workflows/{workflow}/runs?head_sha={commit}&per_page=1") or {}
     ).get("total_count")]
-
-
-# releases
 
 
 def stable_and_prereleases(tags: dict[str, Tag], start: str) -> tuple[dict[str, Tag], int]:
@@ -385,9 +372,6 @@ def list_oss(tags: dict[str, Tag], start: str, github: GitHub) -> list[Finding]:
                 f"the GitHub release v{version} of {LANCEDB} is published and not a prerelease")
         found.append(finding)
     return found + summaries("oss", earlier, prereleases, start)
-
-
-# lancedb/docs main, branches and pull requests
 
 
 def read_main(path: Path, commit: str) -> Main:
@@ -504,9 +488,6 @@ def classify(finding: Finding, main: Main, github: GitHub, repo: Path, heads: di
             finding.state = "blocked"
             finding.reason = (f"{finding.branch} exists without a pull request, and does not hold the edition "
                               "of these release inputs; review or delete it")
-
-
-# preparation
 
 
 def enterprise_pages(main: Main, tags: dict[str, Tag]) -> tuple[str, str]:
@@ -657,9 +638,6 @@ def push(repo: Path, commit: str, branch: str) -> bool:
     raise DiscoveryError(f"could not push {branch}: {result.stderr.decode(errors='replace').strip()}")
 
 
-# pull requests
-
-
 def title(finding: Finding) -> str:
     return f"docs: save the {finding.name} edition"
 
@@ -748,9 +726,6 @@ def act(finding: Finding, main: Main, repo: Path, lancedb: Path, sophon: Path, g
     elif finding.state == "open" and (missing := unstarted(github, finding.pull["head"]["sha"])):
         start_checks(github, finding.branch, missing)
         finding.done = f"started {' and '.join(missing)}, which had not run on its head"
-
-
-# discovery
 
 
 def discover(repo: Path, lancedb: Path, sophon: Path, github: GitHub, config: Path | None = None,

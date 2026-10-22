@@ -272,8 +272,6 @@ class World:
             git(clone, "remote", "add", "origin", f"file://{upstream}")
             self.clones[name] = clone
 
-    # producers
-
     def lancedb_commit(self, label: str, docs: bool = True) -> str:
         """A commit no release tags, as an Enterprise release may bundle."""
         return commit(self.lancedb, oss_pages(label, docs), label)
@@ -300,8 +298,6 @@ class World:
         elif qualified:
             annotated(self.sophon, name, qualified)
         return target
-
-    # lancedb/docs
 
     def publish(self) -> str:
         git(self.docs, "push", "-q", "--force", "origin", "HEAD:refs/heads/main")
@@ -370,9 +366,6 @@ def saved_enterprise(world: World) -> str:
     return world.merge(1)
 
 
-# discovery starts only where configured
-
-
 def test_discovery_is_off_until_discover_yaml_names_where_it_starts(world):
     world.oss("0.98.0")
     world.enterprise("8.2.0", world.lancedb_commit("bundled"))
@@ -393,9 +386,6 @@ def test_releases_before_the_start_are_never_prepared(released):
     assert result.states() == {"Enterprise 8.2.0": "open"}
     assert "2 releases before 8.2.0 (8.0.5 to 8.1.0): discovery starts at 8.2.0, with no backfill" in result.report
     assert [p["head"] for p in released.github.opened()] == ["editions/enterprise-8.2.0"]
-
-
-# a dry run
 
 
 def test_a_dry_run_reports_each_releases_exact_inputs_and_writes_nothing(released):
@@ -422,7 +412,6 @@ def test_a_dry_run_reports_each_releases_exact_inputs_and_writes_nothing(release
     assert "Would prepare it on `editions/enterprise-8.2.0`" in result.report
     assert "sets the preferred Enterprise edition to 8.2.0 in compose.yaml" in result.report
     assert result.report.startswith("# Release discovery (dry run)")
-    # Nothing written to GitHub or any remote, and no worktree left behind.
     assert released.github.posts == []
     assert released.remotes() == remotes
     assert len(git(released.docs, "worktree", "list").splitlines()) == 1
@@ -446,9 +435,6 @@ def test_a_dry_run_can_try_a_configuration_that_is_not_committed(world, tmp_path
     assert result.states() == {"Enterprise 8.2.0": "prepare"}
     with pytest.raises(SystemExit):
         discover.parse(["--open-prs", "--config", str(trial)])
-
-
-# eligible releases
 
 
 def test_a_qualified_enterprise_release_is_prepared_with_the_lancedb_it_bundles(released):
@@ -522,9 +508,6 @@ def test_an_eligible_oss_release_takes_the_preferred_enterprise_editions_pages(r
     body = released.github.opened()[-1]["body"]
     assert "the GitHub release v0.98.0 of lancedb/lancedb is published and not a prerelease" in body
     assert f"Enterprise pages from `v8.2.0` at `{enterprise}`" in body
-
-
-# releases that are not eligible
 
 
 def test_unqualified_unpublished_and_prerelease_releases_are_not_prepared(released):
@@ -648,7 +631,6 @@ def test_absent_docs_ambiguous_pins_and_conflicting_qualification_stop_for_revie
     assert found.state == "blocked"
     assert error in found.reason
     assert discover.failed(result.findings)
-    # The other releases go ahead, and nothing is pushed for this one.
     assert result["Enterprise 8.2.0"].state == "open"
     assert "refs/heads/editions/enterprise-8.3.0" not in refs(released.origin)
     assert released.remotes()["docs"]["refs/heads/main"] == remotes["docs"]["refs/heads/main"]
@@ -688,9 +670,6 @@ def test_a_skipped_release_is_left_alone(released):
     assert result["Enterprise 8.3.0"].state == "skipped"
     assert "discover.yaml skips it: Published without documentation." in result.report
     assert not discover.failed(result.findings)
-
-
-# repeated discovery, saved editions and existing pull requests
 
 
 def test_repeated_discovery_reuses_the_open_pull_request_and_keeps_reviewers_commits(released):
@@ -923,9 +902,6 @@ def test_a_merged_pull_request_whose_record_main_lacks_stops_for_review(released
     assert "was merged, but main has no record of this release" in result.report
 
 
-# interrupted and concurrent runs
-
-
 def test_a_run_interrupted_after_pushing_opens_the_pull_request_next_time(released):
     released.github.failures["repos/lancedb/docs/pulls"] = 1
 
@@ -963,7 +939,6 @@ def test_a_check_that_did_not_start_is_started_next_time_on_its_own(released, wo
     assert found.state == "open" and found.failed
     assert found.done.startswith(f"opened pull request #1, then failed: could not start {workflow} (GitHub POST")
     assert found.done.endswith("the next run starts what has not run")
-    # The other check started anyway.
     assert released.github.dispatched() == [("compose.yml", branch), ("assemble.yml", branch)]
     head, posts = released.github.head(branch), len(released.github.posts)
 
@@ -1040,9 +1015,6 @@ def test_a_pull_request_opened_meanwhile_is_reused(released, monkeypatch):
     assert len(released.github.pull_requests) == 1
 
 
-# out-of-order and maintenance releases
-
-
 def test_out_of_order_and_maintenance_releases_never_change_the_preferred_edition(released):
     released.enterprise("8.4.0", released.bundled)
     released.configure(enterprise="8.4.0")
@@ -1068,9 +1040,6 @@ def test_out_of_order_and_maintenance_releases_never_change_the_preferred_editio
     bodies = {p["head"]: p["body"] for p in released.github.opened()}
     assert "Leaves the preferred Enterprise edition at 8.4.0, a newer release" in bodies["editions/enterprise-8.3.1"]
     assert "This release is newer: to make it the default, change `preferred`" in bodies["editions/enterprise-8.5.0"]
-
-
-# failures
 
 
 def test_a_failed_preparation_leaves_main_and_saved_editions_unchanged(released, monkeypatch):
@@ -1130,9 +1099,6 @@ def test_opening_pull_requests_needs_a_checkout_of_mains_newest_commit(released)
     assert released.remotes() == remotes and released.github.posts == []
 
 
-# configuration
-
-
 @pytest.mark.parametrize(
     "config, error",
     [
@@ -1162,9 +1128,6 @@ def test_the_committed_configuration_prepares_nothing():
 
     assert {name: options["from"] for name, options in config["products"].items()} == {"oss": None, "enterprise": None}
     assert config["products"]["oss"]["enterprise_pages"] is None
-
-
-# the workflows
 
 
 def workflow(name: str) -> dict:
