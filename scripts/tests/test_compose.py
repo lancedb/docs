@@ -79,6 +79,15 @@ def docs(tmp_path) -> Path:
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=repo, env=environment(), check=True)
     shutil.copy(SCRIPTS.parent / ".gitignore", repo / ".gitignore")
     configure(repo)
+    shared = repo / "site"
+    (shared / "static").mkdir(parents=True)
+    (shared / "settings.json").write_text(json.dumps({
+        "name": "LanceDB", "favicon": "/static/favicon.svg",
+        "banner": {"content": "Shared announcement"},
+        "integrations": {"ga4": {"measurementId": "G-SHARED"}},
+    }))
+    (shared / "static/favicon.svg").write_text("<svg>shared</svg>\n")
+    (shared / "static/style.css").write_text("/* shared style */\n")
     return repo
 
 
@@ -239,16 +248,93 @@ def test_each_edition_keeps_its_pages_assets_navigation_and_about_page_under_its
     assert "the Enterprise documentation of LanceDB Enterprise 8.2.0" in oss
 
 
-def test_site_wide_styles_scripts_and_branding_come_from_the_default_edition_once(docs, tmp_path):
+def test_switching_preferred_editions_does_not_change_shared_settings_or_assets(docs, tmp_path):
     standard(docs)
+    before = tree(docs / "editions")
     site = composed(docs, tmp_path)
 
     # Mintlify loads every stylesheet on every page, so editions cannot each have one.
     assert sorted(p.relative_to(site).as_posix() for p in site.rglob("*.css")) == ["static/style.css"]
-    assert (site / "static/style.css").read_text() == "/* enterprise 8.2.0 */\n"
-    assert (site / "static/favicon.svg").is_file()
+    assert (site / "static/style.css").read_text() == "/* shared style */\n"
+    assert (site / "static/favicon.svg").read_text() == "<svg>shared</svg>\n"
     config = site_json(site)
     assert (config["name"], config["favicon"]) == ("LanceDB", "/static/favicon.svg")
+    configure(docs, enterprise="8.1.0", oss="0.99.0")
+    second = composed(docs, tmp_path, "second")
+    shared = lambda config: {k: v for k, v in config.items() if k not in ("navigation", "redirects")}
+    assert shared(site_json(second)) == shared(config)
+    assert tree(second / "static") == tree(site / "static")
+    assert tree(docs / "editions") == before
+    assert next(r for r in site_json(second)["redirects"] if r["source"] == "/guide")["destination"] == "/enterprise/v8-1-0/guide"
+
+
+def test_shared_settings_can_change_without_a_release_or_correction(docs, tmp_path):
+    standard(docs)
+    before = tree(docs / "editions"), tree(docs / "releases")
+    first = composed(docs, tmp_path)
+    path = docs / "site/settings.json"
+    settings = json.loads(path.read_text())
+    settings["banner"]["content"] = "New announcement"
+    path.write_text(json.dumps(settings))
+    (docs / "site/static/style.css").write_text("/* new shared style */\n")
+    second = composed(docs, tmp_path, "second")
+    assert site_json(second)["banner"]["content"] == "New announcement"
+    assert (second / "static/style.css").read_text() == "/* new shared style */\n"
+    assert tree(first / "enterprise") == tree(second / "enterprise")
+    save(docs, "enterprise", "8.3.0")
+    configure(docs, enterprise="8.3.0", oss="0.99.0")
+    third = composed(docs, tmp_path, "third")
+    assert site_json(third)["banner"] == site_json(second)["banner"]
+    assert tree(third / "static") == tree(second / "static")
+    for root, saved in zip((docs / "editions", docs / "releases"), before):
+        assert {p: tree(root)[p] for p in saved} == saved
+
+
+def test_shared_stylesheet_dependencies_keep_their_root_and_relative_paths(docs, tmp_path):
+    standard(docs)
+    css = '.hero { background: url("/static/hero.svg"); }\n@font-face { src: url("font.woff2"); }\n'
+    (docs / "site/static/style.css").write_text(css)
+    (docs / "site/static/hero.svg").write_text("<svg>hero</svg>")
+    (docs / "site/static/font.woff2").write_bytes(b"font fixture")
+    site = composed(docs, tmp_path)
+    assert tree(site / "static") == tree(docs / "site/static")
+    assert (site / "static/style.css").read_text() == css
+
+
+@pytest.mark.parametrize("key", ["navigation", "redirects"])
+def test_shared_settings_cannot_override_generated_routing(docs, tmp_path, key):
+    standard(docs)
+    path = docs / "site/settings.json"
+    path.write_text(json.dumps({"name": "LanceDB", key: []}))
+    with pytest.raises(compose.ComposeError, match="cannot set navigation or redirects"):
+        composed(docs, tmp_path)
+    assert not (tmp_path / "site").exists()
+
+
+@pytest.mark.parametrize("path", ["private.txt", "static/page.mdx"])
+def test_shared_files_cannot_add_unversioned_pages_or_other_root_files(docs, tmp_path, path):
+    standard(docs)
+    (docs / "site" / path).write_text("not an asset")
+    with pytest.raises(compose.ComposeError, match="shared assets belong in static/"):
+        composed(docs, tmp_path)
+
+
+def test_shared_assets_cannot_replace_a_different_example_download(docs, tmp_path):
+    files = edition_files("8.1.0")
+    files["guide.mdx"] += '\n```sh\ncurl https://docs.lancedb.com/static/favicon.svg\n```\n'
+    save(docs, "enterprise", "8.1.0", files)
+    configure(docs, enterprise="8.1.0")
+    with pytest.raises(compose.ComposeError, match="unversioned path must be the same"):
+        composed(docs, tmp_path)
+    (docs / "site/static/favicon.svg").write_text(files["static/favicon.svg"])
+    assert (composed(docs, tmp_path) / "static/favicon.svg").read_text() == files["static/favicon.svg"]
+
+
+def test_shared_assets_refuse_symlinks(docs, tmp_path):
+    standard(docs)
+    (docs / "site/static/link").symlink_to(docs / "editions")
+    with pytest.raises(candidate.CandidateError, match="symlink"):
+        composed(docs, tmp_path)
 
 
 # links
@@ -584,12 +670,14 @@ def test_the_command_reports_unversioned_paths_it_leaves_without_a_redirect(docs
     ) in out
 
 
-def test_composing_never_writes_over_the_saved_editions(docs, tmp_path):
+@pytest.mark.parametrize("path", ["editions", "site", "site/static"])
+def test_composing_never_writes_over_the_saved_editions_or_shared_inputs(docs, tmp_path, path):
     standard(docs)
 
     with pytest.raises(compose.ComposeError, match=r"overlaps"):
-        compose.compose(docs, docs / "editions")
+        compose.compose(docs, docs / path)
     assert (docs / "editions/enterprise/8.1.0/guide.mdx").is_file()
+    assert (docs / "site/settings.json").is_file()
 
 
 @pytest.mark.parametrize("value", ['"/enterprise/security"', "{'/enterprise/security'}", '{`/enterprise/security`}'])

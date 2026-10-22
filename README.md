@@ -474,10 +474,30 @@ edition whose code downloads it must hold the same file, so a newer release
 cannot change it beneath an older example. If they differ, composition stops:
 give the newer example its own URL in its source.
 
-Mintlify loads every stylesheet and script on every page, so the site takes
-them from its default edition, with the branding and other settings of that
-edition's `docs.json`. Older editions keep their content but take on the
-current look.
+Site-wide settings live in `site/settings.json`: the theme, banner, logos,
+navbar, footer and integrations. Edit that file to change the shared site
+without creating a release or correcting an edition. `compose.yaml` still
+chooses the preferred editions; changing that choice does not change these
+settings.
+
+Keep shared logos, fonts, stylesheets, scripts and their dependencies under
+`site/static/`. Composition copies that whole folder to `/static/` unchanged,
+so local stylesheet paths keep working. For example, `site/static/style.css`
+can use `url("/static/hero.svg")` when the image is saved at
+`site/static/hero.svg`. Anything in this folder is public. Pages do not belong
+there, and symbolic links are refused.
+
+Mintlify loads every stylesheet and script on every page, so the composer
+uses only the copies in `site/static/`, not those saved in editions. Saved
+editions still supply their pages, page assets and version navigation.
+`navigation` and `redirects` cannot be set in `site/settings.json`; composition
+generates them. A shared asset cannot replace a different file used by an
+edition's unversioned example download. The composed candidate records the
+docs commit containing these settings and assets, so promotion and rollback
+reuse the exact shared files too.
+
+These settings apply to the versioned site. The existing unversioned Assemble
+workflow continues to take its settings from the product source.
 
 Each edition's redirects stay within it. Every unversioned path that some
 edition publishes, as a page or a redirect, redirects to the same page in the

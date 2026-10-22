@@ -41,13 +41,14 @@ import edition  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG = "compose.yaml"
+SITE = "site"
+SETTINGS = "settings.json"
 OUTPUT = REPO_ROOT / "build" / "versioned"
 NAV = assemble.NAV_BASE
 IGNORE = ".mintignore"
 ABOUT = "about-this-version"
 PAGE_SUFFIXES = assemble.PAGE_SUFFIXES
-# Mintlify loads every stylesheet and script on every page, so the site takes
-# these from its default edition only.
+# Mintlify loads these on every page; only site/ supplies them.
 SITE_WIDE = (".css", ".js")
 # Mint ignores these beside .mintignore (DEFAULT_MINT_IGNORES, Mint 4.2.888).
 MINT_IGNORES = (
@@ -313,7 +314,6 @@ class Edition:
     paths: set[str]
     assets: set[str]
     redirects: list[Redirect]
-    site_wide: list[str]
 
     @property
     def name(self) -> str:
@@ -373,9 +373,8 @@ def read_edition(repo: Path, record: dict, host: str) -> Edition:
     folders = {"/".join(r.split("/")[:depth]) for r in routes for depth in range(2, r.count("/") + 1)}
     assets = {f"/{p}" for p in published if p in files and p not in pages}
     redirects = [redirect(item, f"{rel}/{NAV}", host) for item in docs.get("redirects") or []]
-    site_wide = [p for p in kept if p.endswith(SITE_WIDE) and p in published]
     return Edition(record, prefix, docs, ignore, files, pages, routes, routes | stems | folders | assets,
-                   assets, redirects, site_wide)
+                   assets, redirects)
 
 
 # pages
@@ -858,13 +857,36 @@ def check_redirects(redirects: list[dict], legacy: list[dict], routes: set[str],
 
 def check_output(repo: Path, output: Path) -> None:
     """Refuse an output whose clearing would delete the editions or their sources."""
-    for name in ("editions", "releases", "docs", "scripts"):
+    for name in ("editions", "releases", "docs", "scripts", SITE):
         kept = (repo / name).resolve()
         if output == kept or kept.is_relative_to(output) or output.is_relative_to(kept):
             raise ComposeError(f"the output {output} overlaps {kept}; composing would delete it")
 
 
 # compose
+
+
+def shared_site(repo: Path) -> tuple[dict, dict[str, tuple[str, Path, str]]]:
+    root = repo / SITE
+    if root.is_symlink():
+        raise ComposeError(f"{SITE} is a symlink")
+    hashes = candidate.file_hashes(root)
+    try:
+        settings = json.loads((root / SETTINGS).read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ComposeError(f"{SITE}/{SETTINGS}: unreadable: {exc}") from None
+    if not isinstance(settings, dict) or not isinstance(settings.get("name"), str):
+        raise ComposeError(f"{SITE}/{SETTINGS} must be an object with the site's name")
+    if set(settings) & {"navigation", "redirects"}:
+        raise ComposeError(f"{SITE}/{SETTINGS} cannot set navigation or redirects; composition generates them")
+    assets = {}
+    for rel, digest in hashes.items():
+        if rel == SETTINGS:
+            continue
+        if not rel.startswith("static/") or rel.endswith(PAGE_SUFFIXES):
+            raise ComposeError(f"{SITE}/{rel}: shared assets belong in static/ and cannot be pages")
+        assets[rel] = digest, root / rel, f"shared asset {SITE}/{rel}"
+    return settings, assets
 
 
 def load_config(path: Path) -> dict:
@@ -933,7 +955,7 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
     problems, warnings = [], []
     files: dict[str, bytes | Path] = {}
     # Files at the site's root: path -> (SHA-256, source, why).
-    root: dict[str, tuple[str, Path, str]] = {}
+    settings, root = shared_site(repo)
     downloads: dict[str, list[str]] = {}
 
     def at_root(rel: str, ed: Edition, why: str) -> None:
@@ -1000,21 +1022,6 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
                 "versions": versions,
             })
 
-    for rel in default.site_wide:
-        at_root(rel, default, "site-wide file")
-    settings = {key: value for key, value in default.docs.items() if key not in ("navigation", "redirects")}
-
-    def chrome(value) -> None:
-        if isinstance(value, dict):
-            for item in value.values():
-                chrome(item)
-        elif isinstance(value, list):
-            for item in value:
-                chrome(item)
-        elif isinstance(value, str) and value.startswith("/") and f"/{value.lstrip('/')}" in default.assets:
-            at_root(value.lstrip("/"), default, "site setting")
-
-    chrome(settings)
     legacy, unresolved = legacy_redirects(editions, default)
     redirects += legacy
     composed_routes = {versioned(e.prefix, r) for e in editions for r in e.routes}
@@ -1026,13 +1033,7 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
         shown_problems = problems[:50] + ([f"... and {len(problems) - 50} more"] if len(problems) > 50 else [])
         raise ComposeError("the editions cannot be composed:\n  " + "\n  ".join(shown_problems))
 
-    site = {}
-    for key, value in default.docs.items():
-        if key == "navigation":
-            site[key] = {"products": navigation}
-        elif key != "redirects":
-            site[key] = value
-    site["redirects"] = redirects
+    site = {**settings, "navigation": {"products": navigation}, "redirects": redirects}
     if output.exists():
         shutil.rmtree(output)
     output.mkdir(parents=True)
