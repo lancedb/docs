@@ -93,7 +93,6 @@ class Finding:
     notes: list[str] = field(default_factory=list)
     done: str | None = None
     failed: bool = False
-    # Counted rather than named while it waits: nothing public names it yet.
     unpublished: bool = False
 
     @property
