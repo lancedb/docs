@@ -5,11 +5,11 @@ selectors.
 Each edition in editions/<product>/<version>/ is published as it was saved,
 under /<product>/v<major>-<minor>-<patch>/: its pages, assets, navigation,
 redirects and drafts, and an "About this version" page made from its release
-record. Links in its pages are pointed into the edition; code is left as
-written. compose.yaml orders the products and names each one's preferred
-edition. Readers land on the first product's preferred edition, and
-unversioned URLs redirect to its matching pages. Nothing is rebuilt from
-product sources. See "Composing the site" in README.md.
+record. Links in its pages, snippets and navigation are pointed into the
+edition; code is left as written. compose.yaml orders the products and names
+each one's preferred edition. Readers land on the first product's preferred
+edition, and unversioned URLs redirect to its matching pages. Nothing is
+rebuilt from product sources. See "Composing the site" in README.md.
 
 Usage:
 
@@ -74,6 +74,8 @@ TAG_START_RE = re.compile(r"<[A-Za-z][\w.-]*(?=\s|/?>)")
 ANY_ATTRIBUTE_RE = re.compile(r"""[\w:-]+[ \t]*=[ \t]*\{?[ \t]*(["'`])[^"'`\n]*\1""")
 LINK_TEXT_RE = re.compile(r"\[[^\]\n]*\]")
 IMPORT_RE = re.compile(r"""([ \t]*(?:import\b[^'"\n]*?\bfrom|\}[ \t]*from)[ \t]*)(["'])(/[^'"\n]+)\2""")
+# A snippet's exported string: code that pages show, such as a generated example.
+CONSTANT_RE = re.compile(r"""[ \t]*export[ \t]+(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(["'`])""")
 FRONTMATTER_RE = re.compile(
     rf"""((?:{'|'.join(map(re.escape, FRONTMATTER_LINKS))})[ \t]*:[ \t]*)(["']?)([^"'\s]+)\2([ \t]*)"""
 )
@@ -397,20 +399,20 @@ def plain(text: str) -> str:
 
 
 class Linker:
-    """Points the links in one edition's pages into the edition."""
+    """Points the links in one edition's pages, snippets and navigation into the edition."""
 
     def __init__(self, ed: Edition, host: str, problems: list[str], warnings: list[str]):
         self.ed, self.host = ed, host
         self.problems, self.warnings = problems, warnings
         # Where code uses a URL on this site, and the URL's path.
         self.code_urls: list[tuple[str, str]] = []
-        self.page, self.line, self.quiet = "", 0, False
+        self.page, self.line, self.quiet, self.snippet = "", 0, False, False
         self.site_url = re.compile(
             rf"(?i)(?<![\w.-])https?://{re.escape(host)}(?![\w.-])([^\s\"'`<>()\[\]{{}}|\\]*)"
         )
 
     def where(self) -> str:
-        return f"{self.ed.record['edition']}/{self.page}:{self.line}"
+        return f"{self.ed.record['edition']}/{self.page}" + (f":{self.line}" if self.line else "")
 
     def fail(self, message: str) -> None:
         if not self.quiet:
@@ -433,6 +435,13 @@ class Linker:
             return raw
         try:
             if not absolute and not target.startswith("/"):
+                if self.snippet:
+                    # Relative to each page that imports the snippet, wherever that page is.
+                    if ".." in (urllib.parse.unquote(s) for s in parts.path.split("/")):
+                        raise ComposeError(f"{target} climbs out of the folder of each page that imports this "
+                                           "snippet; link from the root instead, such as /guide")
+                    safe_path(parts.path)
+                    return raw
                 try:
                     resolved = safe_path(posixpath.join(posixpath.dirname(self.page), parts.path))
                 except ComposeError as exc:
@@ -473,12 +482,16 @@ class Linker:
             path = re.split(r"[?#]", found[1])[0].rstrip(".,;:!")
             self.code_urls.append((self.where(), normal(path or "/")))
 
-    def snippet(self, rel: str, text: str) -> None:
-        """A snippet module is code that pages import: note its URLs, keep its text."""
-        self.page, self.quiet = rel, False
-        for number, line in enumerate(text.splitlines(), 1):
-            self.line = number
-            self.code(line)
+    def constant(self, line: str, found: re.Match) -> None:
+        """A snippet's exported string is code that pages show: note its URLs, keep it as written."""
+        quote, i = found[2], found.end()
+        while i < len(line) and line[i] not in (quote, "\n"):
+            i += 2 if line[i] == "\\" else 1
+        closed = i < len(line) and line[i] == quote
+        if not closed or (quote == "`" and "${" in line[found.end():i]) or line[i + 1:].strip() not in ("", ";"):
+            self.fail(f"{found[1]} must be one string on one line, without interpolation: composition keeps a "
+                      "snippet's strings as written, and cannot tell code from links in other forms")
+        self.code(line)
 
     def attribute(self, line: str, match: re.Match) -> tuple[str, int]:
         start = match.end()
@@ -652,9 +665,14 @@ class Linker:
             return line
         return found[1] + found[2] + self.point(found[3]) + found[2] + found[4] + line[len(body):]
 
-    def rewrite(self, rel: str, text: str, published: bool) -> str:
-        """One page, its links pointed into this edition; a draft's problems are not reported."""
-        self.page, self.quiet, self.in_tag = rel, not published, False
+    def rewrite(self, rel: str, text: str, published: bool, snippet: bool = False) -> str:
+        """One page, its links pointed into this edition; a draft's problems are not reported.
+
+        A snippet module is rewritten as a page is, except for its exported
+        strings, which are code, and its relative links, which are relative to
+        each page that imports it.
+        """
+        self.page, self.quiet, self.in_tag, self.snippet = rel, not published, False, snippet
         lines = text.splitlines(keepends=True)
         out, start = [], 0
         if text.startswith("---\n"):
@@ -684,6 +702,10 @@ class Linker:
                 fence = opening[1]
                 out.append(line)
                 continue
+            if snippet and not comment and not self.in_tag and (constant := CONSTANT_RE.match(line)):
+                self.constant(line, constant)
+                out.append(line)
+                continue
             line, comment = self.prose_line(line, comment)
             out.append(line)
         return "".join(out)
@@ -692,18 +714,19 @@ class Linker:
 # navigation and the About page
 
 
-def prefixed_nav(node, prefix: str, key: str | None = None):
+def prefixed_nav(node, prefix: str, linker: Linker, key: str | None = None):
     if isinstance(node, dict):
         if "openapi" in node or "asyncapi" in node:
             raise ComposeError("its navigation generates API pages, which cannot be composed under a version")
-        return {k: prefixed_nav(v, prefix, k) for k, v in node.items()}
+        return {k: prefixed_nav(v, prefix, linker, k) for k, v in node.items()}
     if isinstance(node, list):
-        return [prefixed_nav(item, prefix, key) for item in node]
+        return [prefixed_nav(item, prefix, linker, key) for item in node]
     if isinstance(node, str):
         if key in ("pages", "root") and not SCHEME_RE.match(node):
             return f"{prefix}/{node.lstrip('/')}"
-        if key in ("href", "icon") and node.startswith("/") and not node.startswith("//"):
-            return versioned(prefix, node)
+        # Links as in pages; an icon that is neither a path nor a URL names an icon.
+        if key == "href" or (key == "icon" and (node.startswith("/") or SCHEME_RE.match(node))):
+            return linker.point(node)
     return node
 
 
@@ -719,14 +742,15 @@ def first_pages(node) -> list | None:
     return None
 
 
-def version_navigation(ed: Edition) -> dict:
+def version_navigation(ed: Edition, linker: Linker) -> dict:
     navigation = ed.docs["navigation"]
     nested = sorted(set(navigation) & {"products", "versions", "languages"})
     where = f"{ed.record['edition']}/{NAV}"
     if nested:
         raise ComposeError(f"{where}: navigation by {' and '.join(nested)} cannot be composed under a version")
+    linker.page, linker.line, linker.quiet, linker.snippet = NAV, 0, False, False
     try:
-        composed = prefixed_nav(copy.deepcopy(navigation), ed.prefix)
+        composed = prefixed_nav(copy.deepcopy(navigation), ed.prefix, linker)
     except ComposeError as exc:
         raise ComposeError(f"{where}: {exc}") from None
     pages = first_pages(composed)
@@ -976,9 +1000,12 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
                 if rel in ed.pages:
                     text = source.read_text(encoding="utf-8")
                     files[f"{ed.prefix}/{rel}"] = linker.rewrite(rel, text, ed.pages[rel]).encode("utf-8")
+                elif rel.startswith("snippets/") and rel.endswith(PAGE_SUFFIXES):
+                    text = source.read_text(encoding="utf-8")
+                    pointed = linker.rewrite(rel, text, f"/{rel}" in ed.assets, snippet=True)
+                    # A snippet with nothing to point is copied byte for byte.
+                    files[f"{ed.prefix}/{rel}"] = source if pointed == text else pointed.encode("utf-8")
                 else:
-                    if rel.startswith("snippets/") and rel.endswith(PAGE_SUFFIXES):
-                        linker.snippet(rel, source.read_text(encoding="utf-8"))
                     files[f"{ed.prefix}/{rel}"] = source
             if any(f"{ABOUT}{suffix}" in ed.files for suffix in PAGE_SUFFIXES):
                 problems.append(f"{ed.record['edition']} has its own {ABOUT} page")
@@ -1014,7 +1041,7 @@ def compose(repo: Path = REPO_ROOT, output: Path = OUTPUT) -> dict:
             version = {"version": ed.record["version"]}
             if ed is preferred[name]:
                 version.update(default=True, tag="Latest")
-            versions.append({**version, **version_navigation(ed)})
+            versions.append({**version, **version_navigation(ed, linker)})
         if versions:
             navigation.append({
                 "product": product["label"],
