@@ -63,8 +63,10 @@ Each product has a preferred edition, which readers get by default. New
 visitors land on the preferred Enterprise edition, and links without a version
 go to the same page there. Links that include a version stay in that version.
 
-The preferred edition only changes when someone updates it in a reviewed pull
-request. A new release, or a patch to an older release line, doesn't change it.
+The preferred edition is labelled Latest. Discovery proposes a newer version
+as the preferred edition in the same pull request that adds its docs. It takes
+effect when that pull request merges. A patch to an older release line leaves
+a newer preferred version alone.
 
 If an old link has no matching page in the default edition, it gets no
 redirect. Composition lists those links so someone can add the page or a

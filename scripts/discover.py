@@ -566,20 +566,23 @@ def preferred_note(main: Main, finding: Finding) -> tuple[bool, str]:
         return True, (f"sets the preferred {name} edition to {finding.version} in compose.yaml, since Compose "
                       f"needs one once {name} has an edition; review it")
     if key(finding.version) > key(current):
-        return False, (f"leaves the preferred {name} edition at {current}. This release is newer: to make it "
-                       "the default, change `preferred` in compose.yaml in this pull request")
+        return True, (f"sets the preferred {name} edition to {finding.version} in compose.yaml, "
+                      f"replacing {current} with this newer release; review it")
     return False, f"leaves the preferred {name} edition at {current}, a newer release"
 
 
 def set_preferred(path: Path, product: str, version: str) -> None:
-    """Set an unset `preferred` in compose.yaml, keeping its comments."""
+    """Set `preferred` in compose.yaml, keeping its comments."""
     lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     start = next((i for i, line in enumerate(lines) if line.strip() == f"- product: {product}"), len(lines))
     for i in range(start + 1, len(lines)):
         if lines[i].lstrip().startswith("- product:"):
             break
-        if lines[i].strip() == "preferred:":
-            lines[i] = lines[i].replace("preferred:", f"preferred: {version}", 1)
+        if lines[i].lstrip().startswith("preferred:"):
+            prefix, _, value = lines[i].partition(":")
+            _, marker, comment = value.partition("#")
+            suffix = f" #{comment}" if marker else ("\n" if lines[i].endswith("\n") else "")
+            lines[i] = f"{prefix}: {version}{suffix}"
             path.write_text("".join(lines), encoding="utf-8")
             break
     products = compose.load_config(path)["products"]

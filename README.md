@@ -480,11 +480,12 @@ For each release from `from` on, discovery looks at `main` and at the branch
   leaves it: discovery opens the pull request from it.
 - **None of these:** discovery prepares the edition with `edition.py prepare`
   on a branch from `main`, runs `edition.py check` against `main`, pushes the
-  branch and opens its pull request. For a product's first edition it also sets
-  `preferred` in `compose.yaml`, since composing needs one. It never changes a
-  preferred edition otherwise, so a maintenance or late release cannot replace a
-  newer one; the pull request says whether the release is newer than the
-  preferred edition, for its reviewers to decide.
+  branch and opens its pull request. It also updates `preferred` in
+  `compose.yaml` when this is the product's first edition or a version newer
+  than its current preference. Reviewers approve that choice with the edition.
+  A maintenance or late release older than the preferred version leaves it alone.
+  Existing pull requests are not rewritten; resolve conflicting preference
+  changes against current main before merging.
 
 Discovery creates a branch only if it does not exist yet, so two runs never
 open two pull requests or overwrite each other's work. It prepares a release
@@ -616,9 +617,10 @@ names each product's preferred edition. A product's versions are listed newest
 first, each under its version number, such as 1.10.0, and the preferred one is
 the default, tagged Latest. Readers land on the first product's preferred
 edition, the site's default edition. A preferred edition changes only when
-`compose.yaml` does, in a reviewed pull request; preparing a newer release, or
-a maintenance release of an older line, never changes it. A product with saved
-editions must name one.
+`compose.yaml` does, in a reviewed pull request. Discovery includes that change
+in a newer release's edition pull request; preparing an edition by hand does
+not update it. A maintenance release older than the preferred version leaves
+it alone. A product with saved editions must name one.
 
 Use explicit paths for internal documentation links, such as `/guide`, so they
 stay within the selected version. Code examples are preserved as written.
