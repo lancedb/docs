@@ -1,0 +1,71 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "appearance": {
+    "strict": false
+  },
+  "theme": "mint",
+  "name": "LanceDB",
+  "banner": {
+    "content": "[Why Multimodal Data Needs a Better Lakehouse? \u2014 Download the Research Study](https://lancedb.com/download/)",
+    "dismissible": true
+  },
+  "colors": {
+    "primary": "#FF6B35",
+    "light": "#FF8A5C",
+    "dark": "#E55A2B"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "styling": {
+    "codeblocks": {
+      "theme": {
+        "light": "vitesse-light",
+        "dark": "catppuccin-mocha"
+      }
+    }
+  },
+  "favicon": "/static/favicon.ico",
+  "logo": {
+    "light": "/static/assets/logo/dark-lancedb-logo.svg",
+    "dark": "/static/assets/logo/light-lancedb-logo.svg",
+    "href": "https://lancedb.com"
+  },
+  "background": {
+    "color": {
+      "light": "#FAF5F0",
+      "dark": "#000000"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "https://www.lancedb.com/contact"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/lancedb",
+      "linkedin": "https://www.linkedin.com/company/lancedb",
+      "x": "https://x.com/lancedb",
+      "discord": "https://discord.gg/AUEWnJ7Txb"
+    },
+    "links": [
+      {
+        "items": [
+          {
+            "label": "Cookie settings",
+            "href": "#cookie-settings"
+          }
+        ]
+      }
+    ]
+  },
+  "integrations": {
+    "ga4": {
+      "measurementId": "G-1TMC2PR69E"
+    }
+  }
+}

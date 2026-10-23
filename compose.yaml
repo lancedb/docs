@@ -1,0 +1,24 @@
+# How scripts/compose.py composes the saved editions into the versioned site.
+# See "Composing the site" in README.md.
+
+# Links to this host in a saved page are pointed into the page's own edition.
+host: docs.lancedb.com
+
+# Products in selector order. Readers land on the first product's preferred
+# edition, and unversioned URLs redirect to its matching pages.
+products:
+  - product: enterprise
+    label: Enterprise
+    name: LanceDB Enterprise
+    description: Multimodal lakehouse
+    icon: server
+    # The version readers get by default. It changes only here, in a reviewed
+    # pull request, never because another edition was prepared later. Leave it
+    # empty until the product has a saved edition.
+    preferred:
+  - product: oss
+    label: OSS
+    name: LanceDB OSS
+    description: Embedded library
+    icon: database
+    preferred:

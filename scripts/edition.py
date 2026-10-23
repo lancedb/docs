@@ -640,6 +640,8 @@ def place(staging: Path, site: Path, record: str, repo: Path, edition: Path, pat
 
 
 def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
+    import compose
+
     requested = release_inputs(args)
     edition = repo / requested["edition"]
     path = record_path(repo, requested["product"], requested["version"])
@@ -663,6 +665,7 @@ def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
         _count, warnings = assemble.assemble_site(config)
         for warning in warnings:
             print(f"warning: {warning}", file=sys.stderr)
+        compose.check_authoring(site)
 
         hashes = candidate.file_hashes(site)
         control = sorted(p for p in hashes if PurePosixPath(p).name in GIT_CONTROL)
@@ -681,7 +684,7 @@ def prepare(args: argparse.Namespace, repo: Path = REPO_ROOT) -> str:
             "corrections": [],
         }
         place(staging, site, HEADER + yaml.safe_dump(record, sort_keys=False), repo, edition, path)
-    except (assemble.AssembleError, candidate.CandidateError) as exc:
+    except (assemble.AssembleError, candidate.CandidateError, compose.ComposeError) as exc:
         raise EditionError(str(exc)) from None
     finally:
         shutil.rmtree(staging, ignore_errors=True)
