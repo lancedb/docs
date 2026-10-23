@@ -1,0 +1,614 @@
+---
+title: "Insert data"
+sidebarTitle: "Insert"
+description: "Append records, load file-backed data or batches, and verify ingestion."
+icon: plus
+---
+
+
+
+<Badge color="green">OSS</Badge> <Badge color="red">Enterprise</Badge> Append records through the SDKs in OSS and Enterprise. For large Enterprise writes, see [large upload settings](#bulk-ingests-into-a-remote-table).
+
+Use `add()` to append records to an existing table. It does not compare incoming
+keys with stored keys. Choose [merge insert](/ingestion/merge-insert) when the
+same record may arrive again and should update an existing row.
+
+## Append a first batch {#append}
+
+Install the Python SDK with `pip install lancedb`. This complete example starts
+with Alice, appends Bob and Charlie, and prints all three records.
+
+```python append_rows.py icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    table = db.create_table("users", [{"id": 1, "name": "Alice"}])
+    table.add([{"id": 2, "name": "Bob"}, {"id": 3, "name": "Charlie"}])
+    rows = sorted(table.search().to_list(), key=lambda row: row["id"])
+    print(rows)
+```
+
+The program uses temporary local storage. For a complete TypeScript or Rust
+example, see [Complete write workflow](#complete-example).
+Enterprise SQL offers [`INSERT`](/sql/dml/insert), including `INSERT ... SELECT`.
+
+## Prepare the input {#prepare}
+
+Match the table's schema, including required fields and vector dimensions.
+Supported input formats differ by SDK; see
+[Create a table](/ingestion/create-table). Inspect conversion errors before
+retrying, and verify the final row count and representative values.
+
+## Choose input for a large load {#large-datasets}
+
+Avoid building one large in-memory list when records already live in files
+or arrive as batches. Create a table with the intended schema, then append
+through the appropriate input path.
+
+<span id="bulk-ingestion-for-data-you-already-have"></span>
+### Read from files {#from-files-parquet-csv-etc}
+
+Python accepts a `pyarrow.dataset.Dataset`. This example writes a small Parquet
+file locally, creates an empty table with its schema, and appends the two records.
+For your own data, point the dataset reader at the input files instead.
+
+```python load_parquet.py icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    from pathlib import Path
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    data_path = str(Path(uri) / "input.parquet")
+    pq.write_table(pa.table({"id": [1, 2], "name": ["Alice", "Bob"]}), data_path)
+    import pyarrow.dataset as ds
+
+    dataset = ds.dataset(data_path, format="parquet")
+    table = db.create_table("my_table", schema=dataset.schema, mode="overwrite")
+    table.add(dataset)
+
+    print("Rows:", table.count_rows())
+```
+
+A file-backed source can be scanned without first loading the whole dataset
+into application memory. This Python input API is distinct from converting
+files to Arrow batches yourself in another language.
+
+<span id="iterator-ingestion-for-data-you-transform-on-the-fly"></span>
+### Produce batches during ingestion {#from-iterators-custom-batch-generation}
+
+Use batches when processing the input as it arrives. The Python example creates
+an empty table and appends ten records produced by a batch iterator.
+
+<CodeGroup>
+```python Python icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    import pyarrow as pa
+
+    schema = pa.schema(
+        [
+            pa.field("vector", pa.list_(pa.float32(), 4)),
+            pa.field("item", pa.utf8()),
+            pa.field("price", pa.float32()),
+        ]
+    )
+
+    def make_batches():
+        for i in range(5):
+            yield pa.RecordBatch.from_arrays(
+                [
+                    pa.array(
+                        [[3.1, 4.1, 5.1, 6.1], [5.9, 26.5, 4.7, 32.8]],
+                        pa.list_(pa.float32(), 4),
+                    ),
+                    pa.array(["foo", "bar"]),
+                    pa.array([10.0, 20.0]),
+                ],
+                ["vector", "item", "price"],
+            )
+
+    table = db.create_table("batched_table", schema=schema)
+    table.add(make_batches())
+
+    print("Rows:", table.count_rows())
+```
+```typescript TypeScript icon="square-js"
+const batchSchema = new arrow.Schema([
+  new arrow.Field(
+    "vector",
+    new arrow.FixedSizeList(
+      4,
+      new arrow.Field("item", new arrow.Float32(), true),
+    ),
+  ),
+  new arrow.Field("item", new arrow.Utf8()),
+  new arrow.Field("price", new arrow.Float32()),
+]);
+
+const tableForBatches = await db.createEmptyTable(
+  "batched_table",
+  batchSchema,
+  {
+    mode: "overwrite",
+  },
+);
+
+const rows = Array.from({ length: 10 }, (_, i) => ({
+  vector: [i + 0.1, i + 0.2, i + 0.3, i + 0.4],
+  item: `item-${i + 1}`,
+  price: (i + 1) * 10,
+}));
+
+const chunkSize = 2;
+for (let i = 0; i < rows.length; i += chunkSize) {
+  const batch = lancedb.makeArrowTable(rows.slice(i, i + chunkSize), {
+    schema: batchSchema,
+  });
+  await tableForBatches.add(batch);
+}
+```
+```rust Rust icon="rust"
+let batch_schema = Arc::new(Schema::new(vec![
+    Field::new(
+        "vector",
+        DataType::FixedSizeList(Arc::new(Field::new("item", DataType::Float32, true)), 4),
+        false,
+    ),
+    Field::new("item", DataType::Utf8, false),
+    Field::new("price", DataType::Float32, false),
+]));
+
+let batches = (0..5)
+    .map(|i| {
+        RecordBatch::try_new(
+            batch_schema.clone(),
+            vec![
+                Arc::new(
+                    FixedSizeListArray::from_iter_primitive::<Float32Type, _, _>(
+                        vec![
+                            Some(vec![Some(3.1 + i as f32), Some(4.1), Some(5.1), Some(6.1)]),
+                            Some(vec![
+                                Some(5.9),
+                                Some(26.5 + i as f32),
+                                Some(4.7),
+                                Some(32.8),
+                            ]),
+                        ],
+                        4,
+                    ),
+                ),
+                Arc::new(StringArray::from(vec![
+                    format!("item{}", i * 2 + 1),
+                    format!("item{}", i * 2 + 2),
+                ])),
+                Arc::new(Float32Array::from(vec![
+                    ((i * 2 + 1) * 10) as f32,
+                    ((i * 2 + 2) * 10) as f32,
+                ])),
+            ],
+        )
+        .unwrap()
+    })
+    .collect::<Vec<_>>();
+
+let batch_reader: Box<dyn RecordBatchReader + Send> =
+    Box::new(RecordBatchIterator::new(batches.into_iter().map(Ok), batch_schema.clone()));
+let batch_table = db
+    .create_table("batched_table", batch_reader)
+    .mode(CreateTableMode::Overwrite)
+    .execute()
+    .await
+    .unwrap();
+```
+</CodeGroup>
+
+The language APIs differ: the TypeScript example appends each constructed Arrow
+batch, while the Rust example supplies an Arrow reader when creating the table.
+These are input-format examples, not equivalent parallel-write benchmarks.
+
+### Control write parallelism {#write-parallelism}
+
+Python's `add()` can estimate parallelism for materialized inputs. A streaming
+reader may not expose its total size or support replay. Use `write_parallelism`
+when controlling the number of concurrent partitions; increasing it can also
+increase memory use. TypeScript does not expose that manual option.
+
+Measure with realistic row sizes and storage. Avoid one write per row when a
+batch will do, and avoid a large worker count for a small input.
+
+## Track completion and progress {#tracking-ingestion-progress}
+
+Python, TypeScript and Rust support progress callbacks when adding data.
+These examples start with Alice, append Bob and Charlie, and print the number
+of rows written as progress updates arrive. After the write succeeds, they
+query the table to show all three records.
+
+Each program uses a temporary local database and removes it when finished.
+
+- **Python:** install `lancedb`, save the code as `insert_progress.py`, and run
+  `python insert_progress.py`.
+- **TypeScript:** install `@lancedb/lancedb`, save the code as `insert_progress.mts`,
+  and run `node insert_progress.mts` with Node.js 22.18 or later.
+- **Rust:** download the [Rust examples](/static/code/ingestion-feedback-rust.zip),
+  extract the project, and run `cargo run --locked --bin progress`.
+
+<CodeGroup>
+```python Python icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+def report_progress(progress):
+    print(f"Rows written: {progress['output_rows']}")
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    table = db.create_table("users", [{"id": 1, "name": "Alice"}])
+    table.add(
+        [{"id": 2, "name": "Bob"}, {"id": 3, "name": "Charlie"}],
+        progress=report_progress,
+    )
+    rows = sorted(table.search().to_list(), key=lambda row: row["id"])
+    print("After insertion:", rows)
+```
+```typescript TypeScript icon="square-js"
+const lancedb = await import("@lancedb/lancedb");
+const { mkdtemp, rm } = await import("node:fs/promises");
+const { tmpdir } = await import("node:os");
+const { join } = await import("node:path");
+const uri = await mkdtemp(join(tmpdir(), "lancedb-ingestion-"));
+try {
+  const db = await lancedb.connect(uri);
+  const table = await db.createTable("users", [{ id: 1, name: "Alice" }]);
+  await table.add(
+    [
+      { id: 2, name: "Bob" },
+      { id: 3, name: "Charlie" },
+    ],
+    {
+      progress: (progress) =>
+        console.log(`Rows written: ${progress.outputRows}`),
+    },
+  );
+  const rows = (await table.query().toArray()).sort((a, b) => a.id - b.id);
+  console.log("After insertion:", rows);
+} finally {
+  await rm(uri, { recursive: true, force: true });
+}
+```
+```rust Rust icon="rust"
+use std::sync::Arc;
+
+use arrow_array::{Int64Array, RecordBatch, RecordBatchIterator, RecordBatchReader, StringArray};
+use arrow_schema::{DataType, Field, Schema};
+use futures::TryStreamExt;
+use lancedb::query::ExecutableQuery;
+
+fn make_users_reader(rows: &[(i64, &str)]) -> Box<dyn RecordBatchReader + Send> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.0))),
+            Arc::new(StringArray::from_iter_values(rows.iter().map(|r| r.1))),
+        ],
+    )
+    .unwrap();
+    Box::new(RecordBatchIterator::new(
+        vec![Ok(batch)].into_iter(),
+        schema,
+    ))
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempfile::tempdir()?;
+    let db = lancedb::connect(directory.path().to_str().unwrap())
+        .execute()
+        .await?;
+    let table = db
+        .create_table("users", make_users_reader(&[(1, "Alice")]))
+        .execute()
+        .await?;
+    table
+        .add(make_users_reader(&[(2, "Bob"), (3, "Charlie")]))
+        .progress(|progress| println!("Rows written: {}", progress.output_rows()))
+        .execute()
+        .await?;
+    let rows: Vec<RecordBatch> = table.query().execute().await?.try_collect().await?;
+    println!("After insertion: {rows:?}");
+    assert_eq!(table.count_rows(None).await?, 3);
+    assert_eq!(
+        table
+            .count_rows(Some("id = 1 AND name = 'Alice'".into()))
+            .await?,
+        1
+    );
+    assert_eq!(
+        table
+            .count_rows(Some("id = 2 AND name = 'Bob'".into()))
+            .await?,
+        1
+    );
+    assert_eq!(table.count_rows(Some("id = 3".into())).await?, 1);
+    Ok(())
+}
+```
+</CodeGroup>
+
+For a progress bar in Python, install `tqdm` and pass `progress=True` instead
+of a callback.
+
+### Read progress updates
+
+Updates include row and byte counts, elapsed time, and parallel write activity.
+The field names differ by language:
+
+| Meaning | Python dictionary key | TypeScript property | Rust method |
+|:--------|:----------------------|:--------------------|:------------|
+| Rows written so far | `output_rows` | `outputRows` | `output_rows()` |
+| Bytes written so far | `output_bytes` | `outputBytes` | `output_bytes()` |
+| Expected row count, when known | `total_rows` | `totalRows` | `total_rows()` |
+| Elapsed time | `elapsed_seconds` | `elapsedSeconds` | `elapsed()` |
+| Active write tasks | `active_tasks` | `activeTasks` | `active_tasks()` |
+| Total write tasks | `total_tasks` | `totalTasks` | `total_tasks()` |
+| Final update | `done` | `done` | `done()` |
+
+Python and TypeScript report elapsed time in seconds; Rust returns a `Duration`.
+The expected row count may be unknown for streaming input. On the final update,
+it falls back to the number of rows written.
+
+Keep callbacks short and use the write operation's result to determine success.
+The final `done` update means progress reporting has ended; it can also occur
+after a write fails or is cancelled. Input errors before writing starts may
+produce no updates.
+
+TypeScript delivers callbacks asynchronously. Slow callbacks can queue up,
+and the `add()` promise may resolve before every callback has run. Exceptions
+from a TypeScript callback are logged and do not abort the write.
+
+## Verify writes and handle retries {#performance}
+
+Wait for the write operation's result, then check the expected records.
+Progress callbacks describe activity; they do not establish that a write
+succeeded. If a request fails after the server may have committed it, blindly
+repeating an append can duplicate rows. The client's automatic retries can do
+the same: on a remote table, the Python and TypeScript 0.40.0 clients resend an
+append after a retryable status such as `504`, even when the server had already
+committed it, and `add()` still returns success. Reconcile using your record
+IDs, or choose an upsert policy designed for replay.
+
+## Configure large uploads {#bulk-ingests-into-a-remote-table}
+
+<Badge color="red">Enterprise</Badge>
+
+This section applies only to remote tables (`db://` connections). Embedded (local) writes are unaffected.
+
+When you write to a remote LanceDB Enterprise table, the client sends the write as one HTTP `insert` request unless it splits the data into more than one partition, which it does for a large input it can measure or when you set [`write_parallelism`](#write-parallelism). A partitioned write goes up as a multipart write: the client cuts each partition into one or more `insert` parts and uploads them under a single upload id. Each part is streamed. Its size and duration still affect resource use and
+timeouts: it has to finish within the client read timeout while the server writes it to object storage, so on very large ingests an oversized part can run past that timeout and surface as:
+
+```text
+lancedb.remote.errors.HttpError: operation timed out
+```
+
+Two environment variables control how a multipart write's parts are cut. Both are picked up automatically by the Python and TypeScript clients, for clients that support these settings:
+
+| Variable | Default | What it controls |
+|----------|---------|------------------|
+| `LANCE_CLIENT_MAX_BYTES_PER_REQUEST` | 8 GiB | Maximum size of a single insert part, in LZ4-compressed Arrow IPC bytes. Set to `0` to disable splitting and send one request per partition. |
+| `LANCE_CLIENT_MAX_REQUEST_DURATION` | Half the read timeout | Maximum wall-clock time, in whole seconds, that any one insert part may stay open. Set to `0` to disable the time-based cut. |
+
+A part is cut after the input batch that reaches either limit, so cuts fall between batches. Lower the byte budget, with smaller input batches, when large ingests hit the read timeout; lower the duration when uploads are slow or throttled and the byte budget isn't the limiting factor.
+
+```bash
+export LANCE_CLIENT_MAX_BYTES_PER_REQUEST=1073741824  # 1 GiB
+export LANCE_CLIENT_MAX_REQUEST_DURATION=120          # 2 minutes
+```
+
+Splitting into more parts does not change the final table. The server stages the parts under their shared upload ID before committing
+the write. This upload protocol is separate from repeating an application-level
+`add()` after a timeout.
+
+## Complete write workflow {#complete-example}
+
+<Accordion title="Complete examples: create, append, update, upsert and delete">
+
+Each program creates a temporary local database, performs the five operations,
+prints the result, and removes its temporary data when finished.
+
+- **Python:** install `lancedb`, save the code as `ingestion.py`, and run
+  `python ingestion.py`.
+- **TypeScript:** install `@lancedb/lancedb`, save the code as `ingestion.mts`,
+  and run `node ingestion.mts` with Node.js 22.18 or later.
+- **Rust:** download the [complete Rust project](/static/code/ingestion-rust.zip),
+  extract it, and run `cargo run --locked`. It includes `src/main.rs`, the Cargo
+  manifest and a lockfile for the example's dependencies. The code is shown below.
+
+<CodeGroup>
+```python ingestion.py icon="python"
+from tempfile import TemporaryDirectory
+
+import lancedb
+
+with TemporaryDirectory(prefix="lancedb-ingestion-") as uri:
+    db = lancedb.connect(uri)
+    table = db.create_table(
+        "users",
+        [
+            {"id": 1, "name": "Alice", "login_count": 10},
+            {"id": 2, "name": "Bob", "login_count": 20},
+        ],
+    )
+    table.add([{"id": 3, "name": "Charlie", "login_count": 5}])
+    table.update(where="id = 2", values={"name": "Bobby"})
+    table.update(where="id = 2", values_sql={"login_count": "login_count + 1"})
+    (
+        table.merge_insert("id")
+        .when_matched_update_all()
+        .when_not_matched_insert_all()
+        .execute(
+            [
+                {"id": 3, "name": "Charlie", "login_count": 6},
+                {"id": 4, "name": "Dana", "login_count": 1},
+            ]
+        )
+    )
+    print("Rows selected for deletion:", table.search().where("id = 4").to_list())
+    table.delete("id = 4")
+    rows = sorted(table.search().to_list(), key=lambda row: row["id"])
+    print(rows)
+```
+```typescript ingestion.mts icon="square-js"
+const lancedb = await import("@lancedb/lancedb");
+const { mkdtemp, rm } = await import("node:fs/promises");
+const { tmpdir } = await import("node:os");
+const { join } = await import("node:path");
+
+const uri = await mkdtemp(join(tmpdir(), "lancedb-ingestion-"));
+try {
+  const db = await lancedb.connect(uri);
+  const table = await db.createTable("users", [
+    { id: 1, name: "Alice", login_count: 10 },
+    { id: 2, name: "Bob", login_count: 20 },
+  ]);
+  await table.add([{ id: 3, name: "Charlie", login_count: 5 }]);
+  await table.update({ where: "id = 2", values: { name: "Bobby" } });
+  await table.update({
+    where: "id = 2",
+    valuesSql: { login_count: "login_count + 1" },
+  });
+  await table
+    .mergeInsert("id")
+    .whenMatchedUpdateAll()
+    .whenNotMatchedInsertAll()
+    .execute([
+      { id: 3, name: "Charlie", login_count: 6 },
+      { id: 4, name: "Dana", login_count: 1 },
+    ]);
+  console.log(
+    "Rows selected for deletion:",
+    await table.query().where("id = 4").toArray(),
+  );
+  await table.delete("id = 4");
+  const rows = (await table.query().toArray()).sort((a, b) => a.id - b.id);
+  console.log(rows);
+} finally {
+  await rm(uri, { recursive: true, force: true });
+}
+```
+```rust src/main.rs icon="rust"
+use std::sync::Arc;
+
+use arrow_array::{Int64Array, RecordBatch, RecordBatchIterator, RecordBatchReader, StringArray};
+use arrow_schema::{DataType, Field, Schema};
+use futures::TryStreamExt;
+use lancedb::query::{ExecutableQuery, QueryBase};
+
+fn make_users_reader(rows: &[(i64, &str, i64)]) -> Box<dyn RecordBatchReader + Send> {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("name", DataType::Utf8, false),
+        Field::new("login_count", DataType::Int64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.0))),
+            Arc::new(StringArray::from_iter_values(rows.iter().map(|r| r.1))),
+            Arc::new(Int64Array::from_iter_values(rows.iter().map(|r| r.2))),
+        ],
+    )
+    .unwrap();
+    Box::new(RecordBatchIterator::new(
+        vec![Ok(batch)].into_iter(),
+        schema,
+    ))
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = tempfile::tempdir()?;
+    let db = lancedb::connect(directory.path().to_str().unwrap())
+        .execute()
+        .await?;
+    let table = db
+        .create_table(
+            "users",
+            make_users_reader(&[(1, "Alice", 10), (2, "Bob", 20)]),
+        )
+        .execute()
+        .await?;
+    table
+        .add(make_users_reader(&[(3, "Charlie", 5)]))
+        .execute()
+        .await?;
+    table
+        .update()
+        .only_if("id = 2")
+        .column("name", "'Bobby'")
+        .execute()
+        .await?;
+    table
+        .update()
+        .only_if("id = 2")
+        .column("login_count", "login_count + 1")
+        .execute()
+        .await?;
+    let mut merge = table.merge_insert(&["id"]);
+    merge
+        .when_matched_update_all(None)
+        .when_not_matched_insert_all();
+    merge
+        .execute(make_users_reader(&[(3, "Charlie", 6), (4, "Dana", 1)]))
+        .await?;
+    let selected: Vec<RecordBatch> = table
+        .query()
+        .only_if("id = 4")
+        .execute()
+        .await?
+        .try_collect()
+        .await?;
+    println!("Rows selected for deletion: {selected:?}");
+    table.delete("id = 4").await?;
+    let rows: Vec<RecordBatch> = table.query().execute().await?.try_collect().await?;
+    println!("Remaining rows: {rows:?}");
+    assert_eq!(table.count_rows(None).await?, 3);
+    assert_eq!(
+        table
+            .count_rows(Some(
+                "id = 2 AND name = 'Bobby' AND login_count = 21".into()
+            ))
+            .await?,
+        1
+    );
+    assert_eq!(
+        table
+            .count_rows(Some("id = 3 AND login_count = 6".into()))
+            .await?,
+        1
+    );
+    Ok(())
+}
+```
+</CodeGroup>
+
+After the operations, Alice has 10 logins, Bobby has 21, and Charlie has 6.
+Dana is selected for deletion and is absent from the final result.
+
+</Accordion>

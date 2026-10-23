@@ -1,0 +1,50 @@
+---
+title: OpenAI
+sidebarTitle: OpenAI
+---
+
+
+LanceDB registers the OpenAI embeddings function in the registry by default, as `openai`. Below are the parameters that you can customize when creating the instances:
+
+| Parameter | Type | Default Value | Description |
+|---|---|---|---|
+| `name` | `str` | `"text-embedding-ada-002"` | The name of the model. |
+| `dim` | `int` |  Model default   | Requested output dimensions for models that support shortening embeddings. Use `func.ndims()` when defining the vector field. |
+| `use_azure` | bool | `False` | Set true to use Azure OpenAI SDK |
+
+Set your OpenAI API key before running the example:
+
+```shell
+export OPENAI_API_KEY="your-api-key"
+```
+
+<CodeGroup>
+  ```python Python icon="python"
+  import tempfile
+  from pathlib import Path
+
+  import lancedb
+  from lancedb.embeddings import get_registry
+  from lancedb.pydantic import LanceModel, Vector
+
+  db_path = Path(tempfile.mkdtemp()) / "openai-embeddings"
+  db = lancedb.connect(str(db_path))
+  func = get_registry().get("openai").create(name="text-embedding-ada-002")
+
+  class Words(LanceModel):
+      text: str = func.SourceField()
+      vector: Vector(func.ndims()) = func.VectorField()
+
+  table = db.create_table("words", schema=Words, mode="overwrite")
+  table.add(
+      [
+          {"text": "hello world"},
+          {"text": "goodbye world"},
+      ]
+  )
+
+  query = "greetings"
+  actual = table.search(query).limit(1).to_pydantic(Words)[0]
+  print(actual.text)
+  ```
+</CodeGroup>
