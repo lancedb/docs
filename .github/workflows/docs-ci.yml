@@ -1,6 +1,6 @@
 name: Docs Check
 
-# The site is assembled from lancedb/lancedb, lancedb/sophon and this
+# The site is assembled from LanceDB, Enterprise documentation and this
 # repository, so links are checked on the assembled tree. `docs/` alone is no
 # longer a site: checking it reported pages that live in the other roots as
 # missing. The Assemble workflow runs the same checks before it records a
@@ -39,8 +39,8 @@ jobs:
           sparse-checkout: docs/web
           persist-credentials: false
 
-      - name: Create a read-only Sophon token
-        id: sophon-token
+      - name: Create a read-only Enterprise token
+        id: enterprise-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
@@ -55,7 +55,7 @@ jobs:
           repository: lancedb/sophon
           ref: main
           path: sophon
-          token: ${{ steps.sophon-token.outputs.token }}
+          token: ${{ steps.enterprise-token.outputs.token }}
           sparse-checkout: docs/web
           submodules: false
           persist-credentials: false

@@ -3,7 +3,7 @@ Assemble the published documentation tree from one or more content roots.
 
 The site is not published straight from this repository. It is assembled here
 from the roots in `assemble.yaml` -- the open-source pages from
-`lancedb/lancedb`, the Enterprise pages from `sophon` as whole-page overlays, and
+`lancedb/lancedb`, the Enterprise pages as whole-page overlays, and
 this repository's `docs/`. CI checks each assembly and keeps it as a candidate;
 only the Publish workflow puts a chosen candidate on the `assembled` branch
 (see `candidate.py`).
@@ -416,7 +416,7 @@ def merge_nav(base: dict, fragment: dict) -> dict:
     sidebar order is what a reader navigates by, and dropping Governance below
     Support or Datasets past Use Cases silently reorders the whole site.
 
-    This is the same shape sophon's Enterprise fragment uses.
+    This is the same shape the Enterprise fragment uses.
     """
 
     def descend(node: dict | list, path: list[str]) -> list:
@@ -1016,6 +1016,17 @@ def emit(
     return written + 1
 
 
+def assemble_site(config: Config) -> tuple[int, list[str]]:
+    """Build live sites and saved editions identically; return file count and warnings."""
+    resolved = resolve(config)
+    docs_json, nav_raw = assemble_nav(resolved)
+    warnings = validate(config, resolved, docs_json)
+    merge(resolved)
+    inline_examples(resolved)
+    annotate(resolved, docs_json)
+    return emit(config, resolved, docs_json, nav_raw), warnings
+
+
 def revision(path: Path) -> str:
     """The commit a root was read from, so every build names its inputs.
 
@@ -1133,13 +1144,7 @@ def main() -> int:
             print(f"openapi spec {'updated from' if changed else 'already matches'} {tag}")
             return 0
 
-        resolved = resolve(config)
-        docs_json, nav_raw = assemble_nav(resolved)
-        warnings = validate(config, resolved, docs_json)
-        merge(resolved)
-        inline_examples(resolved)
-        annotate(resolved, docs_json)
-        count = emit(config, resolved, docs_json, nav_raw)
+        count, warnings = assemble_site(config)
     except AssembleError as exc:
         print(f"assemble: {exc}", file=sys.stderr)
         return 1

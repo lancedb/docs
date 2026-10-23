@@ -1,5 +1,5 @@
 name = "table-operations"
-description = "Audit the table operations docs against user-facing evidence from lancedb, docs snippets/tests, and sophon."
+description = "Audit the table operations docs against user-facing evidence from lancedb, docs snippets/tests, and Enterprise."
 docs_repo = "docs"
 rotation_unit = "page"
 keywords = [

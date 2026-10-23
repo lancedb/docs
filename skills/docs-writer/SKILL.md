@@ -146,7 +146,7 @@ Docs must reflect what the code actually does. Before writing or editing any cla
 
 Resolution order for a repo name the user mentions:
 
-1. Sibling checkout of `/Users/prrao/code/docs`: e.g., `../lancedb`, `../sophon`, `../geneva`. Check with `ls ../` first.
+1. Sibling checkout of `/Users/prrao/code/docs`: e.g., `../lancedb`, `../enterprise`, `../geneva`. Check with `ls ../` first.
 2. Anywhere under `/Users/prrao/code/`: try `ls /Users/prrao/code/ | grep -i <name>`.
 3. If neither exists locally, ask the user for the path (or a clone URL) before proceeding — do **not** guess or substitute a different repo.
 
@@ -180,6 +180,6 @@ Prefer these over ad-hoc emphasis:
 - Inventing export names that don't match the `{Py|Ts|Rs}{TitleCase}` formula.
 - Using a relative import path like `'../snippets/indexing.mdx'` (must be `'/snippets/indexing.mdx'`).
 - Writing Python-only examples for a feature that exists in all three SDKs.
-- Documenting parameters that don't exist in the source repo (e.g., `../lancedb`, `../sophon`, `../geneva`).
+- Documenting parameters that don't exist in the source repo (e.g., `../lancedb`, `../enterprise`, `../geneva`).
 - Ignoring a user's explicit instruction to cross-check against a named repo — that instruction is mandatory, not advisory.
 - Running `python scripts/mdx_snippets_gen.py` without the `-s tests/<lang>` flag (the script needs a source dir).

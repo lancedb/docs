@@ -5,8 +5,8 @@ Home of the [LanceDB](https://lancedb.com/) documentation. Built using [Mintlify
 ## Development
 
 The published site is assembled from three roots, listed in `assemble.yaml`:
-the open-source pages in `lancedb/lancedb` and the Enterprise pages in
-`lancedb/sophon`, both under `docs/web`, and this repository's `docs/`.
+the open-source pages in `lancedb/lancedb`, the Enterprise documentation,
+both under `docs/web`, and this repository's `docs/`.
 
 This repository's `docs/` holds the pages it still owns: the Geneva pages, the
 dataset cards and the REST API reference. The four Geneva snippets
@@ -187,20 +187,225 @@ Publishing relies on settings outside this repository:
 - Mintlify's Git settings: repository `lancedb/docs`, branch `assembled`, and
   the content directory above. Mintlify serves the branch its settings name, so
   publishing to `assembled` reaches production only once that is the branch.
-- The LanceDB Docs Reader GitHub App installed on `lancedb/sophon` only, with
+- The LanceDB Docs Reader GitHub App installed on the Enterprise documentation repository only, with
   Contents: read and the required Metadata: read permission. Set its Client ID
   in the `SOPHON_DOCS_APP_CLIENT_ID` repository variable and its PEM private key
   in the `SOPHON_DOCS_APP_PRIVATE_KEY` repository secret. The Assemble and Docs
-  Check workflows generate a short-lived token scoped to Sophon with
+  Check workflows generate a short-lived token scoped to that repository with
   Contents: read. Checkout does not persist it, and the token is revoked when
   the job ends. Fork pull requests receive no App secret and cannot run the
-  combined build; the assembler guard tests still run without credentials.
+  combined build; the assembler guard tests and the saved-edition check still
+  run without Enterprise repository credentials.
 
 Of these, the Publish workflow checks only that production runs from `main`,
 that the environment supplies the deploy key and that `MINTLIFY_CONTENT_DIR` is
 set. It cannot see whether the environment requires reviewers and admits only
 `main`, or whether the ruleset refuses every other writer: verify those
 separately before the first production publication.
+
+## Saved editions
+
+Each published documentation edition is saved in this repository: the site the
+assembler built from one product release's own sources, in
+`editions/<product>/<version>/`, with a release record in
+`releases/<product>-<version>.yaml` that names every source it was read from.
+New documentation is still written in `lancedb/lancedb` and the Enterprise
+documentation repository.
+[VERSIONING.md](VERSIONING.md) describes the design. Composing the saved
+editions into the site, and publishing them, are later steps; for now the site
+is assembled and published as above.
+
+An edition's content comes from two kinds of commit, and its record names both:
+
+- **Product pages** come from the release: an OSS edition's from its
+  `lancedb/lancedb` release tag, and an Enterprise edition's from its
+  Enterprise release tag and the LanceDB commit that release bundles.
+- **Docs-owned content**, the Geneva pages, the dataset cards and the REST API
+  specification, comes from the docs input commit: the commit of this
+  repository's `main` that preparation read, recorded as `sources.build.commit`.
+  It is `main` as it was when the edition was prepared, not when the product
+  was released.
+
+Both are fixed when the edition is prepared. Later changes to `main`, or to a
+product's sources, never reach a saved edition; only a reviewed correction
+changes one.
+
+### Preparing an edition
+
+Fetch the release tags into the LanceDB and Enterprise checkouts. Then run the
+command in a clone of this repository whose `origin` is
+`https://github.com/lancedb/docs.git`, or its SSH form, rather than a fork, on
+a branch whose `scripts/` are those of `main`:
+
+```bash
+uv run --no-project --with pyyaml scripts/edition.py prepare enterprise 1.10.0 --lancedb ../lancedb --enterprise-repo ../enterprise
+uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterprise v1.10.0 --lancedb ../lancedb --enterprise-repo ../enterprise
+```
+
+- **Enterprise** reads the Enterprise release tag `v1.10.0`, which must have an
+  annotated `release-qualified/v1.10.0` tag on the same commit. The shared
+  pages come from the LanceDB commit that release bundles at `src/lancedb`,
+  which may be one no OSS release tags: fetch it with `git -C ../lancedb fetch
+  origin <commit>`. `--bundled-lancedb <commit>`, given the full 40-character
+  hash, stops preparation if the release bundles a different one.
+- **OSS** reads lancedb's tag `v0.41.0`. The Enterprise pages come from the
+  Enterprise tag or full commit hash named with `--enterprise`; a branch name
+  is not accepted, so the record pins an exact commit. The named Enterprise
+  release supplies the Enterprise pages in that OSS edition; see
+  [What goes into an edition](VERSIONING.md#what-goes-into-an-edition).
+- The LanceDB and Enterprise roots are read from Git at their commits, never
+  from a working tree, and only from `docs/web`.
+- Preparation fetches `main` from `origin` itself, and reads this
+  repository's `docs/` and `assemble.yaml` from Git at its head, or at an
+  earlier commit of `main` named with `--docs`. It never reads them from your
+  branch, your working tree or an `origin/main` fetched before. A fork's `main`
+  can hold commits `lancedb/docs` never has, so an `origin` that is not
+  `lancedb/docs` stops preparation. Squash merges give a branch's commits new
+  hashes, so a record names only a commit of `main`, and editions prepared one
+  after another in the same pull request do not depend on its unmerged
+  commits. The assembler that runs is your checkout's `scripts/`, so they must
+  be that commit's.
+- Only stable versions, such as `1.2.3`, have editions.
+
+Preparation saves nothing, and says why, when a tag or commit is missing, a
+release has no `docs/web`, an Enterprise release is not qualified or bundles
+another LanceDB, a root holds a symlink, the Enterprise root holds a hidden
+file, the assembler stops, `.gitignore` would leave out one of the edition's
+files, `origin` is not `lancedb/docs`, the docs input commit is not on its
+`main`, or your `scripts/` are not that commit's.
+
+Preparing a saved release again changes nothing when its release commits and
+qualification tag match the record, even after the edition has been corrected,
+and stops when they differ. It never replaces a saved edition.
+
+Check the new edition as a site, check every edition against its record and
+against `main`, and commit the edition and its record together:
+
+```bash
+(cd editions/enterprise/1.10.0 && mint validate && mint broken-links --check-anchors --check-redirects)
+uv run --no-project --with pyyaml scripts/edition.py check --base refs/remotes/origin/main
+```
+
+A record looks like this. It is illustrative: the Enterprise repository is a
+placeholder and the commits and checksums are shortened, so `check` would
+refuse it as written.
+
+```yaml
+format: 1
+product: enterprise
+version: 1.10.0
+edition: editions/enterprise/1.10.0
+release:
+  repository: <enterprise-repository>
+  tag: v1.10.0
+  commit: 5a1f0c9e…
+  qualification:
+    tag: release-qualified/v1.10.0
+    object: 9c3e27d4…
+  bundled_lancedb: 7d0b4a12…
+sources:
+  lancedb:
+    repository: lancedb/lancedb
+    path: docs/web
+    commit: 7d0b4a12…
+  enterprise:
+    repository: <enterprise-repository>
+    path: docs/web
+    commit: 5a1f0c9e…
+  build:
+    repository: lancedb/docs
+    path: docs
+    commit: e2c4b8f0…
+  openapi:
+    repository: lance-format/lance-namespace
+    release: v0.12.0
+    path: docs/src/spec.yaml
+    sha256: 41ab93c7…
+prepared:
+  files: 312
+  sha256: b07d5e61…
+corrections: []
+```
+
+`release` and `sources` say what the edition was built from, and `prepared` is
+the snapshot as first saved. An OSS record has `enterprise_pages`, the
+`--enterprise` ref and its commit, in place of `qualification` and
+`bundled_lancedb`. `sources.openapi` names the specification release that
+`assemble.yaml` pinned at the docs input commit, and the checksum of the copy
+saved in the edition.
+
+### What `check` enforces
+
+`edition.py check` works offline, on this checkout:
+
+- Every record has the fields `prepare` writes, in their formats, and each
+  source commit agrees with the release field that selected it, such as an
+  Enterprise record's `sources.lancedb.commit` and `release.bundled_lancedb`.
+- Every record has its edition, and every edition its record.
+- Each edition matches the checksum its record last accepted:
+  `prepared.sha256`, or the latest correction's `sha256`.
+
+With `--base COMMIT`, it also compares the editions and records already on
+that commit, by their parsed values rather than their formatting. Each must
+still be there. Every field of a record except `corrections` must be
+unchanged, and its existing corrections must be unchanged and in order, with
+new ones only after them. A new edition is checked by the rules above.
+
+The test job of the Assemble workflow runs `make check-editions` with a base:
+for a pull request, the base commit its event names, and for a push to `main`,
+the commit `main` pointed at before. The job first fetches that commit by hash
+with its own GitHub token; `edition.py check` then runs offline and needs no
+Enterprise repository credentials. A manual run of the workflow has no base,
+and checks each edition against its record only.
+
+This keeps saved editions only while the check must pass before a pull request
+merges, and while changes to the checker and its workflow need enforced review,
+such as required code-owner review of `scripts/`, the `Makefile` and
+`.github/workflows/`, since a pull request runs its own copy of the check. Both
+are repository rules set up separately. The check on a push to `main` reports
+a violation in that push but cannot undo it, and a later push does not find it,
+because its base already includes the change.
+
+### Correcting a saved edition
+
+A saved edition can be corrected after review, at the same URL:
+
+1. Edit the affected files in each edition that has the error, and in no other.
+2. Run `edition.py check`. It fails, because the edition no longer matches its
+   record, and prints the corrected edition's checksum:
+
+   ```text
+   edition: editions/enterprise/1.10.0 has changed since it was prepared; its files now have checksum 3f9c2a7e…. For a reviewed correction, add an entry under `corrections` in releases/enterprise-1.10.0.yaml with `sha256: 3f9c2a7e…`
+   ```
+
+3. In each edition's record, add an entry at the end of `corrections` with a
+   one-line summary, the files it changes, and that checksum; for the first
+   correction, replace `corrections: []`. Leave the rest of the record, and
+   any earlier corrections, as they are.
+
+   ```yaml
+   corrections:
+   - summary: Fix the default retry count in the merge-insert example.
+     files: [tables/merge-insert.mdx]
+     sha256: 3f9c2a7e…
+   ```
+
+4. Run the checks above, with `--base refs/remotes/origin/main` after fetching `main`.
+   `edition.py check` now passes: each edition matches the checksum of its
+   latest correction. Any later change to the edition, including a deleted
+   file, fails again until it is recorded the same way, as a further entry.
+   `--base` refuses a change to an earlier entry or to the rest of the
+   record, as the pull request's check does. Check a corrected example the way
+   that example needs; a typo needs no test run.
+5. If the error is still in the current source, in `lancedb/lancedb`,
+   the Enterprise documentation repository or `docs/` here, fix it there as well.
+6. Open one pull request that names every edition it corrects. Reviewers decide
+   whether each correction is right; the checksum shows only that the record
+   describes the files.
+
+Preparing that release again later checks its release inputs and saved files,
+then keeps the edition and its corrections. It does not fetch docs main or
+require matching assembler scripts unless it is building a new edition.
 
 ## Code snippets
 

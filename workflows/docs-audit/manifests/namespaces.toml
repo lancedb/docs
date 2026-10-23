@@ -1,5 +1,5 @@
 name = "namespaces"
-description = "Audit namespace and catalog-model docs against user-facing evidence from lancedb SDKs, docs snippets/tests, and sophon enterprise namespace surfaces."
+description = "Audit namespace and catalog-model docs against user-facing evidence from lancedb SDKs, docs snippets/tests, and Enterprise namespace surfaces."
 docs_repo = "docs"
 rotation_unit = "page"
 keywords = [

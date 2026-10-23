@@ -719,7 +719,7 @@ def test_independent_review_probes(tmp_path, remote, case):
 
 
 def assemble_sources(base: Path, index: bytes) -> dict:
-    """lancedb, sophon and docs checkouts with the shape assemble.yaml reads."""
+    """LanceDB, Enterprise and docs checkouts with the shape assemble.yaml reads."""
     navigation = {
         "navigation": {
             "tabs": [
@@ -739,7 +739,7 @@ def assemble_sources(base: Path, index: bytes) -> dict:
             "docs/web/index.mdx": index,
             "docs/web/enterprise/security.mdx": b"Open-source security\n",
         },
-        "sophon": {"docs/web/enterprise/security.mdx": b"Enterprise security\n"},
+        "enterprise_repo": {"docs/web/enterprise/security.mdx": b"Enterprise security\n"},
         "docs": {"docs/geneva/udfs.mdx": b"Geneva UDFs\n"},
     }.items():
         repo = base / name
@@ -760,7 +760,7 @@ roots:
     path: {repos["lancedb"] / "docs/web"}
     role: reference
   - name: enterprise
-    path: {repos["sophon"] / "docs/web"}
+    path: {repos["enterprise_repo"] / "docs/web"}
     role: overlay
     private: true
   - name: build

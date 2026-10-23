@@ -3,7 +3,7 @@ draft and example handling.
 
 Each test builds a small site in a temporary directory: a reference root that
 owns `enterprise/security` and the navigation, and a private overlay root at
-`sophon/docs/web` beside an internal folder that must never be published.
+`enterprise_repo/docs/web` beside an internal folder that must never be published.
 
 Run with `make test-assemble`.
 """
@@ -52,23 +52,23 @@ def write(path: Path, text: str) -> Path:
 
 
 def site(base: Path, *, checkout: bool = True) -> dict[str, Path]:
-    """A reference root, a Sophon-like checkout, and an internal folder."""
+    """A reference root, an Enterprise checkout, and an internal folder."""
     reference = base / "lancedb/docs/web"
     write(reference / "docs.json", json.dumps(NAVIGATION))
     write(reference / "enterprise/security.mdx", "Open-source security page\n")
     write(reference / "static/styles/style.css", "body {}\n")
 
-    sophon = base / "sophon"
+    enterprise_repo = base / "enterprise_repo"
     if checkout:
-        (sophon / ".git").mkdir(parents=True)
-    write(sophon / "docs/ci.md", INTERNAL)
+        (enterprise_repo / ".git").mkdir(parents=True)
+    write(enterprise_repo / "docs/ci.md", INTERNAL)
     internal = base / "internal"
     write(internal / "enterprise/security.mdx", INTERNAL)
     write(internal / "web/enterprise/security.mdx", INTERNAL)
     return {
         "reference": reference,
-        "sophon": sophon,
-        "public": sophon / "docs/web",
+        "enterprise_repo": enterprise_repo,
+        "public": enterprise_repo / "docs/web",
         "internal": internal,
     }
 
@@ -137,11 +137,11 @@ def test_symlinked_private_root_is_refused(base, checkout):
 @pytest.mark.parametrize("checkout", [True, False])
 def test_symlinked_parent_of_private_root_is_refused(base, checkout):
     paths = site(base, checkout=checkout)
-    (paths["sophon"] / "docs/ci.md").unlink()
-    (paths["sophon"] / "docs").rmdir()
-    (paths["sophon"] / "docs").symlink_to(paths["internal"], target_is_directory=True)
+    (paths["enterprise_repo"] / "docs/ci.md").unlink()
+    (paths["enterprise_repo"] / "docs").rmdir()
+    (paths["enterprise_repo"] / "docs").symlink_to(paths["internal"], target_is_directory=True)
 
-    with pytest.raises(assemble.AssembleError, match=r"sophon/docs is a symlink"):
+    with pytest.raises(assemble.AssembleError, match=r"enterprise_repo/docs is a symlink"):
         build(config(base, paths["reference"], paths["public"]))
 
 
@@ -149,10 +149,10 @@ def test_symlinked_checkout_is_refused(base):
     paths = site(base)
     public_root(paths)
     elsewhere = base / "elsewhere"
-    paths["sophon"].rename(elsewhere)
-    paths["sophon"].symlink_to(elsewhere, target_is_directory=True)
+    paths["enterprise_repo"].rename(elsewhere)
+    paths["enterprise_repo"].symlink_to(elsewhere, target_is_directory=True)
 
-    with pytest.raises(assemble.AssembleError, match=r"sophon is a symlink"):
+    with pytest.raises(assemble.AssembleError, match=r"enterprise_repo is a symlink"):
         build(config(base, paths["reference"], paths["public"]))
 
 
@@ -161,7 +161,7 @@ def test_symlink_above_the_checkout_is_allowed(base):
     paths = site(real)
     public_root(paths)
     (base / "linked").symlink_to(real, target_is_directory=True)
-    overlay = base / "linked/sophon/docs/web"
+    overlay = base / "linked/enterprise_repo/docs/web"
 
     output = build(config(base, paths["reference"], overlay))
 
