@@ -367,6 +367,7 @@ def saved_enterprise(world: World) -> str:
 
 
 def test_discovery_is_off_until_discover_yaml_names_where_it_starts(world):
+    world.configure()
     world.oss("0.98.0")
     world.enterprise("8.2.0", world.lancedb_commit("bundled"))
 
@@ -1123,10 +1124,10 @@ def test_discover_yaml_is_checked(tmp_path, config, error):
         discover.load_config(path)
 
 
-def test_the_committed_configuration_prepares_nothing():
+def test_the_committed_configuration_starts_enterprise_discovery_only():
     config = discover.load_config(SCRIPTS.parent / "discover.yaml")
 
-    assert {name: options["from"] for name, options in config["products"].items()} == {"oss": None, "enterprise": None}
+    assert {name: options["from"] for name, options in config["products"].items()} == {"oss": None, "enterprise": "1.10.0"}
     assert config["products"]["oss"]["enterprise_pages"] is None
 
 
