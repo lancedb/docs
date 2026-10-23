@@ -1,10 +1,9 @@
 # Docs Audit Workspace
 
-This workspace orchestrates a weekly documentation-gap audit across three local repositories:
-
-- `../../../lancedb`
-- `../..`
-- `../../../sophon`
+This workspace orchestrates a weekly documentation-gap audit across the SDK,
+docs and Enterprise source checkouts configured in `config.toml`. Keep private
+source evidence out of public reports and artifacts; describe only user-facing
+documentation gaps.
 
 The goal is to find what is missing from the docs, especially conceptual and imperative guidance that exists in code, tests, UI copy, request schemas, config comments, or integration scenarios but is not conveyed clearly in the public docs.
 
@@ -31,7 +30,7 @@ The watched repos live outside this workspace on purpose.
 
 - `lancedb` is the main SDK/core codebase.
 - `docs` is the Mintlify docs repo and includes tested snippets.
-- `sophon` is the private product repo and contributes user-facing operational truth that may not appear in the public SDK alone.
+- The Enterprise source repository contributes user-facing behavior that may not appear in the public SDK alone.
 
 The audit runner only reads those repos and records refresh status. This workspace stores orchestration code, manifests, prompts, state, and artifacts.
 
@@ -234,7 +233,7 @@ Set the top-level fields first:
 
 ```toml
 name = "search"
-description = "Audit the search docs against user-facing evidence from lancedb, docs snippets/tests, and sophon."
+description = "Audit the search docs against user-facing evidence from lancedb, docs snippets/tests, and Enterprise sources."
 docs_repo = "docs"
 rotation_unit = "page"
 keywords = ["search", "filter", "rerank"]
@@ -412,14 +411,11 @@ resolve:
   lancedb/
   docs/
     workflows/docs-audit/
-  sophon/
+  enterprise/
 ```
 
-From the `docs` checkout, the docs-audit workspace still expects:
-
-- `../../../lancedb`
-- `../..`
-- `../../../sophon`
+This is an example layout. Set the repository paths in
+`workflows/docs-audit/config.toml` to match the local checkouts.
 
 If the EC2 checkout layout differs, update `workflows/docs-audit/config.toml` instead of adding
 path translation logic to the runner.
@@ -518,7 +514,7 @@ One row per completed run.
 | `areas` | Selected areas for the run |
 | `report_text` | Raw completed `report.md` text, stored once per run |
 | `report_path` | Original artifact path or cloud artifact URL |
-| `repo_shas` | Docs, LanceDB, and Sophon commit SHAs |
+| `repo_shas` | Docs, LanceDB, and Enterprise source commit SHAs |
 | `selected_pages` | Pages audited in the run |
 | `changed_pages` | Pages whose evidence fingerprints changed |
 | `refresh` | Watched repo refresh metadata |

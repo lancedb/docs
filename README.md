@@ -272,12 +272,14 @@ Publishing relies on settings outside this repository:
 - The LanceDB Docs Reader GitHub App installed on the Enterprise documentation repository only, with
   Contents: read and the required Metadata: read permission. Set its Client ID
   in the `SOPHON_DOCS_APP_CLIENT_ID` repository variable and its PEM private key
-  in the `SOPHON_DOCS_APP_PRIVATE_KEY` repository secret. The Assemble and Docs
-  Check workflows generate a short-lived token scoped to that repository with
-  Contents: read. Checkout does not persist it, and the token is revoked when
-  the job ends. Fork pull requests receive no App secret and cannot run the
-  combined build; the assembler guard tests and the Compose workflow still run
-  without Enterprise repository credentials.
+  in the `SOPHON_DOCS_APP_PRIVATE_KEY` repository secret. The Assemble, Docs
+  Check and Discover releases workflows generate a short-lived token scoped to
+  that repository with Contents: read. Assemble and Docs Check do not persist
+  it. Discover releases keeps it in the configuration of its own blob-less copy
+  of that repository, so preparation can fetch the documentation files it
+  reads. The token is revoked when the job ends. Fork pull requests receive no
+  App secret and cannot run the combined build; the assembler guard tests and
+  the Compose workflow still run without Enterprise repository credentials.
 
 Of these, the Publish workflow checks only that production runs from `main`,
 that the environment supplies the deploy key, that `MINTLIFY_CONTENT_DIR` and
@@ -285,6 +287,12 @@ that the environment supplies the deploy key, that `MINTLIFY_CONTENT_DIR` and
 see whether the environment requires reviewers and admits only `main`, or
 whether the ruleset refuses every other writer: verify those separately before
 the first production publication.
+
+Release discovery's pull requests need two more, which a dry run does not: the
+repository variable `RELEASE_DISCOVERY` set to `open-prs`, and the Actions
+setting that allows workflows to create pull requests. That setting also lets
+workflows approve pull requests, so enable it only once `main` requires review
+that a workflow cannot give, such as code-owner review.
 
 ## Saved editions
 
@@ -328,7 +336,7 @@ uv run --no-project --with pyyaml scripts/edition.py prepare oss 0.41.0 --enterp
 
 - **Enterprise** reads the Enterprise release tag `v1.10.0`, which must have an
   annotated `release-qualified/v1.10.0` tag on the same commit. The shared
-  pages come from the LanceDB commit that release bundles at `src/lancedb`,
+  pages come from the LanceDB commit that release bundles,
   which may be one no OSS release tags: fetch it with `git -C ../lancedb fetch
   origin <commit>`. `--bundled-lancedb <commit>`, given the full 40-character
   hash, stops preparation if the release bundles a different one.
@@ -429,6 +437,83 @@ the snapshot as first saved. An OSS record has `enterprise_pages`, the
 `assemble.yaml` pinned at the docs input commit, and the checksum of the copy
 saved in the edition.
 
+### Discovering releases
+
+`scripts/discover.py` finds the releases that should get an edition, prepares
+each one as above, and opens a pull request for it. People review and merge
+those pull requests; discovery never merges or publishes.
+
+- **Enterprise:** a release is eligible once its `vX.Y.Z` tag and an annotated
+  `release-qualified/vX.Y.Z` tag name the same commit. A qualification tag
+  without a release tag is not eligible; a release tag without a qualification
+  tag stops for review. Discovery reads both tags from the Enterprise
+  repository on every run, so a withdrawn qualification stops a release even
+  in a clone that still has the old tag.
+- **OSS:** a release is eligible once `lancedb/lancedb` has a published GitHub
+  release for its `vX.Y.Z` tag that is not marked as a prerelease. Its
+  Enterprise pages come from the preferred Enterprise edition, at the release
+  its record names, so OSS releases wait until `compose.yaml` prefers one.
+- Betas and release candidates never get editions. Discovery counts them, and
+  Enterprise releases that are qualified but not yet published, without naming
+  them.
+- GitHub's "latest release" is not used: it can be a maintenance release of an
+  older line.
+
+`discover.yaml` configures it. Each product's `from` is the first release
+discovery prepares; it never prepares an earlier one, so there is no backfill,
+and a product with no `from` is off. `skip` lists releases to leave alone, each
+with its reason, and `holds` lists publication holds that every edition pull
+request repeats.
+
+For each release from `from` on, discovery looks at `main` and at the branch
+`editions/<product>-<version>`:
+
+- **Saved on `main`:** nothing to do, corrected or not, while its tags still
+  name the commit and qualification tag its record names. If they do not, it
+  stops for review: an edition is never replaced.
+- **An open pull request from the branch:** kept as it is, with any commits
+  reviewers have pushed. Discovery starts each check workflow that has not run
+  on its head, and never reruns one that has.
+- **A pull request closed without merging:** left closed. Reopen it to prepare
+  the release again.
+- **The branch without a pull request,** as a run that stopped after pushing
+  leaves it: discovery opens the pull request from it.
+- **None of these:** discovery prepares the edition with `edition.py prepare`
+  on a branch from `main`, runs `edition.py check` against `main`, pushes the
+  branch and opens its pull request. For a product's first edition it also sets
+  `preferred` in `compose.yaml`, since composing needs one. It never changes a
+  preferred edition otherwise, so a maintenance or late release cannot replace a
+  newer one; the pull request says whether the release is newer than the
+  preferred edition, for its reviewers to decide.
+
+Discovery creates a branch only if it does not exist yet, so two runs never
+open two pull requests or overwrite each other's work. It prepares a release
+only from its tags as it checked them, and checks the prepared record before
+pushing, so a tag that moves while it runs stops that release. A release whose
+inputs are missing or contradictory stops for review with the reason, and
+leaves `main`, the saved editions and the other releases as they are. Any stop
+fails the run, until the release is fixed or listed in `skip`.
+If a tagged release fails the authoring check, list it in `skip`; it gets no
+edition. Fix the source for a later release instead of moving the tag.
+
+A dry run reports what discovery would do: each eligible release's exact
+inputs, and why the others are waiting, skipped or stopped. It fetches release
+tags and commits into the two checkouts and reads GitHub with `gh`, but pushes,
+opens and starts nothing. Run it in a clone set up as for preparing, with
+`--config` to try a configuration before committing it:
+
+```bash
+uv run --no-project --with pyyaml scripts/discover.py --lancedb ../lancedb --enterprise-repo ../enterprise
+```
+
+The Discover releases workflow runs it when started by hand, as a dry run by
+default; nothing starts it on a schedule yet. Its `open-prs` mode prepares
+editions and opens their pull requests. It runs only on `main`, once the
+repository variable `RELEASE_DISCOVERY` is `open-prs`. It pushes and opens pull
+requests with the workflow's own token, whose pushes start no workflows, so it
+starts Compose and Assemble on each branch itself. The run's summary is as
+public as this repository.
+
 ### What `check` enforces
 
 `edition.py check` works offline, on this checkout:
@@ -450,8 +535,9 @@ The Compose workflow runs `make check-editions` with a base: for a pull
 request, the base commit its event names, and for a push to `main`, the commit
 `main` pointed at before. The job first fetches that commit by hash
 with its own GitHub token; `edition.py check` then runs offline and needs no
-Enterprise repository credentials. A manual run of the workflow has no base,
-and checks each edition against its record only.
+Enterprise repository credentials. A manual run, as release discovery starts
+on its branches, checks out the branch rather than a merge, so its base is the
+commit of `main` the branch was made from.
 
 This keeps saved editions only while the check must pass before a pull request
 merges, and while changes to the checker and its workflow need enforced review,

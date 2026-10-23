@@ -35,11 +35,17 @@ jobs:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'push' && github.event.before || '' }}
         run: |
           set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            git fetch --no-tags --unshallow origin +refs/heads/main:refs/remotes/origin/main
+            BASE_SHA=$(git merge-base HEAD refs/remotes/origin/main)
+          elif [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != 0000000000000000000000000000000000000000 ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          fi
+          # An all-zero SHA means there is no previous commit; validate the saved editions without comparing to a base.
           if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = 0000000000000000000000000000000000000000 ]; then
             echo "No base commit for this $EVENT event; checking each edition against its record only."
             make check-editions
           else
-            git fetch --no-tags --depth=1 origin "$BASE_SHA"
             make check-editions BASE="$BASE_SHA"
           fi
 
@@ -90,4 +96,4 @@ jobs:
           name: candidate
           path: build/candidate
           include-hidden-files: true
-          retention-days: ${{ github.event_name == 'pull_request' && 7 || 90 }}
+          retention-days: ${{ github.ref == 'refs/heads/main' && 90 || 7 }}

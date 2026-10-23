@@ -7,10 +7,10 @@ combines its product pages, the selected shared or Enterprise pages, and pages
 owned by this repository. These come from separately recorded commits. Readers
 can switch between editions on the site.
 
-Release records, saved editions, site composition and publishing are in
-place; see [Publishing](README.md#publishing). Finding new releases comes
-next. Until a cutover is approved, the site is built and published as it is
-today.
+Release records, saved editions, site composition, publishing and release
+discovery are in place; see
+[Discovering releases](README.md#discovering-releases).
+Until a cutover is approved, the site is built and published as it is today.
 
 ## How it works
 

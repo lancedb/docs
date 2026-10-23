@@ -1,0 +1,128 @@
+name: Discover releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: dry-run reports eligible releases; open-prs also prepares them and opens pull requests
+        type: choice
+        options:
+          - dry-run
+          - open-prs
+        default: dry-run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: discover
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  dry-run:
+    name: Report eligible releases
+    if: inputs.mode == 'dry-run'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create a read-only Enterprise token
+        id: enterprise-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SOPHON_DOCS_APP_PRIVATE_KEY }}
+          owner: lancedb
+          repositories: sophon
+          permission-contents: read
+
+      - name: Set up the release repositories
+        env:
+          ENTERPRISE_TOKEN: ${{ steps.enterprise-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          for name in lancedb sophon; do
+            git init --quiet --bare "$RUNNER_TEMP/$name.git"
+            git -C "$RUNNER_TEMP/$name.git" remote add origin "https://github.com/lancedb/$name.git"
+          done
+          # In that repository's own configuration, as actions/checkout keeps a token.
+          basic=$(printf 'x-access-token:%s' "$ENTERPRISE_TOKEN" | base64 -w0)
+          echo "::add-mask::$basic"
+          git -C "$RUNNER_TEMP/sophon.git" config http.https://github.com/.extraheader "AUTHORIZATION: basic $basic"
+
+      - name: Discover
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run --no-project --with pyyaml scripts/discover.py \
+            --lancedb "$RUNNER_TEMP/lancedb.git" --enterprise-repo "$RUNNER_TEMP/sophon.git" \
+            --summary "$GITHUB_STEP_SUMMARY"
+
+  open-prs:
+    name: Open edition pull requests
+    if: inputs.mode == 'open-prs'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the editions/* branches
+      pull-requests: write
+      actions: write # their pull request checks, which their pushes do not start, and which have run
+    steps:
+      - name: Check that opening pull requests is enabled
+        if: github.ref != 'refs/heads/main' || vars.RELEASE_DISCOVERY != 'open-prs'
+        run: |
+          echo "::error::Opening edition pull requests runs on main, once the repository variable RELEASE_DISCOVERY is open-prs."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Create a read-only Enterprise token
+        id: enterprise-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.SOPHON_DOCS_APP_CLIENT_ID }}
+          private-key: ${{ secrets.SOPHON_DOCS_APP_PRIVATE_KEY }}
+          owner: lancedb
+          repositories: sophon
+          permission-contents: read
+
+      - name: Set up the release repositories
+        env:
+          ENTERPRISE_TOKEN: ${{ steps.enterprise-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          for name in lancedb sophon; do
+            git init --quiet --bare "$RUNNER_TEMP/$name.git"
+            git -C "$RUNNER_TEMP/$name.git" remote add origin "https://github.com/lancedb/$name.git"
+          done
+          # In that repository's own configuration, as actions/checkout keeps a token.
+          basic=$(printf 'x-access-token:%s' "$ENTERPRISE_TOKEN" | base64 -w0)
+          echo "::add-mask::$basic"
+          git -C "$RUNNER_TEMP/sophon.git" config http.https://github.com/.extraheader "AUTHORIZATION: basic $basic"
+
+      - name: Discover, prepare and open pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run --no-project --with pyyaml scripts/discover.py --open-prs \
+            --lancedb "$RUNNER_TEMP/lancedb.git" --enterprise-repo "$RUNNER_TEMP/sophon.git" \
+            --summary "$GITHUB_STEP_SUMMARY"

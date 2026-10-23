@@ -1,0 +1,23 @@
+# Which releases scripts/discover.py prepares editions for, and what each
+# edition pull request says. See "Discovering releases" in README.md.
+
+products:
+  enterprise:
+    # The first release discovery prepares. Discovery never prepares an
+    # earlier one: there is no backfill. Unset, it prepares no Enterprise
+    # releases.
+    from:
+    # Releases discovery leaves alone, each with its reason, such as
+    #   1.2.3: Published without its documentation.
+    skip: {}
+  oss:
+    from:
+    skip: {}
+    # Where an OSS edition's Enterprise pages come from, required once `from`
+    # is set. `preferred` is the preferred Enterprise edition in compose.yaml,
+    # at the commit its record names.
+    enterprise_pages:
+
+# Holds on publication, listed in every edition pull request until removed.
+holds:
+  - Production serves the earlier site until the cutover to the versioned site is approved.
