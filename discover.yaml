@@ -6,7 +6,7 @@ products:
     # The first release discovery prepares. Discovery never prepares an
     # earlier one: there is no backfill. Unset, it prepares no Enterprise
     # releases.
-    from:
+    from: 1.10.0
     # Releases discovery leaves alone, each with its reason, such as
     #   1.2.3: Published without its documentation.
     skip: {}
