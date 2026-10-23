@@ -77,6 +77,8 @@
         "versions": [
           {
             "version": "1.10.1",
+            "default": true,
+            "tag": "Latest",
             "tabs": [
               {
                 "tab": "Documentation",
@@ -543,8 +545,6 @@
           },
           {
             "version": "1.10.0",
-            "default": true,
-            "tag": "Latest",
             "tabs": [
               {
                 "tab": "Documentation",
@@ -1560,1482 +1560,1482 @@
     },
     {
       "source": "/agent-branch-experiments",
-      "destination": "/enterprise/v1-10-0/agent-branch-experiments",
+      "destination": "/enterprise/v1-10-1/agent-branch-experiments",
       "permanent": false
     },
     {
       "source": "/api-reference",
-      "destination": "/enterprise/v1-10-0/basics/sdk",
+      "destination": "/enterprise/v1-10-1/basics/sdk",
       "permanent": false
     },
     {
       "source": "/api-reference/rest",
-      "destination": "/enterprise/v1-10-0/api-reference/rest",
+      "destination": "/enterprise/v1-10-1/api-reference/rest",
       "permanent": false
     },
     {
       "source": "/architecture",
-      "destination": "/enterprise/v1-10-0/architecture",
+      "destination": "/enterprise/v1-10-1/architecture",
       "permanent": false
     },
     {
       "source": "/basics/agentic-skills",
-      "destination": "/enterprise/v1-10-0/basics/agentic-skills",
+      "destination": "/enterprise/v1-10-1/basics/agentic-skills",
       "permanent": false
     },
     {
       "source": "/basics/apis",
-      "destination": "/enterprise/v1-10-0/basics/sdk",
+      "destination": "/enterprise/v1-10-1/basics/sdk",
       "permanent": false
     },
     {
       "source": "/basics/catalog",
-      "destination": "/enterprise/v1-10-0/basics/catalog",
+      "destination": "/enterprise/v1-10-1/basics/catalog",
       "permanent": false
     },
     {
       "source": "/basics/connect",
-      "destination": "/enterprise/v1-10-0/basics/connect",
+      "destination": "/enterprise/v1-10-1/basics/connect",
       "permanent": false
     },
     {
       "source": "/basics/data-types",
-      "destination": "/enterprise/v1-10-0/sql/data-types",
+      "destination": "/enterprise/v1-10-1/sql/data-types",
       "permanent": false
     },
     {
       "source": "/basics/guarantees",
-      "destination": "/enterprise/v1-10-0/basics/guarantees",
+      "destination": "/enterprise/v1-10-1/basics/guarantees",
       "permanent": false
     },
     {
       "source": "/basics/jobs",
-      "destination": "/enterprise/v1-10-0/basics/jobs",
+      "destination": "/enterprise/v1-10-1/basics/jobs",
       "permanent": false
     },
     {
       "source": "/basics/lakehouse",
-      "destination": "/enterprise/v1-10-0/basics/lakehouse",
+      "destination": "/enterprise/v1-10-1/basics/lakehouse",
       "permanent": false
     },
     {
       "source": "/basics/lance",
-      "destination": "/enterprise/v1-10-0/basics/lance",
+      "destination": "/enterprise/v1-10-1/basics/lance",
       "permanent": false
     },
     {
       "source": "/basics/limits",
-      "destination": "/enterprise/v1-10-0/basics/limits",
+      "destination": "/enterprise/v1-10-1/basics/limits",
       "permanent": false
     },
     {
       "source": "/basics/naming",
-      "destination": "/enterprise/v1-10-0/basics/naming",
+      "destination": "/enterprise/v1-10-1/basics/naming",
       "permanent": false
     },
     {
       "source": "/basics/offerings",
-      "destination": "/enterprise/v1-10-0/basics/offerings",
+      "destination": "/enterprise/v1-10-1/basics/offerings",
       "permanent": false
     },
     {
       "source": "/basics/query",
-      "destination": "/enterprise/v1-10-0/basics/query",
+      "destination": "/enterprise/v1-10-1/basics/query",
       "permanent": false
     },
     {
       "source": "/basics/sdk",
-      "destination": "/enterprise/v1-10-0/basics/sdk",
+      "destination": "/enterprise/v1-10-1/basics/sdk",
       "permanent": false
     },
     {
       "source": "/basics/sql",
-      "destination": "/enterprise/v1-10-0/basics/sql",
+      "destination": "/enterprise/v1-10-1/basics/sql",
       "permanent": false
     },
     {
       "source": "/build-with-ai-agents",
-      "destination": "/enterprise/v1-10-0/basics/agentic-skills",
+      "destination": "/enterprise/v1-10-1/basics/agentic-skills",
       "permanent": false
     },
     {
       "source": "/catalog",
-      "destination": "/enterprise/v1-10-0/basics/catalog",
+      "destination": "/enterprise/v1-10-1/basics/catalog",
       "permanent": false
     },
     {
       "source": "/catalog/database",
-      "destination": "/enterprise/v1-10-0/basics/catalog",
+      "destination": "/enterprise/v1-10-1/basics/catalog",
       "permanent": false
     },
     {
       "source": "/core/update",
-      "destination": "/enterprise/v1-10-0/ingestion/update",
+      "destination": "/enterprise/v1-10-1/ingestion/update",
       "permanent": false
     },
     {
       "source": "/curation",
-      "destination": "/enterprise/v1-10-0/curation",
+      "destination": "/enterprise/v1-10-1/curation",
       "permanent": false
     },
     {
       "source": "/curation/aggregate",
-      "destination": "/enterprise/v1-10-0/curation/aggregate",
+      "destination": "/enterprise/v1-10-1/curation/aggregate",
       "permanent": false
     },
     {
       "source": "/curation/join",
-      "destination": "/enterprise/v1-10-0/curation/join",
+      "destination": "/enterprise/v1-10-1/curation/join",
       "permanent": false
     },
     {
       "source": "/curation/sampling",
-      "destination": "/enterprise/v1-10-0/curation/sampling",
+      "destination": "/enterprise/v1-10-1/curation/sampling",
       "permanent": false
     },
     {
       "source": "/curation/windowing",
-      "destination": "/enterprise/v1-10-0/curation/windowing",
+      "destination": "/enterprise/v1-10-1/curation/windowing",
       "permanent": false
     },
     {
       "source": "/datasets",
-      "destination": "/enterprise/v1-10-0/datasets",
+      "destination": "/enterprise/v1-10-1/datasets",
       "permanent": false
     },
     {
       "source": "/datasets/ade20k",
-      "destination": "/enterprise/v1-10-0/datasets/ade20k",
+      "destination": "/enterprise/v1-10-1/datasets/ade20k",
       "permanent": false
     },
     {
       "source": "/datasets/chartqa",
-      "destination": "/enterprise/v1-10-0/datasets/chartqa",
+      "destination": "/enterprise/v1-10-1/datasets/chartqa",
       "permanent": false
     },
     {
       "source": "/datasets/cifar10",
-      "destination": "/enterprise/v1-10-0/datasets/cifar10",
+      "destination": "/enterprise/v1-10-1/datasets/cifar10",
       "permanent": false
     },
     {
       "source": "/datasets/coco-captions-2017",
-      "destination": "/enterprise/v1-10-0/datasets/coco-captions-2017",
+      "destination": "/enterprise/v1-10-1/datasets/coco-captions-2017",
       "permanent": false
     },
     {
       "source": "/datasets/coco-detection-2017",
-      "destination": "/enterprise/v1-10-0/datasets/coco-detection-2017",
+      "destination": "/enterprise/v1-10-1/datasets/coco-detection-2017",
       "permanent": false
     },
     {
       "source": "/datasets/docvqa",
-      "destination": "/enterprise/v1-10-0/datasets/docvqa",
+      "destination": "/enterprise/v1-10-1/datasets/docvqa",
       "permanent": false
     },
     {
       "source": "/datasets/eurosat",
-      "destination": "/enterprise/v1-10-0/datasets/eurosat",
+      "destination": "/enterprise/v1-10-1/datasets/eurosat",
       "permanent": false
     },
     {
       "source": "/datasets/fashion-mnist",
-      "destination": "/enterprise/v1-10-0/datasets/fashion-mnist",
+      "destination": "/enterprise/v1-10-1/datasets/fashion-mnist",
       "permanent": false
     },
     {
       "source": "/datasets/fineweb-edu",
-      "destination": "/enterprise/v1-10-0/datasets/fineweb-edu",
+      "destination": "/enterprise/v1-10-1/datasets/fineweb-edu",
       "permanent": false
     },
     {
       "source": "/datasets/flickr30k",
-      "destination": "/enterprise/v1-10-0/datasets/flickr30k",
+      "destination": "/enterprise/v1-10-1/datasets/flickr30k",
       "permanent": false
     },
     {
       "source": "/datasets/food101",
-      "destination": "/enterprise/v1-10-0/datasets/food101",
+      "destination": "/enterprise/v1-10-1/datasets/food101",
       "permanent": false
     },
     {
       "source": "/datasets/gqa-testdev-balanced",
-      "destination": "/enterprise/v1-10-0/datasets/gqa-testdev-balanced",
+      "destination": "/enterprise/v1-10-1/datasets/gqa-testdev-balanced",
       "permanent": false
     },
     {
       "source": "/datasets/handwriting-ocr",
-      "destination": "/enterprise/v1-10-0/datasets/handwriting-ocr",
+      "destination": "/enterprise/v1-10-1/datasets/handwriting-ocr",
       "permanent": false
     },
     {
       "source": "/datasets/hotpotqa-distractor",
-      "destination": "/enterprise/v1-10-0/datasets/hotpotqa-distractor",
+      "destination": "/enterprise/v1-10-1/datasets/hotpotqa-distractor",
       "permanent": false
     },
     {
       "source": "/datasets/imagenet-1k-val",
-      "destination": "/enterprise/v1-10-0/datasets/imagenet-1k-val",
+      "destination": "/enterprise/v1-10-1/datasets/imagenet-1k-val",
       "permanent": false
     },
     {
       "source": "/datasets/kitti-2d-detection",
-      "destination": "/enterprise/v1-10-0/datasets/kitti-2d-detection",
+      "destination": "/enterprise/v1-10-1/datasets/kitti-2d-detection",
       "permanent": false
     },
     {
       "source": "/datasets/laion-1m",
-      "destination": "/enterprise/v1-10-0/datasets/laion-1m",
+      "destination": "/enterprise/v1-10-1/datasets/laion-1m",
       "permanent": false
     },
     {
       "source": "/datasets/lerobot-pusht",
-      "destination": "/enterprise/v1-10-0/datasets/lerobot-pusht",
+      "destination": "/enterprise/v1-10-1/datasets/lerobot-pusht",
       "permanent": false
     },
     {
       "source": "/datasets/lerobot-xvla-soft-fold",
-      "destination": "/enterprise/v1-10-0/datasets/lerobot-xvla-soft-fold",
+      "destination": "/enterprise/v1-10-1/datasets/lerobot-xvla-soft-fold",
       "permanent": false
     },
     {
       "source": "/datasets/librispeech-clean",
-      "destination": "/enterprise/v1-10-0/datasets/librispeech-clean",
+      "destination": "/enterprise/v1-10-1/datasets/librispeech-clean",
       "permanent": false
     },
     {
       "source": "/datasets/mnist",
-      "destination": "/enterprise/v1-10-0/datasets/mnist",
+      "destination": "/enterprise/v1-10-1/datasets/mnist",
       "permanent": false
     },
     {
       "source": "/datasets/ms-marco-v2",
-      "destination": "/enterprise/v1-10-0/datasets/ms-marco-v2",
+      "destination": "/enterprise/v1-10-1/datasets/ms-marco-v2",
       "permanent": false
     },
     {
       "source": "/datasets/natural-questions-val",
-      "destination": "/enterprise/v1-10-0/datasets/natural-questions-val",
+      "destination": "/enterprise/v1-10-1/datasets/natural-questions-val",
       "permanent": false
     },
     {
       "source": "/datasets/openvid",
-      "destination": "/enterprise/v1-10-0/datasets/openvid",
+      "destination": "/enterprise/v1-10-1/datasets/openvid",
       "permanent": false
     },
     {
       "source": "/datasets/oxford-pets",
-      "destination": "/enterprise/v1-10-0/datasets/oxford-pets",
+      "destination": "/enterprise/v1-10-1/datasets/oxford-pets",
       "permanent": false
     },
     {
       "source": "/datasets/pascal-voc-2012-segmentation",
-      "destination": "/enterprise/v1-10-0/datasets/pascal-voc-2012-segmentation",
+      "destination": "/enterprise/v1-10-1/datasets/pascal-voc-2012-segmentation",
       "permanent": false
     },
     {
       "source": "/datasets/squad-v2",
-      "destination": "/enterprise/v1-10-0/datasets/squad-v2",
+      "destination": "/enterprise/v1-10-1/datasets/squad-v2",
       "permanent": false
     },
     {
       "source": "/datasets/stanford-cars",
-      "destination": "/enterprise/v1-10-0/datasets/stanford-cars",
+      "destination": "/enterprise/v1-10-1/datasets/stanford-cars",
       "permanent": false
     },
     {
       "source": "/datasets/textvqa",
-      "destination": "/enterprise/v1-10-0/datasets/textvqa",
+      "destination": "/enterprise/v1-10-1/datasets/textvqa",
       "permanent": false
     },
     {
       "source": "/datasets/trivia-qa",
-      "destination": "/enterprise/v1-10-0/datasets/trivia-qa",
+      "destination": "/enterprise/v1-10-1/datasets/trivia-qa",
       "permanent": false
     },
     {
       "source": "/datasets/vqav2",
-      "destination": "/enterprise/v1-10-0/datasets/vqav2",
+      "destination": "/enterprise/v1-10-1/datasets/vqav2",
       "permanent": false
     },
     {
       "source": "/demos",
-      "destination": "/enterprise/v1-10-0/demos",
+      "destination": "/enterprise/v1-10-1/demos",
       "permanent": false
     },
     {
       "source": "/demos/fineweb-edu-search",
-      "destination": "/enterprise/v1-10-0/demos/fineweb-edu-search",
+      "destination": "/enterprise/v1-10-1/demos/fineweb-edu-search",
       "permanent": false
     },
     {
       "source": "/demos/robot-data-curation",
-      "destination": "/enterprise/v1-10-0/demos/robot-data-curation",
+      "destination": "/enterprise/v1-10-1/demos/robot-data-curation",
       "permanent": false
     },
     {
       "source": "/demos/semantic-art",
-      "destination": "/enterprise/v1-10-0/demos/semantic-art",
+      "destination": "/enterprise/v1-10-1/demos/semantic-art",
       "permanent": false
     },
     {
       "source": "/demos/video-search",
-      "destination": "/enterprise/v1-10-0/demos/video-search",
+      "destination": "/enterprise/v1-10-1/demos/video-search",
       "permanent": false
     },
     {
       "source": "/demos/wikipedia-search",
-      "destination": "/enterprise/v1-10-0/demos/wikipedia-search",
+      "destination": "/enterprise/v1-10-1/demos/wikipedia-search",
       "permanent": false
     },
     {
       "source": "/deployment/monitoring",
-      "destination": "/enterprise/v1-10-0/deployment/monitoring",
+      "destination": "/enterprise/v1-10-1/deployment/monitoring",
       "permanent": false
     },
     {
       "source": "/deployment/storage",
-      "destination": "/enterprise/v1-10-0/deployment/storage",
+      "destination": "/enterprise/v1-10-1/deployment/storage",
       "permanent": false
     },
     {
       "source": "/deployment/support",
-      "destination": "/enterprise/v1-10-0/deployment/support",
+      "destination": "/enterprise/v1-10-1/deployment/support",
       "permanent": false
     },
     {
       "source": "/embedding",
-      "destination": "/enterprise/v1-10-0/embedding",
+      "destination": "/enterprise/v1-10-1/embedding",
       "permanent": false
     },
     {
       "source": "/embedding/quickstart",
-      "destination": "/enterprise/v1-10-0/embedding/quickstart",
+      "destination": "/enterprise/v1-10-1/embedding/quickstart",
       "permanent": false
     },
     {
       "source": "/enterprise",
-      "destination": "/enterprise/v1-10-0/enterprise",
+      "destination": "/enterprise/v1-10-1/enterprise",
       "permanent": false
     },
     {
       "source": "/enterprise/architecture",
-      "destination": "/enterprise/v1-10-0/enterprise/architecture",
+      "destination": "/enterprise/v1-10-1/enterprise/architecture",
       "permanent": false
     },
     {
       "source": "/enterprise/authentication",
-      "destination": "/enterprise/v1-10-0/enterprise/authentication",
+      "destination": "/enterprise/v1-10-1/enterprise/authentication",
       "permanent": false
     },
     {
       "source": "/enterprise/benchmarks",
-      "destination": "/enterprise/v1-10-0/enterprise/benchmarks",
+      "destination": "/enterprise/v1-10-1/enterprise/benchmarks",
       "permanent": false
     },
     {
       "source": "/enterprise/deployment",
-      "destination": "/enterprise/v1-10-0/enterprise/deployment",
+      "destination": "/enterprise/v1-10-1/enterprise/deployment",
       "permanent": false
     },
     {
       "source": "/enterprise/deployment/azure",
-      "destination": "/enterprise/v1-10-0/enterprise/deployment/azure",
+      "destination": "/enterprise/v1-10-1/enterprise/deployment/azure",
       "permanent": false
     },
     {
       "source": "/enterprise/performance",
-      "destination": "/enterprise/v1-10-0/enterprise/benchmarks",
+      "destination": "/enterprise/v1-10-1/enterprise/benchmarks",
       "permanent": false
     },
     {
       "source": "/enterprise/quickstart",
-      "destination": "/enterprise/v1-10-0/quickstart",
+      "destination": "/enterprise/v1-10-1/quickstart",
       "permanent": false
     },
     {
       "source": "/enterprise/security",
-      "destination": "/enterprise/v1-10-0/enterprise/security",
+      "destination": "/enterprise/v1-10-1/enterprise/security",
       "permanent": false
     },
     {
       "source": "/faq",
-      "destination": "/enterprise/v1-10-0/deployment/support",
+      "destination": "/enterprise/v1-10-1/deployment/support",
       "permanent": false
     },
     {
       "source": "/faq/faq-enterprise",
-      "destination": "/enterprise/v1-10-0/deployment/support",
+      "destination": "/enterprise/v1-10-1/deployment/support",
       "permanent": false
     },
     {
       "source": "/faq/faq-oss",
-      "destination": "/enterprise/v1-10-0/deployment/support",
+      "destination": "/enterprise/v1-10-1/deployment/support",
       "permanent": false
     },
     {
       "source": "/feature-engineering",
-      "destination": "/enterprise/v1-10-0/feature-engineering",
+      "destination": "/enterprise/v1-10-1/feature-engineering",
       "permanent": false
     },
     {
       "source": "/feature-engineering/add-computed-column",
-      "destination": "/enterprise/v1-10-0/feature-engineering/add-computed-column",
+      "destination": "/enterprise/v1-10-1/feature-engineering/add-computed-column",
       "permanent": false
     },
     {
       "source": "/feature-engineering/computed-columns",
-      "destination": "/enterprise/v1-10-0/feature-engineering/add-computed-column",
+      "destination": "/enterprise/v1-10-1/feature-engineering/add-computed-column",
       "permanent": false
     },
     {
       "source": "/feature-engineering/data-evolution",
-      "destination": "/enterprise/v1-10-0/feature-engineering/data-evolution",
+      "destination": "/enterprise/v1-10-1/feature-engineering/data-evolution",
       "permanent": false
     },
     {
       "source": "/feature-engineering/materialized-views",
-      "destination": "/enterprise/v1-10-0/feature-engineering/materialized-views",
+      "destination": "/enterprise/v1-10-1/feature-engineering/materialized-views",
       "permanent": false
     },
     {
       "source": "/feature-engineering/refresh-column",
-      "destination": "/enterprise/v1-10-0/feature-engineering/refresh-column",
+      "destination": "/enterprise/v1-10-1/feature-engineering/refresh-column",
       "permanent": false
     },
     {
       "source": "/geneva",
-      "destination": "/enterprise/v1-10-0/geneva",
+      "destination": "/enterprise/v1-10-1/geneva",
       "permanent": false
     },
     {
       "source": "/geneva/deployment",
-      "destination": "/enterprise/v1-10-0/geneva/deployment",
+      "destination": "/enterprise/v1-10-1/geneva/deployment",
       "permanent": false
     },
     {
       "source": "/geneva/deployment/dependency-verification",
-      "destination": "/enterprise/v1-10-0/geneva/deployment/dependency-verification",
+      "destination": "/enterprise/v1-10-1/geneva/deployment/dependency-verification",
       "permanent": false
     },
     {
       "source": "/geneva/deployment/helm",
-      "destination": "/enterprise/v1-10-0/geneva/deployment/helm",
+      "destination": "/enterprise/v1-10-1/geneva/deployment/helm",
       "permanent": false
     },
     {
       "source": "/geneva/deployment/troubleshooting",
-      "destination": "/enterprise/v1-10-0/geneva/deployment/troubleshooting",
+      "destination": "/enterprise/v1-10-1/geneva/deployment/troubleshooting",
       "permanent": false
     },
     {
       "source": "/geneva/end-to-end",
-      "destination": "/enterprise/v1-10-0/geneva/end-to-end",
+      "destination": "/enterprise/v1-10-1/geneva/end-to-end",
       "permanent": false
     },
     {
       "source": "/geneva/getting-started",
-      "destination": "/enterprise/v1-10-0/geneva/getting-started",
+      "destination": "/enterprise/v1-10-1/geneva/getting-started",
       "permanent": false
     },
     {
       "source": "/geneva/jobs",
-      "destination": "/enterprise/v1-10-0/geneva/jobs",
+      "destination": "/enterprise/v1-10-1/geneva/jobs",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/advanced-job-configuration",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/advanced-job-configuration",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/advanced-job-configuration",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/backfilling",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/backfilling",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/backfilling",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/bulk-load-columns",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/bulk-load-columns",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/bulk-load-columns",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/conflicts",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/conflicts",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/conflicts",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/console",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/console",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/console",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/contexts",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/contexts",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/contexts",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/job_metrics",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/job_metrics",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/job_metrics",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/lifecycle",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/lifecycle",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/lifecycle",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/materialized-views",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/materialized-views",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/materialized-views",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/performance",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/performance",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/performance",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/startup",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/startup",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/startup",
       "permanent": false
     },
     {
       "source": "/geneva/jobs/troubleshooting",
-      "destination": "/enterprise/v1-10-0/geneva/jobs/troubleshooting",
+      "destination": "/enterprise/v1-10-1/geneva/jobs/troubleshooting",
       "permanent": false
     },
     {
       "source": "/geneva/overview",
-      "destination": "/enterprise/v1-10-0/geneva/overview",
+      "destination": "/enterprise/v1-10-1/geneva/overview",
       "permanent": false
     },
     {
       "source": "/geneva/reference",
-      "destination": "/enterprise/v1-10-0/geneva/reference",
+      "destination": "/enterprise/v1-10-1/geneva/reference",
       "permanent": false
     },
     {
       "source": "/geneva/udfs",
-      "destination": "/enterprise/v1-10-0/geneva/udfs",
+      "destination": "/enterprise/v1-10-1/geneva/udfs",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/advanced-configuration",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/advanced-configuration",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/advanced-configuration",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/batch-udtfs",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/batch-udtfs",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/batch-udtfs",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/blobs",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/blobs",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/blobs",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/built-in",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/providers",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/providers",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/error_handling",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/error_handling",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/error_handling",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/profiling-memory",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/profiling-memory",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/profiling-memory",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/providers",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/providers",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/providers",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/providers/gemini",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/providers/gemini",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/providers/gemini",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/providers/openai",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/providers/openai",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/providers/openai",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/providers/sentence-transformers",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/providers/sentence-transformers",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/providers/sentence-transformers",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/scalar-udtfs",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/scalar-udtfs",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/scalar-udtfs",
       "permanent": false
     },
     {
       "source": "/geneva/udfs/udfs",
-      "destination": "/enterprise/v1-10-0/geneva/udfs/udfs",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/udfs",
       "permanent": false
     },
     {
       "source": "/governance/authorization",
-      "destination": "/enterprise/v1-10-0/governance/authorization",
+      "destination": "/enterprise/v1-10-1/governance/authorization",
       "permanent": false
     },
     {
       "source": "/huggingface/datasets",
-      "destination": "/enterprise/v1-10-0/datasets",
+      "destination": "/enterprise/v1-10-1/datasets",
       "permanent": false
     },
     {
       "source": "/huggingface/overview",
-      "destination": "/enterprise/v1-10-0/integrations/ai/huggingface",
+      "destination": "/enterprise/v1-10-1/integrations/ai/huggingface",
       "permanent": false
     },
     {
       "source": "/hybrid-search",
-      "destination": "/enterprise/v1-10-0/search/hybrid-search",
+      "destination": "/enterprise/v1-10-1/search/hybrid-search",
       "permanent": false
     },
     {
       "source": "/indexing",
-      "destination": "/enterprise/v1-10-0/indexing",
+      "destination": "/enterprise/v1-10-1/indexing",
       "permanent": false
     },
     {
       "source": "/indexing/fts-index",
-      "destination": "/enterprise/v1-10-0/indexing/fts-index",
+      "destination": "/enterprise/v1-10-1/indexing/fts-index",
       "permanent": false
     },
     {
       "source": "/indexing/gpu-indexing",
-      "destination": "/enterprise/v1-10-0/indexing/reindexing#gpu",
+      "destination": "/enterprise/v1-10-1/indexing/reindexing#gpu",
       "permanent": false
     },
     {
       "source": "/indexing/quantization",
-      "destination": "/enterprise/v1-10-0/indexing/vector-index",
+      "destination": "/enterprise/v1-10-1/indexing/vector-index",
       "permanent": false
     },
     {
       "source": "/indexing/reindexing",
-      "destination": "/enterprise/v1-10-0/indexing/reindexing",
+      "destination": "/enterprise/v1-10-1/indexing/reindexing",
       "permanent": false
     },
     {
       "source": "/indexing/scalar-index",
-      "destination": "/enterprise/v1-10-0/indexing/scalar-index",
+      "destination": "/enterprise/v1-10-1/indexing/scalar-index",
       "permanent": false
     },
     {
       "source": "/indexing/vector-index",
-      "destination": "/enterprise/v1-10-0/indexing/vector-index",
+      "destination": "/enterprise/v1-10-1/indexing/vector-index",
       "permanent": false
     },
     {
       "source": "/ingestion",
-      "destination": "/enterprise/v1-10-0/ingestion",
+      "destination": "/enterprise/v1-10-1/ingestion",
       "permanent": false
     },
     {
       "source": "/ingestion/create-table",
-      "destination": "/enterprise/v1-10-0/ingestion/create-table",
+      "destination": "/enterprise/v1-10-1/ingestion/create-table",
       "permanent": false
     },
     {
       "source": "/ingestion/delete",
-      "destination": "/enterprise/v1-10-0/ingestion/delete",
+      "destination": "/enterprise/v1-10-1/ingestion/delete",
       "permanent": false
     },
     {
       "source": "/ingestion/insert",
-      "destination": "/enterprise/v1-10-0/ingestion/insert",
+      "destination": "/enterprise/v1-10-1/ingestion/insert",
       "permanent": false
     },
     {
       "source": "/ingestion/merge-insert",
-      "destination": "/enterprise/v1-10-0/ingestion/merge-insert",
+      "destination": "/enterprise/v1-10-1/ingestion/merge-insert",
       "permanent": false
     },
     {
       "source": "/ingestion/update",
-      "destination": "/enterprise/v1-10-0/ingestion/update",
+      "destination": "/enterprise/v1-10-1/ingestion/update",
       "permanent": false
     },
     {
       "source": "/integrations",
-      "destination": "/enterprise/v1-10-0/integrations",
+      "destination": "/enterprise/v1-10-1/integrations",
       "permanent": false
     },
     {
       "source": "/integrations/ai/agno",
-      "destination": "/enterprise/v1-10-0/integrations/ai/agno",
+      "destination": "/enterprise/v1-10-1/integrations/ai/agno",
       "permanent": false
     },
     {
       "source": "/integrations/ai/genkit",
-      "destination": "/enterprise/v1-10-0/integrations/ai/genkit",
+      "destination": "/enterprise/v1-10-1/integrations/ai/genkit",
       "permanent": false
     },
     {
       "source": "/integrations/ai/hermes-agent",
-      "destination": "/enterprise/v1-10-0/integrations/ai/hermes-agent",
+      "destination": "/enterprise/v1-10-1/integrations/ai/hermes-agent",
       "permanent": false
     },
     {
       "source": "/integrations/ai/huggingface",
-      "destination": "/enterprise/v1-10-0/integrations/ai/huggingface",
+      "destination": "/enterprise/v1-10-1/integrations/ai/huggingface",
       "permanent": false
     },
     {
       "source": "/integrations/ai/kiln",
-      "destination": "/enterprise/v1-10-0/integrations/ai/kiln",
+      "destination": "/enterprise/v1-10-1/integrations/ai/kiln",
       "permanent": false
     },
     {
       "source": "/integrations/ai/langchain",
-      "destination": "/enterprise/v1-10-0/integrations/ai/langchain",
+      "destination": "/enterprise/v1-10-1/integrations/ai/langchain",
       "permanent": false
     },
     {
       "source": "/integrations/ai/llamaIndex",
-      "destination": "/enterprise/v1-10-0/integrations/ai/llamaIndex",
+      "destination": "/enterprise/v1-10-1/integrations/ai/llamaIndex",
       "permanent": false
     },
     {
       "source": "/integrations/ai/prompttools",
-      "destination": "/enterprise/v1-10-0/integrations/ai/prompttools",
+      "destination": "/enterprise/v1-10-1/integrations/ai/prompttools",
       "permanent": false
     },
     {
       "source": "/integrations/ai/synthetic-data-kit",
-      "destination": "/enterprise/v1-10-0/integrations/ai/synthetic-data-kit",
+      "destination": "/enterprise/v1-10-1/integrations/ai/synthetic-data-kit",
       "permanent": false
     },
     {
       "source": "/integrations/data/dlt",
-      "destination": "/enterprise/v1-10-0/integrations/data/dlt",
+      "destination": "/enterprise/v1-10-1/integrations/data/dlt",
       "permanent": false
     },
     {
       "source": "/integrations/data/duckdb",
-      "destination": "/enterprise/v1-10-0/integrations/data/duckdb",
+      "destination": "/enterprise/v1-10-1/integrations/data/duckdb",
       "permanent": false
     },
     {
       "source": "/integrations/data/pandas_and_pyarrow",
-      "destination": "/enterprise/v1-10-0/integrations/data/pandas_and_pyarrow",
+      "destination": "/enterprise/v1-10-1/integrations/data/pandas_and_pyarrow",
       "permanent": false
     },
     {
       "source": "/integrations/data/phidata",
-      "destination": "/enterprise/v1-10-0/integrations/ai/agno",
+      "destination": "/enterprise/v1-10-1/integrations/ai/agno",
       "permanent": false
     },
     {
       "source": "/integrations/data/polars_arrow",
-      "destination": "/enterprise/v1-10-0/integrations/data/polars_arrow",
+      "destination": "/enterprise/v1-10-1/integrations/data/polars_arrow",
       "permanent": false
     },
     {
       "source": "/integrations/data/pydantic",
-      "destination": "/enterprise/v1-10-0/integrations/data/pydantic",
+      "destination": "/enterprise/v1-10-1/integrations/data/pydantic",
       "permanent": false
     },
     {
       "source": "/integrations/data/voxel51",
-      "destination": "/enterprise/v1-10-0/integrations/data/voxel51",
+      "destination": "/enterprise/v1-10-1/integrations/data/voxel51",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/aws",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/aws",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/aws",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/cohere",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/cohere",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/cohere",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/colpali",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/colpali",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/colpali",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/gemini",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/gemini",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/gemini",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/huggingface",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/huggingface",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/huggingface",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/ibm",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/ibm",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/ibm",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/imagebind",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/imagebind",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/imagebind",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/instructor",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/instructor",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/instructor",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/jina",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/jina",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/jina",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/ollama",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/ollama",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/ollama",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/openai",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/openai",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/openai",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/openclip",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/openclip",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/openclip",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/sentence-transformers",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/sentence-transformers",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/sentence-transformers",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/superlinked",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/superlinked",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/superlinked",
       "permanent": false
     },
     {
       "source": "/integrations/embedding/voyageai",
-      "destination": "/enterprise/v1-10-0/integrations/embedding/voyageai",
+      "destination": "/enterprise/v1-10-1/integrations/embedding/voyageai",
       "permanent": false
     },
     {
       "source": "/integrations/frameworks/:slug*",
-      "destination": "/enterprise/v1-10-0/integrations/ai/:slug*",
+      "destination": "/enterprise/v1-10-1/integrations/ai/:slug*",
       "permanent": false
     },
     {
       "source": "/integrations/lerobotdataset",
-      "destination": "/enterprise/v1-10-0/integrations/lerobotdataset",
+      "destination": "/enterprise/v1-10-1/integrations/lerobotdataset",
       "permanent": false
     },
     {
       "source": "/integrations/platforms/:slug*",
-      "destination": "/enterprise/v1-10-0/integrations/data/:slug*",
+      "destination": "/enterprise/v1-10-1/integrations/data/:slug*",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/answerdotai",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/answerdotai",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/answerdotai",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/cohere",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/cohere",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/cohere",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/colbert",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/colbert",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/colbert",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/cross_encoder",
-      "destination": "/enterprise/v1-10-0/reranking",
+      "destination": "/enterprise/v1-10-1/reranking",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/jina",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/jina",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/jina",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/linear_combination",
-      "destination": "/enterprise/v1-10-0/reranking",
+      "destination": "/enterprise/v1-10-1/reranking",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/mrr",
-      "destination": "/enterprise/v1-10-0/reranking",
+      "destination": "/enterprise/v1-10-1/reranking",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/openai",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/openai",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/openai",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/rrf",
-      "destination": "/enterprise/v1-10-0/reranking",
+      "destination": "/enterprise/v1-10-1/reranking",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/voyageai",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/voyageai",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/voyageai",
       "permanent": false
     },
     {
       "source": "/integrations/reranking/watsonx",
-      "destination": "/enterprise/v1-10-0/integrations/reranking/watsonx",
+      "destination": "/enterprise/v1-10-1/integrations/reranking/watsonx",
       "permanent": false
     },
     {
       "source": "/integrations/stable-worldmodel",
-      "destination": "/enterprise/v1-10-0/integrations/stable-worldmodel",
+      "destination": "/enterprise/v1-10-1/integrations/stable-worldmodel",
       "permanent": false
     },
     {
       "source": "/lance",
-      "destination": "/enterprise/v1-10-0/basics/lance",
+      "destination": "/enterprise/v1-10-1/basics/lance",
       "permanent": false
     },
     {
       "source": "/maintenance/background-jobs",
-      "destination": "/enterprise/v1-10-0/maintenance/background-jobs",
+      "destination": "/enterprise/v1-10-1/maintenance/background-jobs",
       "permanent": false
     },
     {
       "source": "/maintenance/cleanup",
-      "destination": "/enterprise/v1-10-0/maintenance/cleanup",
+      "destination": "/enterprise/v1-10-1/maintenance/cleanup",
       "permanent": false
     },
     {
       "source": "/maintenance/compaction",
-      "destination": "/enterprise/v1-10-0/maintenance/compaction",
+      "destination": "/enterprise/v1-10-1/maintenance/compaction",
       "permanent": false
     },
     {
       "source": "/management",
-      "destination": "/enterprise/v1-10-0/management",
+      "destination": "/enterprise/v1-10-1/management",
       "permanent": false
     },
     {
       "source": "/management/database",
-      "destination": "/enterprise/v1-10-0/management/database",
+      "destination": "/enterprise/v1-10-1/management/database",
       "permanent": false
     },
     {
       "source": "/management/materialized-view",
-      "destination": "/enterprise/v1-10-0/management/materialized-view",
+      "destination": "/enterprise/v1-10-1/management/materialized-view",
       "permanent": false
     },
     {
       "source": "/management/namespace",
-      "destination": "/enterprise/v1-10-0/management/namespace",
+      "destination": "/enterprise/v1-10-1/management/namespace",
       "permanent": false
     },
     {
       "source": "/management/table",
-      "destination": "/enterprise/v1-10-0/management/table",
+      "destination": "/enterprise/v1-10-1/management/table",
       "permanent": false
     },
     {
       "source": "/management/view",
-      "destination": "/enterprise/v1-10-0/management/view",
+      "destination": "/enterprise/v1-10-1/management/view",
       "permanent": false
     },
     {
       "source": "/namespaces",
-      "destination": "/enterprise/v1-10-0/management/namespace",
+      "destination": "/enterprise/v1-10-1/management/namespace",
       "permanent": false
     },
     {
       "source": "/namespaces/usage",
-      "destination": "/enterprise/v1-10-0/management/namespace",
+      "destination": "/enterprise/v1-10-1/management/namespace",
       "permanent": false
     },
     {
       "source": "/performance",
-      "destination": "/enterprise/v1-10-0/search#performance",
+      "destination": "/enterprise/v1-10-1/search#performance",
       "permanent": false
     },
     {
       "source": "/quickstart",
-      "destination": "/enterprise/v1-10-0/quickstart",
+      "destination": "/enterprise/v1-10-1/quickstart",
       "permanent": false
     },
     {
       "source": "/reranking",
-      "destination": "/enterprise/v1-10-0/reranking",
+      "destination": "/enterprise/v1-10-1/reranking",
       "permanent": false
     },
     {
       "source": "/reranking/:slug*",
-      "destination": "/enterprise/v1-10-0/reranking",
+      "destination": "/enterprise/v1-10-1/reranking",
       "permanent": false
     },
     {
       "source": "/search",
-      "destination": "/enterprise/v1-10-0/search",
+      "destination": "/enterprise/v1-10-1/search",
       "permanent": false
     },
     {
       "source": "/search/explain",
-      "destination": "/enterprise/v1-10-0/search/explain",
+      "destination": "/enterprise/v1-10-1/search/explain",
       "permanent": false
     },
     {
       "source": "/search/explain-analyze",
-      "destination": "/enterprise/v1-10-0/search/explain",
+      "destination": "/enterprise/v1-10-1/search/explain",
       "permanent": false
     },
     {
       "source": "/search/filtering",
-      "destination": "/enterprise/v1-10-0/search/filtering",
+      "destination": "/enterprise/v1-10-1/search/filtering",
       "permanent": false
     },
     {
       "source": "/search/fts-examples",
-      "destination": "/enterprise/v1-10-0/search/full-text-search",
+      "destination": "/enterprise/v1-10-1/search/full-text-search",
       "permanent": false
     },
     {
       "source": "/search/full-text-search",
-      "destination": "/enterprise/v1-10-0/search/full-text-search",
+      "destination": "/enterprise/v1-10-1/search/full-text-search",
       "permanent": false
     },
     {
       "source": "/search/hybrid-search",
-      "destination": "/enterprise/v1-10-0/search/hybrid-search",
+      "destination": "/enterprise/v1-10-1/search/hybrid-search",
       "permanent": false
     },
     {
       "source": "/search/multivector-search",
-      "destination": "/enterprise/v1-10-0/search/vector-search",
+      "destination": "/enterprise/v1-10-1/search/vector-search",
       "permanent": false
     },
     {
       "source": "/search/optimize-queries",
-      "destination": "/enterprise/v1-10-0/search/explain",
+      "destination": "/enterprise/v1-10-1/search/explain",
       "permanent": false
     },
     {
       "source": "/search/select",
-      "destination": "/enterprise/v1-10-0/sql/dql/select",
+      "destination": "/enterprise/v1-10-1/sql/dql/select",
       "permanent": false
     },
     {
       "source": "/search/sql",
-      "destination": "/enterprise/v1-10-0/sql",
+      "destination": "/enterprise/v1-10-1/sql",
       "permanent": false
     },
     {
       "source": "/search/sql/fts-sql",
-      "destination": "/enterprise/v1-10-0/sql/dql/fts",
+      "destination": "/enterprise/v1-10-1/sql/dql/fts",
       "permanent": false
     },
     {
       "source": "/search/sql/index",
-      "destination": "/enterprise/v1-10-0/sql",
+      "destination": "/enterprise/v1-10-1/sql",
       "permanent": false
     },
     {
       "source": "/search/vector-search",
-      "destination": "/enterprise/v1-10-0/search/vector-search",
+      "destination": "/enterprise/v1-10-1/search/vector-search",
       "permanent": false
     },
     {
       "source": "/sql",
-      "destination": "/enterprise/v1-10-0/sql",
+      "destination": "/enterprise/v1-10-1/sql",
       "permanent": false
     },
     {
       "source": "/sql/aggregation",
-      "destination": "/enterprise/v1-10-0/sql/dql/aggregation",
+      "destination": "/enterprise/v1-10-1/sql/dql/aggregation",
       "permanent": false
     },
     {
       "source": "/sql/data-types",
-      "destination": "/enterprise/v1-10-0/sql/data-types",
+      "destination": "/enterprise/v1-10-1/sql/data-types",
       "permanent": false
     },
     {
       "source": "/sql/ddl",
-      "destination": "/enterprise/v1-10-0/sql/ddl",
+      "destination": "/enterprise/v1-10-1/sql/ddl",
       "permanent": false
     },
     {
       "source": "/sql/ddl/job",
-      "destination": "/enterprise/v1-10-0/sql/ddl/job",
+      "destination": "/enterprise/v1-10-1/sql/ddl/job",
       "permanent": false
     },
     {
       "source": "/sql/ddl/materialized-view",
-      "destination": "/enterprise/v1-10-0/sql/ddl/materialized-view",
+      "destination": "/enterprise/v1-10-1/sql/ddl/materialized-view",
       "permanent": false
     },
     {
       "source": "/sql/ddl/namespace",
-      "destination": "/enterprise/v1-10-0/sql/ddl/namespace",
+      "destination": "/enterprise/v1-10-1/sql/ddl/namespace",
       "permanent": false
     },
     {
       "source": "/sql/ddl/table",
-      "destination": "/enterprise/v1-10-0/sql/ddl/table",
+      "destination": "/enterprise/v1-10-1/sql/ddl/table",
       "permanent": false
     },
     {
       "source": "/sql/ddl/view",
-      "destination": "/enterprise/v1-10-0/sql/ddl/view",
+      "destination": "/enterprise/v1-10-1/sql/ddl/view",
       "permanent": false
     },
     {
       "source": "/sql/dml",
-      "destination": "/enterprise/v1-10-0/sql/dml/insert",
+      "destination": "/enterprise/v1-10-1/sql/dml/insert",
       "permanent": false
     },
     {
       "source": "/sql/dml/copy",
-      "destination": "/enterprise/v1-10-0/sql/dml/copy",
+      "destination": "/enterprise/v1-10-1/sql/dml/copy",
       "permanent": false
     },
     {
       "source": "/sql/dml/delete",
-      "destination": "/enterprise/v1-10-0/sql/dml/delete",
+      "destination": "/enterprise/v1-10-1/sql/dml/delete",
       "permanent": false
     },
     {
       "source": "/sql/dml/insert",
-      "destination": "/enterprise/v1-10-0/sql/dml/insert",
+      "destination": "/enterprise/v1-10-1/sql/dml/insert",
       "permanent": false
     },
     {
       "source": "/sql/dml/refresh",
-      "destination": "/enterprise/v1-10-0/sql/dml/refresh",
+      "destination": "/enterprise/v1-10-1/sql/dml/refresh",
       "permanent": false
     },
     {
       "source": "/sql/dml/update",
-      "destination": "/enterprise/v1-10-0/sql/dml/update",
+      "destination": "/enterprise/v1-10-1/sql/dml/update",
       "permanent": false
     },
     {
       "source": "/sql/dql/aggregation",
-      "destination": "/enterprise/v1-10-0/sql/dql/aggregation",
+      "destination": "/enterprise/v1-10-1/sql/dql/aggregation",
       "permanent": false
     },
     {
       "source": "/sql/dql/explain",
-      "destination": "/enterprise/v1-10-0/sql/dql/explain",
+      "destination": "/enterprise/v1-10-1/sql/dql/explain",
       "permanent": false
     },
     {
       "source": "/sql/dql/fts",
-      "destination": "/enterprise/v1-10-0/sql/dql/fts",
+      "destination": "/enterprise/v1-10-1/sql/dql/fts",
       "permanent": false
     },
     {
       "source": "/sql/dql/join",
-      "destination": "/enterprise/v1-10-0/sql/dql/join",
+      "destination": "/enterprise/v1-10-1/sql/dql/join",
       "permanent": false
     },
     {
       "source": "/sql/dql/sampling",
-      "destination": "/enterprise/v1-10-0/sql/dql/sampling",
+      "destination": "/enterprise/v1-10-1/sql/dql/sampling",
       "permanent": false
     },
     {
       "source": "/sql/dql/select",
-      "destination": "/enterprise/v1-10-0/sql/dql/select",
+      "destination": "/enterprise/v1-10-1/sql/dql/select",
       "permanent": false
     },
     {
       "source": "/sql/dql/subqueries",
-      "destination": "/enterprise/v1-10-0/sql/dql/subqueries",
+      "destination": "/enterprise/v1-10-1/sql/dql/subqueries",
       "permanent": false
     },
     {
       "source": "/sql/dql/window",
-      "destination": "/enterprise/v1-10-0/sql/dql/window",
+      "destination": "/enterprise/v1-10-1/sql/dql/window",
       "permanent": false
     },
     {
       "source": "/sql/explain",
-      "destination": "/enterprise/v1-10-0/sql/dql/explain",
+      "destination": "/enterprise/v1-10-1/sql/dql/explain",
       "permanent": false
     },
     {
       "source": "/sql/functions",
-      "destination": "/enterprise/v1-10-0/sql/functions",
+      "destination": "/enterprise/v1-10-1/sql/functions",
       "permanent": false
     },
     {
       "source": "/sql/join",
-      "destination": "/enterprise/v1-10-0/sql/dql/join",
+      "destination": "/enterprise/v1-10-1/sql/dql/join",
       "permanent": false
     },
     {
       "source": "/sql/operators",
-      "destination": "/enterprise/v1-10-0/sql/operators",
+      "destination": "/enterprise/v1-10-1/sql/operators",
       "permanent": false
     },
     {
       "source": "/sql/prepared-statements",
-      "destination": "/enterprise/v1-10-0/sql/prepared-statements",
+      "destination": "/enterprise/v1-10-1/sql/prepared-statements",
       "permanent": false
     },
     {
       "source": "/sql/refresh",
-      "destination": "/enterprise/v1-10-0/sql/dml/refresh",
+      "destination": "/enterprise/v1-10-1/sql/dml/refresh",
       "permanent": false
     },
     {
       "source": "/sql/sampling",
-      "destination": "/enterprise/v1-10-0/sql/dql/sampling",
+      "destination": "/enterprise/v1-10-1/sql/dql/sampling",
       "permanent": false
     },
     {
       "source": "/sql/scalar-functions",
-      "destination": "/enterprise/v1-10-0/sql/scalar-functions",
+      "destination": "/enterprise/v1-10-1/sql/scalar-functions",
       "permanent": false
     },
     {
       "source": "/sql/select",
-      "destination": "/enterprise/v1-10-0/sql/dql/select",
+      "destination": "/enterprise/v1-10-1/sql/dql/select",
       "permanent": false
     },
     {
       "source": "/sql/show",
-      "destination": "/enterprise/v1-10-0/sql/ddl/job",
+      "destination": "/enterprise/v1-10-1/sql/ddl/job",
       "permanent": false
     },
     {
       "source": "/sql/subqueries",
-      "destination": "/enterprise/v1-10-0/sql/dql/subqueries",
+      "destination": "/enterprise/v1-10-1/sql/dql/subqueries",
       "permanent": false
     },
     {
       "source": "/sql/window",
-      "destination": "/enterprise/v1-10-0/sql/dql/window",
+      "destination": "/enterprise/v1-10-1/sql/dql/window",
       "permanent": false
     },
     {
       "source": "/storage",
-      "destination": "/enterprise/v1-10-0/deployment/storage",
+      "destination": "/enterprise/v1-10-1/deployment/storage",
       "permanent": false
     },
     {
       "source": "/storage/configuration",
-      "destination": "/enterprise/v1-10-0/deployment/storage",
+      "destination": "/enterprise/v1-10-1/deployment/storage",
       "permanent": false
     },
     {
       "source": "/storage/monitoring",
-      "destination": "/enterprise/v1-10-0/deployment/monitoring",
+      "destination": "/enterprise/v1-10-1/deployment/monitoring",
       "permanent": false
     },
     {
       "source": "/tables",
-      "destination": "/enterprise/v1-10-0/management/table",
+      "destination": "/enterprise/v1-10-1/management/table",
       "permanent": false
     },
     {
       "source": "/tables-and-namespaces",
-      "destination": "/enterprise/v1-10-0/basics/catalog",
+      "destination": "/enterprise/v1-10-1/basics/catalog",
       "permanent": false
     },
     {
       "source": "/tables/branching",
-      "destination": "/enterprise/v1-10-0/tables/branching",
+      "destination": "/enterprise/v1-10-1/tables/branching",
       "permanent": false
     },
     {
       "source": "/tables/consistency",
-      "destination": "/enterprise/v1-10-0/tables/consistency",
+      "destination": "/enterprise/v1-10-1/tables/consistency",
       "permanent": false
     },
     {
       "source": "/tables/create",
-      "destination": "/enterprise/v1-10-0/ingestion",
+      "destination": "/enterprise/v1-10-1/ingestion",
       "permanent": false
     },
     {
       "source": "/tables/multimodal",
-      "destination": "/enterprise/v1-10-0/management/table#multimodal",
+      "destination": "/enterprise/v1-10-1/management/table#multimodal",
       "permanent": false
     },
     {
       "source": "/tables/schema",
-      "destination": "/enterprise/v1-10-0/management/table#schema",
+      "destination": "/enterprise/v1-10-1/management/table#schema",
       "permanent": false
     },
     {
       "source": "/tables/update",
-      "destination": "/enterprise/v1-10-0/ingestion/update",
+      "destination": "/enterprise/v1-10-1/ingestion/update",
       "permanent": false
     },
     {
       "source": "/tables/versioning",
-      "destination": "/enterprise/v1-10-0/management/table#versioning",
+      "destination": "/enterprise/v1-10-1/management/table#versioning",
       "permanent": false
     },
     {
       "source": "/training",
-      "destination": "/enterprise/v1-10-0/training/data-loading",
+      "destination": "/enterprise/v1-10-1/training/data-loading",
       "permanent": false
     },
     {
       "source": "/training/data-loading",
-      "destination": "/enterprise/v1-10-0/training/data-loading",
+      "destination": "/enterprise/v1-10-1/training/data-loading",
       "permanent": false
     },
     {
       "source": "/training/lerobot",
-      "destination": "/enterprise/v1-10-0/integrations/lerobotdataset",
+      "destination": "/enterprise/v1-10-1/integrations/lerobotdataset",
       "permanent": false
     },
     {
       "source": "/training/object-detection",
-      "destination": "/enterprise/v1-10-0/training/object-detection",
+      "destination": "/enterprise/v1-10-1/training/object-detection",
       "permanent": false
     },
     {
       "source": "/training/torch",
-      "destination": "/enterprise/v1-10-0/training/torch",
+      "destination": "/enterprise/v1-10-1/training/torch",
       "permanent": false
     },
     {
       "source": "/training/vlm-finetuning",
-      "destination": "/enterprise/v1-10-0/training/vlm-finetuning",
+      "destination": "/enterprise/v1-10-1/training/vlm-finetuning",
       "permanent": false
     },
     {
       "source": "/training/why-lancedb",
-      "destination": "/enterprise/v1-10-0/training/why-lancedb",
+      "destination": "/enterprise/v1-10-1/training/why-lancedb",
       "permanent": false
     },
     {
       "source": "/troubleshooting",
-      "destination": "/enterprise/v1-10-0/deployment/support",
+      "destination": "/enterprise/v1-10-1/deployment/support",
       "permanent": false
     },
     {
       "source": "/tutorials",
-      "destination": "/enterprise/v1-10-0/tutorials",
+      "destination": "/enterprise/v1-10-1/tutorials",
       "permanent": false
     },
     {
       "source": "/tutorials/agents",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/contextual-rag",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/contextual-rag",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/agentic-rag",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/agentic-rag",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/agentic-rag",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/contextual-rag",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/contextual-rag",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/contextual-rag",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/hyde",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/hyde",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/hyde",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/late-chunking",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/late-chunking",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/late-chunking",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/matryoshka-embeddings",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/matryoshka-embeddings",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/matryoshka-embeddings",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/multimodal-agent",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/multimodal-agent",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/multimodal-agent",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/nvidia-rag-blueprint",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/nvidia-rag-blueprint",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/nvidia-rag-blueprint",
       "permanent": false
     },
     {
       "source": "/tutorials/agents/time-travel-rag",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/time-travel-rag",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/time-travel-rag",
       "permanent": false
     },
     {
       "source": "/tutorials/feature-engineering",
-      "destination": "/enterprise/v1-10-0/tutorials/feature-engineering/feature-engineering-101",
+      "destination": "/enterprise/v1-10-1/tutorials/feature-engineering/feature-engineering-101",
       "permanent": false
     },
     {
       "source": "/tutorials/feature-engineering/feature-engineering-101",
-      "destination": "/enterprise/v1-10-0/tutorials/feature-engineering/feature-engineering-101",
+      "destination": "/enterprise/v1-10-1/tutorials/feature-engineering/feature-engineering-101",
       "permanent": false
     },
     {
       "source": "/tutorials/feature-engineering/materialized-views",
-      "destination": "/enterprise/v1-10-0/tutorials/feature-engineering/materialized-views",
+      "destination": "/enterprise/v1-10-1/tutorials/feature-engineering/materialized-views",
       "permanent": false
     },
     {
       "source": "/tutorials/rag/:slug*",
-      "destination": "/enterprise/v1-10-0/tutorials/agents/:slug*",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/:slug*",
       "permanent": false
     },
     {
       "source": "/tutorials/search",
-      "destination": "/enterprise/v1-10-0/tutorials/search/hybrid-search-beir",
+      "destination": "/enterprise/v1-10-1/tutorials/search/hybrid-search-beir",
       "permanent": false
     },
     {
       "source": "/tutorials/search/hybrid-search-beir",
-      "destination": "/enterprise/v1-10-0/tutorials/search/hybrid-search-beir",
+      "destination": "/enterprise/v1-10-1/tutorials/search/hybrid-search-beir",
       "permanent": false
     },
     {
       "source": "/tutorials/search/multivector-needle-in-a-haystack",
-      "destination": "/enterprise/v1-10-0/tutorials/search/multivector-needle-in-a-haystack",
+      "destination": "/enterprise/v1-10-1/tutorials/search/multivector-needle-in-a-haystack",
       "permanent": false
     },
     {
       "source": "/tutorials/search/multivector-xtr",
-      "destination": "/enterprise/v1-10-0/tutorials/search/multivector-xtr",
+      "destination": "/enterprise/v1-10-1/tutorials/search/multivector-xtr",
       "permanent": false
     },
     {
       "source": "/tutorials/search/ner-search",
-      "destination": "/enterprise/v1-10-0/tutorials/search/ner-search",
+      "destination": "/enterprise/v1-10-1/tutorials/search/ner-search",
       "permanent": false
     },
     {
       "source": "/tutorials/search/reddit-summarizer",
-      "destination": "/enterprise/v1-10-0/tutorials/search/reddit-summarizer",
+      "destination": "/enterprise/v1-10-1/tutorials/search/reddit-summarizer",
       "permanent": false
     },
     {
       "source": "/tutorials/search/vector-arithmetic",
-      "destination": "/enterprise/v1-10-0/tutorials/search/vector-arithmetic",
+      "destination": "/enterprise/v1-10-1/tutorials/search/vector-arithmetic",
       "permanent": false
     },
     {
       "source": "/tutorials/search/video-search",
-      "destination": "/enterprise/v1-10-0/tutorials/search/video-search",
+      "destination": "/enterprise/v1-10-1/tutorials/search/video-search",
       "permanent": false
     },
     {
       "source": "/tutorials/vector-search/:slug*",
-      "destination": "/enterprise/v1-10-0/tutorials/search/:slug*",
+      "destination": "/enterprise/v1-10-1/tutorials/search/:slug*",
       "permanent": false
     }
   ]
