@@ -249,8 +249,27 @@ class World:
         self.lancedb = serving(base / "lancedb")
         self.enterprise_repo = serving(base / "enterprise_repo")
         self.docs = serving(base / "docs")
-        for name in ("assemble.yaml", ".gitignore", "compose.yaml", "discover.yaml"):
+        for name in ("assemble.yaml", ".gitignore"):
             shutil.copy(SCRIPTS.parent / name, self.docs / name)
+        (self.docs / "compose.yaml").write_text("""host: docs.lancedb.com
+products:
+  - product: enterprise
+    label: Enterprise
+    name: LanceDB Enterprise
+    # The version readers get by default.
+    preferred:
+  - product: oss
+    label: OSS
+    name: LanceDB OSS
+    preferred:
+""")
+        (self.docs / "discover.yaml").write_text(yaml.safe_dump({
+            "products": {
+                "enterprise": {"from": None, "skip": {}},
+                "oss": {"from": None, "skip": {}, "enterprise_pages": None},
+            },
+            "holds": [HOLD],
+        }))
         for rel, content in {
             "docs/docs.nav.json": json.dumps(GENEVA_NAV),
             "docs/geneva/index.mdx": "# Geneva\n",
@@ -364,6 +383,35 @@ def saved_enterprise(world: World) -> str:
     """Prepare Enterprise 8.2.0 and merge its pull request."""
     world.run(open_prs=True)
     return world.merge(1)
+
+
+@pytest.mark.parametrize("live_version", ["1.10.0", "1.10.1"])
+def test_fixture_ignores_live_release_settings(tmp_path, monkeypatch, live_version):
+    source = tmp_path / "source"
+    source.mkdir()
+    for name in ("assemble.yaml", ".gitignore", "compose.yaml", "discover.yaml"):
+        shutil.copy(SCRIPTS.parent / name, source / name)
+    config = yaml.safe_load((source / "compose.yaml").read_text())
+    for product in config["products"]:
+        product["preferred"] = live_version
+    (source / "compose.yaml").write_text(yaml.safe_dump(config))
+    config = yaml.safe_load((source / "discover.yaml").read_text())
+    for product in config["products"].values():
+        product["from"] = live_version
+    config["products"]["oss"]["enterprise_pages"] = "preferred"
+    (source / "discover.yaml").write_text(yaml.safe_dump(config))
+    monkeypatch.setattr(sys.modules[__name__], "SCRIPTS", source / "scripts")
+
+    world = World(tmp_path / "world")
+
+    composition = discover.compose.load_config(world.docs / "compose.yaml")
+    assert all(product["preferred"] is None for product in composition["products"])
+    settings = discover.load_config(world.docs / "discover.yaml")
+    assert all(product["from"] is None for product in settings["products"].values())
+    world.enterprise("8.2.0", world.lancedb_commit("bundled"))
+    result = world.run(open_prs=True)
+    assert all(finding.state == "skipped" for finding in result.findings)
+    assert world.github.posts == []
 
 
 def test_discovery_is_off_until_discover_yaml_names_where_it_starts(world):
