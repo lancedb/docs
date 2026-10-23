@@ -974,16 +974,24 @@ def test_a_check_that_still_cannot_start_fails_the_run_with_its_name(released):
     assert len(released.github.pull_requests) == 1
 
 
-def test_concurrent_runs_open_one_pull_request(released, monkeypatch):
+@pytest.mark.parametrize("same_commit", [True, False])
+def test_concurrent_runs_open_one_pull_request(released, monkeypatch, same_commit):
+    monkeypatch.setenv("GIT_AUTHOR_DATE", "2000-01-01T00:00:00+00:00")
+    monkeypatch.setenv("GIT_COMMITTER_DATE", "2000-01-01T00:00:00+00:00")
     prepare_branch = discover.prepare_branch
     other = []
+    prepared = []
 
     def meanwhile(*args, **kwargs):
         made = prepare_branch(*args, **kwargs)
         if not other:
             # Another run prepares the same release, pushes and opens its pull request first.
             monkeypatch.setattr(discover, "prepare_branch", prepare_branch)
-            other.append(released.run(open_prs=True))
+            with monkeypatch.context() as concurrent:
+                if not same_commit:
+                    concurrent.setenv("GIT_COMMITTER_DATE", "2000-01-01T00:00:01+00:00")
+                other.append(released.run(open_prs=True))
+            prepared.append(made)
         return made
 
     monkeypatch.setattr(discover, "prepare_branch", meanwhile)
@@ -993,9 +1001,12 @@ def test_concurrent_runs_open_one_pull_request(released, monkeypatch):
     assert other[0]["Enterprise 8.2.0"].done == "opened pull request #1 and started its checks"
     found = result["Enterprise 8.2.0"]
     assert found.state == "open" and not found.failed
-    assert "appeared while this run prepared it, so its commits are kept" in result.report
+    if not same_commit:
+        assert "appeared while this run prepared it, so its commits are kept" in result.report
     assert len(released.github.pull_requests) == 1
-    assert released.github.head("editions/enterprise-8.2.0") == released.github.pull_requests[0]["head"]["sha"]
+    winner = released.github.pull_requests[0]["head"]["sha"]
+    assert (prepared[0] == winner) == same_commit
+    assert released.github.head("editions/enterprise-8.2.0") == winner
 
 
 def test_a_pull_request_opened_meanwhile_is_reused(released, monkeypatch):
