@@ -30,6 +30,8 @@ from typing import Iterable
 
 import yaml
 
+from structured_data import dataset_schema, render_jsonld, strip_markdown
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "scripts" / "hf_datasets.yaml"
 DATASETS_DIR = REPO_ROOT / "docs" / "datasets"
@@ -103,9 +105,6 @@ def fetch_card(ds: Dataset) -> str:
 
 FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
 H1_RE = re.compile(r"^# .+?\n", re.MULTILINE)
-LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
-INLINE_CODE_RE = re.compile(r"`([^`]+)`")
-BOLD_ITALIC_RE = re.compile(r"\*+([^*]+)\*+")
 BARE_URL_RE = re.compile(r"https?://\S+")
 WHITESPACE_RE = re.compile(r"\s+")
 BIBTEX_OPEN_RE = re.compile(r"^@\w+\{")
@@ -147,10 +146,7 @@ def first_paragraph(body: str) -> str:
 
 def plain_text(s: str) -> str:
     """Strip markdown formatting + URLs to a clean prose string."""
-    s = LINK_RE.sub(r"\1", s)
-    s = BARE_URL_RE.sub("", s)
-    s = INLINE_CODE_RE.sub(r"\1", s)
-    s = BOLD_ITALIC_RE.sub(r"\1", s)
+    s = BARE_URL_RE.sub("", strip_markdown(s))
     s = WHITESPACE_RE.sub(" ", s).strip()
     return s
 
@@ -238,7 +234,10 @@ def transform_card(ds: Dataset, card_text: str) -> tuple[str, str]:
         f"Source dataset card and downloadable files for `lance-format/{ds.hf}`.\n"
         f"</Card>\n\n"
     )
-    return frontmatter + hf_card + body.rstrip() + "\n", description
+    schema = render_jsonld(dataset_schema(
+        ds.title, plain_text(first_paragraph(body)), ds.slug, hf_url
+    ))
+    return frontmatter + schema + "\n" + hf_card + body.rstrip() + "\n", description
 
 
 # ----- index.mdx card grid ----------------------------------------------------

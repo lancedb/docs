@@ -23,6 +23,15 @@ Check broken links (applies to internal links within this docs site only):
 mint broken-links
 ```
 
+## Structured data
+
+After editing the OSS or Enterprise FAQ answers, run
+`python3 scripts/sync_faq_schema.py` to refresh their structured data. CI checks
+that it stays in sync. Add new FAQ pages to `FAQ_PAGES` in that script.
+
+`docs/docs.json` configures Organization metadata, and `make hf-sync` generates
+Dataset metadata.
+
 ## Generate snippets
 
 To generate snippets, use `uv` to sync your local Python environment so that you can run the Python script described below.
