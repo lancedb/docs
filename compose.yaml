@@ -15,7 +15,7 @@ products:
     # The version readers get by default. It changes only here, in a reviewed
     # pull request, never because another edition was prepared later. Leave it
     # empty until the product has a saved edition.
-    preferred: 1.10.1
+    preferred: 1.10.0
   - product: oss
     label: OSS
     name: LanceDB OSS
