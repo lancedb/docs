@@ -1,0 +1,40 @@
+# Release record, written by scripts/edition.py prepare. `release` and `sources`
+# say what the edition was built from, and `prepared` describes the snapshot as
+# first saved. Once merged, neither changes; `edition.py check --base` refuses
+# a change to them. A reviewed correction to the saved edition adds an entry at
+# the end of `corrections` with the checksum of the corrected edition; see
+# "Saved editions" in README.md.
+format: 1
+product: enterprise
+version: 1.10.0
+edition: editions/enterprise/1.10.0
+release:
+  repository: lancedb/sophon
+  tag: v1.10.0
+  commit: 9f1d81537e61860dcec76fb08d94e8b2d821400c
+  qualification:
+    tag: release-qualified/v1.10.0
+    object: 8329db9dde838f370a688e66906165e5aedcaa50
+  bundled_lancedb: 19991cea32c696767f1d0124f4959700a926b4e4
+sources:
+  lancedb:
+    repository: lancedb/lancedb
+    path: docs/web
+    commit: 19991cea32c696767f1d0124f4959700a926b4e4
+  enterprise:
+    repository: lancedb/sophon
+    path: docs/web
+    commit: 9f1d81537e61860dcec76fb08d94e8b2d821400c
+  build:
+    repository: lancedb/docs
+    path: docs
+    commit: 163e70971163cbc471cf992d5999d119f7c95820
+  openapi:
+    repository: lance-format/lance-namespace
+    release: v0.12.0
+    path: docs/src/spec.yaml
+    sha256: 64ea22cb93fcd4eb6a7e7043e72f72e913c5581faa0efe91028055cd90fbe370
+prepared:
+  files: 307
+  sha256: 41dad29cd9b8acbc0397e1211a0e1264e3a99928d8f3e016adbd7a0551b77d1c
+corrections: []
