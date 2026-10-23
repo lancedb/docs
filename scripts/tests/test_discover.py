@@ -1075,7 +1075,37 @@ def test_a_pull_request_opened_meanwhile_is_reused(released, monkeypatch):
     assert len(released.github.pull_requests) == 1
 
 
-def test_out_of_order_and_maintenance_releases_never_change_the_preferred_edition(released):
+@pytest.mark.parametrize("product", ["enterprise", "oss"])
+@pytest.mark.parametrize("current,version,update", [
+    (None, "1.9.0", True),
+    ("1.9.0", "1.10.0", True),
+    ("1.10.0", "1.9.5", False),
+])
+def test_preference_updates_use_version_order_for_each_product(tmp_path, product, current, version, update):
+    main = discover.Main("", tmp_path, {}, {}, {product: current})
+    finding = discover.Finding(product, version, "eligible", "")
+    assert discover.preferred_note(main, finding)[0] is update
+
+
+def test_updating_a_preference_preserves_comments_and_the_other_product(tmp_path):
+    path = tmp_path / "compose.yaml"
+    original = '''host: docs.lancedb.com
+products:
+  - product: enterprise
+    label: Enterprise
+    name: LanceDB Enterprise
+    preferred: "1.9.0" # chosen release
+  - product: oss
+    label: OSS
+    name: LanceDB OSS
+    preferred: 0.40.0
+'''
+    path.write_text(original)
+    discover.set_preferred(path, "enterprise", "1.10.0")
+    assert path.read_text() == original.replace('preferred: "1.9.0"', "preferred: 1.10.0")
+
+
+def test_newer_release_updates_the_preferred_edition_but_older_releases_do_not(released):
     released.enterprise("8.4.0", released.bundled)
     released.configure(enterprise="8.4.0")
     released.run(open_prs=True)
@@ -1094,12 +1124,17 @@ def test_out_of_order_and_maintenance_releases_never_change_the_preferred_editio
     main = refs(released.origin)["refs/heads/main"]
     for version in ("8.2.0", "8.2.9", "8.3.1", "8.5.0"):
         branch = refs(released.origin)[f"refs/heads/editions/enterprise-{version}"]
-        assert released.show(branch, "compose.yaml") == released.show(main, "compose.yaml")
+        configuration = yaml.safe_load(released.show(branch, "compose.yaml"))
+        assert preferred(configuration, "enterprise") == ("8.5.0" if version == "8.5.0" else "8.4.0")
+        assert preferred(configuration, "oss") is None
+        if version != "8.5.0":
+            assert released.show(branch, "compose.yaml") == released.show(main, "compose.yaml")
         record = "releases/enterprise-8.4.0.yaml"
         assert released.show(branch, record) == released.show(main, record)
     bodies = {p["head"]: p["body"] for p in released.github.opened()}
     assert "Leaves the preferred Enterprise edition at 8.4.0, a newer release" in bodies["editions/enterprise-8.3.1"]
-    assert "This release is newer: to make it the default, change `preferred`" in bodies["editions/enterprise-8.5.0"]
+    assert "Sets the preferred Enterprise edition to 8.5.0 in compose.yaml" in bodies["editions/enterprise-8.5.0"]
+    assert preferred(yaml.safe_load(released.show(main, "compose.yaml")), "enterprise") == "8.4.0"
 
 
 def test_a_failed_preparation_leaves_main_and_saved_editions_unchanged(released, monkeypatch):

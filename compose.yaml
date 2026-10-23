@@ -12,10 +12,8 @@ products:
     name: LanceDB Enterprise
     description: Multimodal lakehouse
     icon: server
-    # The version readers get by default. It changes only here, in a reviewed
-    # pull request, never because another edition was prepared later. Leave it
-    # empty until the product has a saved edition.
-    preferred: 1.10.0
+    # The reviewed edition readers get by default, labelled Latest.
+    preferred: 1.10.1
   - product: oss
     label: OSS
     name: LanceDB OSS
