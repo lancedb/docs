@@ -12,67 +12,127 @@ on:
           - production
         default: staging
       run_id:
-        description: ID of the successful Assemble run whose candidate to publish
+        description: ID of the successful Assemble or Compose run whose candidate to publish
         required: true
       site_sha256:
         description: The candidate's site checksum, from that run's summary
         required: true
+  # Only a wake-up: the staging job reads main itself, so an older or repeated
+  # run cannot put an older candidate on staging.
+  workflow_run:
+    workflows:
+      - Compose
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   contents: read
 
-concurrency:
-  group: publish-${{ inputs.target }}
-  cancel-in-progress: false
-
 env:
-  RUN_ID: ${{ inputs.run_id }}
-  SITE_SHA256: ${{ inputs.site_sha256 }}
   MINTLIFY_CONTENT_DIR: ${{ vars.MINTLIFY_CONTENT_DIR }}
 
 jobs:
   staging:
     name: Publish to staging
-    if: inputs.target == 'staging'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.target == 'staging') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event != 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
+    concurrency:
+      group: publish
+      queue: max
+      cancel-in-progress: false
     permissions:
       contents: write # the `staging` branch; the `assembled` ruleset must refuse this token
       actions: read # the candidate artifact and its run
     steps:
       - uses: actions/checkout@v4
 
+      - name: Choose the run
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
+            main=$(git ls-remote origin refs/heads/main | cut -f1)
+            runs="repos/$GITHUB_REPOSITORY/actions/workflows/compose.yml/runs"
+            RUN_ID=$(gh api "$runs?branch=main&head_sha=$main&status=success" --jq \
+              '[.workflow_runs[] | select(.event == "push" or .event == "workflow_dispatch")][0].id // empty')
+          fi
+          if ! [[ "$RUN_ID" =~ ^[0-9]*$ ]]; then
+            echo "::error::run ID $RUN_ID is not a number"
+            exit 1
+          fi
+          echo "id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
       # Fall back to verified publication history when the artifact has expired.
       - name: Download the candidate
+        if: steps.run.outputs.id
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           name: candidate
           path: ${{ runner.temp }}/candidate
-          run-id: ${{ inputs.run_id }}
+          run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ github.token }}
 
       - name: Read the run that recorded it
+        if: steps.run.outputs.id
         env:
           GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.run.outputs.id }}
         run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
 
       - name: Publish
+        env:
+          RUN_ID: ${{ steps.run.outputs.id }}
+          SITE_SHA256: ${{ inputs.site_sha256 }}
+          AUTOMATIC: ${{ github.event_name == 'workflow_run' && 'true' || '' }}
         run: |
-          python3 scripts/candidate.py publish --target staging \
+          python3 scripts/candidate.py publish --target staging ${AUTOMATIC:+--automatic} \
             --run-id "$RUN_ID" --site-sha256 "$SITE_SHA256" \
             --run "$RUNNER_TEMP/run.json" --repository "$GITHUB_REPOSITORY" \
             --content-dir "$MINTLIFY_CONTENT_DIR" --candidate "$RUNNER_TEMP/candidate" \
             --summary "$GITHUB_STEP_SUMMARY"
 
+  request:
+    name: Read production when requested
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      production: ${{ steps.read.outputs.production }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read production
+        id: read
+        run: |
+          set -euo pipefail
+          heads=$(git ls-remote origin refs/heads/assembled)
+          echo "production=${heads%%[[:space:]]*}" >> "$GITHUB_OUTPUT"
+
   production:
     name: Publish to production
-    if: inputs.target == 'production'
+    needs: request
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'production'
     runs-on: ubuntu-latest
     # Environment restrictions and branch rules must be enforced externally.
     environment: production
+    concurrency:
+      group: publish
+      queue: max
+      cancel-in-progress: false
     permissions:
       contents: read
       actions: read # the candidate artifact and its run
+      deployments: read # Mintlify's deployments of the staging commit
     steps:
       - name: Require main and the production key
         env:
@@ -103,12 +163,36 @@ jobs:
       - name: Read the run that recorded it
         env:
           GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
         run: gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > "$RUNNER_TEMP/run.json"
 
+      - name: Read Mintlify's deployments of staging
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          staging=$(git ls-remote origin refs/heads/staging | cut -f1)
+          if [ -n "$staging" ]; then
+            api="repos/$GITHUB_REPOSITORY/deployments"
+            ids=$(gh api "$api?sha=$staging&per_page=100" --jq '.[].id')
+            for id in $ids; do
+              gh api "$api/$id/statuses?per_page=100" > "$RUNNER_TEMP/statuses.json"
+              gh api "$api/$id" | jq --slurpfile statuses "$RUNNER_TEMP/statuses.json" \
+                '. + {statuses: $statuses[0]}'
+            done | jq -s . > "$RUNNER_TEMP/staging-deployments.json"
+          fi
+
       - name: Publish
+        env:
+          RUN_ID: ${{ inputs.run_id }}
+          SITE_SHA256: ${{ inputs.site_sha256 }}
+          PRODUCTION: ${{ needs.request.outputs.production }}
+          STAGING_URL: ${{ vars.MINTLIFY_STAGING_URL }}
         run: |
           python3 scripts/candidate.py publish --target production \
             --run-id "$RUN_ID" --site-sha256 "$SITE_SHA256" \
             --run "$RUNNER_TEMP/run.json" --repository "$GITHUB_REPOSITORY" \
             --content-dir "$MINTLIFY_CONTENT_DIR" --candidate "$RUNNER_TEMP/candidate" \
-            --summary "$GITHUB_STEP_SUMMARY"
+            --staging-deployments "$RUNNER_TEMP/staging-deployments.json" \
+            --staging-url "$STAGING_URL" \
+            --production-was "$PRODUCTION" --summary "$GITHUB_STEP_SUMMARY"

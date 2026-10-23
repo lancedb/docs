@@ -9,7 +9,8 @@ record. Links in its pages, snippets and navigation are pointed into the
 edition; code is left as written. compose.yaml orders the products and names
 each one's preferred edition. Readers land on the first product's preferred
 edition, and unversioned URLs redirect to its matching pages. Nothing is
-rebuilt from product sources. See "Composing the site" in README.md.
+rebuilt from product sources. The last line printed names the commit composed,
+as `sources: build=<commit>`. See "Composing the site" in README.md.
 
 Usage:
 
@@ -954,6 +955,9 @@ def main(argv: list[str] | None = None) -> int:
               f"for review ({len(unresolved)}):")
         for path, names in unresolved:
             print(f"  {path} ({', '.join(names)})")
+    # Every edition, record and setting comes from this commit; the Compose
+    # workflow records it with the candidate.
+    print(f"sources: build={assemble.revision(REPO_ROOT)}")
     return 0
 
 
