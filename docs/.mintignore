@@ -1,5 +1,13 @@
 # Composed by scripts/compose.py from each edition's .mintignore.
 
+# enterprise 1.10.1
+# Functions are documented before their release. At release, remove these
+# entries, add the pages back to the navigation in docs.json, restore the
+# /feature-engineering/functions redirect to /management/function, and publish
+# the drafts marked "Draft for the Functions release".
+/enterprise/v1-10-1/management/function.mdx
+/enterprise/v1-10-1/sql/ddl/function.mdx
+
 # enterprise 1.10.0
 # Functions are documented before their release. At release, remove these
 # entries, add the pages back to the navigation in docs.json, restore the

@@ -76,6 +76,472 @@
         "icon": "server",
         "versions": [
           {
+            "version": "1.10.1",
+            "tabs": [
+              {
+                "tab": "Documentation",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "enterprise/v1-10-1/index",
+                      "enterprise/v1-10-1/basics/offerings",
+                      "enterprise/v1-10-1/basics/connect",
+                      "enterprise/v1-10-1/quickstart",
+                      "enterprise/v1-10-1/architecture",
+                      "enterprise/v1-10-1/basics/sdk",
+                      "enterprise/v1-10-1/basics/sql",
+                      "enterprise/v1-10-1/basics/agentic-skills",
+                      "enterprise/v1-10-1/about-this-version"
+                    ]
+                  },
+                  {
+                    "group": "Concepts",
+                    "pages": [
+                      "enterprise/v1-10-1/basics/lance",
+                      "enterprise/v1-10-1/basics/catalog",
+                      "enterprise/v1-10-1/basics/lakehouse",
+                      "enterprise/v1-10-1/basics/query",
+                      "enterprise/v1-10-1/basics/jobs",
+                      "enterprise/v1-10-1/tables/consistency",
+                      "enterprise/v1-10-1/basics/guarantees",
+                      "enterprise/v1-10-1/basics/limits",
+                      "enterprise/v1-10-1/basics/naming"
+                    ]
+                  },
+                  {
+                    "group": "Data Ingestion",
+                    "pages": [
+                      "enterprise/v1-10-1/ingestion/index",
+                      "enterprise/v1-10-1/ingestion/create-table",
+                      "enterprise/v1-10-1/ingestion/insert",
+                      "enterprise/v1-10-1/ingestion/merge-insert",
+                      "enterprise/v1-10-1/ingestion/update",
+                      "enterprise/v1-10-1/ingestion/delete"
+                    ]
+                  },
+                  {
+                    "group": "Semantic Search",
+                    "pages": [
+                      "enterprise/v1-10-1/search/index",
+                      "enterprise/v1-10-1/search/vector-search",
+                      "enterprise/v1-10-1/search/full-text-search",
+                      "enterprise/v1-10-1/search/hybrid-search",
+                      "enterprise/v1-10-1/search/filtering",
+                      "enterprise/v1-10-1/reranking/index",
+                      "enterprise/v1-10-1/search/explain"
+                    ]
+                  },
+                  {
+                    "group": "Data Curation",
+                    "pages": [
+                      "enterprise/v1-10-1/curation/index",
+                      "enterprise/v1-10-1/curation/aggregate",
+                      "enterprise/v1-10-1/curation/sampling",
+                      "enterprise/v1-10-1/curation/join",
+                      "enterprise/v1-10-1/curation/windowing"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "enterprise/v1-10-1/feature-engineering/index",
+                      "enterprise/v1-10-1/feature-engineering/data-evolution",
+                      "enterprise/v1-10-1/feature-engineering/add-computed-column",
+                      "enterprise/v1-10-1/feature-engineering/refresh-column",
+                      "enterprise/v1-10-1/feature-engineering/materialized-views"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering (Geneva)",
+                    "pages": [
+                      "enterprise/v1-10-1/geneva/index",
+                      "enterprise/v1-10-1/geneva/overview/index",
+                      "enterprise/v1-10-1/geneva/getting-started",
+                      {
+                        "group": "Transforms",
+                        "pages": [
+                          "enterprise/v1-10-1/geneva/udfs/index",
+                          "enterprise/v1-10-1/geneva/udfs/udfs",
+                          "enterprise/v1-10-1/geneva/udfs/scalar-udtfs",
+                          "enterprise/v1-10-1/geneva/udfs/batch-udtfs",
+                          "enterprise/v1-10-1/geneva/udfs/error_handling",
+                          "enterprise/v1-10-1/geneva/udfs/profiling-memory",
+                          "enterprise/v1-10-1/geneva/udfs/blobs"
+                        ]
+                      },
+                      {
+                        "group": "Built-in Transforms",
+                        "pages": [
+                          "enterprise/v1-10-1/geneva/udfs/providers/index",
+                          "enterprise/v1-10-1/geneva/udfs/providers/openai",
+                          "enterprise/v1-10-1/geneva/udfs/providers/gemini",
+                          "enterprise/v1-10-1/geneva/udfs/providers/sentence-transformers"
+                        ]
+                      },
+                      {
+                        "group": "Running Jobs",
+                        "pages": [
+                          "enterprise/v1-10-1/geneva/jobs/index",
+                          "enterprise/v1-10-1/geneva/jobs/backfilling",
+                          "enterprise/v1-10-1/geneva/jobs/bulk-load-columns",
+                          "enterprise/v1-10-1/geneva/jobs/materialized-views",
+                          "enterprise/v1-10-1/geneva/jobs/advanced-job-configuration",
+                          "enterprise/v1-10-1/geneva/jobs/lifecycle",
+                          "enterprise/v1-10-1/geneva/jobs/conflicts",
+                          "enterprise/v1-10-1/geneva/jobs/performance",
+                          "enterprise/v1-10-1/geneva/jobs/job_metrics",
+                          "enterprise/v1-10-1/geneva/jobs/console",
+                          "enterprise/v1-10-1/geneva/jobs/troubleshooting",
+                          "enterprise/v1-10-1/geneva/jobs/contexts"
+                        ]
+                      },
+                      {
+                        "group": "Deployment",
+                        "pages": [
+                          "enterprise/v1-10-1/geneva/deployment/helm",
+                          "enterprise/v1-10-1/geneva/jobs/startup",
+                          "enterprise/v1-10-1/geneva/deployment/dependency-verification",
+                          "enterprise/v1-10-1/geneva/udfs/advanced-configuration",
+                          "enterprise/v1-10-1/geneva/deployment/index",
+                          "enterprise/v1-10-1/geneva/deployment/troubleshooting"
+                        ]
+                      },
+                      "enterprise/v1-10-1/geneva/end-to-end",
+                      "enterprise/v1-10-1/geneva/reference"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "enterprise/v1-10-1/training/why-lancedb",
+                      "enterprise/v1-10-1/training/data-loading",
+                      "enterprise/v1-10-1/training/torch"
+                    ]
+                  },
+                  {
+                    "group": "Management",
+                    "pages": [
+                      "enterprise/v1-10-1/management/index",
+                      "enterprise/v1-10-1/management/database",
+                      "enterprise/v1-10-1/management/namespace",
+                      "enterprise/v1-10-1/management/table",
+                      "enterprise/v1-10-1/tables/branching",
+                      "enterprise/v1-10-1/management/materialized-view",
+                      "enterprise/v1-10-1/management/view"
+                    ]
+                  },
+                  {
+                    "group": "Maintenance",
+                    "pages": [
+                      "enterprise/v1-10-1/indexing/index",
+                      "enterprise/v1-10-1/indexing/vector-index",
+                      "enterprise/v1-10-1/indexing/fts-index",
+                      "enterprise/v1-10-1/indexing/scalar-index",
+                      "enterprise/v1-10-1/indexing/reindexing",
+                      "enterprise/v1-10-1/maintenance/compaction",
+                      "enterprise/v1-10-1/maintenance/cleanup",
+                      "enterprise/v1-10-1/maintenance/background-jobs"
+                    ]
+                  },
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "enterprise/v1-10-1/enterprise/index",
+                      "enterprise/v1-10-1/enterprise/architecture",
+                      "enterprise/v1-10-1/enterprise/deployment/index",
+                      "enterprise/v1-10-1/deployment/storage",
+                      "enterprise/v1-10-1/deployment/monitoring",
+                      "enterprise/v1-10-1/enterprise/deployment/azure",
+                      "enterprise/v1-10-1/enterprise/benchmarks",
+                      "enterprise/v1-10-1/deployment/support"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "enterprise/v1-10-1/enterprise/authentication",
+                      "enterprise/v1-10-1/governance/authorization",
+                      "enterprise/v1-10-1/enterprise/security"
+                    ]
+                  },
+                  {
+                    "group": "SQL Reference",
+                    "pages": [
+                      "enterprise/v1-10-1/sql/index",
+                      "enterprise/v1-10-1/sql/data-types",
+                      {
+                        "group": "DDL",
+                        "pages": [
+                          "enterprise/v1-10-1/sql/ddl/namespace",
+                          "enterprise/v1-10-1/sql/ddl/table",
+                          "enterprise/v1-10-1/sql/ddl/view",
+                          "enterprise/v1-10-1/sql/ddl/materialized-view",
+                          "enterprise/v1-10-1/sql/ddl/index",
+                          "enterprise/v1-10-1/sql/ddl/job"
+                        ],
+                        "icon": "sitemap"
+                      },
+                      {
+                        "group": "DML",
+                        "pages": [
+                          "enterprise/v1-10-1/sql/dml/insert",
+                          "enterprise/v1-10-1/sql/dml/update",
+                          "enterprise/v1-10-1/sql/dml/delete",
+                          "enterprise/v1-10-1/sql/dml/copy",
+                          "enterprise/v1-10-1/sql/dml/refresh"
+                        ],
+                        "icon": "database"
+                      },
+                      {
+                        "group": "DQL",
+                        "pages": [
+                          "enterprise/v1-10-1/sql/dql/select",
+                          "enterprise/v1-10-1/sql/dql/subqueries",
+                          "enterprise/v1-10-1/sql/dql/join",
+                          "enterprise/v1-10-1/sql/dql/aggregation",
+                          "enterprise/v1-10-1/sql/dql/window",
+                          "enterprise/v1-10-1/sql/dql/sampling",
+                          "enterprise/v1-10-1/sql/dql/fts",
+                          "enterprise/v1-10-1/sql/dql/explain"
+                        ],
+                        "icon": "filter"
+                      },
+                      {
+                        "group": "Expressions",
+                        "pages": [
+                          "enterprise/v1-10-1/sql/operators",
+                          "enterprise/v1-10-1/sql/functions",
+                          "enterprise/v1-10-1/sql/scalar-functions",
+                          "enterprise/v1-10-1/sql/prepared-statements"
+                        ],
+                        "icon": "code"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Integrations",
+                "pages": [
+                  "enterprise/v1-10-1/integrations/index",
+                  {
+                    "group": "Embedding Registry",
+                    "pages": [
+                      "enterprise/v1-10-1/embedding/index",
+                      "enterprise/v1-10-1/embedding/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Embedding Providers",
+                    "pages": [
+                      "enterprise/v1-10-1/integrations/embedding/huggingface",
+                      "enterprise/v1-10-1/integrations/embedding/aws",
+                      "enterprise/v1-10-1/integrations/embedding/cohere",
+                      "enterprise/v1-10-1/integrations/embedding/colpali",
+                      "enterprise/v1-10-1/integrations/embedding/gemini",
+                      "enterprise/v1-10-1/integrations/embedding/ibm",
+                      "enterprise/v1-10-1/integrations/embedding/imagebind",
+                      "enterprise/v1-10-1/integrations/embedding/instructor",
+                      "enterprise/v1-10-1/integrations/embedding/jina",
+                      "enterprise/v1-10-1/integrations/embedding/ollama",
+                      "enterprise/v1-10-1/integrations/embedding/openai",
+                      "enterprise/v1-10-1/integrations/embedding/openclip",
+                      "enterprise/v1-10-1/integrations/embedding/sentence-transformers",
+                      "enterprise/v1-10-1/integrations/embedding/voyageai",
+                      "enterprise/v1-10-1/integrations/embedding/superlinked"
+                    ]
+                  },
+                  {
+                    "group": "Rerankers",
+                    "pages": [
+                      "enterprise/v1-10-1/integrations/reranking/answerdotai",
+                      "enterprise/v1-10-1/integrations/reranking/cohere",
+                      "enterprise/v1-10-1/integrations/reranking/colbert",
+                      "enterprise/v1-10-1/integrations/reranking/jina",
+                      "enterprise/v1-10-1/integrations/reranking/openai",
+                      "enterprise/v1-10-1/integrations/reranking/voyageai",
+                      "enterprise/v1-10-1/integrations/reranking/watsonx"
+                    ]
+                  },
+                  {
+                    "group": "Data Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "enterprise/v1-10-1/integrations/data/pydantic",
+                      "enterprise/v1-10-1/integrations/data/duckdb",
+                      "enterprise/v1-10-1/integrations/data/pandas_and_pyarrow",
+                      "enterprise/v1-10-1/integrations/data/polars_arrow",
+                      "enterprise/v1-10-1/integrations/data/dlt",
+                      "enterprise/v1-10-1/integrations/data/voxel51"
+                    ]
+                  },
+                  {
+                    "group": "AI Platforms & Frameworks",
+                    "expanded": true,
+                    "pages": [
+                      "enterprise/v1-10-1/integrations/ai/agno",
+                      "enterprise/v1-10-1/integrations/ai/hermes-agent",
+                      "enterprise/v1-10-1/integrations/ai/huggingface",
+                      "enterprise/v1-10-1/integrations/ai/langchain",
+                      "enterprise/v1-10-1/integrations/ai/llamaIndex",
+                      "enterprise/v1-10-1/integrations/ai/genkit",
+                      "enterprise/v1-10-1/integrations/ai/kiln",
+                      "enterprise/v1-10-1/integrations/ai/prompttools",
+                      "enterprise/v1-10-1/integrations/ai/synthetic-data-kit"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Tutorials",
+                "pages": [
+                  "enterprise/v1-10-1/tutorials/index",
+                  {
+                    "group": "Search",
+                    "pages": [
+                      "enterprise/v1-10-1/tutorials/search/hybrid-search-beir",
+                      "enterprise/v1-10-1/tutorials/search/multivector-xtr",
+                      "enterprise/v1-10-1/tutorials/search/multivector-needle-in-a-haystack",
+                      "enterprise/v1-10-1/tutorials/search/video-search",
+                      "enterprise/v1-10-1/tutorials/search/vector-arithmetic",
+                      "enterprise/v1-10-1/tutorials/search/ner-search",
+                      "enterprise/v1-10-1/tutorials/search/reddit-summarizer"
+                    ]
+                  },
+                  {
+                    "group": "RAG",
+                    "pages": [
+                      "enterprise/v1-10-1/tutorials/agents/contextual-rag",
+                      "enterprise/v1-10-1/tutorials/agents/nvidia-rag-blueprint/index",
+                      "enterprise/v1-10-1/tutorials/agents/time-travel-rag/index",
+                      "enterprise/v1-10-1/tutorials/agents/multimodal-agent/index",
+                      "enterprise/v1-10-1/tutorials/agents/matryoshka-embeddings",
+                      "enterprise/v1-10-1/tutorials/agents/hyde",
+                      "enterprise/v1-10-1/tutorials/agents/late-chunking",
+                      "enterprise/v1-10-1/tutorials/agents/agentic-rag"
+                    ]
+                  },
+                  {
+                    "group": "Feature Engineering",
+                    "pages": [
+                      "enterprise/v1-10-1/tutorials/feature-engineering/feature-engineering-101",
+                      "enterprise/v1-10-1/tutorials/feature-engineering/materialized-views",
+                      "enterprise/v1-10-1/agent-branch-experiments"
+                    ]
+                  },
+                  {
+                    "group": "Training",
+                    "pages": [
+                      "enterprise/v1-10-1/training/object-detection",
+                      "enterprise/v1-10-1/training/vlm-finetuning",
+                      "enterprise/v1-10-1/integrations/stable-worldmodel"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Demos",
+                "pages": [
+                  "enterprise/v1-10-1/demos/index",
+                  "enterprise/v1-10-1/demos/semantic-art",
+                  "enterprise/v1-10-1/demos/wikipedia-search",
+                  "enterprise/v1-10-1/demos/video-search",
+                  "enterprise/v1-10-1/demos/fineweb-edu-search",
+                  "enterprise/v1-10-1/demos/robot-data-curation"
+                ]
+              },
+              {
+                "tab": "Datasets",
+                "pages": [
+                  "enterprise/v1-10-1/datasets/index",
+                  {
+                    "group": "Robotics",
+                    "pages": [
+                      "enterprise/v1-10-1/integrations/lerobotdataset",
+                      "enterprise/v1-10-1/datasets/lerobot-pusht",
+                      "enterprise/v1-10-1/datasets/lerobot-xvla-soft-fold"
+                    ]
+                  },
+                  {
+                    "group": "Image Classification",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/mnist",
+                      "enterprise/v1-10-1/datasets/cifar10",
+                      "enterprise/v1-10-1/datasets/fashion-mnist",
+                      "enterprise/v1-10-1/datasets/food101",
+                      "enterprise/v1-10-1/datasets/oxford-pets",
+                      "enterprise/v1-10-1/datasets/stanford-cars",
+                      "enterprise/v1-10-1/datasets/imagenet-1k-val",
+                      "enterprise/v1-10-1/datasets/eurosat"
+                    ]
+                  },
+                  {
+                    "group": "OCR & Handwriting",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/handwriting-ocr"
+                    ]
+                  },
+                  {
+                    "group": "Object Detection & Segmentation",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/coco-detection-2017",
+                      "enterprise/v1-10-1/datasets/pascal-voc-2012-segmentation",
+                      "enterprise/v1-10-1/datasets/ade20k",
+                      "enterprise/v1-10-1/datasets/kitti-2d-detection"
+                    ]
+                  },
+                  {
+                    "group": "Image Retrieval",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/coco-captions-2017",
+                      "enterprise/v1-10-1/datasets/flickr30k",
+                      "enterprise/v1-10-1/datasets/laion-1m"
+                    ]
+                  },
+                  {
+                    "group": "Visual Question Answering",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/chartqa",
+                      "enterprise/v1-10-1/datasets/docvqa",
+                      "enterprise/v1-10-1/datasets/textvqa",
+                      "enterprise/v1-10-1/datasets/vqav2",
+                      "enterprise/v1-10-1/datasets/gqa-testdev-balanced"
+                    ]
+                  },
+                  {
+                    "group": "Text QA",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/squad-v2",
+                      "enterprise/v1-10-1/datasets/trivia-qa",
+                      "enterprise/v1-10-1/datasets/hotpotqa-distractor",
+                      "enterprise/v1-10-1/datasets/natural-questions-val",
+                      "enterprise/v1-10-1/datasets/ms-marco-v2"
+                    ]
+                  },
+                  {
+                    "group": "Text Corpora",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/fineweb-edu"
+                    ]
+                  },
+                  {
+                    "group": "Speech",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/librispeech-clean"
+                    ]
+                  },
+                  {
+                    "group": "Video",
+                    "pages": [
+                      "enterprise/v1-10-1/datasets/openvid"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "version": "1.10.0",
             "default": true,
             "tag": "Latest",
@@ -548,6 +1014,278 @@
     ]
   },
   "redirects": [
+    {
+      "source": "/enterprise/v1-10-1/tables/update",
+      "destination": "/enterprise/v1-10-1/ingestion/update"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/fts-examples",
+      "destination": "/enterprise/v1-10-1/search/full-text-search"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/optimize-queries",
+      "destination": "/enterprise/v1-10-1/search/explain"
+    },
+    {
+      "source": "/enterprise/v1-10-1/lance",
+      "destination": "/enterprise/v1-10-1/basics/lance"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tables-and-namespaces",
+      "destination": "/enterprise/v1-10-1/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v1-10-1/catalog",
+      "destination": "/enterprise/v1-10-1/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v1-10-1/catalog/database",
+      "destination": "/enterprise/v1-10-1/basics/catalog"
+    },
+    {
+      "source": "/enterprise/v1-10-1/api-reference",
+      "destination": "/enterprise/v1-10-1/basics/apis"
+    },
+    {
+      "source": "/enterprise/v1-10-1/feature-engineering/computed-columns",
+      "destination": "/enterprise/v1-10-1/feature-engineering/add-computed-column"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tables/create",
+      "destination": "/enterprise/v1-10-1/ingestion"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tables/multimodal",
+      "destination": "/enterprise/v1-10-1/management/table#multimodal"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/select",
+      "destination": "/enterprise/v1-10-1/sql/select"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tutorials/search",
+      "destination": "/enterprise/v1-10-1/tutorials/search/hybrid-search-beir"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tutorials/agents",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/contextual-rag"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tutorials/feature-engineering",
+      "destination": "/enterprise/v1-10-1/tutorials/feature-engineering/feature-engineering-101"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tables",
+      "destination": "/enterprise/v1-10-1/management/table"
+    },
+    {
+      "source": "/enterprise/v1-10-1/namespaces",
+      "destination": "/enterprise/v1-10-1/management/namespace"
+    },
+    {
+      "source": "/enterprise/v1-10-1/namespaces/usage",
+      "destination": "/enterprise/v1-10-1/management/namespace"
+    },
+    {
+      "source": "/enterprise/v1-10-1/basics/data-types",
+      "destination": "/enterprise/v1-10-1/sql/data-types"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tables/schema",
+      "destination": "/enterprise/v1-10-1/management/table#schema"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tables/versioning",
+      "destination": "/enterprise/v1-10-1/management/table#versioning"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/multivector-search",
+      "destination": "/enterprise/v1-10-1/search/vector-search"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/explain-analyze",
+      "destination": "/enterprise/v1-10-1/search/explain"
+    },
+    {
+      "source": "/enterprise/v1-10-1/indexing/quantization",
+      "destination": "/enterprise/v1-10-1/indexing/vector-index"
+    },
+    {
+      "source": "/enterprise/v1-10-1/performance",
+      "destination": "/enterprise/v1-10-1/search#performance"
+    },
+    {
+      "source": "/enterprise/v1-10-1/reranking/:slug*",
+      "destination": "/enterprise/v1-10-1/reranking"
+    },
+    {
+      "source": "/enterprise/v1-10-1/training",
+      "destination": "/enterprise/v1-10-1/training/data-loading"
+    },
+    {
+      "source": "/enterprise/v1-10-1/training/lerobot",
+      "destination": "/enterprise/v1-10-1/integrations/lerobotdataset"
+    },
+    {
+      "source": "/enterprise/v1-10-1/build-with-ai-agents",
+      "destination": "/enterprise/v1-10-1/basics/agentic-skills"
+    },
+    {
+      "source": "/enterprise/v1-10-1/core/update",
+      "destination": "/enterprise/v1-10-1/ingestion/update"
+    },
+    {
+      "source": "/enterprise/v1-10-1/storage",
+      "destination": "/enterprise/v1-10-1/deployment/storage"
+    },
+    {
+      "source": "/enterprise/v1-10-1/storage/configuration",
+      "destination": "/enterprise/v1-10-1/deployment/storage"
+    },
+    {
+      "source": "/enterprise/v1-10-1/storage/monitoring",
+      "destination": "/enterprise/v1-10-1/deployment/monitoring"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/sql",
+      "destination": "/enterprise/v1-10-1/sql"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/sql/index",
+      "destination": "/enterprise/v1-10-1/sql"
+    },
+    {
+      "source": "/enterprise/v1-10-1/search/sql/fts-sql",
+      "destination": "/enterprise/v1-10-1/sql/dql/fts"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/select",
+      "destination": "/enterprise/v1-10-1/sql/dql/select"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/subqueries",
+      "destination": "/enterprise/v1-10-1/sql/dql/subqueries"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/join",
+      "destination": "/enterprise/v1-10-1/sql/dql/join"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/aggregation",
+      "destination": "/enterprise/v1-10-1/sql/dql/aggregation"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/window",
+      "destination": "/enterprise/v1-10-1/sql/dql/window"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/sampling",
+      "destination": "/enterprise/v1-10-1/sql/dql/sampling"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/explain",
+      "destination": "/enterprise/v1-10-1/sql/dql/explain"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/ddl",
+      "destination": "/enterprise/v1-10-1/sql/ddl/table"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/dml",
+      "destination": "/enterprise/v1-10-1/sql/dml/insert"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/refresh",
+      "destination": "/enterprise/v1-10-1/sql/dml/refresh"
+    },
+    {
+      "source": "/enterprise/v1-10-1/sql/show",
+      "destination": "/enterprise/v1-10-1/sql/ddl/job"
+    },
+    {
+      "source": "/enterprise/v1-10-1/faq",
+      "destination": "/enterprise/v1-10-1/deployment/support"
+    },
+    {
+      "source": "/enterprise/v1-10-1/faq/faq-oss",
+      "destination": "/enterprise/v1-10-1/deployment/support"
+    },
+    {
+      "source": "/enterprise/v1-10-1/faq/faq-enterprise",
+      "destination": "/enterprise/v1-10-1/deployment/support"
+    },
+    {
+      "source": "/enterprise/v1-10-1/troubleshooting",
+      "destination": "/enterprise/v1-10-1/deployment/support"
+    },
+    {
+      "source": "/enterprise/v1-10-1/basics/apis",
+      "destination": "/enterprise/v1-10-1/basics/sdk"
+    },
+    {
+      "source": "/enterprise/v1-10-1/hybrid-search",
+      "destination": "/enterprise/v1-10-1/search/hybrid-search"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/reranking/rrf",
+      "destination": "/enterprise/v1-10-1/reranking/rrf"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/reranking/linear_combination",
+      "destination": "/enterprise/v1-10-1/reranking/linear_combination"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/reranking/mrr",
+      "destination": "/enterprise/v1-10-1/reranking/mrr"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/reranking/cross_encoder",
+      "destination": "/enterprise/v1-10-1/reranking/cross_encoder"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/platforms/:slug*",
+      "destination": "/enterprise/v1-10-1/integrations/data/:slug*"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/frameworks/:slug*",
+      "destination": "/enterprise/v1-10-1/integrations/ai/:slug*"
+    },
+    {
+      "source": "/enterprise/v1-10-1/integrations/data/phidata",
+      "destination": "/enterprise/v1-10-1/integrations/ai/agno"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tutorials/rag/:slug*",
+      "destination": "/enterprise/v1-10-1/tutorials/agents/:slug*"
+    },
+    {
+      "source": "/enterprise/v1-10-1/tutorials/vector-search/:slug*",
+      "destination": "/enterprise/v1-10-1/tutorials/search/:slug*"
+    },
+    {
+      "source": "/enterprise/v1-10-1/geneva/udfs/built-in",
+      "destination": "/enterprise/v1-10-1/geneva/udfs/providers"
+    },
+    {
+      "source": "/enterprise/v1-10-1/enterprise/performance",
+      "destination": "/enterprise/v1-10-1/enterprise/benchmarks"
+    },
+    {
+      "source": "/enterprise/v1-10-1/enterprise/quickstart",
+      "destination": "/enterprise/v1-10-1/quickstart"
+    },
+    {
+      "source": "/enterprise/v1-10-1/huggingface/overview",
+      "destination": "/enterprise/v1-10-1/integrations/ai/huggingface"
+    },
+    {
+      "source": "/enterprise/v1-10-1/huggingface/datasets",
+      "destination": "/enterprise/v1-10-1/datasets"
+    },
+    {
+      "source": "/enterprise/v1-10-1/indexing/gpu-indexing",
+      "destination": "/enterprise/v1-10-1/indexing/reindexing#gpu"
+    },
     {
       "source": "/enterprise/v1-10-0/tables/update",
       "destination": "/enterprise/v1-10-0/ingestion/update"
